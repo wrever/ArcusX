@@ -1,0 +1,320 @@
+/* Pending Notifications Popup Styles */
+.pending-notifications-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  backdrop-filter: blur(8px);
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.pending-notifications-popup {
+  background: linear-gradient(135deg, #1a2a3d 0%, #0b1b2f 100%);
+  border: 1px solid rgba(40, 192, 240, 0.3);
+  border-radius: 20px;
+  padding: 2rem;
+  max-width: 700px;
+  width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.pending-notifications-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #fff;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0.5rem;
+  border-radius: 50%;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.pending-notifications-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: rotate(90deg);
+}
+
+.pending-notifications-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.pending-notifications-icon {
+  font-size: 3rem;
+  color: #ffc107;
+  margin-bottom: 1rem;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.pending-notifications-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 0.5rem 0;
+  background: linear-gradient(90deg, #28c0f0, #1180b3);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.pending-notifications-subtitle {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+}
+
+.pending-notifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  max-height: 50vh;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.pending-notifications-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.pending-notifications-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.pending-notifications-list::-webkit-scrollbar-thumb {
+  background: rgba(40, 192, 240, 0.5);
+  border-radius: 4px;
+}
+
+.pending-notifications-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(40, 192, 240, 0.7);
+}
+
+.pending-notification-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.pending-notification-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 193, 7, 0.3);
+  transform: translateX(4px);
+}
+
+.pending-notification-task-header {
+  margin-bottom: 1rem;
+}
+
+.pending-notification-task-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 0.5rem 0;
+}
+
+.pending-notification-task-subtitle {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+}
+
+.pending-notification-worker-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.pending-notification-worker-detail {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.95rem;
+}
+
+.pending-notification-icon-small {
+  font-size: 1rem;
+  color: #28c0f0;
+  flex-shrink: 0;
+}
+
+.pending-notification-label {
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+  min-width: 80px;
+}
+
+.pending-notification-value {
+  color: #fff;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.pending-notification-actions {
+  margin-top: 1rem;
+}
+
+.pending-notification-actions-label {
+  display: block;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 0.75rem;
+  font-weight: 600;
+}
+
+.pending-notification-actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pending-notification-action-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 193, 7, 0.15);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 8px;
+  color: #ffc107;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.pending-notification-action-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.pending-notifications-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.pending-notifications-cancel-button,
+.pending-notifications-send-button {
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pending-notifications-cancel-button {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.pending-notifications-cancel-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.pending-notifications-send-button {
+  background: linear-gradient(90deg, #28c0f0, #1180b3);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(40, 192, 240, 0.3);
+}
+
+.pending-notifications-send-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(40, 192, 240, 0.4);
+}
+
+.pending-notifications-send-button:active {
+  transform: translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .pending-notifications-popup {
+    max-width: 95%;
+    padding: 1.5rem;
+    max-height: 90vh;
+  }
+
+  .pending-notifications-title {
+    font-size: 1.5rem;
+  }
+
+  .pending-notification-item {
+    padding: 1rem;
+  }
+
+  .pending-notifications-footer {
+    flex-direction: column;
+  }
+
+  .pending-notifications-cancel-button,
+  .pending-notifications-send-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+

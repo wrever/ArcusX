@@ -1,0 +1,5 @@
+{
+  "devDependencies": {
+    "stellar-mcp": "^0.0.11"
+  }
+}

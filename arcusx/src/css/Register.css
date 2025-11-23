@@ -1,0 +1,641 @@
+.register-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, #07233c 0%, #0a2d4a 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.register-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to bottom right,
+    rgba(7, 35, 60, 0.2),
+    rgba(7, 35, 60, 0)
+  );
+  z-index: 0;
+}
+
+.register-content {
+  display: flex;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  overflow: hidden;
+  width: 100%;
+  max-width: 1100px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  position: relative;
+  z-index: 10;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.register-left {
+  flex: 1;
+  padding: 3rem;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.register-info {
+  color: white;
+  max-width: 300px;
+}
+
+.register-info h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.register-info h1 .highlight-text {
+  color: #ffffff !important;
+  background: linear-gradient(90deg, #28c0f0, #1180b3);
+  background-size: 200% 100%;
+  padding: 0.3rem 1rem;
+  border-radius: 8px;
+  position: relative;
+  display: inline-block;
+  transform: rotate(-2deg);
+  transition: all 0.5s ease;
+  animation: floatHighlight 3s ease-in-out infinite;
+  box-shadow: 0 4px 15px rgba(40, 192, 240, 0.3);
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+@keyframes floatHighlight {
+  0%, 100% {
+    transform: rotate(-2deg) translateY(0);
+  }
+  50% {
+    transform: rotate(-2deg) translateY(-6px);
+  }
+}
+
+.register-info p {
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.6;
+}
+
+.register-benefits {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.benefit-item {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr 2.5rem;
+  align-items: center;
+  gap: 1.25rem;
+  font-size: 1.05rem;
+  color: #ffffff !important;
+  font-weight: 600;
+  padding: 1.25rem 1.5rem;
+  background: rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  position: relative;
+}
+
+.benefit-item span:not(.benefit-icon) {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  font-size: 1.1rem !important;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6) !important;
+  letter-spacing: 0.3px;
+  opacity: 1 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.4;
+  text-align: center;
+  grid-column: 2;
+}
+
+.benefit-item:hover {
+  transform: translateX(8px);
+  background: rgba(40, 192, 240, 0.25);
+  border-color: rgba(40, 192, 240, 0.5);
+  box-shadow: 0 6px 20px rgba(40, 192, 240, 0.4);
+}
+/*CODE OWNER: BRUNO MIRANDA*/
+.benefit-icon {
+  font-size: 2rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  width: 2.5rem;
+  height: 2.5rem;
+  grid-column: 1;
+}
+
+.register-right {
+  flex: 1;
+  padding: 3rem;
+  background: #ffffff;
+  backdrop-filter: blur(20px);
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.register-form {
+  max-width: 420px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 2;
+  width: 100%;
+}
+
+.register-form h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #07233c;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.form-group {
+  position: relative;
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.input-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: rgba(40, 192, 240, 0.1);
+  border-radius: 10px;
+  color: #28c0f0;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.form-group input {
+  flex: 1;
+  padding: 0.875rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  background: #ffffff;
+  color: #1a1f2c;
+  font-weight: 400;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Asegurar que todos los campos tengan texto visible */
+.form-group input {
+  color: #1a1f2c !important;
+}
+
+.form-group input::placeholder {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+  font-weight: 400;
+}
+
+.form-group input:focus {
+  border-color: #28c0f0;
+  box-shadow: 0 0 0 4px rgba(40, 192, 240, 0.15);
+  outline: none;
+  background: white;
+  transform: translateY(-1px);
+}
+
+.form-group:focus-within .input-icon {
+  background: rgba(40, 192, 240, 0.15);
+  color: #1180b3;
+  transform: scale(1.05);
+}
+
+/* Ajuste para el botón de mostrar/ocultar contraseña */
+.form-group input[type="password"],
+.form-group input[type="text"], 
+.form-group input[type="email"] {
+  color: #1a1f2c !important;
+}
+
+/* Solo los inputs de contraseña necesitan padding extra para el botón */
+.form-group:has(.toggle-password) input {
+  padding-right: 2.75rem;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #06a3ec;
+  cursor: pointer;
+  padding: 0.25rem;
+  transition: color 0.3s ease;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.toggle-password:hover {
+  color: #28c0f0;
+}
+
+.register-button {
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(90deg, #28c0f0, #1180b3);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 2rem;
+  box-shadow: 0 4px 15px rgba(40, 192, 240, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.register-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.register-button:hover::before {
+  left: 100%;
+}
+
+.register-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(40, 192, 240, 0.4);
+}
+
+.register-button:active {
+  transform: translateY(0);
+}
+
+.login-link {
+  text-align: center;
+  margin-top: 1.5rem;
+  color: #6c757d;
+  font-size: 0.95rem;
+}
+
+.login-link a {
+  color: #28c0f0;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.login-link a:hover {
+  color: #1180b3;
+}
+
+@media (max-width: 768px) {
+  .register-content {
+    flex-direction: column;
+  }
+
+  .register-left,
+  .register-right {
+    padding: 2rem;
+  }
+
+  .register-info h1 {
+    font-size: 2.5rem;
+  }
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.register-form {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.benefit-item {
+  animation: fadeIn 0.5s ease-out;
+  animation-fill-mode: both;
+  color: #ffffff !important;
+  background: rgba(0, 0, 0, 0.3) !important;
+}
+
+.benefit-item:nth-child(1) { animation-delay: 0.1s; }
+.benefit-item:nth-child(2) { animation-delay: 0.2s; }
+.benefit-item:nth-child(3) { animation-delay: 0.3s; }
+
+/* Efectos de hover en los inputs */
+.form-group:hover input {
+  border-color: #adb5bd;
+}
+
+/* Estilo para inputs con valor */
+.form-group input:not(:placeholder-shown) {
+  background: white;
+  border-color: #28c0f0;
+}
+
+/* OAuth Styles para Register */
+.oauth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 1.5rem 0;
+  color: #64748b;
+  font-size: 0.9rem;
+  width: 100%;
+}
+
+.oauth-divider::before,
+.oauth-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.oauth-divider span {
+  padding: 0 1rem;
+  background: white;
+}
+
+.oauth-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  width: 100%;
+}
+
+.oauth-button {
+  width: 100%;
+  padding: 0.875rem 1.25rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  background: white;
+  color: #1a1f2c;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.oauth-button:hover:not(:disabled) {
+  border-color: #28c0f0;
+  background: #f0f9ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(40, 192, 240, 0.25);
+}
+
+.oauth-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.oauth-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.oauth-button svg {
+  font-size: 1.2rem;
+}
+
+.oauth-google {
+  color: #4285f4;
+}
+
+.oauth-google:hover:not(:disabled) {
+  border-color: #4285f4;
+  background: #f8f9ff;
+}
+
+.oauth-github {
+  color: #24292e;
+}
+
+.oauth-github:hover:not(:disabled) {
+  border-color: #24292e;
+  background: #f6f8fa;
+}
+
+.register-error {
+  background: #fee2e2;
+  color: #ef4444;
+  padding: 1rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid #fecaca;
+}
+/*CODE OWNER: BRUNO MIRANDA*/
+.back-button {
+  position: fixed;
+  top: 2rem;
+  left: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  z-index: 10;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+.back-button span {
+  color: white;
+}
+.back-button:hover {
+  background: rgba(40, 192, 240, 0.2);
+  border-color: rgba(40, 192, 240, 0.4);
+  transform: translateX(-5px);
+  color: white;
+  box-shadow: 0 6px 20px rgba(40, 192, 240, 0.3);
+}
+
+.back-button svg {
+  font-size: 1rem;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .register-content {
+    flex-direction: column;
+  }
+
+  .register-left,
+  .register-right {
+    padding: 2rem;
+  }
+
+  .register-info h1 {
+    font-size: 2.5rem;
+  }
+
+  .back-button {
+    top: 1rem;
+    left: 1rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    color: white;
+  }
+}
+
+/* Human ID Verification Styles */
+.human-id-section {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.human-id-verification {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+}
+
+.human-id-verification.compact {
+  flex-direction: row;
+  gap: 0.5rem;
+}
+
+.human-id-verification.verified {
+  color: #4ade80;
+  font-weight: 500;
+}
+
+.human-id-verification .verified-icon {
+  color: #4ade80;
+  font-size: 1.25rem;
+  margin-right: 0.5rem;
+}
+
+.human-id-verification .verify-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+  justify-content: center;
+}
+
+.human-id-verification .verify-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.human-id-verification .verify-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.human-id-verification .verify-button svg {
+  font-size: 1rem;
+}
+
+.human-id-verification .verify-hint {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+  margin: 0;
+}
+
+.human-id-verification .spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.human-id-verification.compact .verify-button {
+  width: auto;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+}
+
+.human-id-verification.compact .verify-hint {
+  display: none;
+} 

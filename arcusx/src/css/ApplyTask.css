@@ -1,0 +1,341 @@
+.apply-task-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+  background-color: #0b1b2f; /* Fondo oscuro similar al dashboard */
+  min-height: 100vh;
+  color: #fff;
+  position: relative;
+}
+
+.back-button {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #28c0f0;
+  text-decoration: none;
+  font-size: 1rem;
+  transition: color 0.3s ease;
+}
+
+.back-button:hover {
+  color: #1180b3;
+}
+
+.apply-task-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  width: 100%;
+  max-width: 1000px;
+  margin-top: 2rem;
+}
+
+.task-details-card,
+.application-form-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  padding: 2rem;
+  border-radius: 12px;
+  border: 1px solid rgba(40, 192, 240, 0.3);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  flex: 1;
+  min-width: 300px;
+}
+
+.task-header {
+  margin-bottom: 1.5rem;
+}
+
+.task-header h2 {
+  color: #28c0f0;
+  margin-bottom: 0.5rem;
+}
+
+.task-subtitle {
+  color: #b0b0b0;
+  font-style: italic;
+  margin-bottom: 0.5rem;
+}
+
+.task-details-card .task-difficulty {
+  display: inline-block;
+  margin-bottom: 1rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.task-difficulty.fácil {
+  background-color: #4CAF50;
+}
+
+.task-difficulty.intermedio {
+  background-color: #FFC107;
+}
+
+.task-difficulty.difícil {
+  background-color: #f44336;
+}
+
+.task-description-full {
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+  color: #e1e1e1;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(40, 192, 240, 0.3);
+}
+
+.meta-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.meta-label {
+  font-size: 0.9rem;
+  color: #b0b0b0;
+  margin-bottom: 0.2rem;
+  white-space: nowrap;
+}
+
+.meta-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.application-form-card h3 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  color: #28c0f0;
+}
+
+.application-form .form-group {
+  margin-bottom: 1rem;
+}
+
+.application-form label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #e1e1e1;
+}
+
+.application-form input[type="text"],
+.application-form input[type="number"],
+.application-form input[type="url"],
+.application-form textarea,
+.application-form select {
+  width: 100%;
+  padding: 0.875rem;
+  border: 1px solid rgba(40, 192, 240, 0.3);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.application-form textarea {
+  resize: vertical;
+  min-height: 150px; /* Aumentar altura del textarea */
+}
+
+.application-form input::placeholder,
+.application-form textarea::placeholder {
+  color: #b0b0b0;
+}
+
+.application-form input:focus,
+.application-form textarea:focus {
+  outline: none;
+  border-color: #28c0f0;
+  box-shadow: 0 0 0 3px rgba(40, 192, 240, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.form-help {
+  display: block;
+  margin-top: 0.3rem;
+  color: #b0b0b0;
+  font-size: 0.85rem;
+}
+
+.form-info {
+  background: rgba(40, 192, 240, 0.1);
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(40, 192, 240, 0.3);
+  margin: 1rem 0;
+}
+
+.form-info h4 {
+  color: #28c0f0;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+.form-info ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: #e1e1e1;
+}
+
+.form-info li {
+  margin-bottom: 0.3rem;
+  line-height: 1.4;
+}
+
+.application-form button[type="submit"] {
+  width: 100%;
+  padding: 0.875rem;
+  background: linear-gradient(135deg, #28c0f0, #1180b3);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 1.5rem;
+  box-shadow: 0 4px 15px rgba(40, 192, 240, 0.3);
+}
+
+.application-form button[type="submit"]:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(40, 192, 240, 0.4);
+}
+
+.application-form button[type="submit"]:disabled {
+  background: #555;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.success-message {
+  color: #4CAF50;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.error-message {
+  color: #f44336;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+/* Popups */
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.popup {
+  background: #2a2a2a;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  border: 1px solid #404040;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.popup-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.popup h3 {
+  color: #fff;
+  margin: 0 0 1rem 0;
+  font-size: 1.3rem;
+}
+
+.popup p {
+  color: #e1e1e1;
+  margin: 0 0 1.5rem 0;
+  line-height: 1.5;
+}
+
+.popup-button {
+  background: #28c0f0;
+  color: #fff;
+  border: none;
+  padding: 0.8rem 2rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.popup-button:hover {
+  background: #1ea8d4;
+  transform: translateY(-2px);
+}
+
+.success-popup {
+  border-left: 4px solid #4caf50;
+}
+
+.error-popup {
+  border-left: 4px solid #f44336;
+}
+
+.error-popup .popup-icon {
+  color: #f44336;
+}
+
+.success-popup .popup-icon {
+  color: #4caf50;
+}
+
+@media (max-width: 768px) {
+  .apply-task-content {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  .task-details-card,
+  .application-form-card {
+    min-width: unset;
+  }
+  
+  .popup {
+    padding: 1.5rem;
+    margin: 1rem;
+  }
+  
+  .popup-icon {
+    font-size: 2.5rem;
+  }
+  
+  .popup h3 {
+    font-size: 1.1rem;
+  }
+} 

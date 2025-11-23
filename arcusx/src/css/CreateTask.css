@@ -1,0 +1,773 @@
+/* CreateTask.css - Diseño Optimizado */
+
+/* Estilos para mostrar monto neto y comisión */
+.net-amount-display {
+  background: rgba(40, 192, 240, 0.1);
+  border: 1px solid rgba(40, 192, 240, 0.3);
+  border-radius: 6px;
+  padding: 0.6rem 0.8rem;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.net-amount-text {
+  font-size: 0.85rem;
+  color: #ffffff;
+  margin: 0 0 0.3rem 0;
+  line-height: 1.4;
+}
+
+.net-amount-text strong {
+  color: #28c0f0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.commission-text {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 0.3rem 0;
+  line-height: 1.4;
+}
+
+.contract-cost-text {
+  font-size: 0.8rem;
+  color: #ffa500;
+  margin: 0.3rem 0 0 0;
+  padding-top: 0.4rem;
+  border-top: 1px solid rgba(255, 165, 0, 0.3);
+  line-height: 1.4;
+}
+
+.contract-cost-text strong {
+  color: #ffa500;
+  font-weight: 600;
+}
+
+/* Estilo para el campo de moneda de solo lectura */
+.currency-readonly {
+  cursor: not-allowed;
+  opacity: 0.7;
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+.create-task-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+  background: linear-gradient(135deg, #0b1b2f 0%, #1a2a3d 100%);
+  min-height: 100vh;
+  color: #fff;
+  position: relative;
+}
+
+.back-button {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #28c0f0;
+  text-decoration: none;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  background: rgba(40, 192, 240, 0.1);
+}
+
+.back-button:hover {
+  color: #1180b3;
+  background: rgba(40, 192, 240, 0.2);
+  transform: translateX(-2px);
+}
+
+.create-task-form-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(40, 192, 240, 0.3);
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: 800px;
+  margin-top: 2rem;
+}
+
+.create-task-form-card h2 {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #28c0f0;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+/* Límites del usuario */
+.user-limits-info {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: rgba(40, 192, 240, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(40, 192, 240, 0.3);
+}
+
+.limit-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #28c0f0;
+}
+
+.limit-item svg {
+  font-size: 1rem;
+}
+
+.cooldown-item {
+  color: #ffc107 !important;
+  font-weight: 600;
+}
+
+/* Advertencia de timeout - Diseño ArcusX */
+.timeout-warning {
+  background: rgba(255, 152, 0, 0.1);
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 152, 0, 0.4);
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 8px 32px rgba(255, 152, 0, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.timeout-warning::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #ff9800, #ffc107, #ff9800);
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.warning-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(255, 152, 0, 0.3);
+}
+
+.warning-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255, 152, 0, 0.2), rgba(255, 193, 7, 0.2));
+  border: 2px solid rgba(255, 152, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.warning-icon {
+  color: #ff9800;
+  font-size: 1.2rem !important;
+  width: 1.2rem !important;
+  height: 1.2rem !important;
+  min-width: 1.2rem !important;
+  min-height: 1.2rem !important;
+  max-width: 1.2rem !important;
+  max-height: 1.2rem !important;
+  animation: pulse 2s ease-in-out infinite;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0 !important;
+  padding: 0 !important;
+  display: block !important;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.warning-icon svg {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+.warning-title-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.warning-header h3 {
+  color: #fff;
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+}
+
+.cooldown-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, rgba(255, 152, 0, 0.3), rgba(255, 193, 7, 0.3));
+  border: 1px solid rgba(255, 152, 0, 0.5);
+  border-radius: 8px;
+  width: fit-content;
+}
+
+.cooldown-time {
+  color: #ffc107;
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+}
+
+.warning-content {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.warning-message {
+  margin-bottom: 1.5rem;
+}
+
+.warning-message p {
+  color: rgba(255, 255, 255, 0.95);
+  margin: 0;
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+.highlight-time {
+  color: #ffc107;
+  font-weight: 700;
+  font-size: 1.2rem;
+  text-shadow: 0 2px 8px rgba(255, 193, 7, 0.5);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+}
+
+.next-task-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba(40, 192, 240, 0.1);
+  border: 1px solid rgba(40, 192, 240, 0.3);
+  border-radius: 10px;
+  margin-top: 1rem;
+}
+
+.info-icon {
+  color: #28c0f0;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.next-task-info span {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1rem;
+}
+
+.next-task-info strong {
+  color: #28c0f0;
+  font-weight: 600;
+}
+
+.limits-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.limit-stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: rgba(255, 152, 0, 0.1);
+  border: 1px solid rgba(255, 152, 0, 0.3);
+  border-radius: 10px;
+}
+
+.limit-label {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+}
+
+.limit-value {
+  color: #ffc107;
+  font-size: 1.3rem;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+}
+
+.limit-hint {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.95rem;
+  margin-top: 1rem;
+  text-align: center;
+  font-style: italic;
+}
+
+.warning-content strong {
+  font-weight: 600;
+  color: #ffc107;
+}
+
+/* Secciones del formulario */
+.form-section {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.form-section h3 {
+  color: #28c0f0;
+  margin-bottom: 1.5rem;
+  font-size: 1.3rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Filas del formulario */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Grupos de formulario */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #e1e1e1;
+  font-size: 0.95rem;
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 0.875rem;
+  border: 1px solid rgba(40, 192, 240, 0.3);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff !important;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="number"]:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #28c0f0;
+  box-shadow: 0 0 0 2px rgba(40, 192, 240, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff !important;
+}
+
+.form-group input[type="text"]::placeholder,
+.form-group input[type="number"]::placeholder,
+.form-group textarea::placeholder {
+  color: #b0b0b0;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+/* Caja de información */
+.info-box {
+  background: rgba(40, 192, 240, 0.1);
+  border: 1px solid rgba(40, 192, 240, 0.3);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+.info-box p {
+  color: #28c0f0;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.info-box ul {
+  color: #e1e1e1;
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.info-box li {
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+/* Acciones del formulario */
+.form-actions {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.submit-button {
+  width: 100%;
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #28c0f0, #1180b3);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(40, 192, 240, 0.3);
+}
+
+.submit-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(40, 192, 240, 0.4);
+}
+
+.submit-button:disabled {
+  background: #555;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Mensajes de estado */
+.success-message {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #10b981;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.error-message {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .create-task-container {
+    padding: 1rem;
+  }
+  
+  .create-task-form-card {
+    padding: 1.5rem;
+  }
+  
+  .user-limits-info {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .form-section {
+    padding: 1rem;
+  }
+}
+
+/* Estilos para milestones */
+.milestone-card {
+  background: #2a2a2a;
+  border: 1px solid #404040;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 15px;
+  position: relative;
+}
+
+.milestone-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.milestone-header h4 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 16px;
+}
+
+.remove-milestone-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.remove-milestone-btn:hover {
+  background: #c82333;
+  transform: scale(1.1);
+}
+
+.milestone-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.milestone-fields .form-group:last-child {
+  grid-column: 1 / -1;
+}
+
+.add-milestone-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 10px;
+}
+
+.add-milestone-btn:hover {
+  background: #218838;
+  transform: translateY(-1px);
+}
+
+/* Estilos para el campo de porcentaje */
+.percentage-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.percentage-input input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.percentage-input span {
+  color: #6c757d;
+  font-weight: 500;
+  font-size: 14px;
+  min-width: 20px;
+}
+
+/* Estilos para el resumen de milestones */
+.milestone-summary {
+  background: #2a2a2a;
+  border: 1px solid #404040;
+  border-radius: 6px;
+  padding: 15px;
+  margin: 15px 0;
+}
+
+.percentage-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.percentage-warning {
+  color: #dc3545;
+  font-size: 14px;
+}
+
+.percentage-info {
+  color: #17a2b8;
+  font-size: 14px;
+}
+
+/* Estilos para las etiquetas de milestones */
+.required-badge {
+  background: #dc3545;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-left: 8px;
+  font-weight: 500;
+}
+
+.optional-badge {
+  background: #6c757d;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-left: 8px;
+  font-weight: 500;
+}
+
+/* Estilos para cuando no hay milestones */
+.no-milestones {
+  background: #2a2a2a;
+  border: 1px solid #404040;
+  border-radius: 6px;
+  padding: 20px;
+  text-align: center;
+  margin: 15px 0;
+}
+
+.no-milestones p {
+  color: #ffc107;
+  font-weight: 500;
+  margin-bottom: 15px;
+}
+
+.add-first-milestone-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.add-first-milestone-btn:hover {
+  background: #218838;
+  transform: translateY(-1px);
+}
+
+/* Estilos para inputs de fecha */
+input[type="date"] {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(40, 192, 240, 0.3) !important;
+  padding: 8px 12px !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-family: inherit !important;
+}
+
+input[type="date"]:focus {
+  border-color: #28c0f0 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(40, 192, 240, 0.2) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Asegurar que el texto sea visible en todos los inputs */
+.milestone-fields input,
+.milestone-fields textarea {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(40, 192, 240, 0.3) !important;
+}
+
+/* Estilos específicos para el input de porcentaje */
+.percentage-input input {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(40, 192, 240, 0.3) !important;
+}
+
+.percentage-input input:focus {
+  border-color: #28c0f0 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(40, 192, 240, 0.2) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Estilos generales para todos los inputs en milestone cards */
+.milestone-card input[type="text"],
+.milestone-card input[type="number"],
+.milestone-card textarea {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(40, 192, 240, 0.3) !important;
+  padding: 8px 12px !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-family: inherit !important;
+}
+
+.milestone-card input:focus,
+.milestone-card textarea:focus {
+  border-color: #28c0f0 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(40, 192, 240, 0.2) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+} 
