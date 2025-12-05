@@ -326,7 +326,7 @@ export const fundTrustlessEscrow = async (
   amount: number,
   signer: string,
   kit: any,
-  fundEscrow: (payload: FundEscrowPayload, type: 'single-release') => Promise<EscrowRequestResponse>,
+  fundEscrow: (payload: FundEscrowPayload, type: 'single-release') => Promise<{ unsignedTransaction: string }>,
   sendTransaction: (signedXdr: string) => Promise<SendTransactionResponse | InitializeSingleReleaseEscrowResponse>,
   getEscrowFromIndexer?: (contractIds: string[]) => Promise<any>
 ): Promise<{ success: boolean; txHash?: string; error?: string }> => {
@@ -609,7 +609,8 @@ export const fundTrustlessEscrow = async (
     }
     
     // Llamar a la API de Trustless Work
-    let fundResponse: EscrowRequestResponse;
+    // Según la documentación oficial, fundEscrow retorna directamente { unsignedTransaction }
+    let unsignedTransaction: string;
     try {
       console.log('⏳ Llamando a fundEscrow...');
       console.log('📋 Información del fondeo:', {
@@ -621,11 +622,17 @@ export const fundTrustlessEscrow = async (
         trustlineAddress: escrowFromIndexer?.trustline?.address,
         platformFee: escrowFromIndexer?.platformFee
       });
-      fundResponse = await fundEscrow(payload, 'single-release');
+      const fundResponse = await fundEscrow(payload, 'single-release');
       console.log('✅ Respuesta de fundEscrow recibida:', {
-        status: fundResponse.status,
-        hasUnsignedTransaction: !!fundResponse.unsignedTransaction
+        hasUnsignedTransaction: !!fundResponse?.unsignedTransaction,
+        unsignedTransactionLength: fundResponse?.unsignedTransaction?.length || 0
       });
+      
+      if (!fundResponse?.unsignedTransaction) {
+        throw new Error('Unsigned transaction is missing from fundEscrow response.');
+      }
+      
+      unsignedTransaction = fundResponse.unsignedTransaction;
     } catch (apiError: any) {
       // Capturar TODA la información del error
       const errorResponse = apiError.response;
@@ -729,15 +736,10 @@ export const fundTrustlessEscrow = async (
       
       throw new Error(`Error al llamar a la API de Trustless Work: ${errorMessage}`);
     }
-    
-    if (fundResponse.status !== 'SUCCESS' || !fundResponse.unsignedTransaction) {
-      const errorMsg = (fundResponse as any).message || 'Respuesta inválida de Trustless Work';
-      throw new Error(`Error al fondear escrow: ${errorMsg}`);
-    }
 
     // Firmar y enviar transacción
     const result = await createAndSendTransaction(
-      fundResponse.unsignedTransaction,
+      unsignedTransaction,
       kit,
       signer,
       sendTransaction
