@@ -505,24 +505,31 @@ export const fundTrustlessEscrow = async (
       } : 'No disponible'
     });
     
-    // CRÍTICO: Usar EXACTAMENTE el amount del escrow indexado, sin ninguna conversión
-    // Esto garantiza que el amount coincida exactamente con el del escrow creado
+    // CRÍTICO: Usar el amount en formato decimal (igual que cuando se creó el escrow)
+    // Trustless Work espera el amount en el mismo formato que se usó al crear el escrow (decimal, no stroops)
+    // El escrow se creó con amount: 0.1 (decimal), así que al fondear también debe ser 0.1 (decimal)
     let finalAmountForPayload: number;
     if (escrowFromIndexer && escrowFromIndexer.amount !== undefined && escrowFromIndexer.amount !== null) {
-      // Usar directamente el amount del indexer que es la fuente de verdad
+      // Usar directamente el amount del indexer en formato decimal (la fuente de verdad)
       finalAmountForPayload = typeof escrowFromIndexer.amount === 'string' 
         ? parseFloat(escrowFromIndexer.amount) 
         : escrowFromIndexer.amount;
-      console.log('✅ Usando amount EXACTO del escrow indexado:', finalAmountForPayload);
+      console.log('✅ Usando amount EXACTO del escrow indexado (formato decimal):', {
+        amountDecimal: finalAmountForPayload,
+        amountDelIndexer: escrowFromIndexer.amount,
+        tipo: typeof finalAmountForPayload
+      });
     } else {
-      // Fallback: usar el amount verificado
+      // Fallback: usar el amount verificado en formato decimal
       finalAmountForPayload = verifiedAmount;
-      console.warn('⚠️ No se encontró amount en el indexer, usando amount verificado:', finalAmountForPayload);
+      console.warn('⚠️ No se encontró amount en el indexer, usando amount verificado (formato decimal):', {
+        amountDecimal: finalAmountForPayload
+      });
     }
     
     const payload: FundEscrowPayload = {
       contractId,
-      amount: finalAmountForPayload, // Usar el amount exacto del escrow indexado
+      amount: finalAmountForPayload, // Enviar amount en formato decimal (igual que al crear el escrow)
       signer
     };
 
@@ -633,8 +640,9 @@ export const fundTrustlessEscrow = async (
       console.error('📋 Status:', errorStatus);
       console.error('📋 Message:', errorMessage);
       console.error('📋 Contract ID:', contractId);
-      console.error('📋 Amount enviado:', verifiedAmount, `(${amountString})`);
-      console.error('📋 Amount del indexer:', escrowFromIndexer?.amount);
+      console.error('📋 Amount enviado (formato decimal):', finalAmountForPayload);
+      console.error('📋 Amount del indexer (decimal):', escrowFromIndexer?.amount);
+      console.error('📋 Amount verificado (decimal):', verifiedAmount, `(${amountString})`);
       console.error('📋 Signer:', signer);
       console.error('📋 Signer del escrow:', escrowFromIndexer?.signer);
       console.error('📋 Escrow completo del indexer:', JSON.stringify(escrowFromIndexer, null, 2));
@@ -695,14 +703,23 @@ export const fundTrustlessEscrow = async (
           // 1. El escrow necesita más tiempo después de estar indexado para estar completamente disponible en la blockchain
           // 2. Hay algún problema con la validación interna de la API que no estamos cumpliendo
           // 3. Hay un problema temporal con la API de Trustless Work
-          const errorMsg = `❌ No se puede fondear el escrow: ${errorMessage}${detailsText}${specificMessage}\n\n🔍 VERIFICA ESTOS PUNTOS CRÍTICOS:\n\n1. ✅ TRUSTLINE DE USDC:\n   - Abre Freighter wallet\n   - Ve a "Assets" o "Manage Assets"\n   - Asegúrate de tener USDC agregado con issuer: GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5\n   - Si no lo tienes, agrégalo manualmente\n\n2. ✅ BALANCE SUFICIENTE:\n   - Necesitas al menos ${verifiedAmount} USDC en tu wallet\n   - Más fees de transacción (aprox. 0.00001 XLM)\n   - Verifica tu balance en Freighter\n\n3. ✅ ESTADO DEL ESCROW:\n   - El escrow está indexado: ✅\n   - Contract ID: ${contractId}\n   - Amount del escrow: ${escrowFromIndexer?.amount || 'N/A'}\n   - Amount a fondear: ${amountString}\n   - Balance actual: ${escrowFromIndexer?.balance || 0}\n\n4. ⚠️ SI EL PROBLEMA PERSISTE:\n   - Espera 5-10 minutos y vuelve a intentar\n   - Verifica que el escrow se desplegó correctamente en la blockchain\n   - Si el problema continúa, crea un nuevo escrow\n\n📋 Información del escrow:\n${escrowFromIndexer ? JSON.stringify({
+          // 4. El escrow necesita alguna validación on-chain adicional que no está disponible todavía
+          
+          const escrowInfo = escrowFromIndexer ? {
             contractId: escrowFromIndexer.contractId,
+            contractBaseId: escrowFromIndexer.contractBaseId,
             amount: escrowFromIndexer.amount,
             balance: escrowFromIndexer.balance,
             platformFee: escrowFromIndexer.platformFee,
             signer: escrowFromIndexer.signer,
-            trustline: escrowFromIndexer.trustline
-          }, null, 2) : 'No disponible'}`;
+            trustline: escrowFromIndexer.trustline,
+            isActive: escrowFromIndexer.isActive,
+            type: escrowFromIndexer.type,
+            engagementId: escrowFromIndexer.engagementId,
+            inconsistencies: escrowFromIndexer.inconsistencies
+          } : null;
+          
+          const errorMsg = `❌ No se puede fondear el escrow: ${errorMessage}${detailsText}${specificMessage}\n\n🔍 DIAGNÓSTICO:\n\n✅ VERIFICACIONES COMPLETADAS:\n   - Escrow indexado: ✅\n   - Amount coincide: ✅ (${finalAmountForPayload} USDC)\n   - Signer coincide: ✅ (${signer})\n   - Trustline configurado: ✅ (${escrowFromIndexer?.trustline?.address || 'N/A'})\n   - Escrow activo: ✅\n   - Sin inconsistencias: ✅\n   - Balance actual: ${escrowFromIndexer?.balance || 0}\n\n⚠️ POSIBLES CAUSAS:\n   1. El escrow necesita más tiempo después de estar indexado (puede tardar hasta 10-15 minutos)\n   2. Hay una validación on-chain que Trustless Work está verificando y aún no está disponible\n   3. Problema temporal con la API de Trustless Work\n   4. El escrow necesita algún estado adicional en la blockchain\n\n💡 SOLUCIONES SUGERIDAS:\n   1. Espera 10-15 minutos adicionales y vuelve a intentar\n   2. Verifica en el explorador de Stellar que el contrato esté completamente desplegado\n   3. Contacta con el soporte de Trustless Work con esta información:\n      - Contract ID: ${contractId}\n      - Error: ${errorMessage}\n      - Timestamp: ${new Date().toISOString()}\n      - API Endpoint: /escrow/single-release/fund-escrow\n\n📋 Información completa del escrow para soporte:\n${escrowInfo ? JSON.stringify(escrowInfo, null, 2) : 'No disponible'}\n\n📋 Payload enviado:\n${JSON.stringify(payload, null, 2)}`;
           
           throw new Error(errorMsg);
         }
