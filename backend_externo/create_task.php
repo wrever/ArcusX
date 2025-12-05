@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $userId = intval($data['user_id']);
 
     // Validar los valores de los campos de selección (opcional pero recomendado)
-    $allowed_currencies = ['USDC', 'XLM', 'ARCX']; // USDC es la moneda principal ahora (Trustless Work)
+    $allowed_currencies = ['USDC']; // Solo USDC permitido
     $allowed_difficulties = ['Fácil', 'Intermedio', 'Difícil'];
     $allowed_categories = ['Desarrollo', 'Diseño', 'Marketing', 'Blockchain', 'Contenido'];
 

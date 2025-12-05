@@ -4,23 +4,7 @@ import { FaArrowLeft, FaUser, FaCalendarAlt, FaWallet, FaExternalLinkAlt, FaChec
 import axios from 'axios';
 import { API_URL } from '../config/database';
 import { useWallet } from '../hooks/useWallet';
-// ============================================
-// SISTEMA ANTIGUO: MULTISIG 2-DE-2 (ACTIVO)
-// ============================================
-// Sistema de escrow usando multisig 2-de-2 en Stellar
-// Costo: 2.5 XLM para crear la cuenta escrow + fees de transacción
-// Fecha de restauración: 2025-11-22
-// Moneda: XLM (Stellar Lumens)
-// ============================================
-import { 
-  createEscrowAccount,
-  setupMultisig,
-  getHorizonServer
-} from '../services/stellarEscrowService';
-import { TransactionBuilder, Operation, Networks, Keypair, Asset } from '@stellar/stellar-sdk';
-// ============================================
-// FIN SISTEMA ANTIGUO
-// ============================================
+// Sistema antiguo de multisig eliminado - ahora usamos Trustless Work
 
 // ============================================
 // SISTEMA NUEVO: SOROBAN - COMENTADO
@@ -32,11 +16,18 @@ import { TransactionBuilder, Operation, Networks, Keypair, Asset } from '@stella
 // ============================================
 
 // ============================================
-// SISTEMA TRUSTLESS WORK - ELIMINADO
+// SISTEMA TRUSTLESS WORK - IMPLEMENTADO
 // ============================================
-// Todo el código de Trustless Work ha sido eliminado
-// Sistema restaurado: Multisig 2-de-2 (sistema antiguo)
-// ============================================
+import { 
+  useInitializeEscrow, 
+  useFundEscrow, 
+  useSendTransaction,
+  useGetEscrowFromIndexerByContractIds
+} from '@trustless-work/escrow/hooks';
+import { 
+  createTrustlessEscrow, 
+  fundTrustlessEscrow 
+} from '../services/trustlessWorkEscrowService';
 
 // Importar funciones de comisión (se usan en ambos sistemas)
 import { calculateCommission, calculateNetAmount } from '../config/commission';
@@ -91,7 +82,6 @@ const ProposalReview = () => {
 
   // Estados para el nuevo popup paso a paso
   const [showEscrowProcessPopup, setShowEscrowProcessPopup] = useState(false);
-  const [escrowKeypairSecret, setEscrowKeypairSecret] = useState<string | null>(null);
 
   // Wallet (Freighter/Stellar)
   const {
@@ -102,8 +92,11 @@ const ProposalReview = () => {
     kit
   } = useWallet();
 
-  // Hooks de Trustless Work - ELIMINADOS
-  // Sistema restaurado: Multisig 2-de-2 (sistema antiguo)
+  // Hooks de Trustless Work
+  const { deployEscrow } = useInitializeEscrow();
+  const { fundEscrow } = useFundEscrow();
+  const { sendTransaction } = useSendTransaction();
+  const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds();
 
   // Obtener usuario logeado
   const storedUser = localStorage.getItem('user');
@@ -187,10 +180,10 @@ const ProposalReview = () => {
   };
 
   /* ============================================
-   * SISTEMA ANTIGUO: MULTISIG 2-DE-2 (RESTAURADO)
+   * SISTEMA TRUSTLESS WORK - IMPLEMENTADO
    * ============================================
    * Función para crear el escrow (Paso 2 del popup)
-   * Sistema restaurado: 2025-11-22
+   * Usa Trustless Work para crear el escrow
    * ============================================ */
   const handleCreateEscrow = async () => {
     try {
@@ -206,6 +199,10 @@ const ProposalReview = () => {
         return { success: false, error: 'Kit de wallets no inicializado. Por favor reconecta tu wallet.' };
       }
 
+      if (!task) {
+        return { success: false, error: 'No se encontró información de la tarea' };
+      }
+
       // Validar direcciones Stellar
       const clientAddress = address;
       const workerAddress = selectedProposal.worker_wallet_address;
@@ -218,243 +215,89 @@ const ProposalReview = () => {
         return { success: false, error: 'Dirección del trabajador no es válida' };
       }
       
-      // Generar cuenta escrow única para esta tarea
-      const escrowAccount = createEscrowAccount();
-      const escrowPublicKey = escrowAccount.publicKey;
-      const horizonServer = getHorizonServer();
+      // Crear escrow con Trustless Work
+      const engagementId = `arcusx-${taskId}-${Date.now()}`;
+      // Asegurar precisión de USDC (7 decimales) - usar el mismo formato que al fondear
+      // DEBE coincidir exactamente con el amount usado al fondear
+      const rawAmount = parseFloat(task.price);
+      const roundedAmount = Math.round(rawAmount * 10000000) / 10000000;
+      const amountString = roundedAmount.toFixed(7);
+      const amount = parseFloat(amountString); // Asegurar exactamente 7 decimales
 
+      console.log('🔐 Creando escrow con Trustless Work...');
 
-      // Guardar secret key en estado para usar después (configurar multisig)
-      setEscrowKeypairSecret(escrowAccount.secretKey);
-      
-      // Guardar secret key en backend de forma segura ANTES de crear la cuenta
-      try {
-        const token = localStorage.getItem('token');
-        if (token && taskId) {
-          await axios.post(`${API_URL}/auth/save_escrow_secret.php`, {
-            task_id: parseInt(taskId, 10),
-            escrow_secret: escrowAccount.secretKey
-          }, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          });
-        }
-      } catch (error) {
-        // Continuar de todas formas
+      const result = await createTrustlessEscrow(
+        {
+          signer: clientAddress,
+          engagementId,
+          title: task.title,
+          description: task.description,
+          amount,
+          approver: clientAddress,
+          serviceProvider: workerAddress,
+          receiver: workerAddress,
+          milestoneDescription: `Completar tarea: ${task.title}`
+        },
+        kit,
+        deployEscrow,
+        sendTransaction
+      );
+
+      if (!result.success) {
+        console.error('❌ Error al crear escrow:', result.error);
+        return {
+          success: false,
+          error: result.error || 'Error al crear el escrow'
+        };
       }
 
-      // Crear el escrow (sistema antiguo: multisig 2-de-2)
-      // Esto requiere una firma del cliente
-      
-      // Cargar cuenta fuente
-      const sourceAccount = await horizonServer.loadAccount(clientAddress);
-      
-      // Costo de crear cuenta escrow: 2.5 XLM
-      const escrowCreationCost = 2.5;
-      const startingBalanceStr = escrowCreationCost.toFixed(7);
-      
-      console.log(`💰 Creando cuenta escrow con costo de ${escrowCreationCost} XLM`);
-      
-      // Crear transacción simple
-      const transaction = new TransactionBuilder(sourceAccount, {
-        fee: '100',
-        networkPassphrase: Networks.TESTNET
-      })
-        .addOperation(Operation.createAccount({
-          destination: escrowPublicKey,
-          startingBalance: startingBalanceStr
-        }))
-        .setTimeout(300)
-        .build();
-      
-      // Convertir a XDR y firmar
-      const finalXdr = transaction.toXDR();
-      kit.setWallet('freighter');
-      
-      // Usar la misma forma que en useWallet.ts
-      const { signedTxXdr } = await kit.signTransaction(finalXdr, {
-        address: clientAddress,
-        networkPassphrase: Networks.TESTNET
-      });
-      
-      // Verificar que el XDR firmado sea diferente del original (debe tener firmas)
-      if (signedTxXdr === finalXdr) {
-        throw new Error('❌ ERROR: El XDR firmado es idéntico al original. Freighter no firmó la transacción.');
-      }
-      
-      console.log(`✅ Transacción firmada exitosamente`);
-      console.log(`📋 XDR firmado (longitud: ${signedTxXdr.length} caracteres)`);
-      
-      // Decodificar solo para verificación
-      const signedTx = TransactionBuilder.fromXDR(signedTxXdr, Networks.TESTNET);
-      
-      // Verificar que la transacción tenga firmas
-      const signatures = signedTx.signatures;
-      console.log(`🔐 Número de firmas: ${signatures.length}`);
-      
-      if (signatures.length === 0) {
-        throw new Error('❌ ERROR: La transacción no tiene firmas. Freighter no firmó correctamente.');
-      }
-      
-      // Verificar que la cuenta fuente sea correcta
-      const txSource = (signedTx as any).source;
-      const txSourceId = typeof txSource === 'string' ? txSource : (txSource?.accountId?.() || txSource?.toString());
-      console.log(`🔍 Cuenta fuente en transacción: ${txSourceId}`);
-      console.log(`🔍 Cuenta esperada: ${clientAddress}`);
-      
-      if (txSourceId !== clientAddress) {
-        console.warn(`⚠️ ADVERTENCIA: La cuenta fuente (${txSourceId}) no coincide con ${clientAddress}, pero continuando...`);
-      }
-      
-      // Intentar enviar usando el objeto Transaction decodificado
-      // Si falla, intentaremos con el XDR directamente
-      let result;
-      try {
-        console.log(`📤 Enviando transacción a Horizon usando objeto Transaction...`);
-        result = await horizonServer.submitTransaction(signedTx);
-        console.log(`✅ Transacción enviada exitosamente. Hash: ${result.hash}`);
-      } catch (submitError: any) {
-        // Capturar y mostrar el error detallado de Horizon
-        console.error('❌ ========== ERROR AL ENVIAR TRANSACCIÓN ==========');
-        console.error('Error completo:', submitError);
-        
-        // Intentar obtener los result codes de Stellar
-        const responseData = submitError.response?.data;
-        const resultCodes = responseData?.extras?.result_codes;
-        const errorDetail = responseData?.detail || submitError.message;
-        const errorType = responseData?.type;
-        const errorTitle = responseData?.title;
-        
-        console.error('📋 Detalles del error:');
-        console.error('   - Tipo:', errorType);
-        console.error('   - Título:', errorTitle);
-        console.error('   - Detalle:', errorDetail);
-        
-        if (resultCodes) {
-          console.error('📋 Result Codes de Stellar:');
-          console.error('   - Transaction:', resultCodes.transaction);
-          console.error('   - Operations:', resultCodes.operations);
-          
-          // Mensajes específicos para códigos comunes
-          let errorMessage = 'Error al enviar transacción a Stellar: ';
-          
-          if (resultCodes.transaction === 'tx_bad_seq') {
-            errorMessage += 'La secuencia de la cuenta está desactualizada. Por favor, recarga la página e intenta de nuevo.';
-          } else if (resultCodes.transaction === 'tx_bad_auth') {
-            errorMessage += 'Faltan firmas o las firmas son inválidas. Verifica que la transacción esté correctamente firmada.';
-          } else if (resultCodes.transaction === 'tx_too_late') {
-            errorMessage += 'La transacción ha expirado. Por favor, crea una nueva transacción.';
-          } else if (resultCodes.transaction === 'tx_insufficient_balance') {
-            errorMessage += 'Balance insuficiente en tu wallet. Verifica que tengas suficiente XLM (se requieren 2.5 XLM + fees).';
-          } else if (resultCodes.transaction === 'tx_missing_operation') {
-            errorMessage += 'La transacción no tiene operaciones válidas.';
-          } else if (resultCodes.transaction === 'tx_fee_bump_inside_fee_bump') {
-            errorMessage += 'Error en la estructura de la transacción.';
-          } else if (resultCodes.transaction) {
-            errorMessage += `Error de transacción: ${resultCodes.transaction}`;
-          }
-          
-          // Verificar errores de operación
-          if (resultCodes.operations && resultCodes.operations.length > 0) {
-            const opError = resultCodes.operations[0];
-            console.error('   - Error de operación:', opError);
-            
-            if (opError === 'op_underfunded') {
-              errorMessage += ' Balance insuficiente para crear la cuenta escrow.';
-            } else if (opError === 'op_low_reserve') {
-              errorMessage += ' El startingBalance es menor que el mínimo requerido (1 XLM).';
-            } else if (opError === 'op_already_exists') {
-              errorMessage += ' La cuenta escrow ya existe.';
-            } else if (opError) {
-              errorMessage += ` Error de operación: ${opError}`;
-            }
-          }
-          
-          throw new Error(errorMessage);
-        } else {
-          // Si no hay result codes, usar el mensaje genérico
-          throw new Error(`Error al enviar transacción a Stellar: ${errorDetail || submitError.message}`);
-        }
+      if (!result.contractId) {
+        console.error('❌ No se recibió contractId:', result);
+        return {
+          success: false,
+          error: 'No se pudo obtener el contractId del escrow creado'
+        };
       }
 
-      // Esperar un momento para que la transacción se procese
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log('✅ Escrow creado:', result.contractId);
 
-      // Verificar que la cuenta escrow fue creada
-      try {
-        const escrowAccountAfter = await horizonServer.loadAccount(escrowPublicKey);
-        const escrowBalance = escrowAccountAfter.balances.find((b: any) => b.asset_type === 'native');
-        const escrowBalanceAmount = parseFloat(escrowBalance?.balance || '0');
-        console.log(`💳 Balance de la cuenta escrow creada: ${escrowBalanceAmount} XLM`);
-        
-        if (Math.abs(escrowBalanceAmount - escrowCreationCost) > 0.0000001) {
-          console.warn(`⚠️ ADVERTENCIA: El balance de la cuenta escrow (${escrowBalanceAmount} XLM) no coincide con el startingBalance esperado (${escrowCreationCost} XLM).`);
-        } else {
-          console.log(`✅ Verificación de escrow: La cuenta escrow tiene el balance correcto (${escrowBalanceAmount} XLM)`);
-        }
-      } catch (escrowError) {
-        console.warn(`⚠️ No se pudo verificar el balance del escrow:`, escrowError);
-      }
+      const txHash = (result as any).txHash || '';
 
-      // Guardar escrow_id en el backend
+      // Guardar escrow_id y amount exacto en el backend
       try {
         const token = localStorage.getItem('token');
         if (token && taskId && selectedProposal) {
-          // Obtener la wallet del cliente desde useWallet
-          const clientWalletAddress = address || null;
-          
           const payload = {
             task_id: parseInt(taskId, 10),
             proposal_id: selectedProposal.id,
-            escrow_id: escrowPublicKey,
-            transaction_hash: result.hash,
-            client_wallet_address: clientWalletAddress // Enviar wallet del cliente
+            escrow_id: result.contractId,
+            transaction_hash: txHash,
+            client_wallet_address: clientAddress,
+            escrow_amount: amount // Guardar el amount exacto usado al crear el escrow
           };
-          
-          console.log(`💾 Guardando escrow en backend...`);
-          console.log(`📋 Datos a enviar:`, payload);
-          console.log(`📋 Tipo de task_id:`, typeof payload.task_id, `Valor:`, payload.task_id);
-          console.log(`📋 Tipo de proposal_id:`, typeof payload.proposal_id, `Valor:`, payload.proposal_id);
-          console.log(`📋 selectedProposal completo:`, selectedProposal);
-          
-          const createEscrowResponse = await axios.post(`${API_URL}/auth/create_escrow.php`, payload, {
+
+          await axios.post(`${API_URL}/auth/create_escrow.php`, payload, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
             }
-          });
-          console.log(`✅ Escrow guardado en backend:`, createEscrowResponse.data);
-        } else {
-          console.warn(`⚠️ No se pudo guardar escrow en backend:`, {
-            token: !!token,
-            taskId: taskId,
-            selectedProposal: !!selectedProposal
           });
         }
       } catch (error: any) {
         console.error('❌ Error al guardar escrow en backend:', error);
-        console.error('   URL intentada:', `${API_URL}/auth/create_escrow.php`);
-        console.error('   Status:', error.response?.status);
-        console.error('   Mensaje:', error.response?.data || error.message);
-        console.error('   Datos enviados:', {
-          task_id: taskId ? parseInt(taskId, 10) : null,
-          proposal_id: selectedProposal?.id,
-          escrow_id: escrowPublicKey
-        });
-        // Continuar de todas formas - la transacción ya se completó en Stellar
-        console.warn('⚠️ Continuando sin guardar en backend. La transacción de Stellar ya se completó.');
+        // Continuar de todas formas - el escrow ya se creó en Trustless Work
       }
+      
+      // Guardar el amount exacto en localStorage para usarlo al fondear
+      localStorage.setItem(`escrow_amount_${result.contractId}`, amountString);
       
       return {
         success: true,
-        escrowId: escrowPublicKey,
-        txHash: result.hash
+        escrowId: result.contractId,
+        txHash: txHash
       };
       
     } catch (error: any) {
-      
       if (error.message?.includes('User declined')) {
         return { success: false, error: 'Transacción cancelada por el usuario' };
       }
@@ -464,10 +307,10 @@ const ProposalReview = () => {
   };
 
   /* ============================================
-   * SISTEMA ANTIGUO: MULTISIG 2-DE-2 (RESTAURADO)
+   * SISTEMA TRUSTLESS WORK - IMPLEMENTADO
    * ============================================
    * Función para enviar dinero al escrow (Paso 3 del popup)
-   * Sistema restaurado: 2025-11-22
+   * Usa Trustless Work para fondear el escrow
    * ============================================ */
   const handleFundEscrow = async (escrowId: string) => {
     try {
@@ -483,98 +326,143 @@ const ProposalReview = () => {
         return { success: false, error: 'No se encontró información de la tarea' };
       }
 
-      // Obtener monto de la tarea
-      const amount = task.price;
-      const horizonServer = getHorizonServer();
-
-      // Obtener kit de wallets para firmar transacción
       if (!kit) {
         return { success: false, error: 'Kit de wallets no inicializado. Por favor reconecta tu wallet.' };
       }
 
-      // Crear transacción XDR para que Freighter la firme
-      const sourceAccount = await horizonServer.loadAccount(address);
-      const escrowPublicKey = escrowId;
-
-      // El escrow ya fue creado en el paso anterior
-      // Ahora fondeamos con el precio completo de la tarea
-      const totalAmount = parseFloat(amount);
-      const paymentAmount = totalAmount; // Fondear el precio completo de la tarea
+      // Obtener el amount exacto que se usó al crear el escrow
+      // CRÍTICO: Debe ser EXACTAMENTE el mismo amount que se usó al crear el escrow
+      // Obtener el amount exacto que se usó al crear el escrow
+      // CRÍTICO: Debe ser EXACTAMENTE el mismo amount que se usó al crear el escrow
+      let amount: number;
+      const savedAmountString = localStorage.getItem(`escrow_amount_${escrowId}`);
       
-      // Crear transacción para enviar el resto del dinero al escrow
-      const transaction = new TransactionBuilder(sourceAccount, {
-        fee: '100',
-        networkPassphrase: Networks.TESTNET
-      })
-        .addOperation(
-          Operation.payment({
-            destination: escrowPublicKey,
-            asset: Asset.native(),
-            amount: paymentAmount.toString()
-          })
-        )
-
-      const builtTransaction = transaction.setTimeout(30).build();
-
-      // Asegurar que siempre use Freighter
-      kit.setWallet('freighter');
-      
-      // Firmar con Freighter
-      const { signedTxXdr } = await kit.signTransaction(builtTransaction.toXDR(), {
-        address: address,
-        networkPassphrase: Networks.TESTNET
-      });
-      
-      // Enviar transacción
-      const signedTx = TransactionBuilder.fromXDR(signedTxXdr, Networks.TESTNET);
-      const result = await horizonServer.submitTransaction(signedTx);
-
-
-      // Configurar multisig 2-de-2 DESPUÉS de fondear
-      // Esto asegura que cada escrow sea independiente y seguro
-      if (escrowKeypairSecret) {
-        try {
-          const escrowKeypair = Keypair.fromSecret(escrowKeypairSecret);
-          const clientAddress = address;
-          const workerAddress = selectedProposal.worker_wallet_address;
-        
-          
-          // Configurar multisig (requiere que la cuenta esté fondeada)
-          const multisigResult = await setupMultisig(
-            escrowKeypair,
-            clientAddress,
-            workerAddress,
-            horizonServer
-          );
-        
-          if (multisigResult.success) {
-            console.log('🔒 Escrow seguro: requiere 2 firmas (cliente + trabajador) para liberar fondos');
-        } else {
-            // Continuar de todas formas, el escrow está fondeado pero sin multisig
-            // En producción, esto debería ser un error crítico
-          }
-        } catch (multisigError: any) {
-          // Continuar de todas formas
-        }
+      if (savedAmountString) {
+        // Usar el amount exacto guardado al crear el escrow
+        // Procesarlo de la misma manera que al crear para garantizar coincidencia exacta
+        const savedAmount = parseFloat(savedAmountString);
+        const amountAsInteger = Math.round(savedAmount * 10000000);
+        amount = amountAsInteger / 10000000;
+        console.log('✅ Usando amount exacto guardado al crear el escrow:', {
+          savedString: savedAmountString,
+          savedAmount: savedAmount,
+          amountAsInteger: amountAsInteger,
+          finalAmount: amount,
+          finalAmountString: amount.toFixed(7)
+        });
       } else {
-        // Intentar obtener del backend
+        // Fallback: calcular desde task.price (debería coincidir)
+        console.warn('⚠️ No se encontró amount guardado, calculando desde task.price');
+        const rawAmount = parseFloat(task.price);
+        
+        if (isNaN(rawAmount) || rawAmount <= 0) {
+          return {
+            success: false,
+            error: `Amount inválido: ${task.price}. Debe ser un número positivo.`
+          };
+        }
+
+        // Usar el mismo método que al crear el escrow
+        const amountAsInteger = Math.round(rawAmount * 10000000);
+        amount = amountAsInteger / 10000000;
+        console.log('⚠️ Amount calculado desde task.price:', {
+          rawAmount: rawAmount,
+          amountAsInteger: amountAsInteger,
+          finalAmount: amount,
+          finalAmountString: amount.toFixed(7)
+        });
+      }
+      
+      // Validar que el amount sea válido
+      if (isNaN(amount) || amount <= 0) {
+        return {
+          success: false,
+          error: `Amount inválido: ${amount}. Debe ser un número positivo.`
+        };
+      }
+
+      // IMPORTANTE: Esperar antes del primer intento de fondeo
+      // Trustless Work necesita tiempo para indexar el escrow en la blockchain
+      // después de crearlo. Sin esta espera, el escrow no estará disponible para fondear.
+      console.log('⏳ Esperando 120 segundos para que el escrow esté completamente indexado...');
+      console.log('💡 Esto es necesario porque Trustless Work debe indexar el escrow en la blockchain antes de poder fondearlo');
+      console.log('💡 Mientras tanto, verifica que:');
+      console.log('   1. Tu wallet Freighter tiene trustline de USDC configurado');
+      console.log('   2. Tu wallet tiene suficiente balance de USDC (al menos ' + amount + ' USDC + fees)');
+      console.log('   3. El issuer de USDC es: GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5');
+      await new Promise(resolve => setTimeout(resolve, 120000)); // 120 segundos de espera inicial
+      console.log('✅ Espera completada. Intentando fondear el escrow...');
+
+      // Intentar fondear el escrow con reintentos
+      // Si falla con error 400, puede ser que el escrow aún no esté completamente disponible
+      let result: { success: boolean; txHash?: string; error?: string } | null = null;
+      const maxRetries = 3;
+      const retryDelays = [60000, 120000, 180000]; // 60s, 120s, 180s entre reintentos (ya esperamos 120s inicialmente)
+      
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          const token = localStorage.getItem('token');
-          if (token && taskId) {
-            // El secret key ya debería estar guardado en el paso anterior
-            // Por ahora continuamos sin multisig, pero esto es un problema de seguridad
+          console.log(`🔄 Intento ${attempt}/${maxRetries} de fondeo...`);
+          result = await fundTrustlessEscrow(
+            escrowId,
+            amount,
+            address,
+            kit,
+            fundEscrow,
+            sendTransaction,
+            async (contractIds: string[]) => {
+              try {
+                // CRÍTICO: Usar validateOnChain: true para verificar que el escrow esté completamente disponible en la blockchain
+                const result = await getEscrowByContractIds({ 
+                  contractIds,
+                  validateOnChain: true 
+                });
+                // El resultado puede tener diferentes estructuras, devolvemos el resultado completo
+                return Array.isArray(result) ? result : (result as any)?.escrows || result || [];
+              } catch (error) {
+                console.warn('Error al verificar indexación:', error);
+                return [];
+              }
+            }
+          );
+          
+          if (result.success) {
+            console.log('✅ Escrow fondeado exitosamente');
+            break;
+          } else if (attempt < maxRetries) {
+            const delay = retryDelays[attempt - 1];
+            console.log(`⏳ Esperando ${delay / 1000} segundos antes del siguiente intento...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+        } catch (error: any) {
+          if (attempt === maxRetries) {
+            result = {
+              success: false,
+              error: error.message || 'Error al fondear el escrow después de múltiples intentos'
+            };
+            break;
+          }
+          
+          const delay = retryDelays[attempt - 1];
+          console.log(`⚠️ Intento ${attempt} falló: ${error.message}`);
+          console.log(`⏳ Esperando ${delay / 1000} segundos antes del siguiente intento...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
-      } catch (error) {
-        }
+      }
+
+      // Si no hay resultado o falló, retornar error
+      if (!result || !result.success) {
+        return {
+          success: false,
+          error: result?.error || 'Error al fondear el escrow después de múltiples intentos'
+        };
       }
       
       return {
         success: true,
-        txHash: result.hash
+        txHash: result.txHash || ''
       };
       
     } catch (error: any) {
-      
       if (error.message?.includes('User declined')) {
         return { success: false, error: 'Transacción cancelada por el usuario' };
       }
@@ -583,17 +471,7 @@ const ProposalReview = () => {
     }
   };
   // ============================================
-  // FIN SISTEMA ANTIGUO - RESTAURADO
-  // ============================================
-
-  // ============================================
-  // SISTEMA NUEVO: SOROBAN - COMENTADO
-  // ============================================
-  // ============================================
-  // SISTEMA TRUSTLESS WORK - ELIMINADO COMPLETAMENTE
-  // ============================================
-  // Todo el código de Trustless Work ha sido eliminado
-  // Sistema restaurado: Multisig 2-de-2 (sistema antiguo)
+  // FIN SISTEMA TRUSTLESS WORK
   // ============================================
 
   // Función para seleccionar trabajador en la base de datos (Paso 4 del popup)
@@ -683,9 +561,9 @@ const ProposalReview = () => {
     // Mostrar mensaje de éxito mejorado
     setPopupMessage(`✅ CONTRATO ACTIVADO EXITOSAMENTE!
         
-💰 Monto total: ${task?.price || 'N/A'} ${task?.currency || 'XLM'}
-💵 Recibirás: ${netAmount.toFixed(7)} XLM (neto)
-📊 Comisión ArcusX (0.3%): ${commission.toFixed(7)} XLM
+💰 Monto total: ${task?.price || 'N/A'} ${task?.currency || 'USDC'}
+💵 Recibirás: ${netAmount.toFixed(7)} USDC (neto)
+📊 Comisión ArcusX (0.3%): ${commission.toFixed(7)} USDC
 🌐 Red: Stellar Testnet
 👤 Trabajador: ${selectedProposal?.applicant_username}
 
@@ -855,7 +733,7 @@ const ProposalReview = () => {
               marginTop: '1rem'
             }}>
               <p style={{ margin: 0, color: '#4ade80', fontSize: '0.9rem' }}>
-                ✅ <strong>Sistema Multisig 2-de-2:</strong> Se crea una cuenta escrow única para cada tarea. Requiere 2.5 XLM para crear la cuenta y el precio completo de la tarea para fondear. Los fondos están seguros y requieren ambas firmas (cliente + trabajador) para liberar.
+                ✅ <strong>Sistema Multisig 2-de-2:</strong> Se crea una cuenta escrow única para cada tarea. Los fondos en USDC están seguros y requieren ambas firmas (cliente + trabajador) para liberar.
               </p>
             </div>
           </div>

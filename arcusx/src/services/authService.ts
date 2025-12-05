@@ -95,10 +95,13 @@ export const authService = {
   // Funciones para autenticación con Supabase OAuth
   async signInWithGoogle() {
     try {
-      // FORZAR SIEMPRE arcusx.one - nunca localhost
-      const redirectUrl = 'https://arcusx.one/auth/callback';
+      // Detectar si estamos en desarrollo o producción
+      const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const redirectUrl = isDevelopment 
+        ? `${window.location.origin}/auth/callback`
+        : 'https://arcusx.one/auth/callback';
       
-      console.log('Google OAuth - Forzando redirect a:', redirectUrl);
+      console.log('Google OAuth - Redirect URL:', redirectUrl, '(Development:', isDevelopment, ')');
       
       // Usar skipBrowserRedirect para interceptar la URL
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -142,10 +145,13 @@ export const authService = {
 
   async signInWithGitHub() {
     try {
-      // FORZAR SIEMPRE arcusx.one - nunca localhost
-      const redirectUrl = 'https://arcusx.one/auth/callback';
+      // Detectar si estamos en desarrollo o producción
+      const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const redirectUrl = isDevelopment 
+        ? `${window.location.origin}/auth/callback`
+        : 'https://arcusx.one/auth/callback';
       
-      console.log('GitHub OAuth - Forzando redirect a:', redirectUrl);
+      console.log('GitHub OAuth - Redirect URL:', redirectUrl, '(Development:', isDevelopment, ')');
       
       // Usar skipBrowserRedirect para interceptar la URL
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -165,19 +171,22 @@ export const authService = {
       if (data?.url) {
         let finalUrl = data.url;
         
-        // Reemplazar cualquier referencia a localhost con arcusx.one
-        finalUrl = finalUrl.replace(/http:\/\/localhost:\d+/g, 'https://arcusx.one');
-        finalUrl = finalUrl.replace(/https?:\/\/localhost:\d+/g, 'https://arcusx.one');
-        
-        // Asegurar que el redirect_uri en los query params también sea correcto
-        const urlObj = new URL(finalUrl);
-        const redirectUri = urlObj.searchParams.get('redirect_uri');
-        if (redirectUri && redirectUri.includes('localhost')) {
-          urlObj.searchParams.set('redirect_uri', redirectUrl);
-          finalUrl = urlObj.toString();
+        // Solo corregir si estamos en producción
+        if (!isDevelopment) {
+          // Reemplazar cualquier referencia a localhost con arcusx.one
+          finalUrl = finalUrl.replace(/http:\/\/localhost:\d+/g, 'https://arcusx.one');
+          finalUrl = finalUrl.replace(/https?:\/\/localhost:\d+/g, 'https://arcusx.one');
+          
+          // Asegurar que el redirect_uri en los query params también sea correcto
+          const urlObj = new URL(finalUrl);
+          const redirectUri = urlObj.searchParams.get('redirect_uri');
+          if (redirectUri && redirectUri.includes('localhost')) {
+            urlObj.searchParams.set('redirect_uri', redirectUrl);
+            finalUrl = urlObj.toString();
+          }
         }
         
-        console.log('URL corregida:', finalUrl);
+        console.log('URL final:', finalUrl);
         window.location.href = finalUrl;
       }
       
@@ -189,15 +198,28 @@ export const authService = {
 
   async handleSupabaseCallback() {
     try {
+      console.log('🔄 handleSupabaseCallback iniciado');
+      
       // Sincronizar usuario con backend PHP para obtener token JWT
       // La sesión ya fue obtenida en AuthCallback.tsx
       const { data: { session }, error } = await supabase.auth.getSession();
       
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error obteniendo sesión en handleSupabaseCallback:', error);
+        throw error;
+      }
       
       if (!session?.user) {
+        console.error('❌ No hay sesión en handleSupabaseCallback');
         return null;
       }
+
+      console.log('📤 Enviando datos al backend para sincronización...');
+      console.log('Usuario:', {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.user_metadata?.full_name || session.user.user_metadata?.name
+      });
 
       const syncResponse = await axios.post(`${API_URL}/auth/sync_supabase_user.php`, {
         supabase_user_id: session.user.id,
@@ -206,16 +228,25 @@ export const authService = {
         avatar_url: session.user.user_metadata?.avatar_url || null
       });
       
+      console.log('📥 Respuesta del backend:', syncResponse.data);
+      
       if (syncResponse.data.success && syncResponse.data.token) {
+        console.log('✅ Token recibido, guardando en localStorage...');
         localStorage.setItem('token', syncResponse.data.token);
         localStorage.setItem('user', JSON.stringify(syncResponse.data.user));
         // Guardar también el access_token de Supabase por si lo necesitamos
         localStorage.setItem('supabase_access_token', session.access_token);
+        console.log('✅ Datos guardados exitosamente');
         return syncResponse.data;
       }
       
+      console.error('❌ Respuesta del backend no exitosa:', syncResponse.data);
       throw new Error(syncResponse.data.message || 'Error al sincronizar usuario');
-    } catch (error) {
+    } catch (error: any) {
+      console.error('❌ Error en handleSupabaseCallback:', error);
+      if (error.response) {
+        console.error('Respuesta de error:', error.response.data);
+      }
       throw error;
     }
   },

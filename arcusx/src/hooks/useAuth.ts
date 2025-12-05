@@ -33,11 +33,13 @@ export const useAuth = () => {
 
     // Escuchar eventos de almacenamiento (para cambios entre pestañas)
     window.addEventListener('storage', handleStorageChange);
-
-    // Verificar autenticación periódicamente (cada 5 segundos)
+    
+    // Verificar autenticación periódicamente para detectar cambios rápidos
+    // Esto es necesario porque el evento 'storage' solo se dispara entre pestañas
+    // Verificamos cada 500ms para detectar cambios en la misma pestaña
     const interval = setInterval(() => {
       checkAuth();
-    }, 5000);
+    }, 500);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);

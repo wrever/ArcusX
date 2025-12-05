@@ -21,7 +21,7 @@ const CreateTask = () => {
     title: '',
     description: '',
     price: '',
-    currency: 'XLM', // Moneda por defecto (Stellar Lumens)
+    currency: 'USDC', // Moneda por defecto (USD Coin)
     difficulty: 'Fácil',
     category: 'Desarrollo',
     subtitle: ''
@@ -193,7 +193,7 @@ const CreateTask = () => {
           title: '',
           description: '',
           price: '',
-          currency: 'XLM',
+          currency: 'USDC',
           difficulty: 'Fácil',
           category: 'Desarrollo',
           subtitle: ''
@@ -228,7 +228,7 @@ const CreateTask = () => {
           title: '',
           description: '',
           price: '',
-          currency: 'XLM',
+          currency: 'USDC',
           difficulty: 'Fácil',
           category: 'Desarrollo',
           subtitle: ''
@@ -390,13 +390,13 @@ const CreateTask = () => {
             {formData.price && netAmount && commissionAmount && (
               <div className="net-amount-display">
                 <p className="net-amount-text">
-                  💰 Trabajador recibirá: <strong>{netAmount} XLM</strong>
+                  💰 Trabajador recibirá: <strong>{netAmount} USDC</strong>
                 </p>
                 <p className="commission-text">
-                  📊 Comisión (0.3%): {commissionAmount} XLM
+                  📊 Comisión (0.3%): {commissionAmount} USDC
                 </p>
                 <p className="contract-cost-text">
-                  ⚠️ Costo contrato: <strong>2.5 XLM</strong> para crear la cuenta escrow + fees de transacción
+                  ⚠️ Nota: Se requiere una pequeña cantidad de XLM para fees de transacción de Stellar (~0.0001 XLM)
                 </p>
               </div>
             )}
@@ -423,7 +423,7 @@ const CreateTask = () => {
                   type="text"
                   id="currency"
                   name="currency"
-                  value="XLM"
+                  value="USDC"
                   readOnly
                   disabled
                   className="currency-readonly"
@@ -481,9 +481,9 @@ const CreateTask = () => {
               <p style={{ marginTop: '1rem' }}><strong>💰 Sobre los costos:</strong></p>
               <ul>
                 <li><strong>Comisión ArcusX (0.3%):</strong> Se retiene automáticamente del pago al trabajador. El trabajador recibirá el monto neto (99.7% del total) al completar la tarea.</li>
-                <li><strong>Costo de creación de contrato:</strong> 2.5 XLM para crear la cuenta escrow única en Stellar + fees de transacción (~0.00001 XLM).</li>
-                <li><strong>Total a pagar:</strong> El monto de la tarea que estableces en XLM + 2.5 XLM para crear el escrow. La comisión del 0.3% se deduce del pago al trabajador, no es un costo adicional para ti.</li>
-                <li><strong>Importante:</strong> El sistema usa XLM (Lumens nativos de Stellar). Se requiere 2.5 XLM para crear la cuenta escrow + el precio de la tarea para fondear.</li>
+                <li><strong>Moneda:</strong> El sistema usa USDC (USD Coin) como moneda principal para todos los pagos.</li>
+                <li><strong>Total a pagar:</strong> El monto de la tarea que estableces en USDC. La comisión del 0.3% se deduce del pago al trabajador, no es un costo adicional para ti.</li>
+                <li><strong>Fees de transacción:</strong> Se requiere una pequeña cantidad de XLM para fees de transacción de Stellar (~0.0001 XLM por transacción).</li>
                 <li>Estos costos garantizan la seguridad de las transacciones y el mantenimiento de la plataforma.</li>
               </ul>
             </div>

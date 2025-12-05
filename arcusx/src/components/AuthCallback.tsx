@@ -11,78 +11,129 @@ const AuthCallback = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const handleCallback = async () => {
-      try {
-        // SIEMPRE redirigir a arcusx.one si estamos en localhost
-        if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-          const urlParams = new URLSearchParams(window.location.search);
-          const code = urlParams.get('code');
-          const error = urlParams.get('error');
-          const errorDescription = urlParams.get('error_description');
-          
-          // Construir nueva URL con todos los parámetros
-          const newUrl = new URL('https://arcusx.one/auth/callback');
-          if (code) newUrl.searchParams.set('code', code);
-          if (error) newUrl.searchParams.set('error', error);
-          if (errorDescription) newUrl.searchParams.set('error_description', errorDescription);
-          
-          // Redirigir inmediatamente
-          window.location.replace(newUrl.toString());
-          return;
+    console.log('🔐 AuthCallback iniciado en:', window.location.hostname);
+    
+    // Escuchar cambios en el estado de autenticación
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔔 Evento de autenticación:', event, 'Sesión:', session?.user?.email);
+      
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (session?.user) {
+          try {
+            console.log('✅ Usuario autenticado:', session.user.email);
+            console.log('🔄 Sincronizando con backend...');
+
+            // Sincronizar usuario con backend PHP para obtener token JWT
+            const result = await authService.handleSupabaseCallback();
+            
+            console.log('📦 Resultado de sincronización:', result);
+            
+            if (result && result.user?.id) {
+              console.log('✅ Usuario sincronizado exitosamente');
+              console.log('🔑 Token guardado en localStorage');
+              
+              // Esperar un momento para asegurar que el token esté guardado
+              await new Promise(resolve => setTimeout(resolve, 300));
+              
+              // Verificar que el token esté realmente guardado
+              const token = localStorage.getItem('token');
+              if (!token) {
+                console.error('❌ Token no encontrado en localStorage después de guardar');
+                setError('Error al guardar la sesión. Por favor, intenta iniciar sesión nuevamente.');
+                setLoading(false);
+                return;
+              }
+              
+              console.log('✅ Token verificado, redirigiendo a dashboard...');
+              // Usar window.location para forzar recarga completa y asegurar que ProtectedRoute vea el token
+              window.location.href = '/dashboard';
+            } else {
+              console.error('❌ No se pudo sincronizar usuario:', result);
+              setError('No se pudo completar la autenticación. Por favor, intenta iniciar sesión nuevamente.');
+              setLoading(false);
+            }
+          } catch (err: any) {
+            console.error('❌ Error sincronizando usuario:', err);
+            const errorMessage = err.response?.data?.message || err.message || 'Error al procesar la autenticación';
+            setError(errorMessage);
+            setLoading(false);
+          }
         }
-        
-        // Supabase procesa automáticamente los parámetros de la URL
-        // Esperamos un momento para que Supabase procese la sesión
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Obtener la sesión de Supabase
+      } else if (event === 'SIGNED_OUT') {
+        console.log('👋 Usuario cerró sesión');
+        setError('Sesión cerrada. Por favor, inicia sesión nuevamente.');
+        setLoading(false);
+      }
+    });
+
+    // También intentar obtener la sesión actual inmediatamente
+    const checkSession = async () => {
+      try {
+        console.log('🔍 Verificando sesión actual...');
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
-          throw sessionError;
-        }
-        
-        if (!session?.user) {
-          setError('No se pudo obtener la sesión de autenticación');
-          setLoading(false);
+          console.error('❌ Error obteniendo sesión:', sessionError);
+          // No lanzar error aquí, esperar a onAuthStateChange
           return;
         }
+        
+        if (session?.user) {
+          console.log('✅ Sesión encontrada, usuario:', session.user.email);
+          console.log('🔄 Sincronizando con backend...');
 
-        // Sincronizar usuario con backend PHP para obtener token JWT
-        const result = await authService.handleSupabaseCallback();
-        
-        // COMENTADO - HUMAN ID
-        // if (result && result.user?.id) {
-        //   // Verificar si el usuario tiene Human ID verificado
-        //   const isHumanIdVerified = await verifyHumanIdViaBackend(result.user.id);
-        //   
-        //   // Si no está verificado, redirigir a verificación de identidad
-        //   if (!isHumanIdVerified) {
-        //     navigate('/verify-identity', { replace: true });
-        //   } else {
-        //     // Si está verificado, redirigir al dashboard
-        //     navigate('/dashboard', { replace: true });
-        //   }
-        // } else {
-        //   setError('No se pudo completar la autenticación');
-        //   setLoading(false);
-        // }
-        
-        if (result && result.user?.id) {
-          // Redirigir directamente al dashboard (sin verificación Human ID)
-          navigate('/dashboard', { replace: true });
+          // Sincronizar usuario con backend PHP para obtener token JWT
+          const result = await authService.handleSupabaseCallback();
+          
+          console.log('📦 Resultado de sincronización:', result);
+          
+          if (result && result.user?.id) {
+            console.log('✅ Usuario sincronizado exitosamente');
+            console.log('🔑 Token guardado en localStorage');
+            
+            // Esperar un momento para asegurar que el token esté guardado
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
+            // Verificar que el token esté realmente guardado
+            const token = localStorage.getItem('token');
+            if (!token) {
+              console.error('❌ Token no encontrado en localStorage después de guardar');
+              setError('Error al guardar la sesión. Por favor, intenta iniciar sesión nuevamente.');
+              setLoading(false);
+              return;
+            }
+            
+            console.log('✅ Token verificado, redirigiendo a dashboard...');
+            // Usar window.location para forzar recarga completa y asegurar que ProtectedRoute vea el token
+            window.location.href = '/dashboard';
+          } else {
+            console.error('❌ No se pudo sincronizar usuario:', result);
+            setError('No se pudo completar la autenticación. Por favor, intenta iniciar sesión nuevamente.');
+            setLoading(false);
+          }
         } else {
-          setError('No se pudo completar la autenticación');
-          setLoading(false);
+          console.log('⏳ No hay sesión activa, esperando callback de Supabase...');
+          // Esperar a que Supabase procese la URL
+          setTimeout(() => {
+            if (loading) {
+              console.log('⏰ Timeout esperando sesión, verificando nuevamente...');
+              checkSession();
+            }
+          }, 2000);
         }
       } catch (err: any) {
-        setError(err.response?.data?.message || err.message || 'Error al procesar la autenticación');
-        setLoading(false);
+        console.error('❌ Error verificando sesión:', err);
+        // No establecer error aquí, esperar a onAuthStateChange
       }
     };
 
-    handleCallback();
-  }, [navigate]);
+    checkSession();
+
+    // Limpiar suscripción al desmontar
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [navigate, loading]);
 
   if (loading) {
     return (
@@ -119,7 +170,18 @@ const AuthCallback = () => {
     );
   }
 
-  return null;
+  // Mantener el componente montado mientras procesa
+  return (
+    <div className="login-container">
+      <div className="login-card">
+        <div className="login-header">
+          <div className="login-logo">ArcusX</div>
+          <h2>Completando autenticación...</h2>
+          <p>Por favor espera</p>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default AuthCallback;

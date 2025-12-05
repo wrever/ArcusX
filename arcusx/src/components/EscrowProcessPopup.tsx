@@ -49,7 +49,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
     {
       id: 'create',
       title: 'Crear Contrato',
-      description: 'Crea la cuenta escrow única en Stellar (costo: 2.5 XLM + fees)',
+      description: 'Crea la cuenta escrow única en Stellar',
       icon: <FaFileContract />,
       status: 'pending',
       buttonText: 'Crear y Firmar Contrato'
@@ -57,7 +57,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
     {
       id: 'fund',
       title: 'Enviar Dinero',
-      description: `Envía ${taskPrice} XLM al contrato escrow`,
+      description: `Envía ${taskPrice} USDC al contrato escrow`,
       icon: <FaCoins />,
       status: 'pending',
       buttonText: 'Enviar Dinero'
@@ -196,9 +196,9 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
           <div className="escrow-task-details">
             <p><strong>Trabajador:</strong> {contributorName}</p>
             <p><strong>Dirección:</strong> {contributorAddress.slice(0, 6)}...{contributorAddress.slice(-4)}</p>
-            <p><strong>Monto de la tarea:</strong> {taskPrice} XLM</p>
+            <p><strong>Monto de la tarea:</strong> {taskPrice} USDC</p>
             <p style={{ color: '#ffa500', marginTop: '0.5rem' }}>
-              <strong>⚠️ Costo adicional:</strong> 2.5 XLM para crear la cuenta escrow + fees de transacción
+              <strong>⚠️ Nota:</strong> Se requiere una pequeña cantidad de XLM para fees de transacción de Stellar (~0.0001 XLM)
             </p>
           </div>
         </div>
@@ -292,10 +292,10 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
         {/* Info */}
         <div className="escrow-process-note">
           <p>💡 <strong>Nota:</strong> Este proceso requiere 2 transacciones:</p>
-          <p>1. Crear el contrato escrow (costo: 2.5 XLM + fees)</p>
-          <p>2. Enviar el dinero al contrato ({taskPrice} XLM)</p>
+          <p>1. Crear el contrato escrow</p>
+          <p>2. Enviar el dinero al contrato ({taskPrice} USDC)</p>
           <p style={{ marginTop: '0.5rem', fontWeight: 'bold' }}>
-            💰 Total a pagar: {(parseFloat(taskPrice) + 2.5).toFixed(7)} XLM
+            💰 Total a pagar: {taskPrice} USDC + fees de XLM (~0.0001 XLM)
           </p>
         </div>
       </div>

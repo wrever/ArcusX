@@ -150,7 +150,7 @@ export async function fundEscrowAccount(
       .addOperation(
         Operation.payment({
           destination: escrowPublicKey,
-          asset: Asset.native(), // XLM
+          asset: Asset.native(), // XLM (solo para fees de transacción)
           amount: amount
         })
       )
@@ -196,7 +196,7 @@ export async function releaseFunds(
       .addOperation(
         Operation.payment({
           destination: workerPublicKey,
-          asset: Asset.native(), // XLM
+          asset: Asset.native(), // XLM (solo para fees de transacción)
           amount: amount
         })
       )
@@ -250,7 +250,7 @@ export async function refundFunds(
       .addOperation(
         Operation.payment({
           destination: clientPublicKey,
-          asset: Asset.native(), // XLM
+          asset: Asset.native(), // XLM (solo para fees de transacción)
           amount: refundAmount
         })
       )

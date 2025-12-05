@@ -54,7 +54,7 @@ const WalletButtonInner: React.FC = () => {
                 {address ? formatAddress(address) : 'Conectado'}
               </span>
               <span className="wallet-type-badge">
-                XLM
+                USDC
               </span>
             </>
           ) : (

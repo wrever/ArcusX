@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-// Trustless Work - ELIMINADO
+import { TrustlessWorkConfig } from '@trustless-work/escrow';
+import { TRUSTLESS_WORK_API_KEY, TRUSTLESS_WORK_BASE_URL } from './config/trustlessWork';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Login from './components/Login';
@@ -31,6 +32,7 @@ function App() {
   }, []);
 
   return (
+    <TrustlessWorkConfig baseURL={TRUSTLESS_WORK_BASE_URL} apiKey={TRUSTLESS_WORK_API_KEY}>
     <Router>
         {isLoading ? (
           <Preloader />
@@ -60,6 +62,7 @@ function App() {
           </div>
         )}
       </Router>
+    </TrustlessWorkConfig>
   );
 }
 

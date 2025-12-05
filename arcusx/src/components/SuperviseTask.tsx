@@ -10,7 +10,7 @@ import { useWallet } from '../hooks/useWallet';
 // ============================================
 // Sistema de escrow usando multisig 2-de-2 en Stellar
 // Sistema restaurado: 2025-11-22
-// Usa XLM (no USDC)
+// Usa USDC como moneda principal - XLM solo para fees
 // ============================================
 import { 
   createReleaseFundsXDR,
@@ -585,7 +585,7 @@ const SuperviseTask = () => {
             const netAmount = calculateNetAmount(taskPrice);
             const balanceAfterRelease = balanceNum - netAmount;
             if (balanceAfterRelease < minimumBalance) {
-                throw new Error(`Balance insuficiente. Balance actual: ${balance} XLM. Monto neto a pagar: ${netAmount.toFixed(7)} XLM (de ${taskPrice.toFixed(7)} XLM total). Después del retiro quedarían ${balanceAfterRelease.toFixed(7)} XLM, pero se requieren al menos ${minimumBalance.toFixed(7)} XLM para mantener la cuenta activa (considerando ${activeSigners} signers activos). La comisión del 0.3% quedará en el escrow.`);
+                throw new Error(`Balance insuficiente. Balance actual: ${balance} USDC. Monto neto a pagar: ${netAmount.toFixed(7)} USDC (de ${taskPrice.toFixed(7)} USDC total). Después del retiro quedarían ${balanceAfterRelease.toFixed(7)} USDC, pero se requieren al menos ${minimumBalance.toFixed(7)} USDC para mantener la cuenta activa (considerando ${activeSigners} signers activos). La comisión del 0.3% quedará en el escrow.`);
             }
 
             // Paso 4: Verificar si hay transacción pendiente
@@ -1186,7 +1186,7 @@ const SuperviseTask = () => {
             const netAmount = calculateNetAmount(taskPriceForRelease);
             const balanceAfterRelease = balanceNum - netAmount;
             if (balanceAfterRelease < minimumBalance) {
-                throw new Error(`Balance insuficiente. Balance actual: ${balance} XLM. Monto neto a pagar: ${netAmount.toFixed(7)} XLM (de ${taskPriceForRelease.toFixed(7)} XLM total). Después del retiro quedarían ${balanceAfterRelease.toFixed(7)} XLM, pero se requieren al menos ${minimumBalance.toFixed(7)} XLM para mantener la cuenta activa (considerando ${activeSigners} signers activos). La comisión del 0.3% quedará en el escrow.`);
+                throw new Error(`Balance insuficiente. Balance actual: ${balance} USDC. Monto neto a pagar: ${netAmount.toFixed(7)} USDC (de ${taskPriceForRelease.toFixed(7)} USDC total). Después del retiro quedarían ${balanceAfterRelease.toFixed(7)} USDC, pero se requieren al menos ${minimumBalance.toFixed(7)} USDC para mantener la cuenta activa (considerando ${activeSigners} signers activos). La comisión del 0.3% quedará en el escrow.`);
             }
 
             // Crear XDR de transacción - pasar el monto TOTAL (taskPriceForRelease), no el neto
@@ -2768,7 +2768,7 @@ const SuperviseTask = () => {
                                 textAlign: 'left'
                             }}>
                                 <p style={{ margin: '8px 0', fontSize: '16px' }}>
-                                    <strong>💰 Monto recibido:</strong> {paymentSuccessData.amount} XLM
+                                    <strong>💰 Monto recibido:</strong> {paymentSuccessData.amount} USDC
                                 </p>
                                 <p style={{ margin: '8px 0', fontSize: '14px', color: '#666' }}>
                                     <strong>🔗 Hash de transacción:</strong>
