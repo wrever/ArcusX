@@ -376,20 +376,17 @@ const ProposalReview = () => {
       // IMPORTANTE: Esperar antes del primer intento de fondeo
       // Trustless Work necesita tiempo para indexar el escrow en la blockchain
       // después de crearlo. Sin esta espera, el escrow no estará disponible para fondear.
-      console.log('⏳ Esperando 120 segundos para que el escrow esté completamente indexado...');
-      console.log('💡 Esto es necesario porque Trustless Work debe indexar el escrow en la blockchain antes de poder fondearlo');
-      console.log('💡 Mientras tanto, verifica que:');
+      console.log('🔍 Verificando que el escrow esté indexado antes de fondear...');
+      console.log('💡 Verifica que:');
       console.log('   1. Tu wallet Freighter tiene trustline de USDC configurado');
       console.log('   2. Tu wallet tiene suficiente balance de USDC (al menos ' + amount + ' USDC + fees)');
       console.log('   3. El issuer de USDC es: GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5');
-      await new Promise(resolve => setTimeout(resolve, 120000)); // 120 segundos de espera inicial
-      console.log('✅ Espera completada. Intentando fondear el escrow...');
 
-      // Intentar fondear el escrow con reintentos
-      // Si falla con error 400, puede ser que el escrow aún no esté completamente disponible
+      // Intentar fondear el escrow con reintentos rápidos
+      // El detector de deploy en trustlessWorkEscrowService ya verifica que esté indexado
       let result: { success: boolean; txHash?: string; error?: string } | null = null;
       const maxRetries = 3;
-      const retryDelays = [60000, 120000, 180000]; // 60s, 120s, 180s entre reintentos (ya esperamos 120s inicialmente)
+      const retryDelays = [2000, 5000, 10000]; // 2s, 5s, 10s entre reintentos (reintentos rápidos)
       
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {

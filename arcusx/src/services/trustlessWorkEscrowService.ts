@@ -27,8 +27,8 @@ const USDC_TRUSTLINE = 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA
 const waitForEscrowIndexing = async (
   contractId: string,
   getEscrowFromIndexer: (contractIds: string[]) => Promise<any>,
-  maxWaitTime: number = 300000, // 5 minutos máximo
-  checkInterval: number = 5000 // Verificar cada 5 segundos
+  maxWaitTime: number = 60000, // 1 minuto máximo (los contratos se despliegan rápido)
+  checkInterval: number = 2000 // Verificar cada 2 segundos (más frecuente)
 ): Promise<boolean> => {
   const startTime = Date.now();
   
@@ -45,7 +45,7 @@ const waitForEscrowIndexing = async (
     } catch (error: any) {
       // El escrow aún no está indexado, continuar esperando
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      if (elapsed % 10 === 0) { // Log cada 10 segundos para no saturar
+      if (elapsed % 5 === 0) { // Log cada 5 segundos
         console.log(`⏳ Esperando indexación del escrow... (${elapsed}s)`);
       }
     }
@@ -379,13 +379,8 @@ export const fundTrustlessEscrow = async (
             throw new Error(`El escrow ${contractId} tiene inconsistencias con la blockchain. No se puede fondear. Detalles: ${JSON.stringify(escrowFromIndexer.inconsistencies)}`);
           }
           
-          // CRÍTICO: Esperar adicional después de que el escrow esté indexado
-          // Aunque esté indexado, puede que necesite tiempo para estar completamente disponible en la blockchain
-          // NOTA: El escrow puede necesitar hasta 5 minutos después de estar indexado para poder ser fondeado
-          console.log('⏳ Esperando 60 segundos adicionales para que el escrow esté completamente disponible en la blockchain...');
-          console.log('💡 Esto es necesario porque aunque el escrow esté indexado, puede que necesite tiempo adicional para estar completamente desplegado en la blockchain.');
-          await new Promise(resolve => setTimeout(resolve, 60000)); // 60 segundos adicionales (aumentado de 30 a 60)
-          console.log('✅ Espera completada. El escrow debería estar completamente disponible ahora.');
+          // El escrow está indexado y sin inconsistencias, listo para fondear
+          console.log('✅ Escrow verificado y listo para fondear. No hay inconsistencias.');
           
           // Verificar que el escrow esté activo
           if (escrowFromIndexer.isActive === false) {

@@ -31,15 +31,16 @@ Empowering freelancers with fast, secure, and borderless crypto payments on Stel
 
 ## 🎯 Overview
 
-ArcusX is a decentralized freelancing platform built on the Stellar blockchain that connects clients with freelancers through secure, trustless escrow smart contracts. By leveraging Stellar's fast, low-cost transactions and Freighter wallet integration, ArcusX eliminates intermediaries and provides a transparent, efficient marketplace for freelance work.
+ArcusX is a decentralized freelancing platform built on the Stellar blockchain that connects clients with freelancers through secure, trustless escrow contracts powered by Trustless Work. By leveraging Stellar's fast, low-cost transactions and Freighter wallet integration, ArcusX eliminates intermediaries and provides a transparent, efficient marketplace for freelance work.
 
 ### Key Benefits
 
-- **Ultra-Low Fees**: Only 0.3% commission (vs 10-20% on traditional platforms)
+- **Ultra-Low Fees**: Only 0.5% commission (vs 10-20% on traditional platforms)
 - **Instant Payments**: 3-5 second transaction finality
-- **Secure Escrow**: 2-of-2 multisig accounts requiring both parties to approve
+- **Secure Escrow**: Trustless Work escrow system with milestone-based payments
 - **Global Access**: No banking restrictions or geographic limitations
 - **Transparent**: All transactions verifiable on the Stellar blockchain
+- **Dispute Resolution**: Built-in dispute management system
 
 ## ✨ Features
 
@@ -52,10 +53,11 @@ ArcusX is a decentralized freelancing platform built on the Stellar blockchain t
 
 ### For Freelancers
 - Browse and apply to tasks globally
-- Secure payment guarantee through escrow
+- Secure payment guarantee through Trustless Work escrow
 - Fast payment processing (3-5 seconds)
-- Low platform fees (0.3% vs 10-20% industry standard)
+- Low platform fees (0.5% vs 10-20% industry standard)
 - Direct wallet-to-wallet payments via Freighter
+- Automatic task deletion after 24 hours of completion
 
 ### Platform Features
 - Real-time messaging between parties
@@ -89,9 +91,9 @@ ArcusX is a decentralized freelancing platform built on the Stellar blockchain t
 - **Network**: Stellar Testnet (migrating to Mainnet)
 - **Wallet**: Freighter
 - **SDK**: Stellar SDK 11.2.2
-- **Escrow**: 2-of-2 Multisig accounts
-- **Currency**: XLM (Stellar Lumens)
-- **Horizon Server**: `https://horizon-testnet.stellar.org`
+- **Escrow**: Trustless Work (single-release escrow contracts)
+- **Currency**: USDC on Stellar
+- **Escrow Service**: Trustless Work API integration
 
 ## 🏗 Architecture
 
@@ -116,14 +118,17 @@ ArcusX/
 
 ### Escrow System
 
-ArcusX uses a 2-of-2 multisig escrow system on Stellar:
+ArcusX uses **Trustless Work** for secure escrow management on Stellar:
 
-1. **Escrow Creation**: A dedicated Stellar account is created for each task
-2. **Multisig Setup**: Both client and freelancer are set as signers (weight = 1 each)
-3. **Funding**: Client funds the escrow with the task amount
-4. **Work Completion**: Both parties approve completion
-5. **Fund Release**: Both parties sign the release transaction
-6. **Payment**: Funds are instantly transferred to the freelancer
+1. **Escrow Creation**: Trustless Work contract is initialized for each task
+2. **Funding**: Client funds the escrow with the task amount in USDC
+3. **Work Completion**: Freelancer marks milestone as completed
+4. **Approval**: Client approves the completed milestone
+5. **Fund Release**: Client releases funds to the freelancer
+6. **Payment**: Funds are instantly transferred to the freelancer (minus 0.5% platform fee)
+7. **Dispute Resolution**: Built-in dispute system for conflict resolution
+
+The platform fee (0.5%) is automatically deducted and sent to the configured treasury address.
 
 ## 🚀 Getting Started
 
@@ -211,9 +216,9 @@ Update `arcusx/src/hooks/useWallet.ts`:
 network: WalletNetwork.MAINNET // Change from TESTNET
 ```
 
-Update Horizon server URL in `arcusx/src/services/stellarEscrowService.ts`:
+Update Trustless Work environment in `arcusx/src/config/trustlessWork.ts`:
 ```typescript
-return new Horizon.Server('https://horizon.stellar.org'); // Mainnet
+export const TRUSTLESS_WORK_BASE_URL = 'https://api.trustlesswork.com'; // Mainnet
 ```
 
 ## 📖 Usage
@@ -238,17 +243,17 @@ return new Horizon.Server('https://horizon.stellar.org'); // Mainnet
 
 1. Client selects a proposal
 2. Connect Freighter wallet
-3. Create escrow account (2.5 XLM required)
-4. Fund escrow with task amount
+3. Trustless Work escrow contract is created automatically
+4. Client funds the escrow with task amount in USDC
 5. Work begins
 
 ### Completing Work and Payment
 
-1. Freelancer completes work and marks as done
-2. Client reviews and approves
-3. Both parties confirm completion
-4. Freelancer withdraws funds (both signatures required)
-5. Payment processed in 3-5 seconds
+1. Freelancer completes work and marks milestone as completed
+2. Client reviews and approves the milestone
+3. Client releases funds to the freelancer
+4. Payment processed in 3-5 seconds (0.5% platform fee deducted automatically)
+5. Task is automatically scheduled for deletion after 24 hours
 
 ## 📁 Project Structure
 
@@ -264,9 +269,11 @@ return new Horizon.Server('https://horizon.stellar.org'); // Mainnet
 
 ### Services
 
-- `stellarEscrowService.ts` - Stellar blockchain operations
+- `trustlessWorkEscrowService.ts` - Trustless Work escrow operations
+- `platformFeeService.ts` - Platform fee management
 - `authService.ts` - Authentication services
 - `adminService.ts` - Admin panel services
+- `disputeService.ts` - Dispute management
 
 ### Hooks
 
@@ -280,19 +287,23 @@ Key API endpoints:
 - `/api/auth/register.php` - User registration
 - `/api/auth/create_task.php` - Create task
 - `/api/auth/apply_task.php` - Apply to task
-- `/api/auth/create_escrow.php` - Register escrow
-- `/api/auth/save_pending_transaction.php` - Save transaction XDR
-- `/api/auth/submit_complete_transaction.php` - Submit transaction
+- `/api/auth/select_proposal.php` - Select proposal and create escrow
+- `/api/auth/complete_task.php` - Mark task as completed
+- `/api/auth/create_dispute.php` - Create dispute
+- `/api/auth/admin.php` - Admin panel operations
+- `/api/auth/delete_scheduled_tasks.php` - Scheduled task deletion
 
 See `docs/api/` for complete API documentation.
 
 ## 🔒 Security
 
-- **Multisig Escrow**: Requires both parties to approve fund release
+- **Trustless Work Escrow**: Secure escrow contracts managed by Trustless Work
 - **JWT Authentication**: Secure token-based authentication
 - **Input Validation**: All inputs validated on frontend and backend
 - **Stellar Security**: Leverages Stellar's battle-tested blockchain
 - **No Centralized Control**: Platform cannot freeze or seize funds
+- **Dispute Resolution**: Built-in dispute management with admin oversight
+- **Automatic Task Cleanup**: Completed tasks automatically deleted after 24 hours
 
 ## 📊 Current Status
 
@@ -301,22 +312,26 @@ See `docs/api/` for complete API documentation.
 - Task creation and management
 - Proposal/application system
 - Freighter wallet integration
-- Stellar escrow system (2-of-2 multisig)
-- Escrow creation, funding, and withdrawal
-- Transaction pending system (XDR storage)
+- **Trustless Work escrow integration** (fully migrated from multisig)
+- Escrow creation, funding, milestone management, and fund release
+- **Dispute resolution system** with admin management
 - Real-time messaging
-- Admin dashboard
+- Admin dashboard with fee management (0.5% platform fee)
+- Treasury address configuration
+- Automatic task deletion (24 hours after completion)
+- Platform fee management (configurable via admin panel)
+- Escrow status monitoring and verification
 
 ### 🚧 In Progress
 - Migration to Stellar Mainnet
 - Code cleanup and optimization
 
 ### 📋 Roadmap
-- Dispute resolution system
 - Rating and review system
 - Advanced analytics dashboard
 - Mobile app development
-- Multi-asset support (USDC, EURT, etc.)
+- Multi-asset support (additional Stellar assets)
+- Referral system implementation
 
 ## 🤝 Contributing
 
@@ -342,8 +357,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🔗 Links
 
+- **Website**: https://arcusx.pro/
+- **Documentation**: https://docs.arcusx.pro/
 - **Stellar Documentation**: https://developers.stellar.org/
 - **Freighter Wallet**: https://www.freighter.app/
+- **Trustless Work**: https://trustlesswork.com/
 - **Stellar SDK**: https://github.com/stellar/js-stellar-sdk
 - **Horizon API**: https://horizon-testnet.stellar.org/
 

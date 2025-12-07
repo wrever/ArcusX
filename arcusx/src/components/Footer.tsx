@@ -30,26 +30,26 @@ const Footer = () => {
           <div className="footer-section">
             <h4>Plataforma</h4>
             <ul>
-              <li><a href="https://docs.arcusx.one/getting-started/quickstart" target="_blank" rel="noopener noreferrer">Cómo Funciona</a></li>
+              <li><a href="https://docs.arcusx.pro/getting-started/quickstart" target="_blank" rel="noopener noreferrer">Cómo Funciona</a></li>
               <li><Link to="/dashboard">Tareas Disponibles</Link></li>
-              <li><a href="https://docs.arcusx.one/getting-started/publish-your-docs" target="_blank" rel="noopener noreferrer">Comisiones</a></li>
+              <li><a href="https://docs.arcusx.pro/getting-started/publish-your-docs" target="_blank" rel="noopener noreferrer">Comisiones</a></li>
             </ul>
           </div>
           <div className="footer-section">
             <h4>Recursos</h4>
             <ul>
-              <li><a href="https://docs.arcusx.one/" target="_blank" rel="noopener noreferrer">Guía</a></li>
-              <li><a href="https://docs.arcusx.one/" target="_blank" rel="noopener noreferrer">Tutoriales</a></li>
-              <li><a href="https://docs.arcusx.one/community/faq" target="_blank" rel="noopener noreferrer">FAQ</a></li>
+              <li><a href="https://docs.arcusx.pro/" target="_blank" rel="noopener noreferrer">Guía</a></li>
+              <li><a href="https://docs.arcusx.pro/" target="_blank" rel="noopener noreferrer">Tutoriales</a></li>
+              <li><a href="https://docs.arcusx.pro/community/faq" target="_blank" rel="noopener noreferrer">FAQ</a></li>
             </ul>
           </div>
           <div className="footer-section">
             <h4>Legal</h4>
             <ul>
-              <li><a href="https://docs.arcusx.one/legal/privacy-policy" target="_blank" rel="noopener noreferrer">Privacidad</a></li>
-              <li><a href="https://docs.arcusx.one/legal/terms-and-conditions" target="_blank" rel="noopener noreferrer">Términos</a></li>
-              <li><a href="https://docs.arcusx.one/legal/security" target="_blank" rel="noopener noreferrer">Seguridad</a></li>
-              <li><a href="https://docs.arcusx.one/legal/compliance" target="_blank" rel="noopener noreferrer">Compliance</a></li>
+              <li><a href="https://docs.arcusx.pro/legal/privacy-policy" target="_blank" rel="noopener noreferrer">Privacidad</a></li>
+              <li><a href="https://docs.arcusx.pro/legal/terms-and-conditions" target="_blank" rel="noopener noreferrer">Términos</a></li>
+              <li><a href="https://docs.arcusx.pro/legal/security" target="_blank" rel="noopener noreferrer">Seguridad</a></li>
+              <li><a href="https://docs.arcusx.pro/legal/compliance" target="_blank" rel="noopener noreferrer">Compliance</a></li>
             </ul>
           </div>
         </div>

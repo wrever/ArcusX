@@ -441,7 +441,7 @@ Las transacciones parcialmente firmadas se almacenan en la tabla `tasks`:
 ## 🔌 BACKEND API
 
 ### Configuración
-- **Base URL:** `http://arcusx.one/api` (desarrollo) / `https://arcusx.one/api` (producción)
+- **Base URL:** `http://arcusx.pro/api` (desarrollo) / `https://arcusx.pro/api` (producción)
 - **CORS:** Habilitado para todos los orígenes
 - **JWT Secret:** `SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY`
 
@@ -714,8 +714,8 @@ Las transacciones parcialmente firmadas se almacenan en la tabla `tasks`:
 **Frontend (`arcusx/src/config/database.ts`):**
 ```typescript
 export const API_URL = import.meta.env.DEV 
-  ? 'http://arcusx.one/api'  // Desarrollo
-  : 'https://arcusx.one/api'; // Producción
+  ? 'http://arcusx.pro/api'  // Desarrollo
+  : 'https://arcusx.pro/api'; // Producción
 ```
 
 **Backend (`backend_externo/config.php`):**
