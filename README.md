@@ -1,6 +1,8 @@
-# ArcusX
-
 <div align="center">
+
+<img src="./arcusx/src/images/arcus-logo.png" alt="ArcusX Logo" width="200"/>
+
+# ArcusX
 
 **The Future of Freelancing on Blockchain**
 
