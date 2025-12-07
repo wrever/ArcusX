@@ -273,6 +273,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $disputeId = $conn->insert_id;
     $createStmt->close();
     
+    // Obtener tx_hash si viene en el request (de Trustless Work)
+    $txHash = isset($data['tx_hash']) ? trim($data['tx_hash']) : null;
+    
+    // Si hay tx_hash, actualizarlo en la disputa
+    if ($txHash) {
+        // Verificar si la columna tx_hash existe en la tabla disputes
+        $checkColumn = $conn->query("SHOW COLUMNS FROM disputes LIKE 'tx_hash'");
+        $hasTxHash = $checkColumn && $checkColumn->num_rows > 0;
+        
+        if (!$hasTxHash) {
+            // Crear la columna si no existe
+            $alterTable = "ALTER TABLE disputes ADD COLUMN tx_hash VARCHAR(255) NULL AFTER reason";
+            $conn->query($alterTable);
+        }
+        
+        // Actualizar el tx_hash
+        $updateTxHashStmt = $conn->prepare("UPDATE disputes SET tx_hash = ? WHERE id = ?");
+        if ($updateTxHashStmt) {
+            $updateTxHashStmt->bind_param("si", $txHash, $disputeId);
+            $updateTxHashStmt->execute();
+            $updateTxHashStmt->close();
+        }
+    }
+    
     // Actualizar el estado de la tarea a 'disputed'
     $updateTaskStmt = $conn->prepare("UPDATE tasks SET status = 'disputed' WHERE id = ?");
     if ($updateTaskStmt === false) {
@@ -287,7 +311,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     echo json_encode([
         'success' => true,
         'message' => 'Disputa creada exitosamente.',
-        'dispute_id' => $disputeId
+        'dispute_id' => $disputeId,
+        'tx_hash' => $txHash
     ]);
     
     $conn->close();

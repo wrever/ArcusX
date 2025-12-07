@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { supabase } from '../config/supabase';
-// import { verifyHumanIdViaBackend } from '../services/humanIdService'; // COMENTADO - HUMAN ID
 import '../css/Login.css';
 
 const AuthCallback = () => {

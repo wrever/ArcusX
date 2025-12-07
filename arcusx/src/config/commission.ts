@@ -1,35 +1,75 @@
 /**
  * Configuración de comisiones de ArcusX
  * 
- * Comisión: 0.3% del monto total depositado
+ * La comisión se obtiene del backend y puede ser configurada desde el admin panel
  * La comisión se retiene en el escrow y puede ser retirada manualmente
  */
 
-export const COMMISSION_RATE = 0.003; // 0.3%
+// Valor por defecto (0.3%) - se usa solo si no se puede obtener del backend
+export const DEFAULT_COMMISSION_RATE = 0.003; // 0.3%
 
 /**
- * Calcula la comisión sobre un monto dado
+ * Calcula la comisión sobre un monto dado usando el fee del backend
  * @param amount Monto total en USDC
- * @returns Comisión calculada (0.3% del monto) con 7 decimales
+ * @param commissionRate Opcional: tasa de comisión como decimal (ej: 0.005 para 0.5%). Si no se proporciona, se obtiene del backend
+ * @returns Comisión calculada con 7 decimales
  */
-export function calculateCommission(amount: number): number {
+export async function calculateCommission(amount: number, commissionRate?: number): Promise<number> {
   if (isNaN(amount) || amount <= 0) {
     return 0;
   }
-  const commission = amount * COMMISSION_RATE;
+  
+  let rate = commissionRate;
+  if (rate === undefined) {
+    // Obtener del backend
+    const { getPlatformFee } = await import('../services/platformFeeService');
+    rate = await getPlatformFee();
+  }
+  
+  const commission = amount * rate;
+  return parseFloat(commission.toFixed(7));
+}
+
+/**
+ * Calcula la comisión sobre un monto dado (versión síncrona con rate proporcionado)
+ * @param amount Monto total en USDC
+ * @param commissionRate Tasa de comisión como decimal (ej: 0.005 para 0.5%)
+ * @returns Comisión calculada con 7 decimales
+ */
+export function calculateCommissionSync(amount: number, commissionRate: number = DEFAULT_COMMISSION_RATE): number {
+  if (isNaN(amount) || amount <= 0) {
+    return 0;
+  }
+  const commission = amount * commissionRate;
   return parseFloat(commission.toFixed(7));
 }
 
 /**
  * Calcula el monto neto que recibirá el trabajador (después de deducir la comisión)
  * @param amount Monto total en USDC
+ * @param commissionRate Opcional: tasa de comisión como decimal. Si no se proporciona, se obtiene del backend
  * @returns Monto neto (monto total - comisión) con 7 decimales
  */
-export function calculateNetAmount(amount: number): number {
+export async function calculateNetAmount(amount: number, commissionRate?: number): Promise<number> {
   if (isNaN(amount) || amount <= 0) {
     return 0;
   }
-  const commission = calculateCommission(amount);
+  const commission = await calculateCommission(amount, commissionRate);
+  const netAmount = amount - commission;
+  return parseFloat(netAmount.toFixed(7));
+}
+
+/**
+ * Calcula el monto neto que recibirá el trabajador (versión síncrona con rate proporcionado)
+ * @param amount Monto total en USDC
+ * @param commissionRate Tasa de comisión como decimal (ej: 0.005 para 0.5%)
+ * @returns Monto neto (monto total - comisión) con 7 decimales
+ */
+export function calculateNetAmountSync(amount: number, commissionRate: number = DEFAULT_COMMISSION_RATE): number {
+  if (isNaN(amount) || amount <= 0) {
+    return 0;
+  }
+  const commission = calculateCommissionSync(amount, commissionRate);
   const netAmount = amount - commission;
   return parseFloat(netAmount.toFixed(7));
 }

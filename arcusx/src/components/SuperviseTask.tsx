@@ -6,36 +6,26 @@ import '../css/SuperviseTask.css';
 import { jwtDecode } from "jwt-decode"; // Importar jwtDecode
 import { useWallet } from '../hooks/useWallet';
 // ============================================
-// SISTEMA ANTIGUO: MULTISIG 2-DE-2 (RESTAURADO)
-// ============================================
-// Sistema de escrow usando multisig 2-de-2 en Stellar
-// Sistema restaurado: 2025-11-22
-// Usa USDC como moneda principal - XLM solo para fees
+// SISTEMA TRUSTLESS WORK - ÚNICO SISTEMA
 // ============================================
 import { 
-  createReleaseFundsXDR,
-  createRefundXDR,
-  getHorizonServer 
-} from '../services/stellarEscrowService';
-import { TransactionBuilder, Networks, Keypair } from '@stellar/stellar-sdk';
-
-// Helper para convertir Uint8Array a hex (compatible con navegador)
-const uint8ArrayToHex = (arr: Uint8Array): string => {
-    return Array.from(arr)
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
-};
+  useChangeMilestoneStatus,
+  useApproveMilestone,
+  useReleaseFunds,
+  useSendTransaction,
+  useGetEscrowFromIndexerByContractIds,
+  useStartDispute
+} from '@trustless-work/escrow/hooks';
+import {
+  changeMilestoneStatusTrustlessEscrow,
+  approveMilestoneTrustlessEscrow,
+  releaseFundsTrustlessEscrow,
+  startDisputeTrustlessEscrow
+} from '../services/trustlessWorkEscrowService';
 // ============================================
-// FIN SISTEMA ANTIGUO - RESTAURADO
-// ============================================
-
-// ============================================
-// SISTEMA TRUSTLESS WORK - ELIMINADO
-// ============================================
-// Todo el código de Trustless Work ha sido eliminado
-// Sistema restaurado: Multisig 2-de-2 (sistema antiguo)
-// ============================================
-import { calculateNetAmount } from '../config/commission';
+import { calculateNetAmountSync } from '../config/commission';
+import { usePlatformFee } from '../hooks/usePlatformFee';
+import { useScheduledTaskDeletion } from '../hooks/useScheduledTaskDeletion';
 import FileExchange from './FileExchange';
 import WalletButton from './WalletButton';
 import ConfirmDialog from './ConfirmDialog';
@@ -112,11 +102,13 @@ const SuperviseTask = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     
-    // Estado para popup de éxito cuando se recibe el dinero
+    // Estados para popups de éxito
     const [showPaymentSuccessPopup, setShowPaymentSuccessPopup] = useState(false);
+    const [showClientPaymentPopup, setShowClientPaymentPopup] = useState(false);
     const [paymentSuccessData, setPaymentSuccessData] = useState<{
         amount: string;
         txHash: string;
+        netAmount?: string;
     } | null>(null);
     
     // Estados para el chat
@@ -134,8 +126,21 @@ const SuperviseTask = () => {
     // Estados para wallet y blockchain (Stellar/Freighter)
     const { address, isConnected, kit } = useWallet();
 
-    // Hooks de Trustless Work - ELIMINADOS
-    // Sistema restaurado: Multisig 2-de-2 (sistema antiguo)
+    // Hooks de Trustless Work
+    const { changeMilestoneStatus } = useChangeMilestoneStatus();
+    const { approveMilestone } = useApproveMilestone();
+    const { releaseFunds } = useReleaseFunds();
+    const { sendTransaction } = useSendTransaction();
+    const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds();
+    const { startDispute } = useStartDispute();
+    
+    // Obtener platform fee del backend
+    const { platformFee } = usePlatformFee();
+    
+    // Verificar y eliminar tareas programadas automáticamente
+    useScheduledTaskDeletion();
+    
+    // Todos los escrows usan Trustless Work ahora
     
     // Verificar que kit esté inicializado
     useEffect(() => {
@@ -534,13 +539,87 @@ const SuperviseTask = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const escrowId = task.escrow_id;
-            const horizonServer = getHorizonServer();
+            
+            // FLUJO TRUSTLESS WORK: Aprobar milestone y liberar fondos
+                if (!kit) {
+                    throw new Error('Kit de wallets no inicializado');
+                }
+                
+            if (!task.escrow_id) {
+                throw new Error('No hay escrow configurado para esta tarea');
+            }
 
-            // Paso 1: Actualizar BD (client_accepted_completion = 1)
+            // Paso 1: Aprobar milestone
+            const approveResult = await approveMilestoneTrustlessEscrow(
+                task.escrow_id,
+                '0', // Solo un milestone
+                address, // approver (cliente)
+                kit,
+                approveMilestone,
+                sendTransaction
+            );
+
+            if (!approveResult.success) {
+                throw new Error(approveResult.error || 'Error al aprobar milestone');
+            }
+
+            // Paso 2: Liberar fondos automáticamente después de aprobar
+            const releaseResult = await releaseFundsTrustlessEscrow(
+                task.escrow_id,
+                address, // releaseSigner (cliente)
+                kit,
+                releaseFunds,
+                sendTransaction
+            );
+
+            if (!releaseResult.success) {
+                throw new Error(releaseResult.error || 'Error al liberar fondos');
+            }
+
+            // Paso 2.5: Verificar que el escrow esté completado (balance = 0)
+            console.log('🔍 Verificando que el escrow esté completado...');
+            let escrowCompleted = false;
+            let attempts = 0;
+            const maxAttempts = 12; // 12 intentos = 1 minuto (5 segundos cada uno)
+            
+            while (!escrowCompleted && attempts < maxAttempts) {
+                try {
+                    await new Promise(resolve => setTimeout(resolve, 5000)); // Esperar 5 segundos
+                    const escrowResult = await getEscrowByContractIds({ 
+                        contractIds: [task.escrow_id],
+                        validateOnChain: true 
+                    });
+                    const escrows = Array.isArray(escrowResult) ? escrowResult : (escrowResult as any)?.escrows || [];
+                    
+                    if (escrows && escrows.length > 0) {
+                        const escrow = escrows[0];
+                        const balance = parseFloat(escrow.balance || '0');
+                        console.log(`📊 Balance del escrow: ${balance}`);
+                        
+                        if (balance === 0 || escrow.status === 'released' || escrow.status === 'completed') {
+                            escrowCompleted = true;
+                            console.log('✅ Escrow completado - fondos liberados');
+                        }
+                    }
+                } catch (err) {
+                    console.warn('Error al verificar escrow:', err);
+                }
+                attempts++;
+            }
+
+            if (!escrowCompleted) {
+                console.warn('⚠️ No se pudo verificar que el escrow esté completado, pero continuamos...');
+            }
+
+            // Calcular monto neto para el trabajador
+            const netAmount = calculateNetAmountSync(parseFloat(task.price), platformFee);
+
+            // Paso 3: Actualizar BD y programar eliminación después de 24 horas
             const response = await axios.post(`${API_URL}/auth/complete_task.php`, {
-                task_id: parseInt(taskId!, 10),
-                action: 'accept'
+                    task_id: parseInt(taskId!, 10),
+                action: 'accept',
+                escrow_completed: escrowCompleted,
+                tx_hash: releaseResult.txHash
             }, {
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -548,233 +627,25 @@ const SuperviseTask = () => {
             });
 
             if (!response.data.success) {
-                throw new Error(response.data.message || 'Error al aceptar trabajo');
+                throw new Error(response.data.message || 'Error al actualizar estado en BD');
             }
 
-            // Paso 2: Obtener dirección del trabajador
-            const workerId = worker?.id || task?.accepted_applicant_id;
-            if (!workerId) {
-                throw new Error('No se pudo identificar al trabajador');
-            }
-            
-            const workerAddress = await getWorkerWalletAddress(workerId);
-            if (!workerAddress) {
-                throw new Error('El trabajador no tiene wallet configurada');
-            }
-
-            // Paso 3: Verificar balance y calcular monto
-            const escrowAccount = await horizonServer.loadAccount(escrowId);
-            const balance = escrowAccount.balances.find((b: any) => b.asset_type === 'native')?.balance || '0';
-            const balanceNum = parseFloat(balance);
-            
-            // Calcular balance mínimo real
-            const baseReserve = 1.0;
-            const signerReserve = 0.5;
-            const activeSigners = escrowAccount.signers?.filter((s: any) => s.weight > 0).length || 0;
-            const masterWeight = escrowAccount.signers?.find((s: any) => s.key === escrowAccount.accountId())?.weight || 0;
-            
-            let minimumBalance = baseReserve;
-            if (masterWeight === 0) {
-                minimumBalance += (activeSigners * signerReserve);
-            } else {
-                minimumBalance += ((activeSigners - 1) * signerReserve);
-            }
-            minimumBalance += 0.0001; // Margen para fees
-            
-            const taskPrice = parseFloat(task.price || '0');
-            const netAmount = calculateNetAmount(taskPrice);
-            const balanceAfterRelease = balanceNum - netAmount;
-            if (balanceAfterRelease < minimumBalance) {
-                throw new Error(`Balance insuficiente. Balance actual: ${balance} USDC. Monto neto a pagar: ${netAmount.toFixed(7)} USDC (de ${taskPrice.toFixed(7)} USDC total). Después del retiro quedarían ${balanceAfterRelease.toFixed(7)} USDC, pero se requieren al menos ${minimumBalance.toFixed(7)} USDC para mantener la cuenta activa (considerando ${activeSigners} signers activos). La comisión del 0.3% quedará en el escrow.`);
-            }
-
-            // Paso 4: Verificar si hay transacción pendiente
-            let pendingTxResponse;
-            try {
-                pendingTxResponse = await axios.get(`${API_URL}/auth/get_pending_transaction.php?task_id=${taskId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-            } catch (err) {
-                pendingTxResponse = { data: { success: false } };
-            }
-
-            let txXdr: string;
-            let signedTxXdr: string;
-
-            // Verificar si la transacción pendiente tiene el monto correcto
-            let shouldRecreateTransaction = false;
-            if (pendingTxResponse.data.success && pendingTxResponse.data.signed_tx_xdr && !pendingTxResponse.data.complete_tx_xdr) {
-                try {
-                    const partialTx = TransactionBuilder.fromXDR(pendingTxResponse.data.signed_tx_xdr, Networks.TESTNET);
-                    let innerTx: any = partialTx;
-                    if ('innerTransaction' in partialTx && (partialTx as any).innerTransaction) {
-                        innerTx = (partialTx as any).innerTransaction.transaction || (partialTx as any).innerTransaction;
-                    }
-                    const paymentOp = innerTx.operations?.find((op: any) => op.type === 'payment');
-                    
-                    if (paymentOp) {
-                        const txAmount = parseFloat(paymentOp.amount);
-                        const expectedNetAmount = calculateNetAmount(taskPrice);
-                        const tolerance = 0.0000001;
-                        
-                        if (Math.abs(txAmount - expectedNetAmount) > tolerance) {
-                            shouldRecreateTransaction = true;
-                            
-                            try {
-                                await axios.post(`${API_URL}/auth/save_pending_transaction.php`, {
-                                    task_id: parseInt(taskId!, 10),
-                                    signed_tx_xdr: '',
-                                    signer_role: 'delete'
-                                }, {
-                                    headers: { 'Authorization': `Bearer ${token}` }
-                                });
-                            } catch (deleteErr) {
-                                // Error al eliminar transacción pendiente
-                            }
-                        }
-                    }
-                } catch (verifyError) {
-                    shouldRecreateTransaction = true;
-                }
-            }
-
-            // Si hay transacción pendiente firmada por el trabajador, el cliente la completa
-            if (pendingTxResponse.data.success && 
-                pendingTxResponse.data.signed_tx_xdr && 
-                !pendingTxResponse.data.complete_tx_xdr && 
-                !shouldRecreateTransaction &&
-                pendingTxResponse.data.signed_by === 'worker') {
-                
-                if (!kit) {
-                    throw new Error('Kit de wallets no inicializado');
-                }
-                
-                // CRÍTICO: Verificar que la dirección del cliente sea un signer del escrow
-                try {
-                    const escrowAccount = await horizonServer.loadAccount(escrowId);
-                    const signers = escrowAccount.signers || [];
-                    const requiredSigners = signers.filter((s: any) => s.weight > 0).map((s: any) => s.key);
-                    
-                    if (!requiredSigners.includes(address)) {
-                        throw new Error(`Tu dirección actual (${address}) no está configurada como signer del escrow. Los signers son: ${requiredSigners.join(', ')}. Esto puede ocurrir si cambiaste tu wallet después de crear el escrow.`);
-                    }
-                    
-                    console.log('✅ Verificación previa (cliente): Tu dirección está en los signers del escrow.');
-                } catch (verifyError: any) {
-                    if (verifyError.message && verifyError.message.includes('no está configurada')) {
-                        throw verifyError;
-                    }
-                    console.warn('⚠️ No se pudo verificar signers antes de firmar:', verifyError);
-                }
-                
-                const partialXdr = pendingTxResponse.data.signed_tx_xdr;
-                
-                // Firmar la transacción parcialmente firmada
-                kit.setWallet('freighter');
-                console.log('🔐 Cliente firmando transacción parcialmente firmada por trabajador...', {
-                    partialXdrLength: partialXdr.length,
-                    clientAddress: address
-                });
-                
-                const { signedTxXdr: completeXdr } = await kit.signTransaction(partialXdr, {
-                    address: address,
-                    networkPassphrase: Networks.TESTNET
-                });
-
-                // Verificar que tiene 2 firmas
-                const completeTx = TransactionBuilder.fromXDR(completeXdr, Networks.TESTNET);
-                if (completeTx.signatures.length < 2) {
-                    throw new Error(`Error: La transacción no tiene 2 firmas. Tiene ${completeTx.signatures.length} firma(s).`);
-                }
-
-                // Guardar XDR completamente firmado
-                const saveResponse = await axios.post(`${API_URL}/auth/save_pending_transaction.php`, {
-                    task_id: parseInt(taskId!, 10),
-                    signed_tx_xdr: completeXdr,
-                    signer_role: 'both'
-                }, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (!saveResponse.data.success) {
-                    throw new Error('Error al guardar transacción completamente firmada');
-                }
-
-                // Enviar automáticamente
-                setError(null);
-                setPendingTransaction({
-                    hasPending: true,
-                    signedBy: 'both',
-                    waitingFor: undefined
-                });
-                await submitCompleteTransaction();
-                return;
-            }
-
-            // Si no hay transacción pendiente o hay que recrearla, crear nueva y firmar (cliente firma primero)
-            if (!kit) {
-                throw new Error('Kit de wallets no inicializado');
-            }
-            
-            // CRÍTICO: Verificar que las direcciones del cliente y trabajador sean signers del escrow
-            try {
-                const escrowAccount = await horizonServer.loadAccount(escrowId);
-                const signers = escrowAccount.signers || [];
-                const requiredSigners = signers.filter((s: any) => s.weight > 0).map((s: any) => s.key);
-                
-                if (!requiredSigners.includes(address)) {
-                    throw new Error(`Tu dirección actual (${address}) no está configurada como signer del escrow. Los signers son: ${requiredSigners.join(', ')}. Esto puede ocurrir si cambiaste tu wallet después de crear el escrow.`);
-                }
-                
-                if (!requiredSigners.includes(workerAddress)) {
-                    throw new Error(`La dirección del trabajador (${workerAddress}) no está configurada como signer del escrow. Los signers son: ${requiredSigners.join(', ')}. Esto puede ocurrir si el trabajador cambió su wallet después de crear el escrow.`);
-                }
-                
-                console.log('✅ Verificación previa: Las direcciones del cliente y trabajador están en los signers del escrow.');
-            } catch (verifyError: any) {
-                if (verifyError.message && verifyError.message.includes('no está configurada')) {
-                    throw verifyError;
-                }
-                console.warn('⚠️ No se pudo verificar signers antes de crear transacción:', verifyError);
-            }
-            
-            txXdr = await createReleaseFundsXDR(
-                escrowId,
-                workerAddress,
-                taskPrice.toString(),
-                horizonServer
-            );
-
-            // Firmar con Freighter
-            kit.setWallet('freighter');
-            const { signedTxXdr: firstSignedXdr } = await kit.signTransaction(txXdr, {
-                address: address,
-                networkPassphrase: Networks.TESTNET
+            // Mostrar popup para CLIENTE (quien paga)
+            setPaymentSuccessData({
+                amount: task.price,
+                txHash: releaseResult.txHash || 'N/A',
+                netAmount: netAmount.toFixed(7)
             });
-            signedTxXdr = firstSignedXdr;
+            setShowClientPaymentPopup(true);
 
-            // Guardar transacción parcialmente firmada
-            const saveResponse = await axios.post(`${API_URL}/auth/save_pending_transaction.php`, {
-                task_id: parseInt(taskId!, 10),
-                signed_tx_xdr: signedTxXdr,
-                signer_role: 'client'
-            }, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (!saveResponse.data.success) {
-                throw new Error('Error al guardar transacción parcialmente firmada');
+            // Si el trabajador está viendo la página, mostrar popup para él también después de un delay
+            if (isWorker) {
+                setTimeout(() => {
+                    setShowPaymentSuccessPopup(true);
+                }, 2000); // Mostrar después de 2 segundos
             }
 
-            // Actualizar estado de transacción pendiente
-            setPendingTransaction({
-                hasPending: true,
-                signedBy: 'client',
-                waitingFor: 'worker'
-            });
-            setError(null);
-
-            // Actualizar estado
+            // Actualizar estado local
             setTask(prev => prev ? {
                 ...prev,
                 client_accepted_completion: 1,
@@ -785,7 +656,6 @@ const SuperviseTask = () => {
             setTimeout(() => {
                 fetchData();
             }, 500);
-
         } catch (err: any) {
             setError('Error al aceptar trabajo: ' + (err.response?.data?.message || err.message));
         } finally {
@@ -793,22 +663,18 @@ const SuperviseTask = () => {
         }
     };
 
-    /* ============================================
-     * SISTEMA ANTIGUO: MULTISIG 2-DE-2 (RESTAURADO)
-     * ============================================
-     * Función para rechazar trabajo (cliente) - reembolsa fondos
-     * Sistema restaurado: 2025-11-22
-     * ============================================ */
+    // Función para rechazar trabajo - En Trustless Work se usa startDispute
+    // Por ahora, solo actualizamos el estado en el backend
     const handleRejectWork = async () => {
         if (!task || !task.escrow_id || !isConnected || !address || !kit) {
             setError('Debes conectar tu wallet Freighter para rechazar el trabajo');
             return;
         }
 
-        // Mostrar popup de confirmación en lugar de confirm()
+        // Mostrar popup de confirmación
         setConfirmDialogConfig({
             title: 'Confirmar Rechazo',
-            message: '¿Estás seguro de que quieres rechazar este trabajo? Los fondos serán reembolsados a tu cuenta.',
+            message: '¿Estás seguro de que quieres rechazar este trabajo? Esto iniciará una disputa.',
             type: 'danger',
             onConfirm: () => {
                 setShowConfirmDialog(false);
@@ -828,44 +694,12 @@ const SuperviseTask = () => {
         setError(null);
 
         try {
-            const horizonServer = getHorizonServer();
-            const amount = task.price;
-
-                   // Crear XDR de transacción para reembolsar
-                   if (!task.escrow_id) {
-                       throw new Error('No hay escrow configurado para esta tarea.');
-                   }
-                   const txXdr = await createRefundXDR(
-                       task.escrow_id,
-                       address,
-                       amount,
-                       horizonServer
-                   );
-
-                   // Verificar que kit esté inicializado (igual que en ProposalReview)
-                   if (!kit) {
-                       throw new Error('Kit de wallets no inicializado. Por favor, recarga la página.');
-                   }
-
-                   // Asegurar que siempre use Freighter (igual que en ProposalReview)
-                   kit.setWallet('freighter');
-
-                   // Firmar exactamente como en ProposalReview
-                   const { signedTxXdr } = await kit.signTransaction(txXdr, {
-                       address: address,
-                       networkPassphrase: Networks.TESTNET
-                   });
-
-            // Enviar transacción
-            const signedTx = TransactionBuilder.fromXDR(signedTxXdr, Networks.TESTNET);
-            const result = await horizonServer.submitTransaction(signedTx);
-
-            // Enviar a backend usando complete_task.php con action=reject
+            // En Trustless Work, el rechazo se maneja mediante disputas
+            // Por ahora, solo actualizamos el estado en el backend
             const token = localStorage.getItem('token');
             const response = await axios.post(`${API_URL}/auth/complete_task.php`, {
                 task_id: parseInt(taskId!, 10),
-                action: 'reject',
-                tx_hash: result.hash
+                action: 'reject'
             }, {
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -877,7 +711,6 @@ const SuperviseTask = () => {
                     ...prev,
                     status: 'rejected'
                 } : null);
-                // Trabajo rechazado exitosamente
             } else {
                 throw new Error(response.data.message || 'Error al rechazar trabajo');
             }
@@ -889,13 +722,8 @@ const SuperviseTask = () => {
         }
     };
 
-    /* ============================================
-     * SISTEMA ANTIGUO: MULTISIG 2-DE-2 (RESTAURADO)
-     * ============================================
-     * Función para retirar fondos (SOLO trabajador)
-     * Esta función firma la transacción (si no está completa) y luego la envía a Stellar
-     * Sistema restaurado: 2025-11-22
-     * ============================================ */
+    // En Trustless Work, el trabajador NO retira fondos directamente
+    // El cliente debe aprobar y liberar los fondos
     const handleWithdrawFunds = async () => {
         if (!task || !task.escrow_id) {
             setError('Error: No hay escrow configurado para esta tarea.');
@@ -926,307 +754,9 @@ const SuperviseTask = () => {
         setError(null);
 
         try {
-            const token = localStorage.getItem('token');
-            const escrowId = task.escrow_id;
-            const horizonServer = getHorizonServer();
-            
-            // Obtener estado de transacción pendiente
-            let getResponse;
-            try {
-                getResponse = await axios.get(`${API_URL}/auth/get_pending_transaction.php?task_id=${taskId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-            } catch (err) {
-                getResponse = { data: { success: false } };
-            }
-
-            // Verificar si ya hay una transacción completamente firmada
-            if (getResponse.data.success && getResponse.data.complete_tx_xdr) {
-                await submitCompleteTransaction();
-                return;
-            }
-
-            // Obtener dirección del trabajador para validaciones
-            const workerId = worker?.id || task?.accepted_applicant_id;
-            let currentWorkerAddress: string | null = null;
-            if (workerId) {
-                currentWorkerAddress = await getWorkerWalletAddress(workerId);
-            }
-            
-            // Verificar si la transacción pendiente tiene el monto correcto Y el destino correcto
-            let shouldRecreateTransaction = false;
-            const taskPriceForValidation = parseFloat(task.price || '0');
-            const expectedNetAmount = calculateNetAmount(taskPriceForValidation);
-            
-            if (getResponse.data.success && getResponse.data.signed_tx_xdr && !getResponse.data.complete_tx_xdr) {
-                try {
-                    // Decodificar la transacción para verificar el monto y el destino
-                    const partialTx = TransactionBuilder.fromXDR(getResponse.data.signed_tx_xdr, Networks.TESTNET);
-                    let innerTx: any = partialTx;
-                    if ('innerTransaction' in partialTx && (partialTx as any).innerTransaction) {
-                        innerTx = (partialTx as any).innerTransaction.transaction || (partialTx as any).innerTransaction;
-                    }
-                    const paymentOp = innerTx.operations?.find((op: any) => op.type === 'payment');
-                    
-                    if (paymentOp) {
-                        const txAmount = parseFloat(paymentOp.amount);
-                        const tolerance = 0.0000001;
-                        
-                        // Verificar si el monto en la transacción no coincide con el esperado
-                        if (Math.abs(txAmount - expectedNetAmount) > tolerance) {
-                            shouldRecreateTransaction = true;
-                        }
-                        
-                        // Verificar si el destino no coincide con la wallet actual del trabajador
-                        if (currentWorkerAddress && paymentOp.destination !== currentWorkerAddress) {
-                            shouldRecreateTransaction = true;
-                        }
-                        
-                        // Si hay algún problema, eliminar la transacción pendiente incorrecta
-                        if (shouldRecreateTransaction) {
-                            try {
-                                await axios.post(`${API_URL}/auth/save_pending_transaction.php`, {
-                                    task_id: parseInt(taskId!, 10),
-                                    signed_tx_xdr: '',
-                                    signer_role: 'delete'
-                                }, {
-                                    headers: { 'Authorization': `Bearer ${token}` }
-                                });
-                            } catch (deleteErr) {
-                                // Ignorar errores al eliminar
-                            }
-                        }
-                    }
-                } catch (verifyError) {
-                    shouldRecreateTransaction = true;
-                }
-            }
-
-            // Si hay una transacción parcialmente firmada por el cliente, el trabajador la completa
-            if (getResponse.data.success && getResponse.data.signed_tx_xdr && !getResponse.data.complete_tx_xdr && !shouldRecreateTransaction) {
-                const partialXdr = getResponse.data.signed_tx_xdr;
-                
-                // CRÍTICO: Verificar que la dirección del trabajador sea un signer del escrow
-                const escrowId = task?.escrow_id || '';
-                try {
-                    const escrowAccount = await horizonServer.loadAccount(escrowId);
-                    const signers = escrowAccount.signers || [];
-                    const requiredSigners = signers.filter((s: any) => s.weight > 0).map((s: any) => s.key);
-                    
-                    if (!requiredSigners.includes(address)) {
-                        throw new Error(`Tu dirección actual (${address}) no está configurada como signer del escrow. Los signers son: ${requiredSigners.join(', ')}. Esto puede ocurrir si cambiaste tu wallet después de que se creó el escrow. Por favor, contacta al cliente para recrear el escrow con tu nueva wallet.`);
-                    }
-                    
-                    console.log('✅ Verificación previa: La dirección del trabajador está en los signers del escrow.');
-                } catch (verifyError: any) {
-                    if (verifyError.message && verifyError.message.includes('no está configurada')) {
-                        throw verifyError;
-                    }
-                    console.warn('⚠️ No se pudo verificar signers antes de firmar:', verifyError);
-                }
-                
-                // Firmar la transacción parcialmente firmada
-                kit.setWallet('freighter');
-                
-                // Verificar la transacción parcial antes de firmar
-                const partialTx = TransactionBuilder.fromXDR(partialXdr, Networks.TESTNET);
-                const partialSigCount = partialTx.signatures.length;
-                const partialTxHash = partialTx.hash().toString('hex');
-                
-                console.log('🔐 Firmando transacción parcialmente firmada...', {
-                    partialXdrLength: partialXdr.length,
-                    workerAddress: address,
-                    partialSignatures: partialSigCount,
-                    partialTxHash: partialTxHash
-                });
-                
-                const { signedTxXdr: completeXdr } = await kit.signTransaction(partialXdr, {
-                    address: address,
-                    networkPassphrase: Networks.TESTNET
-                });
-
-                // Verificar que tiene 2 firmas
-                const completeTx = TransactionBuilder.fromXDR(completeXdr, Networks.TESTNET);
-                const sigCount = completeTx.signatures.length;
-                const completeTxHash = completeTx.hash().toString('hex');
-                
-                // CRÍTICO: Verificar que el hash de la transacción NO cambió (solo se agregaron firmas)
-                if (partialTxHash !== completeTxHash) {
-                    console.error('❌ ERROR CRÍTICO: El hash de la transacción cambió después de firmar!', {
-                        partialHash: partialTxHash,
-                        completeHash: completeTxHash
-                    });
-                    throw new Error('La transacción fue modificada durante la firma. Esto no debería ocurrir. Por favor, intenta nuevamente.');
-                }
-                
-                console.log('✅ Verificación de hash: La transacción no fue modificada, solo se agregaron firmas.', {
-                    txHash: completeTxHash,
-                    partialSignatures: partialSigCount,
-                    completeSignatures: sigCount
-                });
-                
-                // CRÍTICO: Verificar que las firmas correspondan a los signers del escrow
-                const escrowAccount = await horizonServer.loadAccount(escrowId);
-                const signers = escrowAccount.signers || [];
-                const requiredSigners = signers.filter((s: any) => s.weight > 0).map((s: any) => s.key);
-                
-                // Extraer hints de las firmas para verificar que correspondan a los signers
-                const signatureHints = completeTx.signatures.map((sig: any) => {
-                    try {
-                        // El hint es los últimos 4 bytes de la clave pública
-                        return sig.hint ? uint8ArrayToHex(new Uint8Array(sig.hint)) : null;
-                    } catch (e) {
-                        return null;
-                    }
-                });
-                
-                // Verificar que los hints correspondan a los signers
-                const signerHints = requiredSigners.map((key: string) => {
-                    try {
-                        const keypair = Keypair.fromPublicKey(key);
-                        return uint8ArrayToHex(new Uint8Array(keypair.signatureHint()));
-                    } catch (e) {
-                        return null;
-                    }
-                });
-                
-                console.log('🔐 Verificación detallada de firmas después de completar:', {
-                    partialSignatures: partialSigCount,
-                    completeSignatures: sigCount,
-                    expected: 2,
-                    requiredSigners: requiredSigners,
-                    signatureHints: signatureHints,
-                    signerHints: signerHints,
-                    workerAddress: address,
-                    completeXdrLength: completeXdr.length
-                });
-                
-                if (sigCount < 2) {
-                    throw new Error(`Error: La transacción no tiene 2 firmas. Tiene ${sigCount} firma(s). La transacción parcial tenía ${partialSigCount}.`);
-                }
-                
-                // Verificar que al menos uno de los hints coincida con el trabajador
-                const workerHint = signerHints.find((_hint, idx) => requiredSigners[idx] === address);
-                const hasWorkerSignature = workerHint && signatureHints.includes(workerHint);
-                
-                if (!hasWorkerSignature && workerHint) {
-                    console.warn(`⚠️ ADVERTENCIA: La firma del trabajador puede no estar presente. Worker hint: ${workerHint}, Signature hints: ${signatureHints.join(', ')}`);
-                }
-
-                // Guardar XDR completamente firmado
-                console.log('💾 Guardando XDR completamente firmado en BD...', {
-                    completeXdrLength: completeXdr.length,
-                    signaturesCount: sigCount,
-                    txHash: completeTxHash
-                });
-                
-                const saveResponse = await axios.post(`${API_URL}/auth/save_pending_transaction.php`, {
-                    task_id: parseInt(taskId!, 10),
-                    signed_tx_xdr: completeXdr,
-                    signer_role: 'both' // Indica que ambas firmas están completas
-                }, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (!saveResponse.data.success) {
-                    throw new Error('Error al guardar transacción completamente firmada');
-                }
-
-                // Verificar que el XDR guardado sea el mismo que el que enviamos
-                console.log('✅ XDR guardado exitosamente en BD');
-
-                // Si la transacción está completamente firmada, enviarla automáticamente
-                setError(null); // Limpiar cualquier error previo
-                setPendingTransaction({
-                    hasPending: true,
-                    signedBy: 'both',
-                    waitingFor: undefined
-                });
-                await submitCompleteTransaction();
-                return;
-            }
-
-            // Si no hay transacción pendiente o debe recrearse, crear una nueva y el trabajador la firma (primera firma)
-            // Verificar que tenemos la dirección del trabajador
-            if (!workerId) {
-                throw new Error('No se pudo identificar al trabajador');
-            }
-            
-            if (!currentWorkerAddress) {
-                throw new Error('El trabajador no tiene wallet configurada');
-            }
-            
-            const workerAddress = currentWorkerAddress;
-
-            // Verificar balance del escrow y usar el precio de la tarea como monto a retirar
-            const escrowAccount = await horizonServer.loadAccount(escrowId);
-            const balance = escrowAccount.balances.find((b: any) => b.asset_type === 'native')?.balance || '0';
-            const balanceNum = parseFloat(balance);
-            
-            // Calcular balance mínimo real basado en signers
-            const baseReserve = 1.0;
-            const signerReserve = 0.5;
-            const activeSigners = escrowAccount.signers?.filter((s: any) => s.weight > 0).length || 0;
-            const masterWeight = escrowAccount.signers?.find((s: any) => s.key === escrowAccount.accountId())?.weight || 0;
-            
-            let minimumBalance = baseReserve;
-            if (masterWeight === 0) {
-                minimumBalance += (activeSigners * signerReserve);
-            } else {
-                minimumBalance += ((activeSigners - 1) * signerReserve);
-            }
-            minimumBalance += 0.0001; // Margen para fees
-            
-            // Obtener el precio total de la tarea (el monto que el cliente depositó)
-            // createReleaseFundsXDR calculará internamente el monto neto después de deducir la comisión
-            const taskPriceForRelease = parseFloat(task.price || '0');
-            
-            // Verificar que después de retirar el monto neto, quede al menos el mínimo
-            // Primero calcular el monto neto para la validación
-            const netAmount = calculateNetAmount(taskPriceForRelease);
-            const balanceAfterRelease = balanceNum - netAmount;
-            if (balanceAfterRelease < minimumBalance) {
-                throw new Error(`Balance insuficiente. Balance actual: ${balance} USDC. Monto neto a pagar: ${netAmount.toFixed(7)} USDC (de ${taskPriceForRelease.toFixed(7)} USDC total). Después del retiro quedarían ${balanceAfterRelease.toFixed(7)} USDC, pero se requieren al menos ${minimumBalance.toFixed(7)} USDC para mantener la cuenta activa (considerando ${activeSigners} signers activos). La comisión del 0.3% quedará en el escrow.`);
-            }
-
-            // Crear XDR de transacción - pasar el monto TOTAL (taskPriceForRelease), no el neto
-            // createReleaseFundsXDR calculará internamente el monto neto
-            const txXdr = await createReleaseFundsXDR(
-                escrowId,
-                workerAddress,
-                taskPriceForRelease.toString(), // Pasar el monto total, no el neto
-                horizonServer
-            );
-
-            // Firmar con Freighter
-            kit.setWallet('freighter');
-            const { signedTxXdr: firstSignedXdr } = await kit.signTransaction(txXdr, {
-                address: address,
-                networkPassphrase: Networks.TESTNET
-            });
-
-
-            // Guardar transacción parcialmente firmada
-            const saveResponse = await axios.post(`${API_URL}/auth/save_pending_transaction.php`, {
-                task_id: parseInt(taskId!, 10),
-                signed_tx_xdr: firstSignedXdr,
-                signer_role: 'worker'
-            }, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-                if (!saveResponse.data.success) {
-                    throw new Error('Error al guardar transacción parcialmente firmada');
-                }
-
-                // Actualizar estado de transacción pendiente
-                setPendingTransaction({
-                    hasPending: true,
-                    signedBy: 'worker',
-                    waitingFor: 'client'
-                });
-                setError(null); // Limpiar error, la transacción está pendiente de la firma del cliente
-
+            // En Trustless Work, el trabajador NO libera fondos directamente
+            // El cliente debe aprobar el milestone primero y luego liberar los fondos
+            throw new Error('En Trustless Work, el cliente debe aprobar y liberar los fondos. El trabajador no puede retirar fondos directamente.');
         } catch (err: any) {
             const errorMessage = err.response?.data?.message || err.message || 'Error desconocido';
             
@@ -1236,449 +766,10 @@ const SuperviseTask = () => {
         }
     };
 
-    /* ============================================
-     * SISTEMA ANTIGUO: MULTISIG 2-DE-2 (RESTAURADO)
-     * ============================================
-     * Función para enviar transacción completamente firmada
-     * Sistema restaurado: 2025-11-22
-     * ============================================ */
-    const submitCompleteTransaction = async () => {
-        const token = localStorage.getItem('token');
-        const horizonServer = getHorizonServer();
+    // submitCompleteTransaction eliminada - No se usa en Trustless Work
+    // getWorkerWalletAddress eliminada - No se usa en Trustless Work
 
-        // Obtener transacción del backend
-        const getResponse = await axios.get(`${API_URL}/auth/get_pending_transaction.php?task_id=${taskId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-
-        // Verificar que la transacción está completamente firmada
-        if (!getResponse.data.success || !getResponse.data.complete_tx_xdr) {
-            throw new Error('No hay transacción completamente firmada. Ambos participantes deben aceptar y firmar primero.');
-        }
-
-        const completeTxXdr = getResponse.data.complete_tx_xdr;
-        
-        // Verificar que el XDR no esté vacío
-        if (!completeTxXdr || completeTxXdr.trim() === '') {
-            throw new Error('La transacción completamente firmada está vacía o no es válida.');
-        }
-
-        console.log('📥 XDR recuperado de BD:', {
-            xdrLength: completeTxXdr.length,
-            xdrPreview: completeTxXdr.substring(0, 200)
-        });
-
-        // Decodificar XDR a objeto Transaction (como se hace en ProposalReview.tsx)
-        const signedTx = TransactionBuilder.fromXDR(completeTxXdr, Networks.TESTNET);
-        
-        // Verificar firmas antes de enviar
-        const signatures = signedTx.signatures || [];
-        const txHash = signedTx.hash().toString('hex');
-        
-        console.log('🔐 Verificando firmas antes de enviar...', {
-            signaturesCount: signatures.length,
-            escrowId: task?.escrow_id,
-            txHash: txHash
-        });
-        
-        // Verificar que tiene 2 firmas
-        if (signatures.length < 2) {
-            throw new Error(`La transacción solo tiene ${signatures.length} firma(s), pero se requieren 2 firmas para un escrow multisig 2-de-2.`);
-        }
-        
-        // Verificar que las firmas correspondan a los signers del escrow
-        try {
-            const escrowAccount = await horizonServer.loadAccount(task?.escrow_id || '');
-            const signers = escrowAccount.signers || [];
-            const requiredSigners = signers.filter((s: any) => s.weight > 0).map((s: any) => s.key);
-            
-            // Obtener direcciones esperadas
-            const workerId = worker?.id || task?.accepted_applicant_id;
-            let expectedClientAddress: string | null = null;
-            let expectedWorkerAddress: string | null = null;
-            
-            // Obtener dirección del cliente
-            // Primero intentar desde el usuario actual si es el cliente
-            const isClientUser = currentUser && String(currentUser.id) === String(task?.user_id);
-            if (isClientUser && isConnected && address) {
-                expectedClientAddress = address;
-                console.log('✅ Dirección del cliente obtenida desde wallet conectada:', expectedClientAddress);
-            } else if (task?.user_id) {
-                // Si no, intentar desde la BD
-                try {
-                    const clientResponse = await axios.get(`${API_URL}/auth/get_user_details.php?user_id=${task.user_id}`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    expectedClientAddress = clientResponse.data?.wallet_address || null;
-                    console.log('✅ Dirección del cliente obtenida desde BD:', expectedClientAddress);
-                } catch (e) {
-                    console.warn('⚠️ No se pudo obtener dirección del cliente desde BD:', e);
-                }
-            }
-            
-            // Obtener dirección del trabajador
-            if (workerId) {
-                expectedWorkerAddress = await getWorkerWalletAddress(workerId);
-                console.log('✅ Dirección del trabajador obtenida:', expectedWorkerAddress);
-            }
-            
-            // Extraer hints de las firmas
-            const signatureHints = signatures.map((sig: any, index: number) => {
-                try {
-                    console.log(`🔍 Firma ${index}:`, {
-                        sig: sig,
-                        hint: sig.hint,
-                        hintType: typeof sig.hint,
-                        hintIsArray: Array.isArray(sig.hint),
-                        hintLength: sig.hint?.length
-                    });
-                    
-                    if (!sig.hint) {
-                        return null;
-                    }
-                    
-                    // El hint puede ser un Buffer, Uint8Array, o array de números
-                    let hintBytes: Uint8Array;
-                    if (sig.hint instanceof Uint8Array) {
-                        hintBytes = sig.hint;
-                    } else if (Array.isArray(sig.hint)) {
-                        hintBytes = new Uint8Array(sig.hint);
-                    } else if (sig.hint.buffer) {
-                        // Si es un Buffer-like object
-                        hintBytes = new Uint8Array(sig.hint.buffer, sig.hint.byteOffset || 0, sig.hint.byteLength || sig.hint.length);
-                    } else {
-                        // Intentar convertir directamente
-                        hintBytes = new Uint8Array(Object.values(sig.hint));
-                    }
-                    
-                    return uint8ArrayToHex(hintBytes);
-                } catch (e) {
-                    console.error(`❌ Error extrayendo hint de firma ${index}:`, e, sig);
-                    return null;
-                }
-            });
-            
-            // Calcular hints de los signers esperados
-            const signerHints = requiredSigners.map((key: string) => {
-                try {
-                    const keypair = Keypair.fromPublicKey(key);
-                    return uint8ArrayToHex(new Uint8Array(keypair.signatureHint()));
-                } catch (e) {
-                    return null;
-                }
-            });
-            
-            // Calcular hints de las direcciones esperadas para comparar
-            let expectedClientHint: string | null = null;
-            let expectedWorkerHint: string | null = null;
-            
-            if (expectedClientAddress) {
-                try {
-                    const clientKeypair = Keypair.fromPublicKey(expectedClientAddress);
-                    expectedClientHint = uint8ArrayToHex(new Uint8Array(clientKeypair.signatureHint()));
-                } catch (e) {
-                    console.warn('⚠️ No se pudo calcular hint del cliente:', e);
-                }
-            }
-            
-            if (expectedWorkerAddress) {
-                try {
-                    const workerKeypair = Keypair.fromPublicKey(expectedWorkerAddress);
-                    expectedWorkerHint = uint8ArrayToHex(new Uint8Array(workerKeypair.signatureHint()));
-                } catch (e) {
-                    console.warn('⚠️ No se pudo calcular hint del trabajador:', e);
-                }
-            }
-            
-            console.log('🔍 Verificación detallada de firmas:', {
-                requiredSigners: requiredSigners,
-                expectedClientAddress: expectedClientAddress,
-                expectedWorkerAddress: expectedWorkerAddress,
-                expectedClientHint: expectedClientHint,
-                expectedWorkerHint: expectedWorkerHint,
-                signatureHints: signatureHints,
-                signerHints: signerHints,
-                signaturesMatch: signatureHints.some(hint => signerHints.includes(hint)),
-                clientHintMatches: expectedClientHint && signatureHints.includes(expectedClientHint),
-                workerHintMatches: expectedWorkerHint && signatureHints.includes(expectedWorkerHint)
-            });
-            
-            // Expandir los arrays para ver los valores completos
-            console.log('🔍 Signers del escrow (completo):', requiredSigners);
-            console.log('🔍 Hints de los signers (completo):', signerHints);
-            console.log('🔍 Hints de las firmas (completo):', signatureHints);
-            
-            // Verificar si los signers del escrow coinciden con las direcciones esperadas
-            const clientIsSigner = expectedClientAddress && requiredSigners.includes(expectedClientAddress);
-            const workerIsSigner = expectedWorkerAddress && requiredSigners.includes(expectedWorkerAddress);
-            
-            console.log('🔍 Verificación de signers vs direcciones esperadas:', {
-                clientIsSigner: clientIsSigner,
-                workerIsSigner: workerIsSigner,
-                clientAddressInSigners: expectedClientAddress ? requiredSigners.includes(expectedClientAddress) : false,
-                workerAddressInSigners: expectedWorkerAddress ? requiredSigners.includes(expectedWorkerAddress) : false
-            });
-            
-            // Verificar que al menos 2 hints coincidan con los signers
-            const matchingHints = signatureHints.filter(hint => hint && signerHints.includes(hint));
-            
-            // Si no hay coincidencias, puede ser que las direcciones cambiaron
-            // En este caso, intentar enviar de todas formas ya que el XDR tiene 2 firmas
-            if (matchingHints.length < 2) {
-                console.warn('⚠️ ADVERTENCIA: Los hints de las firmas no coinciden exactamente con los signers del escrow.', {
-                    matchingHints: matchingHints.length,
-                    required: 2,
-                    signatureHints: signatureHints,
-                    signerHints: signerHints,
-                    requiredSigners: requiredSigners
-                });
-                console.warn('⚠️ Continuando de todas formas ya que la transacción tiene 2 firmas. El problema puede ser que las direcciones cambiaron después de crear el escrow.');
-                // NO lanzar error aquí, dejar que Horizon decida
-            }
-        } catch (verifyError: any) {
-            if (verifyError.message && verifyError.message.includes('no corresponden')) {
-                throw verifyError;
-            }
-            console.warn('⚠️ No se pudo verificar signers antes de enviar:', verifyError);
-        }
-        
-        console.log('📤 Enviando transacción a Horizon...');
-        console.log('📋 XDR completo (primeros 200 caracteres):', completeTxXdr.substring(0, 200));
-        
-        let result;
-        try {
-            result = await horizonServer.submitTransaction(signedTx);
-            
-            console.log('Transacción enviada exitosamente:', {
-                hash: result.hash,
-                ledger: result.ledger
-            });
-            
-        } catch (submitError: any) {
-            // Logging detallado del error completo
-            console.error('🔴 Error completo capturado:', submitError);
-            console.error('🔴 Error response:', submitError.response);
-            console.error('🔴 Error response data:', submitError.response?.data);
-            
-            // Logging detallado de result codes
-            const resultCodes = submitError.response?.data?.extras?.result_codes || submitError.response?.data?.result_codes;
-            const errorDetail = submitError.response?.data?.detail || submitError.response?.data?.message || submitError.message;
-            const errorType = submitError.response?.data?.type;
-            const errorTitle = submitError.response?.data?.title;
-            
-            // Mensaje de error más descriptivo
-            let errorMessage = 'Error al enviar transacción a Stellar: ';
-            
-            if (resultCodes) {
-                // Procesar result codes de Stellar
-                if (resultCodes.transaction) {
-                    errorMessage += `[${resultCodes.transaction}] `;
-                    
-                    // Mensajes específicos para códigos comunes
-                    if (resultCodes.transaction === 'tx_bad_auth') {
-                        errorMessage += 'Faltan firmas o las firmas son inválidas. Verifica que ambas partes hayan firmado correctamente. ';
-                    } else if (resultCodes.transaction === 'tx_bad_seq') {
-                        errorMessage += 'La secuencia de la cuenta está desactualizada. Por favor, ambas partes deben aceptar nuevamente para crear una nueva transacción. ';
-                    } else if (resultCodes.transaction === 'tx_too_late') {
-                        errorMessage += 'La transacción ha expirado. Por favor, ambas partes deben aceptar nuevamente para crear una nueva transacción. ';
-                    } else if (resultCodes.transaction === 'tx_insufficient_balance') {
-                        errorMessage += 'Balance insuficiente en la cuenta escrow. ';
-                    } else if (resultCodes.transaction === 'tx_missing_operation') {
-                        errorMessage += 'La transacción no tiene operaciones válidas. ';
-                    }
-                }
-                
-                if (resultCodes.operations && Array.isArray(resultCodes.operations)) {
-                    const opErrors = resultCodes.operations.filter((op: any) => op !== 'op_success');
-                    if (opErrors.length > 0) {
-                        errorMessage += `Errores en operaciones: ${opErrors.join(', ')}. `;
-                    }
-                } else if (resultCodes.operations && typeof resultCodes.operations === 'object') {
-                    // Si operations es un objeto con índices
-                    const opErrors = Object.values(resultCodes.operations).filter((op: any) => op !== 'op_success');
-                    if (opErrors.length > 0) {
-                        errorMessage += `Errores en operaciones: ${opErrors.join(', ')}. `;
-                    }
-                }
-                
-                if (resultCodes.inner_transaction) {
-                    errorMessage += `Transacción interna: ${resultCodes.inner_transaction}. `;
-                }
-            }
-            
-            if (errorTitle) {
-                errorMessage += `Título: ${errorTitle}. `;
-            }
-            
-            if (errorType) {
-                errorMessage += `Tipo: ${errorType}. `;
-            }
-            
-            errorMessage += errorDetail || 'Error desconocido';
-            
-            // Log completo del error para debugging
-            console.error('❌ Error completo de Horizon:', {
-                status: submitError.response?.status,
-                statusText: submitError.response?.statusText,
-                type: errorType,
-                title: errorTitle,
-                data: submitError.response?.data,
-                resultCodes: resultCodes,
-                errorDetail: errorDetail,
-                fullResponse: submitError.response,
-                error: submitError
-            });
-            
-            // Mostrar result_codes completo en consola para debugging
-            if (resultCodes) {
-                console.error('📋 Result Codes detallados:', JSON.stringify(resultCodes, null, 2));
-            }
-            
-            // Si no hay mensaje de error específico, usar el mensaje genérico con más detalles
-            if (!errorMessage || errorMessage === 'Error al enviar transacción a Stellar: ') {
-                errorMessage = `Error al enviar transacción a Stellar. ${errorTitle || 'Error desconocido'}. ${errorDetail || ''}`;
-                if (resultCodes) {
-                    errorMessage += ` Códigos: ${JSON.stringify(resultCodes)}`;
-                }
-            }
-            
-            throw new Error(errorMessage);
-        }
-
-
-        // Verificar que la transacción realmente se procesó
-        try {
-            // Obtener wallet del trabajador para verificar balance
-            const workerId = worker?.id || task?.accepted_applicant_id;
-            let workerAddress: string | null = null;
-            if (workerId) {
-                workerAddress = await getWorkerWalletAddress(workerId);
-            }
-            
-            // Obtener balance del escrow ANTES de verificar
-            const escrowId = task?.escrow_id || '';
-            await horizonServer.loadAccount(escrowId);
-            
-            // Obtener balance del trabajador ANTES (si tenemos su dirección)
-            let workerBalanceBefore = '0';
-            if (workerAddress) {
-                try {
-                    const workerAccountBefore = await horizonServer.loadAccount(workerAddress);
-                    workerBalanceBefore = workerAccountBefore.balances.find((b: any) => b.asset_type === 'native')?.balance || '0';
-                } catch (err) {
-                }
-            }
-            
-            // Esperar un momento para que la transacción se procese
-            await new Promise(resolve => setTimeout(resolve, 3000));
-            
-            // Verificar el estado de la transacción en Horizon
-            const txResult = await horizonServer.transactions().transaction(result.hash).call();
-            
-            if (!txResult.successful) {
-                throw new Error('La transacción no fue exitosa en Stellar');
-            }
-            
-            // Verificar balance del escrow DESPUÉS
-            await horizonServer.loadAccount(escrowId);
-            
-            // Verificar balance del trabajador DESPUÉS (si tenemos su dirección)
-            if (workerAddress) {
-                try {
-                    const workerAccountAfter = await horizonServer.loadAccount(workerAddress);
-                    const workerBalanceAfter = workerAccountAfter.balances.find((b: any) => b.asset_type === 'native')?.balance || '0';
-                    
-                    const balanceIncreased = parseFloat(workerBalanceAfter) > parseFloat(workerBalanceBefore);
-                    if (balanceIncreased) {
-                    } else {
-                    }
-                } catch (err) {
-                }
-            }
-        } catch (verifyError: any) {
-            throw new Error('Error verificando transacción: ' + (verifyError.message || 'Error desconocido'));
-        }
-
-        // Notificar al backend
-        try {
-            await axios.post(`${API_URL}/auth/submit_complete_transaction.php`, {
-                task_id: parseInt(taskId!, 10),
-                complete_tx_xdr: completeTxXdr,
-                tx_hash: result.hash
-            }, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-        } catch (backendError: any) {
-            // No lanzar error, la transacción ya se envió a Stellar
-        }
-
-        // Obtener el monto recibido de la transacción (usar el precio de la tarea)
-        const receivedAmount = task?.price || '0';
-        
-        // Mostrar popup de éxito en lugar de alert
-        setPaymentSuccessData({
-            amount: receivedAmount,
-            txHash: result.hash
-        });
-        setShowPaymentSuccessPopup(true);
-        setWithdrawingFunds(false);
-        
-        // Recargar datos después de un momento
-        setTimeout(() => {
-            fetchData();
-        }, 1000);
-
-        // Redirigir automáticamente al dashboard después de 1 minuto
-        setTimeout(() => {
-            setShowPaymentSuccessPopup(false);
-            navigate('/dashboard');
-        }, 60000); // 60 segundos = 1 minuto
-    };
-
-    // Función helper para obtener wallet del trabajador
-    const getWorkerWalletAddress = async (workerId: string): Promise<string | null> => {
-        try {
-            
-            // Si el trabajador es el usuario actual y tiene wallet conectada, usarla directamente
-            if (currentUser && currentUser.id === workerId && isConnected && address) {
-                // No intentar guardar la wallet aquí - puede causar errores 400 si ya está guardada
-                // La wallet se guarda cuando el usuario se conecta por primera vez
-                return address;
-            }
-            
-            // PRIMERO: Intentar obtener desde task.worker_wallet_address (viene de get_task_details.php)
-            if (task?.worker_wallet_address) {
-                return task.worker_wallet_address;
-            }
-            
-            // SEGUNDO: Si no está en task, obtener de la BD (users o applications)
-            const response = await axios.get(`${API_URL}/auth/get_user_details.php?user_id=${workerId}`);
-            let walletAddress = response.data?.wallet_address || null;
-            
-            // Si no está en la BD pero el trabajador tiene wallet conectada (si es el usuario actual)
-            if (!walletAddress && currentUser && currentUser.id === workerId && isConnected && address) {
-                walletAddress = address;
-                // No intentar guardar aquí - puede causar errores 400 si ya está guardada
-                // La wallet se guarda cuando el usuario se conecta por primera vez
-            }
-            
-            if (!walletAddress) {
-            } else {
-            }
-            return walletAddress;
-        } catch (error: any) {
-            return null;
-        }
-    };
-
-    /* ============================================
-     * SISTEMA ANTIGUO: MULTISIG 2-DE-2 (RESTAURADO)
-     * ============================================
-     * Función para marcar la tarea como completada (trabajador)
-     * Sistema restaurado: 2025-11-22
-     * ============================================ */
-    // Trabajador marca tarea como completada (solo actualiza BD)
+    // Trabajador marca tarea como completada usando Trustless Work
     const handleCompleteTask = async () => {
         if (!taskId) {
             setError('Error: ID de tarea no disponible.');
@@ -1714,25 +805,27 @@ const SuperviseTask = () => {
                 return;
             }
 
-            // PASO 1: Verificar que el cliente ya firmó la transacción
-            let pendingTxResponse;
-            try {
-                pendingTxResponse = await axios.get(`${API_URL}/auth/get_pending_transaction.php?task_id=${taskId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-            } catch (err) {
-                pendingTxResponse = { data: { success: false } };
+            // FLUJO TRUSTLESS WORK: Cambiar estado del milestone a "completed"
+            if (!task || !task.escrow_id || !address || !kit) {
+                throw new Error('Faltan datos necesarios para completar la tarea');
             }
 
-            // Verificar que existe una transacción firmada por el cliente
-            if (!pendingTxResponse.data.success || 
-                !pendingTxResponse.data.signed_tx_xdr || 
-                pendingTxResponse.data.signed_by !== 'client') {
-                throw new Error('El cliente aún no ha firmado la transacción. Debes esperar a que el cliente acepte y firme primero.');
+            const result = await changeMilestoneStatusTrustlessEscrow(
+                task.escrow_id,
+                '0', // Solo un milestone
+                address, // serviceProvider (trabajador)
+                'completed',
+                'Tarea completada', // newEvidence
+                kit,
+                changeMilestoneStatus,
+                sendTransaction
+            );
+
+            if (!result.success) {
+                throw new Error(result.error || 'Error al cambiar estado del milestone');
             }
 
-            // PASO 2: SOLO actualizar BD (worker_accepted_completion = 1)
-            // NO se firma ninguna transacción aquí. La firma se hace cuando se hace clic en "Retirar Dinero"
+            // Actualizar BD
             const response = await axios.post(`${API_URL}/auth/complete_task.php`, 
                 {
                     task_id: parseInt(taskId, 10),
@@ -1746,10 +839,10 @@ const SuperviseTask = () => {
             );
 
             if (!response.data.success) {
-                throw new Error(response.data.message || 'Error al aceptar trabajo');
+                throw new Error(response.data.message || 'Error al actualizar estado en BD');
             }
 
-            // PASO 3: Actualizar el estado local de la tarea
+            // Actualizar estado local
             setTask(prevTask => {
                 if (!prevTask) return null;
                 return { 
@@ -1824,6 +917,16 @@ const SuperviseTask = () => {
             return;
         }
         
+        if (!task || !task.escrow_id) {
+            setError('Error: No hay escrow configurado para esta tarea.');
+            return;
+        }
+
+        if (!isConnected || !address || !kit) {
+            setError('Debes conectar tu wallet Freighter para iniciar una disputa.');
+            return;
+        }
+        
         setCreatingDispute(true);
         setError(null);
         
@@ -1834,12 +937,30 @@ const SuperviseTask = () => {
                 setCreatingDispute(false);
                 return;
             }
+
+            // Paso 1: Iniciar disputa en Trustless Work
+            console.log('🚨 Iniciando disputa en Trustless Work...');
+            const trustlessResult = await startDisputeTrustlessEscrow(
+                task.escrow_id,
+                address, // signer (cliente o trabajador)
+                kit,
+                startDispute,
+                sendTransaction
+            );
+
+            if (!trustlessResult.success) {
+                throw new Error(trustlessResult.error || 'Error al iniciar disputa en Trustless Work');
+            }
+
+            console.log('✅ Disputa iniciada en Trustless Work:', trustlessResult.txHash);
             
+            // Paso 2: Crear registro en la base de datos
             const response = await axios.post(
                 `${API_URL}/auth/create_dispute.php`,
                 {
                     task_id: parseInt(taskId, 10),
-                    reason: disputeReason.trim()
+                    reason: disputeReason.trim(),
+                    tx_hash: trustlessResult.txHash // Enviar hash de transacción
                 },
                 {
                     headers: {
@@ -1865,18 +986,19 @@ const SuperviseTask = () => {
                 });
               
                 // Mostrar mensaje de éxito
-                alert('Disputa creada exitosamente. Un administrador revisará tu caso.');
+                alert('✅ Disputa iniciada exitosamente en Trustless Work. Un administrador revisará tu caso.');
                 
                 // Recargar datos
                 setTimeout(() => {
                     fetchData();
                 }, 500);
             } else {
-                throw new Error(response.data.message || 'Error al crear la disputa');
+                throw new Error(response.data.message || 'Error al crear la disputa en la base de datos');
             }
         } catch (err: any) {
             const errorMessage = err.response?.data?.message || err.message;
             setError('Error al crear la disputa: ' + errorMessage);
+            console.error('Error al crear disputa:', err);
             
             // Si el error indica que la tarea no existe, redirigir al dashboard
             if (errorMessage && (
@@ -1964,7 +1086,7 @@ const SuperviseTask = () => {
             <div className="task-details-section">
                 <h2>Detalles de la Tarea</h2>
                 <p><span className="detail-label">Descripción:</span> {task.description}</p>
-                <p><span className="detail-label">Recompensa:</span> {calculateNetAmount(parseFloat(task.price)).toFixed(7)} {task.currency}</p>
+                <p><span className="detail-label">Recompensa:</span> {calculateNetAmountSync(parseFloat(task.price), platformFee).toFixed(7)} {task.currency}</p>
                 <p><span className="detail-label">Categoría:</span> {task.category}</p>
                 <p><span className="detail-label">Dificultad:</span> {task.difficulty}</p>
             </div>
@@ -2713,6 +1835,120 @@ const SuperviseTask = () => {
                 </div>
             )}
 
+            {/* Popup de Éxito - Pago Realizado (SOLO para cliente) */}
+            {showClientPaymentPopup && paymentSuccessData && isClient && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 10000
+                }}>
+                    <div style={{
+                        backgroundColor: '#fff',
+                        borderRadius: '16px',
+                        padding: '40px',
+                        maxWidth: '500px',
+                        width: '90%',
+                        textAlign: 'center',
+                        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)',
+                        animation: 'scaleIn 0.5s ease-out'
+                    }}>
+                        <div style={{
+                            fontSize: '80px',
+                            marginBottom: '20px'
+                        }}>
+                            ✅
+                        </div>
+                        <h3 style={{
+                            fontSize: '28px',
+                            fontWeight: 'bold',
+                            color: '#28a745',
+                            marginBottom: '20px',
+                            marginTop: 0
+                        }}>
+                            ¡Pago Realizado Exitosamente!
+                        </h3>
+                        <div style={{
+                            marginBottom: '30px',
+                            color: '#333',
+                            lineHeight: '1.6'
+                        }}>
+                            <p style={{ fontSize: '18px', marginBottom: '15px', fontWeight: '600' }}>
+                                Has pagado al trabajador y todo está bien
+                            </p>
+                            <div style={{
+                                backgroundColor: '#f8f9fa',
+                                padding: '20px',
+                                borderRadius: '8px',
+                                marginTop: '15px',
+                                textAlign: 'left'
+                            }}>
+                                <p style={{ margin: '8px 0', fontSize: '16px' }}>
+                                    <strong>💰 Monto pagado:</strong> {paymentSuccessData.amount} USDC
+                                </p>
+                                <p style={{ margin: '8px 0', fontSize: '14px', color: '#666' }}>
+                                    <strong>💵 Trabajador recibirá:</strong> {paymentSuccessData.netAmount} USDC (neto)
+                                </p>
+                                <p style={{ margin: '8px 0', fontSize: '14px', color: '#666' }}>
+                                    <strong>🔗 Hash de transacción:</strong>
+                                </p>
+                                <code style={{
+                                    display: 'block',
+                                    fontSize: '12px',
+                                    color: '#28a745',
+                                    backgroundColor: '#e8f5e9',
+                                    padding: '8px',
+                                    borderRadius: '4px',
+                                    wordBreak: 'break-all',
+                                    marginTop: '5px'
+                                }}>
+                                    {paymentSuccessData.txHash}
+                                </code>
+                                <p style={{ margin: '15px 0 0 0', fontSize: '13px', color: '#666', fontStyle: 'italic' }}>
+                                    ⏰ Esta tarea será eliminada automáticamente en 24 horas
+                                </p>
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+                            <button 
+                                onClick={() => {
+                                    setShowClientPaymentPopup(false);
+                                    navigate('/dashboard');
+                                }}
+                                style={{
+                                    backgroundColor: '#28a745',
+                                    color: '#fff',
+                                    border: 'none',
+                                    padding: '14px 32px',
+                                    borderRadius: '8px',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.3s ease',
+                                    minWidth: '200px'
+                                }}
+                                onMouseOver={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#218838';
+                                    e.currentTarget.style.transform = 'scale(1.05)';
+                                }}
+                                onMouseOut={(e) => {
+                                    e.currentTarget.style.backgroundColor = '#28a745';
+                                    e.currentTarget.style.transform = 'scale(1)';
+                                }}
+                            >
+                                Entendido
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Popup de Éxito - Pago Recibido (SOLO para trabajador) */}
             {showPaymentSuccessPopup && paymentSuccessData && isWorker && (
                 <div style={{
@@ -2758,7 +1994,7 @@ const SuperviseTask = () => {
                             lineHeight: '1.6'
                         }}>
                             <p style={{ fontSize: '18px', marginBottom: '15px', fontWeight: '600' }}>
-                                Has recibido tu pago correctamente
+                                ¡Has recibido tu pago correctamente!
                             </p>
                             <div style={{
                                 backgroundColor: '#f8f9fa',
@@ -2768,8 +2004,13 @@ const SuperviseTask = () => {
                                 textAlign: 'left'
                             }}>
                                 <p style={{ margin: '8px 0', fontSize: '16px' }}>
-                                    <strong>💰 Monto recibido:</strong> {paymentSuccessData.amount} USDC
+                                    <strong>💰 Monto recibido:</strong> {paymentSuccessData.netAmount || paymentSuccessData.amount} USDC
                                 </p>
+                                {paymentSuccessData.netAmount && (
+                                    <p style={{ margin: '8px 0', fontSize: '14px', color: '#666' }}>
+                                        <strong>📊 Monto total:</strong> {paymentSuccessData.amount} USDC (después de comisión)
+                                    </p>
+                                )}
                                 <p style={{ margin: '8px 0', fontSize: '14px', color: '#666' }}>
                                     <strong>🔗 Hash de transacción:</strong>
                                 </p>
@@ -2785,6 +2026,9 @@ const SuperviseTask = () => {
                                 }}>
                                     {paymentSuccessData.txHash}
                                 </code>
+                                <p style={{ margin: '15px 0 0 0', fontSize: '13px', color: '#666', fontStyle: 'italic' }}>
+                                    ⏰ Esta tarea será eliminada automáticamente en 24 horas
+                                </p>
                             </div>
                         </div>
                         <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>

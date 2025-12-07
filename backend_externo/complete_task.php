@@ -195,12 +195,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             error_log("✅ Ambos aceptaron la tarea. Marcando como completada...");
             
-            // Actualizar estado de tarea y escrow
-            $stmt_complete_task = $conn->prepare("UPDATE tasks SET status = 'completed', completed_at = ?, escrow_status = 'completed' WHERE id = ?");
-            if ($stmt_complete_task === false) { throw new Exception('Error al preparar la finalización de tarea: ' . $conn->error); }
-            $stmt_complete_task->bind_param("si", $current_datetime, $taskId);
+            // Verificar si viene información de que el escrow está completado
+            $escrowCompleted = isset($data['escrow_completed']) ? (bool)$data['escrow_completed'] : false;
+            $txHash = isset($data['tx_hash']) ? trim($data['tx_hash']) : null;
+            
+            // Calcular fecha de eliminación programada (24 horas después)
+            $scheduledDeletionAt = date('Y-m-d H:i:s', strtotime('+24 hours'));
+            
+            // Actualizar estado de tarea y escrow, y programar eliminación
+            // Primero verificar si la columna scheduled_deletion_at existe
+            $checkColumn = $conn->query("SHOW COLUMNS FROM tasks LIKE 'scheduled_deletion_at'");
+            $hasScheduledDeletion = $checkColumn && $checkColumn->num_rows > 0;
+            
+            if ($hasScheduledDeletion) {
+                $stmt_complete_task = $conn->prepare("UPDATE tasks SET status = 'completed', completed_at = ?, escrow_status = 'completed', escrow_completed_at = NOW(), scheduled_deletion_at = ? WHERE id = ?");
+                if ($stmt_complete_task === false) { throw new Exception('Error al preparar la finalización de tarea: ' . $conn->error); }
+                $stmt_complete_task->bind_param("ssi", $current_datetime, $scheduledDeletionAt, $taskId);
+            } else {
+                // Si no existe la columna, solo actualizar los campos existentes
+                $stmt_complete_task = $conn->prepare("UPDATE tasks SET status = 'completed', completed_at = ?, escrow_status = 'completed', escrow_completed_at = NOW() WHERE id = ?");
+                if ($stmt_complete_task === false) { throw new Exception('Error al preparar la finalización de tarea: ' . $conn->error); }
+                $stmt_complete_task->bind_param("si", $current_datetime, $taskId);
+            }
+            
             if (!$stmt_complete_task->execute()) { throw new Exception('Error al finalizar la tarea: ' . $stmt_complete_task->error); }
             $stmt_complete_task->close();
+            
+            // Si la columna no existe, crearla
+            if (!$hasScheduledDeletion) {
+                $alterTable = "ALTER TABLE tasks ADD COLUMN scheduled_deletion_at DATETIME NULL AFTER escrow_completed_at";
+                $conn->query($alterTable);
+                // Actualizar con la fecha de eliminación
+                $stmt_update_deletion = $conn->prepare("UPDATE tasks SET scheduled_deletion_at = ? WHERE id = ?");
+                $stmt_update_deletion->bind_param("si", $scheduledDeletionAt, $taskId);
+                $stmt_update_deletion->execute();
+                $stmt_update_deletion->close();
+            }
             
             // Nota: La liberación de fondos se hace desde el frontend con Stellar
             // El backend solo registra que ambos aceptaron

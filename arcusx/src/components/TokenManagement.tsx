@@ -36,31 +36,16 @@ const TokenManagement: React.FC<TokenManagementProps> = ({ onUpdate }) => {
   const fetchTokens = async () => {
     setLoading(true);
     try {
-      // Mock data for development - no API calls
+      // TODO: Implementar endpoint en backend para obtener tokens
+      // Por ahora usar datos mock adaptados a Stellar
       const mockTokens: Token[] = [
         {
-          address: '0xA0b86a33E6441b8C4C8C0C4C0C4C0C4C0C4C0C4C',
+          address: 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5', // USDC Testnet Issuer
           symbol: 'USDC',
           name: 'USD Coin',
-          decimals: 6,
+          decimals: 7,
           allowed: true,
-          addedAt: '2024-01-15T10:30:00Z'
-        },
-        {
-          address: '0xB1c97a44F7551b9D5D1D5D1D5D1D5D1D5D1D5D1D5D',
-          symbol: 'USDT',
-          name: 'Tether USD',
-          decimals: 6,
-          allowed: true,
-          addedAt: '2024-01-16T14:20:00Z'
-        },
-        {
-          address: '0xC2d88b55G8662c0E6E2E6E2E6E2E6E2E6E2E6E2E6E',
-          symbol: 'DAI',
-          name: 'Dai Stablecoin',
-          decimals: 18,
-          allowed: false,
-          addedAt: '2024-01-17T09:15:00Z'
+          addedAt: new Date().toISOString()
         }
       ];
       
@@ -78,9 +63,9 @@ const TokenManagement: React.FC<TokenManagementProps> = ({ onUpdate }) => {
     setError('');
 
     try {
-      // Validaciones
-      if (!newToken.address || newToken.address.length !== 42) {
-        setError('La dirección del token debe ser una dirección Ethereum válida');
+      // Validaciones para Stellar
+      if (!newToken.address || !newToken.address.startsWith('G') || newToken.address.length !== 56) {
+        setError('La dirección del token debe ser una dirección Stellar válida (empieza con G y tiene 56 caracteres)');
         return;
       }
       if (!newToken.symbol || !newToken.name) {
@@ -149,7 +134,7 @@ const TokenManagement: React.FC<TokenManagementProps> = ({ onUpdate }) => {
     <div className="token-management">
       <div className="token-header">
         <h2>Gestión de Tokens</h2>
-        <p>Administra los tokens ERC-20 permitidos en la plataforma</p>
+        <p>Administra los tokens Stellar permitidos en la plataforma</p>
         <button 
           onClick={() => setShowAddForm(!showAddForm)}
           className="add-token-button"
@@ -171,8 +156,8 @@ const TokenManagement: React.FC<TokenManagementProps> = ({ onUpdate }) => {
                 id="tokenAddress"
                 value={newToken.address}
                 onChange={(e) => setNewToken(prev => ({ ...prev, address: e.target.value }))}
-                placeholder="0x..."
-                maxLength={42}
+              placeholder="G..."
+              maxLength={56}
               />
             </div>
             <div className="form-group">

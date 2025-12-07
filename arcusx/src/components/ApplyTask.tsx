@@ -3,7 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import { FaArrowLeft } from 'react-icons/fa';
 import axios from 'axios';
 import { API_URL } from '../config/database';
-import { calculateNetAmount } from '../config/commission';
+import { calculateNetAmountSync } from '../config/commission';
+import { usePlatformFee } from '../hooks/usePlatformFee';
 import '../css/ApplyTask.css'; // Necesitas crear este archivo CSS
 
 interface TaskData {
@@ -48,6 +49,9 @@ const ApplyTask = () => {
   // Obtener usuario logeado para el ID del aplicante
   const storedUser = localStorage.getItem('user');
   const user = storedUser ? JSON.parse(storedUser) : null;
+  
+  // Obtener platform fee del backend
+  const { platformFee } = usePlatformFee();
 
   // Función para manejar cambios en el formulario
   const handleInputChange = (field: keyof ApplicationData, value: string) => {
@@ -236,7 +240,7 @@ const ApplyTask = () => {
              <div className="meta-item">
                <span className="meta-label">Recompensa:</span>
                <span className="meta-value">
-                 {calculateNetAmount(parseFloat(task.price)).toFixed(7)} {task.currency}
+                 {calculateNetAmountSync(parseFloat(task.price), platformFee).toFixed(7)} {task.currency}
                </span>
              </div>
              <div className="meta-item">

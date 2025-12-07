@@ -5,7 +5,8 @@ import '../css/CreateTask.css';
 import axios from 'axios';
 import Popup from './Popup';
 import { API_URL } from '../config/database';
-import { calculateCommission, calculateNetAmount } from '../config/commission';
+import { calculateCommissionSync, calculateNetAmountSync } from '../config/commission';
+import { getPlatformFee } from '../services/platformFeeService';
 
 interface UserLimits {
   can_create: boolean;
@@ -33,6 +34,8 @@ const CreateTask = () => {
   // Estados para monto neto y comisión
   const [netAmount, setNetAmount] = useState<string>('');
   const [commissionAmount, setCommissionAmount] = useState<string>('');
+  const [platformFee, setPlatformFee] = useState<number>(0.003); // 0.3% por defecto
+  const [platformFeePercent, setPlatformFeePercent] = useState<string>('0.3');
   
   // Estados para el popup
   const [showPopup, setShowPopup] = useState(false);
@@ -63,19 +66,22 @@ const CreateTask = () => {
     }
   };
 
-  // Cargar límites del usuario al montar el componente
+  // Cargar límites del usuario y platform fee al montar el componente
   useEffect(() => {
     loadUserLimits();
+    loadPlatformFee();
     
     // Recargar límites cada 30 segundos para mantener actualizado el cooldown
     const interval = setInterval(() => {
       loadUserLimits();
+      loadPlatformFee();
     }, 30000); // 30 segundos
     
     // Recargar límites cuando el usuario regrese a la pestaña
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         loadUserLimits();
+        loadPlatformFee();
       }
     };
     
@@ -87,13 +93,25 @@ const CreateTask = () => {
     };
   }, [user?.id]);
 
-  // Calcular monto neto y comisión en tiempo real cuando cambia el precio
+  // Función para cargar platform fee del backend
+  const loadPlatformFee = async () => {
+    try {
+      const fee = await getPlatformFee();
+      setPlatformFee(fee);
+      setPlatformFeePercent((fee * 100).toFixed(2));
+    } catch (error) {
+      console.error('Error al cargar platform fee:', error);
+      // Mantener valores por defecto si falla
+    }
+  };
+
+  // Calcular monto neto y comisión en tiempo real cuando cambia el precio o el fee
   useEffect(() => {
     if (formData.price && formData.price.trim() !== '') {
       const price = parseFloat(formData.price);
       if (!isNaN(price) && price > 0) {
-        const commission = calculateCommission(price);
-        const net = calculateNetAmount(price);
+        const commission = calculateCommissionSync(price, platformFee);
+        const net = calculateNetAmountSync(price, platformFee);
         setCommissionAmount(commission.toFixed(7));
         setNetAmount(net.toFixed(7));
       } else {
@@ -104,7 +122,7 @@ const CreateTask = () => {
       setNetAmount('');
       setCommissionAmount('');
     }
-  }, [formData.price]);
+  }, [formData.price, platformFee]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -393,7 +411,7 @@ const CreateTask = () => {
                   💰 Trabajador recibirá: <strong>{netAmount} USDC</strong>
                 </p>
                 <p className="commission-text">
-                  📊 Comisión (0.3%): {commissionAmount} USDC
+                  📊 Comisión ({platformFeePercent}%): {commissionAmount} USDC
                 </p>
                 <p className="contract-cost-text">
                   ⚠️ Nota: Se requiere una pequeña cantidad de XLM para fees de transacción de Stellar (~0.0001 XLM)
@@ -480,9 +498,9 @@ const CreateTask = () => {
               </ul>
               <p style={{ marginTop: '1rem' }}><strong>💰 Sobre los costos:</strong></p>
               <ul>
-                <li><strong>Comisión ArcusX (0.3%):</strong> Se retiene automáticamente del pago al trabajador. El trabajador recibirá el monto neto (99.7% del total) al completar la tarea.</li>
+                <li><strong>Comisión ArcusX ({platformFeePercent}%):</strong> Se retiene automáticamente del pago al trabajador. El trabajador recibirá el monto neto ({(100 - parseFloat(platformFeePercent)).toFixed(2)}% del total) al completar la tarea.</li>
                 <li><strong>Moneda:</strong> El sistema usa USDC (USD Coin) como moneda principal para todos los pagos.</li>
-                <li><strong>Total a pagar:</strong> El monto de la tarea que estableces en USDC. La comisión del 0.3% se deduce del pago al trabajador, no es un costo adicional para ti.</li>
+                <li><strong>Total a pagar:</strong> El monto de la tarea que estableces en USDC. La comisión del {platformFeePercent}% se deduce del pago al trabajador, no es un costo adicional para ti.</li>
                 <li><strong>Fees de transacción:</strong> Se requiere una pequeña cantidad de XLM para fees de transacción de Stellar (~0.0001 XLM por transacción).</li>
                 <li>Estos costos garantizan la seguridad de las transacciones y el mantenimiento de la plataforma.</li>
               </ul>

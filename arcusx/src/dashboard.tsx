@@ -9,15 +9,13 @@ import { API_URL } from './config/database';
 import React from 'react';
 import { useAuth } from './hooks/useAuth';
 import WalletButton from './components/WalletButton';
-import { HumanIdVerification } from './components/HumanIdVerification';
-import { calculateNetAmount } from './config/commission';
+import { calculateNetAmountSync } from './config/commission';
+import { usePlatformFee } from './hooks/usePlatformFee';
+import { useScheduledTaskDeletion } from './hooks/useScheduledTaskDeletion';
 import DashboardFooter from './components/DashboardFooter';
 // import PendingNotificationsPopup from './components/PendingNotificationsPopup'; // Popup eliminado
 import { getUserNotifications, Notification, markNotificationAsRead as markNotificationAsReadService } from './services/notificationService';
 import { getUserDisputes, UserDispute } from './services/disputeService';
-import { useWallet } from './hooks/useWallet';
-import { Networks, TransactionBuilder } from '@stellar/stellar-sdk';
-import { getHorizonServer } from './services/stellarEscrowService';
 
 interface UserData {
   id: number;
@@ -70,9 +68,6 @@ const Dashboard = () => {
   const [_loadingPendingActions, setLoadingPendingActions] = useState(false);
   // const [showPendingNotificationsPopup, setShowPendingNotificationsPopup] = useState(false); // Popup eliminado
   
-  // Estado para Human ID verification
-  const [humanIdVerified, setHumanIdVerified] = useState<boolean | null>(null);
-  const [checkingHumanId, setCheckingHumanId] = useState(false);
   
   // Estado para notificaciones
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -82,13 +77,14 @@ const Dashboard = () => {
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const notificationDropdownRef = useRef<HTMLDivElement>(null);
   
-  // Estado para disputas que requieren firma
+  // Estado para disputas
   const [pendingDisputes, setPendingDisputes] = useState<UserDispute[]>([]);
-  const [_loadingDisputes, setLoadingDisputes] = useState(false);
-  const [signingDispute, setSigningDispute] = useState<number | null>(null);
   
-  // Wallet hook
-  const { address, isConnected, signTransaction } = useWallet();
+  // Obtener platform fee del backend
+  const { platformFee } = usePlatformFee();
+  
+  // Verificar y eliminar tareas programadas automáticamente
+  useScheduledTaskDeletion();
   
   // Obtener usuario logeado desde localStorage
   const storedUser = localStorage.getItem('user');
@@ -261,26 +257,6 @@ const Dashboard = () => {
   }, [activeTab, user?.id]); // Ejecutar este efecto cuando cambie la pestaña activa o el user.id
   // -------------------------------------------- //
 
-  // --- Verificar estado de Human ID al cargar el dashboard --- //
-  useEffect(() => {
-    const checkHumanIdStatus = async () => {
-      if (user?.id) {
-        setCheckingHumanId(true);
-        try {
-          const { verifyHumanIdViaBackend } = await import('./services/humanIdService');
-          const result = await verifyHumanIdViaBackend(user.id);
-          setHumanIdVerified(result.verified);
-        } catch (error) {
-          setHumanIdVerified(false);
-        } finally {
-          setCheckingHumanId(false);
-        }
-      }
-    };
-
-    checkHumanIdStatus();
-  }, [user?.id]);
-  // -------------------------------------------- //
   
   // Función para guardar cambios de configuración
   const handleSaveChanges = async (e: React.FormEvent) => {
@@ -366,84 +342,21 @@ const Dashboard = () => {
     }
   };
   
-  // Cargar disputas pendientes de firma
+  // Cargar disputas pendientes
   const fetchPendingDisputes = async () => {
     if (!user?.id) return;
     
-    setLoadingDisputes(true);
     try {
       const data = await getUserDisputes();
       setPendingDisputes(data.disputes);
     } catch (error: any) {
       console.error('Error al cargar disputas pendientes:', error);
-    } finally {
-      setLoadingDisputes(false);
     }
   };
   
-  // Función para firmar transacción de reembolso
-  const handleSignDisputeTransaction = async (dispute: UserDispute) => {
-    if (!isConnected || !address) {
-      alert('Por favor, conecta tu wallet Freighter primero.');
-      return;
-    }
-    
-    setSigningDispute(dispute.dispute_id);
-    
-    try {
-      // Obtener información de la transacción desde el backend
-      const response = await axios.post(
-        `${API_URL}/auth/admin_release_dispute_funds.php`,
-        { dispute_id: dispute.dispute_id },
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-      
-      if (!response.data.success || !response.data.escrow_secret) {
-        throw new Error('No se pudo obtener la información de la transacción.');
-      }
-      
-      // Importar funciones de Stellar
-      const { createRefundXDR } = await import('./services/stellarEscrowService');
-      const horizonServer = getHorizonServer();
-      
-      // Crear XDR de reembolso
-      const amount = dispute.user_role === 'client' 
-        ? dispute.refund_amount.toString() 
-        : dispute.payment_amount.toString();
-      
-      const xdr = await createRefundXDR(
-        dispute.escrow_id,
-        dispute.user_role === 'client' ? address : dispute.escrow_id,
-        amount,
-        horizonServer
-      );
-      
-      // Firmar con Freighter usando el hook
-      const signedTxXdr = await signTransaction(xdr);
-      
-      // Cargar transacción desde XDR firmado
-      const signedTransaction = TransactionBuilder.fromXDR(signedTxXdr, Networks.TESTNET);
-      
-      // Enviar transacción
-      const result = await horizonServer.submitTransaction(signedTransaction);
-      
-      alert(`¡Transacción firmada y enviada exitosamente! TX Hash: ${result.hash}`);
-      
-      // Recargar disputas
-      fetchPendingDisputes();
-      
-    } catch (error: any) {
-      console.error('Error al firmar transacción:', error);
-      alert('Error al firmar la transacción: ' + (error.message || 'Error desconocido'));
-    } finally {
-      setSigningDispute(null);
-    }
-  };
+  // Nota: La funcionalidad de firmar transacciones de disputa ha sido eliminada.
+  // Las disputas ahora se resuelven automáticamente a través de Trustless Work
+  // en el panel de administración (DisputeManagement.tsx).
   
   // Cargar notificaciones del usuario
   const fetchNotifications = async () => {
@@ -818,37 +731,6 @@ const Dashboard = () => {
         </header>
         
         <div className="dashboard-content">
-          {/* Banner de Human ID si no está verificado */}
-          {user?.id && humanIdVerified === false && !checkingHumanId && (
-            <div className="human-id-banner" style={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: 'white',
-              padding: '1rem 1.5rem',
-              borderRadius: '10px',
-              marginBottom: '1.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
-            }}>
-              <div style={{ flex: 1 }}>
-                <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', fontWeight: '600' }}>
-                  🔒 Verifica tu identidad con Human ID
-                </h4>
-                <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.9 }}>
-                  Demuestra que eres un humano único usando Zero-Knowledge Proofs. Protege tu privacidad mientras verificas tu identidad.
-                </p>
-              </div>
-              <div style={{ marginLeft: '1rem' }}>
-                <HumanIdVerification 
-                  userId={user.id}
-                  showLabel={false}
-                  compact={true}
-                  onVerificationChange={(verified) => setHumanIdVerified(verified)}
-                />
-              </div>
-            </div>
-          )}
           {/* Stats Cards */}
           <div className="stats-cards">
             {stats.map(stat => (
@@ -902,33 +784,9 @@ const Dashboard = () => {
                         </p>
                       )}
                     </div>
-                    <button
-                      onClick={() => handleSignDisputeTransaction(dispute)}
-                      disabled={signingDispute === dispute.dispute_id || !isConnected}
-                      style={{
-                        padding: '0.75rem 1.5rem',
-                        backgroundColor: signingDispute === dispute.dispute_id ? 'rgba(239, 68, 68, 0.5)' : '#ef4444',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '8px',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        cursor: signingDispute === dispute.dispute_id || !isConnected ? 'not-allowed' : 'pointer',
-                        transition: 'all 0.3s ease'
-                      }}
-                      onMouseOver={(e) => {
-                        if (signingDispute !== dispute.dispute_id && isConnected) {
-                          e.currentTarget.style.backgroundColor = '#dc2626';
-                        }
-                      }}
-                      onMouseOut={(e) => {
-                        if (signingDispute !== dispute.dispute_id && isConnected) {
-                          e.currentTarget.style.backgroundColor = '#ef4444';
-                        }
-                      }}
-                    >
-                      {signingDispute === dispute.dispute_id ? 'Firmando...' : 'Firmar Transacción'}
-                    </button>
+                    {/* Nota: La funcionalidad de firmar transacciones de disputa ha sido eliminada.
+                         Las disputas ahora se resuelven automáticamente a través de Trustless Work
+                         en el panel de administración. */}
                   </div>
                 </div>
               ))}
@@ -995,7 +853,7 @@ const Dashboard = () => {
                       <div className="task-detail">
                         <span className="task-detail-label">Recompensa</span>
                         <span className="task-detail-value">
-                          {calculateNetAmount(parseFloat(task.price)).toFixed(7)} {task.currency}
+                          {calculateNetAmountSync(parseFloat(task.price), platformFee).toFixed(7)} {task.currency}
                         </span>
                       </div>
                       <div className="task-detail">
@@ -1020,7 +878,7 @@ const Dashboard = () => {
                 <div className="balance-amount">${totalEarnings.toFixed(2)}</div>
                 <p className="wallet-description">
                   Tus ganancias son transferidas directamente a tu wallet cuando se completan las tareas 
-                  a través de nuestro smart contract de escrow.
+                  a través de nuestro sistema de escrow.
                 </p>
               </div>
               
@@ -1275,18 +1133,6 @@ const Dashboard = () => {
                   </div>
                 </div>
                 
-                <div className="settings-section">
-                  <h3>Verificación de Identidad (Human ID)</h3>
-                  <p style={{ marginBottom: '1rem', color: '#666', fontSize: '0.9rem' }}>
-                    Verifica tu identidad usando Zero-Knowledge Proofs para demostrar que eres un humano único sin revelar información personal.
-                  </p>
-                  <HumanIdVerification 
-                    userId={user?.id}
-                    showLabel={true}
-                    compact={false}
-                  />
-                </div>
-                
                 <div className="settings-actions">
                   <button className="settings-button" type="submit" disabled={saving}>
                     {saving ? 'Guardando...' : 'Guardar Cambios'}
@@ -1340,7 +1186,7 @@ const Dashboard = () => {
                           <div className="task-detail">
                             <span className="task-detail-label">Recompensa</span>
                             <span className="task-detail-value">
-                              {calculateNetAmount(parseFloat(task.price)).toFixed(7)} {task.currency}
+                              {calculateNetAmountSync(parseFloat(task.price), platformFee).toFixed(7)} {task.currency}
                             </span>
                         </div>
                         )}

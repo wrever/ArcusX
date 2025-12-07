@@ -30,11 +30,28 @@ const FeeManagement: React.FC<FeeManagementProps> = ({ onUpdate }) => {
   const fetchCurrentConfig = async () => {
     setLoading(true);
     try {
-      // Mock data for development - no API calls
+      // Obtener configuración real del backend
+      const { getAdminConfig } = await import('../services/adminService');
+      const configs = await getAdminConfig();
+      
+      const platformFeeConfig = configs.find(c => c.config_key === 'platform_fee');
+      const referralFeeConfig = configs.find(c => c.config_key === 'referral_fee');
+      const treasuryConfig = configs.find(c => c.config_key === 'treasury_address');
+      
+      const platformFeeValue = platformFeeConfig?.config_value;
+      const platformFeeBps = typeof platformFeeValue === 'number' 
+        ? platformFeeValue * 10000 
+        : (typeof platformFeeValue === 'string' ? parseFloat(platformFeeValue) * 10000 : 30); // 0.3% = 30 bps
+      
+      const referralFeeValue = referralFeeConfig?.config_value;
+      const referralFeeBps = typeof referralFeeValue === 'number' 
+        ? referralFeeValue * 10000 
+        : (typeof referralFeeValue === 'string' ? parseFloat(referralFeeValue) * 10000 : 0);
+      
       const mockConfig: FeeConfig = {
-        platformFeeBps: 500, // 5%
-        referralFeeBps: 100, // 1%
-        treasury: '0x1234567890123456789012345678901234567890'
+        platformFeeBps: platformFeeBps,
+        referralFeeBps: referralFeeBps,
+        treasury: treasuryConfig?.config_value || ''
       };
       
       setConfig(mockConfig);
@@ -60,14 +77,23 @@ const FeeManagement: React.FC<FeeManagementProps> = ({ onUpdate }) => {
         setError('El fee de referral no puede ser mayor al 5%');
         return;
       }
-      if (!config.treasury || config.treasury.length !== 42) {
-        setError('La dirección del treasury debe ser una dirección Ethereum válida');
+      // Validar dirección Stellar (debe empezar con G y tener 56 caracteres)
+      if (!config.treasury || !config.treasury.startsWith('G') || config.treasury.length !== 56) {
+        setError('La dirección del treasury debe ser una dirección Stellar válida (empieza con G y tiene 56 caracteres)');
         return;
       }
 
-      // Simular guardado - no API calls
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simular delay
-      setMessage('Configuración de fees actualizada correctamente (simulado)');
+      // Guardar en backend
+      const { updateAdminConfig } = await import('../services/adminService');
+      await updateAdminConfig('platform_fee', config.platformFeeBps / 10000); // Convertir bps a decimal
+      await updateAdminConfig('referral_fee', config.referralFeeBps / 10000); // Convertir bps a decimal
+      await updateAdminConfig('treasury_address', config.treasury);
+      
+      // Limpiar cache del platform fee para que se recargue en toda la aplicación
+      const { clearPlatformFeeCache } = await import('../services/platformFeeService');
+      clearPlatformFeeCache();
+      
+      setMessage('Configuración de fees actualizada correctamente. El nuevo fee se aplicará en toda la plataforma.');
       onUpdate();
     } catch (err) {
       setError('Error al guardar configuración');
@@ -172,12 +198,12 @@ const FeeManagement: React.FC<FeeManagementProps> = ({ onUpdate }) => {
               id="treasury"
               value={config.treasury}
               onChange={(e) => handleInputChange('treasury', e.target.value)}
-              placeholder="0x..."
-              maxLength={42}
+              placeholder="G..."
+              maxLength={56}
             />
             <div className="input-info">
               <FaInfoCircle />
-              <span>Dirección Ethereum donde se envían las comisiones de plataforma</span>
+              <span>Dirección Stellar (G...) donde se envían las comisiones de plataforma</span>
             </div>
           </div>
         </div>

@@ -7,10 +7,19 @@ import type {
   FundEscrowPayload,
   EscrowRequestResponse,
   SendTransactionResponse,
-  InitializeSingleReleaseEscrowResponse
+  InitializeSingleReleaseEscrowResponse,
+  ChangeMilestoneStatusPayload,
+  ApproveMilestonePayload,
+  SingleReleaseReleaseFundsPayload,
+  SingleReleaseStartDisputePayload,
+  SingleReleaseResolveDisputePayload
 } from '@trustless-work/escrow';
 import { TransactionBuilder, Networks } from '@stellar/stellar-sdk';
-import { PLATFORM_WALLET, ADMIN_WALLET, PLATFORM_FEE_BPS } from '../config/trustlessWork';
+import { PLATFORM_WALLET, ADMIN_WALLET } from '../config/trustlessWork';
+import { getPlatformFeeForTrustlessWork } from './platformFeeService';
+
+// Trustline de USDC para Trustless Work
+const USDC_TRUSTLINE = 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA';
 
 /**
  * Helper para esperar a que el escrow esté indexado
@@ -175,6 +184,10 @@ export const createTrustlessEscrow = async (
 
     console.log('✅ Wallets de plataforma configuradas');
     
+    // Obtener platform fee del backend
+    const platformFee = await getPlatformFeeForTrustlessWork();
+    console.log('💰 Platform fee obtenido del backend:', platformFee, `(${(platformFee * 100).toFixed(2)}%)`);
+    
     // Asegurar que el amount tenga exactamente 7 decimales (mismo formato que al fondear)
     // CRÍTICO: Usar el mismo método de redondeo que al fondear para garantizar coincidencia exacta
     const numericAmount = typeof payload.amount === 'string' ? parseFloat(payload.amount) : payload.amount;
@@ -189,7 +202,8 @@ export const createTrustlessEscrow = async (
       amount: payload.amount,
       amountAsInteger: amountAsInteger,
       amountFinal: finalAmount,
-      amountString: amountString
+      amountString: amountString,
+      platformFee: platformFee
     });
 
     // Crear payload para Trustless Work
@@ -207,12 +221,12 @@ export const createTrustlessEscrow = async (
       },
       description: payload.description,
       amount: finalAmount, // Usar el amount con exactamente 7 decimales
-      platformFee: PLATFORM_FEE_BPS, // 0.3% (Trustless Work multiplica por 100 internamente)
+      platformFee: platformFee, // Obtener del backend (Trustless Work multiplica por 100 internamente)
       milestones: [{
         description: payload.milestoneDescription
       }],
       trustline: {
-        address: payload.signer // CRÍTICO: Trustline debe ser del signer (cliente) que fondea, no del receiver
+        address: USDC_TRUSTLINE // CRÍTICO: Trustline de USDC (no es el signer, es el trustline del asset USDC)
       }
       // receiverMemo no existe en single-release escrow según los tipos TypeScript
     };
@@ -241,7 +255,11 @@ export const createTrustlessEscrow = async (
     validateStellarAddress(escrowPayload.roles.releaseSigner, 'ReleaseSigner');
     validateStellarAddress(escrowPayload.roles.disputeResolver, 'DisputeResolver');
     validateStellarAddress(escrowPayload.roles.receiver, 'Receiver');
-    validateStellarAddress(escrowPayload.trustline.address, 'Trustline address');
+    
+    // Validar trustline de USDC (es un contract ID, no una dirección Stellar)
+    if (!escrowPayload.trustline.address || escrowPayload.trustline.address !== USDC_TRUSTLINE) {
+      throw new Error(`Trustline inválido. Debe ser el trustline de USDC: ${USDC_TRUSTLINE}, pero se recibió: ${escrowPayload.trustline.address}`);
+    }
 
     // Inicializar escrow
     let initResponse: EscrowRequestResponse;
@@ -326,7 +344,7 @@ export const fundTrustlessEscrow = async (
   amount: number,
   signer: string,
   kit: any,
-  fundEscrow: (payload: FundEscrowPayload, type: 'single-release') => Promise<{ unsignedTransaction: string }>,
+  fundEscrow: (payload: FundEscrowPayload, type: 'single-release') => Promise<EscrowRequestResponse>,
   sendTransaction: (signedXdr: string) => Promise<SendTransactionResponse | InitializeSingleReleaseEscrowResponse>,
   getEscrowFromIndexer?: (contractIds: string[]) => Promise<any>
 ): Promise<{ success: boolean; txHash?: string; error?: string }> => {
@@ -375,20 +393,26 @@ export const fundTrustlessEscrow = async (
             throw new Error(`El escrow ${contractId} no está activo. No se puede fondear.`);
           }
           
-          // CRÍTICO: Verificar que el escrow tenga el trustline correcto
+          // CRÍTICO: Verificar que el escrow tenga el trustline correcto de USDC
           if (!escrowFromIndexer.trustline || !escrowFromIndexer.trustline.address) {
             console.error('❌ El escrow no tiene trustline configurado');
             throw new Error(`El escrow ${contractId} no tiene trustline configurado. No se puede fondear.`);
           }
           
-          // Verificar que el trustline del escrow coincida con el signer
-          if (escrowFromIndexer.trustline.address !== signer) {
-            console.warn('⚠️ El trustline del escrow no coincide con el signer:', {
+          // Verificar que el trustline del escrow sea el correcto de USDC
+          if (escrowFromIndexer.trustline.address !== USDC_TRUSTLINE) {
+            console.error('❌ El trustline del escrow no es el correcto de USDC:', {
               trustlineAddress: escrowFromIndexer.trustline.address,
+              trustlineEsperado: USDC_TRUSTLINE,
               signer: signer
             });
-            // No lanzamos error porque el trustline puede ser diferente, pero es una advertencia
+            throw new Error(`El escrow ${contractId} tiene un trustline incorrecto. Trustline esperado: ${USDC_TRUSTLINE}, Trustline actual: ${escrowFromIndexer.trustline.address}`);
           }
+          
+          console.log('✅ Trustline de USDC verificado correctamente:', {
+            trustlineAddress: escrowFromIndexer.trustline.address,
+            signer: signer
+          });
           
           // CRÍTICO: Usar el amount exacto del escrow indexado
           if (escrowFromIndexer.amount !== undefined && escrowFromIndexer.amount !== null) {
@@ -763,6 +787,262 @@ export const fundTrustlessEscrow = async (
 4. El amount (${amount}) coincide exactamente con el amount del escrow creado`);
     }
     
+    throw new Error(errorMessage);
+  }
+};
+
+/**
+ * Cambiar estado del milestone (trabajador marca como completado)
+ */
+export const changeMilestoneStatusTrustlessEscrow = async (
+  contractId: string,
+  milestoneIndex: string,
+  serviceProvider: string,
+  newStatus: string,
+  newEvidence: string,
+  kit: any,
+  changeMilestoneStatus: (payload: ChangeMilestoneStatusPayload, type: 'single-release') => Promise<EscrowRequestResponse>,
+  sendTransaction: (signedXdr: string) => Promise<SendTransactionResponse>
+): Promise<{ success: boolean; txHash?: string; error?: string }> => {
+  try {
+    console.log('🔄 Cambiando estado del milestone...', {
+      contractId,
+      milestoneIndex,
+      serviceProvider,
+      newStatus
+    });
+
+    const payload: ChangeMilestoneStatusPayload = {
+      contractId,
+      milestoneIndex,
+      serviceProvider,
+      newStatus,
+      newEvidence
+    };
+
+    // Llamar a la API de Trustless Work
+    const response = await changeMilestoneStatus(payload, 'single-release');
+    
+    if (!response?.unsignedTransaction) {
+      throw new Error('Unsigned transaction is missing from changeMilestoneStatus response.');
+    }
+
+    // Firmar y enviar transacción
+    const result = await createAndSendTransaction(
+      response.unsignedTransaction,
+      kit,
+      serviceProvider,
+      sendTransaction
+    );
+
+    if (result.success) {
+      console.log('✅ Estado del milestone cambiado exitosamente');
+      return { success: true, txHash: result.txHash };
+    } else {
+      throw new Error(result.error || 'Error al firmar o enviar la transacción');
+    }
+  } catch (error: any) {
+    const errorMessage = error.response?.data?.message || error.message || 'Error desconocido';
+    throw new Error(errorMessage);
+  }
+};
+
+/**
+ * Aprobar milestone (cliente aprueba el trabajo)
+ */
+export const approveMilestoneTrustlessEscrow = async (
+  contractId: string,
+  milestoneIndex: string,
+  approver: string,
+  kit: any,
+  approveMilestone: (payload: ApproveMilestonePayload, type: 'single-release') => Promise<EscrowRequestResponse>,
+  sendTransaction: (signedXdr: string) => Promise<SendTransactionResponse>
+): Promise<{ success: boolean; txHash?: string; error?: string }> => {
+  try {
+    console.log('✅ Aprobando milestone...', {
+      contractId,
+      milestoneIndex,
+      approver
+    });
+
+    const payload: ApproveMilestonePayload = {
+      contractId,
+      milestoneIndex,
+      approver
+    };
+
+    // Llamar a la API de Trustless Work
+    const response = await approveMilestone(payload, 'single-release');
+    
+    if (!response?.unsignedTransaction) {
+      throw new Error('Unsigned transaction is missing from approveMilestone response.');
+    }
+
+    // Firmar y enviar transacción
+    const result = await createAndSendTransaction(
+      response.unsignedTransaction,
+      kit,
+      approver,
+      sendTransaction
+    );
+
+    if (result.success) {
+      console.log('✅ Milestone aprobado exitosamente');
+      return { success: true, txHash: result.txHash };
+    } else {
+      throw new Error(result.error || 'Error al firmar o enviar la transacción');
+    }
+  } catch (error: any) {
+    const errorMessage = error.response?.data?.message || error.message || 'Error desconocido';
+    throw new Error(errorMessage);
+  }
+};
+
+/**
+ * Liberar fondos del escrow (cliente libera fondos al trabajador)
+ */
+export const releaseFundsTrustlessEscrow = async (
+  contractId: string,
+  releaseSigner: string,
+  kit: any,
+  releaseFunds: (payload: SingleReleaseReleaseFundsPayload, type: 'single-release') => Promise<EscrowRequestResponse>,
+  sendTransaction: (signedXdr: string) => Promise<SendTransactionResponse>
+): Promise<{ success: boolean; txHash?: string; error?: string }> => {
+  try {
+    console.log('💰 Liberando fondos del escrow...', {
+      contractId,
+      releaseSigner
+    });
+
+    const payload: SingleReleaseReleaseFundsPayload = {
+      contractId,
+      releaseSigner
+    };
+
+    // Llamar a la API de Trustless Work
+    const response = await releaseFunds(payload, 'single-release');
+    
+    if (!response?.unsignedTransaction) {
+      throw new Error('Unsigned transaction is missing from releaseFunds response.');
+    }
+
+    // Firmar y enviar transacción
+    const result = await createAndSendTransaction(
+      response.unsignedTransaction,
+      kit,
+      releaseSigner,
+      sendTransaction
+    );
+
+    if (result.success) {
+      console.log('✅ Fondos liberados exitosamente');
+      return { success: true, txHash: result.txHash };
+    } else {
+      throw new Error(result.error || 'Error al firmar o enviar la transacción');
+    }
+  } catch (error: any) {
+    const errorMessage = error.response?.data?.message || error.message || 'Error desconocido';
+    throw new Error(errorMessage);
+  }
+};
+
+/**
+ * Iniciar disputa en Trustless Work
+ */
+export const startDisputeTrustlessEscrow = async (
+  contractId: string,
+  signer: string,
+  kit: any,
+  startDispute: (payload: SingleReleaseStartDisputePayload, type: 'single-release') => Promise<EscrowRequestResponse>,
+  sendTransaction: (signedXdr: string) => Promise<SendTransactionResponse>
+): Promise<{ success: boolean; txHash?: string; error?: string }> => {
+  try {
+    console.log('🚨 Iniciando disputa...', {
+      contractId,
+      signer
+    });
+
+    const payload: SingleReleaseStartDisputePayload = {
+      contractId,
+      signer
+    };
+
+    // Llamar a la API de Trustless Work
+    const response = await startDispute(payload, 'single-release');
+    
+    if (!response?.unsignedTransaction) {
+      throw new Error('Unsigned transaction is missing from startDispute response.');
+    }
+
+    // Firmar y enviar transacción
+    const result = await createAndSendTransaction(
+      response.unsignedTransaction,
+      kit,
+      signer,
+      sendTransaction
+    );
+
+    if (result.success) {
+      console.log('✅ Disputa iniciada exitosamente');
+      return { success: true, txHash: result.txHash };
+    } else {
+      throw new Error(result.error || 'Error al firmar o enviar la transacción');
+    }
+  } catch (error: any) {
+    const errorMessage = error.response?.data?.message || error.message || 'Error desconocido';
+    throw new Error(errorMessage);
+  }
+};
+
+/**
+ * Resolver disputa en Trustless Work
+ * Nota: Para single-release escrows, solo se puede distribuir a un receptor a la vez.
+ * Para múltiples distribuciones (split), se deben hacer llamadas separadas.
+ */
+export const resolveDisputeTrustlessEscrow = async (
+  contractId: string,
+  disputeResolver: string,
+  distribution: { address: string; amount: number },
+  kit: any,
+  resolveDispute: (payload: SingleReleaseResolveDisputePayload, type: 'single-release') => Promise<EscrowRequestResponse>,
+  sendTransaction: (signedXdr: string) => Promise<SendTransactionResponse>
+): Promise<{ success: boolean; txHash?: string; error?: string }> => {
+  try {
+    console.log('⚖️ Resolviendo disputa...', {
+      contractId,
+      disputeResolver,
+      distribution
+    });
+
+    const payload: SingleReleaseResolveDisputePayload = {
+      contractId,
+      disputeResolver,
+      distributions: [distribution] as [{ address: string; amount: number }]
+    };
+
+    // Llamar a la API de Trustless Work
+    const response = await resolveDispute(payload, 'single-release');
+    
+    if (!response?.unsignedTransaction) {
+      throw new Error('Unsigned transaction is missing from resolveDispute response.');
+    }
+
+    // Firmar y enviar transacción
+    const result = await createAndSendTransaction(
+      response.unsignedTransaction,
+      kit,
+      disputeResolver,
+      sendTransaction
+    );
+
+    if (result.success) {
+      console.log('✅ Disputa resuelta exitosamente');
+      return { success: true, txHash: result.txHash };
+    } else {
+      throw new Error(result.error || 'Error al firmar o enviar la transacción');
+    }
+  } catch (error: any) {
+    const errorMessage = error.response?.data?.message || error.message || 'Error desconocido';
     throw new Error(errorMessage);
   }
 };

@@ -4,7 +4,6 @@ import { FaArrowLeft, FaGoogle, FaGithub } from 'react-icons/fa';
 import '../css/Login.css';
 import { useAuth } from '../hooks/useAuth';
 import { authService } from '../services/authService';
-// import { verifyHumanIdViaBackend } from '../services/humanIdService'; // COMENTADO - HUMAN ID
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -35,23 +34,6 @@ const Login = () => {
       }
 
       await login(email, password);
-      
-      // COMENTADO - HUMAN ID
-      // if (user?.id) {
-      //   // Verificar si el usuario tiene Human ID verificado
-      //   const isHumanIdVerified = await verifyHumanIdViaBackend(user.id);
-      //   
-      //   // Si no está verificado, redirigir a verificación de identidad
-      //   if (!isHumanIdVerified) {
-      //     navigate('/verify-identity', { replace: true });
-      //   } else {
-      //     // Si está verificado, redirigir al dashboard
-      //     navigate('/dashboard', { replace: true });
-      //   }
-      // } else {
-      //   // Si no hay usuario, redirigir al dashboard (fallback)
-      //   navigate('/dashboard', { replace: true });
-      // }
       
       // Redirigir directamente al dashboard (sin verificación Human ID)
       navigate('/dashboard', { replace: true });

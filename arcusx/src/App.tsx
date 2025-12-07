@@ -17,7 +17,6 @@ import AdminPanel from './components/AdminPanel';
 import AdminLogin from './components/AdminLogin';
 import AdminRoute from './components/AdminRoute';
 import ProtectedRoute from './components/ProtectedRoute';
-import PostRegistrationVerification from './components/PostRegistrationVerification';
 import './App.css';
 
 function App() {
@@ -48,7 +47,6 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
-              <Route path="/verify-identity" element={<ProtectedRoute><PostRegistrationVerification /></ProtectedRoute>} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/create-task" element={<ProtectedRoute><CreateTask /></ProtectedRoute>} />
               <Route path="/apply-task/:taskId" element={<ProtectedRoute><ApplyTask /></ProtectedRoute>} />
