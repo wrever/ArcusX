@@ -1,5 +1,8 @@
-import React from 'react';
-import { FaChartLine, FaCoins, FaUsers, FaExclamationTriangle, FaCheckCircle, FaWallet, FaGavel, FaCog, FaShieldAlt } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { FaChartLine, FaCoins, FaUsers, FaExclamationTriangle, FaCheckCircle, FaWallet, FaGavel, FaCog, FaShieldAlt, FaLink, FaSpinner } from 'react-icons/fa';
+import { PLATFORM_WALLET, ADMIN_WALLET, TRUSTLESS_WORK_BASE_URL } from '../config/trustlessWork';
+import { useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks';
+import { getAdminTasks } from '../services/adminService';
 import '../css/AdminStats.css';
 
 interface AdminStatsProps {
@@ -12,12 +15,128 @@ interface AdminStatsProps {
     referralFee: number;
     treasury: string;
     arbitrator: string;
+    volumeThisMonth?: number;
+    feesThisMonth?: number;
+    volumeToday?: number;
+    feesToday?: number;
   } | null;
   onRefresh: () => void;
   loading: boolean;
+  onNavigate?: (tab: string) => void;
 }
 
-const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading }) => {
+const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNavigate }) => {
+  const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds();
+  
+  // Estado para estadísticas de escrows
+  const [escrowsStats, setEscrowsStats] = useState<{
+    activeCount: number;
+    totalBalance: number;
+    completedCount: number;
+    disputedCount: number;
+    inconsistencies: number;
+    loading: boolean;
+  }>({
+    activeCount: 0,
+    totalBalance: 0,
+    completedCount: 0,
+    disputedCount: 0,
+    inconsistencies: 0,
+    loading: false
+  });
+
+  useEffect(() => {
+    fetchEscrowsStats();
+  }, []);
+
+  const fetchEscrowsStats = async () => {
+    setEscrowsStats(prev => ({ ...prev, loading: true }));
+    try {
+      // Obtener todas las tareas con escrow_id
+      const tasksData = await getAdminTasks({ 
+        page: 1, 
+        limit: 1000, // Obtener todas las tareas
+        status: '' // Sin filtro de estado
+      });
+
+      const tasks = tasksData.tasks || [];
+      
+      // Filtrar solo escrows de Trustless Work (empiezan con 'C')
+      const trustlessEscrows = tasks
+        .filter((task: any) => task.escrow_id && task.escrow_id.startsWith('C'))
+        .map((task: any) => task.escrow_id);
+
+      if (trustlessEscrows.length === 0) {
+        setEscrowsStats({
+          activeCount: 0,
+          totalBalance: 0,
+          completedCount: 0,
+          disputedCount: 0,
+          inconsistencies: 0,
+          loading: false
+        });
+        return;
+      }
+
+      // Obtener información de escrows desde Trustless Work (en lotes de 10)
+      const batchSize = 10;
+      let activeCount = 0;
+      let totalBalance = 0;
+      let completedCount = 0;
+      let disputedCount = 0;
+      let inconsistencies = 0;
+
+      for (let i = 0; i < trustlessEscrows.length; i += batchSize) {
+        const batch = trustlessEscrows.slice(i, i + batchSize);
+        
+        try {
+          const result = await getEscrowByContractIds({
+            contractIds: batch,
+            validateOnChain: true
+          });
+
+          const escrows = Array.isArray(result) ? result : (result as any)?.escrows || [];
+          
+          escrows.forEach((escrow: any) => {
+            const balance = parseFloat(escrow.balance || '0');
+            const status = escrow.status || 'unknown';
+            const isActive = escrow.isActive !== false;
+
+            // Verificar inconsistencias
+            if (escrow.inconsistencies?.inconsistencyFound) {
+              inconsistencies++;
+            }
+
+            if (balance > 0 && isActive) {
+              activeCount++;
+              totalBalance += balance;
+            } else if (status === 'released' || status === 'completed' || balance === 0) {
+              completedCount++;
+            }
+
+            if (status === 'disputed') {
+              disputedCount++;
+            }
+          });
+        } catch (err) {
+          console.error('Error al obtener información de escrows:', err);
+        }
+      }
+
+      setEscrowsStats({
+        activeCount,
+        totalBalance,
+        completedCount,
+        disputedCount,
+        inconsistencies,
+        loading: false
+      });
+    } catch (err) {
+      console.error('Error al obtener estadísticas de escrows:', err);
+      setEscrowsStats(prev => ({ ...prev, loading: false }));
+    }
+  };
+
   const formatAddress = (address: string) => {
     if (!address) return 'No configurado';
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -37,28 +156,42 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading }) =>
       value: stats?.totalEscrows || 0,
       icon: <FaChartLine />,
       color: '#28c0f0',
-      description: 'Escrows creados'
+      description: 'Escrows creados',
+      trend: null
     },
     {
       title: 'Volumen Total',
       value: formatCurrency(stats?.totalVolume || 0),
       icon: <FaCoins />,
       color: '#10b981',
-      description: 'Volumen procesado'
+      description: 'Volumen procesado (todos los tiempos)',
+      trend: stats?.volumeThisMonth ? `Este mes: ${formatCurrency(stats.volumeThisMonth)}` : null
     },
     {
       title: 'Fees Recaudados',
       value: formatCurrency(stats?.totalFees || 0),
       icon: <FaWallet />,
       color: '#f59e0b',
-      description: 'Comisiones de plataforma'
+      description: `Comisiones acumuladas (${stats?.platformFee || 0.3}% del volumen)`,
+      trend: stats?.feesThisMonth ? `Este mes: ${formatCurrency(stats.feesThisMonth)}` : null
     },
     {
       title: 'Disputas Activas',
       value: stats?.activeDisputes || 0,
       icon: <FaExclamationTriangle />,
       color: '#ef4444',
-      description: 'Disputas pendientes'
+      description: 'Disputas pendientes',
+      trend: null
+    },
+    {
+      title: 'Escrows Activos',
+      value: escrowsStats.loading ? (
+        <FaSpinner className="spinning" style={{ fontSize: '20px' }} />
+      ) : escrowsStats.activeCount,
+      icon: <FaCheckCircle />,
+      color: '#10b981',
+      description: `Balance bloqueado: ${formatCurrency(escrowsStats.totalBalance)}`,
+      trend: escrowsStats.completedCount > 0 ? `Completados: ${escrowsStats.completedCount}` : null
     }
   ];
 
@@ -79,7 +212,10 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading }) =>
       title: 'Treasury',
       value: formatAddress(stats?.treasury || ''),
       icon: <FaWallet />,
-      description: 'Dirección del treasury'
+      description: stats?.treasury 
+        ? `Recibe ${formatCurrency(stats?.totalFees || 0)} en comisiones`
+        : 'Dirección del treasury (no configurado)',
+      link: stats?.treasury ? `https://stellar.expert/explorer/testnet/account/${stats.treasury}` : null
     },
     {
       title: 'Arbitrador',
@@ -113,6 +249,9 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading }) =>
               <h3>{stat.title}</h3>
               <p className="stat-value">{stat.value}</p>
               <p className="stat-description">{stat.description}</p>
+              {stat.trend && (
+                <p className="stat-trend">{stat.trend}</p>
+              )}
             </div>
           </div>
         ))}
@@ -129,7 +268,18 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading }) =>
               </div>
               <div className="config-content">
                 <h4>{item.title}</h4>
-                <p className="config-value">{item.value}</p>
+                {item.link ? (
+                  <a 
+                    href={item.link} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="config-value-link"
+                  >
+                    <p className="config-value">{item.value}</p>
+                  </a>
+                ) : (
+                  <p className="config-value">{item.value}</p>
+                )}
                 <p className="config-description">{item.description}</p>
               </div>
             </div>
@@ -137,13 +287,120 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading }) =>
         </div>
       </div>
 
+      {/* Escrows Status from Trustless Work */}
+      {!escrowsStats.loading && (
+        <div className="escrows-status-section" style={{
+          marginTop: '30px',
+          padding: '20px',
+          backgroundColor: 'rgba(255, 255, 255, 0.03)',
+          borderRadius: '12px',
+          border: '1px solid rgba(255, 255, 255, 0.1)'
+        }}>
+          <h3 style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <FaCheckCircle style={{ color: '#10b981' }} />
+            Estado de Escrows (Trustless Work)
+          </h3>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '15px'
+          }}>
+            <div style={{
+              padding: '15px',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              borderRadius: '8px',
+              border: '1px solid rgba(16, 185, 129, 0.3)'
+            }}>
+              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#10b981' }}>
+                {escrowsStats.activeCount}
+              </div>
+              <div style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', marginTop: '5px' }}>
+                Escrows Activos
+              </div>
+            </div>
+            <div style={{
+              padding: '15px',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              borderRadius: '8px',
+              border: '1px solid rgba(16, 185, 129, 0.3)'
+            }}>
+              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#10b981' }}>
+                {formatCurrency(escrowsStats.totalBalance)}
+              </div>
+              <div style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', marginTop: '5px' }}>
+                Balance Total Bloqueado
+              </div>
+            </div>
+            <div style={{
+              padding: '15px',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              borderRadius: '8px',
+              border: '1px solid rgba(59, 130, 246, 0.3)'
+            }}>
+              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#3b82f6' }}>
+                {escrowsStats.completedCount}
+              </div>
+              <div style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', marginTop: '5px' }}>
+                Escrows Completados
+              </div>
+            </div>
+            {escrowsStats.disputedCount > 0 && (
+              <div style={{
+                padding: '15px',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                borderRadius: '8px',
+                border: '1px solid rgba(239, 68, 68, 0.3)'
+              }}>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444' }}>
+                  {escrowsStats.disputedCount}
+                </div>
+                <div style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', marginTop: '5px' }}>
+                  Escrows en Disputa
+                </div>
+              </div>
+            )}
+            {escrowsStats.inconsistencies > 0 && (
+              <div style={{
+                padding: '15px',
+                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                borderRadius: '8px',
+                border: '1px solid rgba(245, 158, 11, 0.3)'
+              }}>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#f59e0b' }}>
+                  {escrowsStats.inconsistencies}
+                </div>
+                <div style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', marginTop: '5px' }}>
+                  Inconsistencias Detectadas
+                </div>
+              </div>
+            )}
+          </div>
+          <button
+            onClick={fetchEscrowsStats}
+            disabled={escrowsStats.loading}
+            style={{
+              marginTop: '15px',
+              padding: '8px 16px',
+              backgroundColor: 'rgba(40, 192, 240, 0.2)',
+              border: '1px solid rgba(40, 192, 240, 0.4)',
+              borderRadius: '6px',
+              color: '#28c0f0',
+              cursor: escrowsStats.loading ? 'not-allowed' : 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            {escrowsStats.loading ? 'Verificando...' : 'Actualizar Estado'}
+          </button>
+        </div>
+      )}
+
       {/* System Status */}
       <div className="system-status">
         <h3>Estado del Sistema</h3>
         <div className="status-items">
           <div className="status-item">
             <FaCheckCircle className="status-icon success" />
-            <span>Contrato Activo</span>
+            <span>Sistema Activo</span>
           </div>
           <div className="status-item">
             <FaCheckCircle className="status-icon success" />
@@ -155,7 +412,103 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading }) =>
           </div>
           <div className="status-item">
             <FaCheckCircle className="status-icon success" />
-            <span>Red Sepolia</span>
+            <span>Red Stellar</span>
+          </div>
+          <div className="status-item">
+            <FaCheckCircle className={`status-icon ${TRUSTLESS_WORK_BASE_URL ? 'success' : 'warning'}`} />
+            <span>Trustless Work {TRUSTLESS_WORK_BASE_URL ? 'Conectado' : 'No Configurado'}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Revenue & Treasury Section */}
+      <div className="revenue-section">
+        <h3>Ganancias y Treasury</h3>
+        <div className="revenue-grid">
+          <div className="revenue-card primary">
+            <div className="revenue-icon">
+              <FaCoins />
+            </div>
+            <div className="revenue-content">
+              <h4>Comisiones Totales</h4>
+              <p className="revenue-value">{formatCurrency(stats?.totalFees || 0)}</p>
+              <p className="revenue-description">
+                {stats?.platformFee ? `${stats.platformFee}%` : '0.3%'} del volumen total
+              </p>
+              {stats?.feesThisMonth && stats.feesThisMonth > 0 && (
+                <p className="revenue-trend">Este mes: {formatCurrency(stats.feesThisMonth)}</p>
+              )}
+            </div>
+          </div>
+          <div className="revenue-card secondary">
+            <div className="revenue-icon">
+              <FaWallet />
+            </div>
+            <div className="revenue-content">
+              <h4>Treasury</h4>
+              {stats?.treasury ? (
+                <>
+                  <a 
+                    href={`https://stellar.expert/explorer/testnet/account/${stats.treasury}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="revenue-value-link"
+                  >
+                    <p className="revenue-value">{formatAddress(stats.treasury)}</p>
+                  </a>
+                  <p className="revenue-description">
+                    Recibe todas las comisiones de plataforma
+                  </p>
+                  <p className="revenue-trend">
+                    Balance estimado: {formatCurrency(stats?.totalFees || 0)}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="revenue-value">No configurado</p>
+                  <p className="revenue-description">
+                    Configura el treasury en Gestión de Fees
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Trustless Work Configuration */}
+      <div className="trustless-work-config">
+        <h3>Configuración Trustless Work</h3>
+        <div className="config-grid">
+          <div className="config-item">
+            <div className="config-icon">
+              <FaLink />
+            </div>
+            <div className="config-content">
+              <h4>Entorno</h4>
+              <p className="config-value">{TRUSTLESS_WORK_BASE_URL === 'https://api.trustlesswork.com' ? 'Mainnet' : 'Development'}</p>
+              <p className="config-description">Entorno de Trustless Work</p>
+            </div>
+          </div>
+          <div className="config-item">
+            <div className="config-icon">
+              <FaWallet />
+            </div>
+            <div className="config-content">
+              <h4>Platform Wallet</h4>
+              <p className="config-value">{PLATFORM_WALLET ? formatAddress(PLATFORM_WALLET) : 'No configurado'}</p>
+              <p className="config-description">Wallet de la plataforma</p>
+            </div>
+          </div>
+          <div className="config-item">
+            <div className="config-icon">
+              <FaGavel />
+            </div>
+            <div className="config-content">
+              <h4>Admin Wallet</h4>
+              <p className="config-value">{ADMIN_WALLET ? formatAddress(ADMIN_WALLET) : 'No configurado'}</p>
+              <p className="config-description">Wallet del administrador (dispute resolver)</p>
+            </div>
           </div>
         </div>
       </div>
@@ -164,15 +517,24 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading }) =>
       <div className="quick-actions">
         <h3>Acciones Rápidas</h3>
         <div className="action-buttons">
-          <button className="action-button primary">
+          <button 
+            className="action-button primary"
+            onClick={() => onNavigate?.('fees')}
+          >
             <FaCog />
             <span>Configurar Fees</span>
           </button>
-          <button className="action-button secondary">
+          <button 
+            className="action-button secondary"
+            onClick={() => onNavigate?.('tokens')}
+          >
             <FaShieldAlt />
             <span>Gestionar Tokens</span>
           </button>
-          <button className="action-button warning">
+          <button 
+            className="action-button warning"
+            onClick={() => onNavigate?.('disputes')}
+          >
             <FaExclamationTriangle />
             <span>Ver Disputas</span>
           </button>

@@ -182,8 +182,8 @@ ArcusX uses a 2-of-2 multisig escrow system on Stellar:
 Update `arcusx/src/config/database.ts`:
 ```typescript
 export const API_URL = import.meta.env.DEV 
-  ? 'http://arcusx.one/api'  // Development
-  : 'https://arcusx.one/api'; // Production
+  ? 'http://arcusx.pro/api'  // Development
+  : 'https://arcusx.pro/api'; // Production
 ```
 
 Update `arcusx/src/config/supabase.ts` with your Supabase credentials.

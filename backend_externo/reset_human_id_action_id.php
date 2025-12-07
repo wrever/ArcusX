@@ -4,7 +4,7 @@
  * Esto permite que los usuarios obtengan nuevos intentos de verificación Human ID
  * 
  * USO:
- * - Acceder desde navegador: http://arcusx.one/api/auth/reset_human_id_action_id.php
+ * - Acceder desde navegador: http://arcusx.pro/api/auth/reset_human_id_action_id.php
  * - O ejecutar desde línea de comandos: php reset_human_id_action_id.php
  */
 

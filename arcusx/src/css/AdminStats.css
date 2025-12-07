@@ -183,6 +183,24 @@
   margin: 0;
 }
 
+.config-value-link {
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.3s ease;
+}
+
+.config-value-link:hover .config-value {
+  color: #28c0f0;
+  text-decoration: underline;
+}
+
+.stat-trend {
+  font-size: 12px;
+  color: rgba(16, 185, 129, 0.8);
+  margin: 4px 0 0 0;
+  font-weight: 600;
+}
+
 /* System Status */
 .system-status {
   margin-bottom: 40px;
@@ -228,6 +246,155 @@
   font-size: 14px;
   font-weight: 600;
   color: #fff;
+}
+
+/* Revenue & Treasury Section */
+.revenue-section {
+  margin-bottom: 40px;
+  padding: 24px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 16px;
+}
+
+.revenue-section h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 24px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.revenue-section h3::before {
+  content: '';
+  width: 4px;
+  height: 24px;
+  background: linear-gradient(135deg, #10b981, #f59e0b);
+  border-radius: 2px;
+}
+
+.revenue-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.revenue-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(40, 192, 240, 0.3);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  transition: all 0.3s ease;
+}
+
+.revenue-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(40, 192, 240, 0.2);
+}
+
+.revenue-card.primary {
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
+.revenue-card.secondary {
+  border-color: rgba(245, 158, 11, 0.5);
+}
+
+.revenue-icon {
+  font-size: 32px;
+  color: #28c0f0;
+  flex-shrink: 0;
+}
+
+.revenue-card.primary .revenue-icon {
+  color: #10b981;
+}
+
+.revenue-card.secondary .revenue-icon {
+  color: #f59e0b;
+}
+
+.revenue-content {
+  flex: 1;
+}
+
+.revenue-content h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 8px 0;
+}
+
+.revenue-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #28c0f0;
+  margin: 0 0 4px 0;
+}
+
+.revenue-card.primary .revenue-value {
+  color: #10b981;
+}
+
+.revenue-card.secondary .revenue-value {
+  color: #f59e0b;
+}
+
+.revenue-value-link {
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.3s ease;
+}
+
+.revenue-value-link:hover .revenue-value {
+  color: #28c0f0;
+  text-decoration: underline;
+}
+
+.revenue-description {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 4px 0;
+}
+
+.revenue-trend {
+  font-size: 12px;
+  color: rgba(16, 185, 129, 0.8);
+  margin: 8px 0 0 0;
+  font-weight: 600;
+}
+
+/* Trustless Work Configuration */
+.trustless-work-config {
+  margin-bottom: 40px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(40, 192, 240, 0.2);
+  border-radius: 16px;
+}
+
+.trustless-work-config h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 24px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.trustless-work-config h3::before {
+  content: '';
+  width: 4px;
+  height: 24px;
+  background: linear-gradient(135deg, #28c0f0, #1180b3);
+  border-radius: 2px;
 }
 
 /* Quick Actions */
@@ -320,6 +487,20 @@
   box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
 }
 
+/* Spinning animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .stats-header {
@@ -347,5 +528,17 @@
   .action-button {
     width: 100%;
     justify-content: center;
+  }
+  
+  .trustless-work-config {
+    padding: 16px;
+  }
+  
+  .revenue-section {
+    padding: 16px;
+  }
+  
+  .revenue-grid {
+    grid-template-columns: 1fr;
   }
 }

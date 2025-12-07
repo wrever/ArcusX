@@ -47,7 +47,7 @@ $avatar_url = $data['avatar_url'] ?? null;
 $secret_key = "SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY";
 $issuedAt = time();
 $expirationTime = $issuedAt + (3600 * 24); // 1 día
-$issuer = "arcusx.one";
+$issuer = "arcusx.pro";
 
 try {
     // Verificar si el usuario ya existe por email

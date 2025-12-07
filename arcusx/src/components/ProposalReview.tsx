@@ -7,15 +7,6 @@ import { useWallet } from '../hooks/useWallet';
 // Sistema antiguo de multisig eliminado - ahora usamos Trustless Work
 
 // ============================================
-// SISTEMA NUEVO: SOROBAN - COMENTADO
-// ============================================
-// import { createAndFundEscrow } from '../services/sorobanEscrowService';
-// import { SOROBAN_CONTRACT_ID } from '../config/contract';
-// ============================================
-// FIN SISTEMA SOROBAN - COMENTADO
-// ============================================
-
-// ============================================
 // SISTEMA TRUSTLESS WORK - IMPLEMENTADO
 // ============================================
 import { 
@@ -28,9 +19,8 @@ import {
   createTrustlessEscrow, 
   fundTrustlessEscrow 
 } from '../services/trustlessWorkEscrowService';
-
-// Importar funciones de comisión (se usan en ambos sistemas)
-import { calculateCommission, calculateNetAmount } from '../config/commission';
+import { calculateCommissionSync, calculateNetAmountSync } from '../config/commission';
+import { usePlatformFee } from '../hooks/usePlatformFee';
 import EscrowProcessPopup from './EscrowProcessPopup';
 import '../css/ProposalReview.css';
 
@@ -44,7 +34,6 @@ interface TaskData {
   difficulty: string;
   category: string;
   created_at: string;
-  soroban_escrow_id?: number | null;
   contract_id?: string | null;
   escrow_id?: string | null;
   escrow_status?: string | null;
@@ -82,6 +71,9 @@ const ProposalReview = () => {
 
   // Estados para el nuevo popup paso a paso
   const [showEscrowProcessPopup, setShowEscrowProcessPopup] = useState(false);
+  
+  // Obtener platform fee del backend
+  const { platformFee } = usePlatformFee();
 
   // Wallet (Freighter/Stellar)
   const {
@@ -498,7 +490,7 @@ const ProposalReview = () => {
             task_id: taskId,
             proposal_id: selectedProposal.id,
             transaction_hash: txHash,
-            escrow_id: escrowId // Dirección Stellar de la cuenta escrow (multisig 2-de-2)
+            escrow_id: escrowId // Contract ID de Trustless Work (empieza con 'C')
           },
           {
             headers: {
@@ -553,17 +545,18 @@ const ProposalReview = () => {
 
   // Función para completar el proceso
   const handleProcessComplete = () => {
-    // Calcular monto neto y comisión
+    // Calcular monto neto y comisión usando el fee del backend
     const totalAmount = task?.price ? parseFloat(task.price) : 0;
-    const netAmount = totalAmount > 0 ? calculateNetAmount(totalAmount) : 0;
-    const commission = totalAmount > 0 ? calculateCommission(totalAmount) : 0;
+    const netAmount = totalAmount > 0 ? calculateNetAmountSync(totalAmount, platformFee) : 0;
+    const commission = totalAmount > 0 ? calculateCommissionSync(totalAmount, platformFee) : 0;
+    const feePercent = (platformFee * 100).toFixed(2);
     
     // Mostrar mensaje de éxito mejorado
     setPopupMessage(`✅ CONTRATO ACTIVADO EXITOSAMENTE!
         
 💰 Monto total: ${task?.price || 'N/A'} ${task?.currency || 'USDC'}
 💵 Recibirás: ${netAmount.toFixed(7)} USDC (neto)
-📊 Comisión ArcusX (0.3%): ${commission.toFixed(7)} USDC
+📊 Comisión ArcusX (${feePercent}%): ${commission.toFixed(7)} USDC
 🌐 Red: Stellar Testnet
 👤 Trabajador: ${selectedProposal?.applicant_username}
 
@@ -708,7 +701,7 @@ const ProposalReview = () => {
               </span>
               <span className="category-tag">{task.category}</span>
               <span className="price-tag">
-                {calculateNetAmount(parseFloat(task.price)).toFixed(7)} {task.currency}
+                {calculateNetAmountSync(parseFloat(task.price), platformFee).toFixed(7)} {task.currency}
               </span>
             </div>
           </div>

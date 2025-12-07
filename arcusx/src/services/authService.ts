@@ -99,7 +99,7 @@ export const authService = {
       const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
       const redirectUrl = isDevelopment 
         ? `${window.location.origin}/auth/callback`
-        : 'https://arcusx.one/auth/callback';
+        : 'https://arcusx.pro/auth/callback';
       
       console.log('Google OAuth - Redirect URL:', redirectUrl, '(Development:', isDevelopment, ')');
       
@@ -121,9 +121,9 @@ export const authService = {
       if (data?.url) {
         let finalUrl = data.url;
         
-        // Reemplazar cualquier referencia a localhost con arcusx.one
-        finalUrl = finalUrl.replace(/http:\/\/localhost:\d+/g, 'https://arcusx.one');
-        finalUrl = finalUrl.replace(/https?:\/\/localhost:\d+/g, 'https://arcusx.one');
+        // Reemplazar cualquier referencia a localhost con arcusx.pro
+        finalUrl = finalUrl.replace(/http:\/\/localhost:\d+/g, 'https://arcusx.pro');
+        finalUrl = finalUrl.replace(/https?:\/\/localhost:\d+/g, 'https://arcusx.pro');
         
         // Asegurar que el redirect_uri en los query params también sea correcto
         const urlObj = new URL(finalUrl);
@@ -149,7 +149,7 @@ export const authService = {
       const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
       const redirectUrl = isDevelopment 
         ? `${window.location.origin}/auth/callback`
-        : 'https://arcusx.one/auth/callback';
+        : 'https://arcusx.pro/auth/callback';
       
       console.log('GitHub OAuth - Redirect URL:', redirectUrl, '(Development:', isDevelopment, ')');
       
@@ -173,9 +173,9 @@ export const authService = {
         
         // Solo corregir si estamos en producción
         if (!isDevelopment) {
-          // Reemplazar cualquier referencia a localhost con arcusx.one
-          finalUrl = finalUrl.replace(/http:\/\/localhost:\d+/g, 'https://arcusx.one');
-          finalUrl = finalUrl.replace(/https?:\/\/localhost:\d+/g, 'https://arcusx.one');
+          // Reemplazar cualquier referencia a localhost con arcusx.pro
+          finalUrl = finalUrl.replace(/http:\/\/localhost:\d+/g, 'https://arcusx.pro');
+          finalUrl = finalUrl.replace(/https?:\/\/localhost:\d+/g, 'https://arcusx.pro');
           
           // Asegurar que el redirect_uri en los query params también sea correcto
           const urlObj = new URL(finalUrl);

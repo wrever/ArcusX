@@ -5,6 +5,11 @@
  * Solo hace routing - toda la lógica está en admin_common.php y admin_actions.php
  */
 
+// Asegurar que no haya output antes de incluir archivos
+if (ob_get_level() > 0) {
+    ob_clean();
+}
+
 // Incluir infraestructura común (CORS, autenticación, utilidades)
 // admin_common.php ya maneja OPTIONS, carga dependencias, autentica y verifica admin
 // Al final de admin_common.php, $conn, $user y $jwt_secret están disponibles
@@ -55,6 +60,12 @@ try {
         case 'get_task_details':
             $params = array_merge($_GET, $_POST);
             $response = handleGetTaskDetails($conn, $user, $params);
+            break;
+        
+        // ========== ESCROWS ==========
+        case 'get_escrows':
+            $params = array_merge($_GET, $_POST);
+            $response = handleGetEscrows($conn, $user, $params);
             break;
         
         case 'update_task':
@@ -124,11 +135,16 @@ try {
     // Enviar respuesta JSON
     if ($response !== null) {
         // Limpiar cualquier output anterior
-        while (ob_get_level() > 1) {
+        while (ob_get_level() > 0) {
             ob_end_clean();
         }
         
-        http_response_code(200);
+        // Asegurar que los headers estén correctos
+        if (!headers_sent()) {
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(200);
+        }
+        
         echo json_encode($response);
         exit();
     }

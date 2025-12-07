@@ -1,7 +1,12 @@
 <?php
 /**
- * Endpoint para enviar una transacción completamente firmada (2 firmas)
- * Se usa cuando el segundo firmante completa la firma y se envía a Stellar
+ * DEPRECATED: Este endpoint ya no se usa.
+ * El sistema ahora usa exclusivamente Trustless Work para manejar escrows.
+ * Trustless Work maneja todas las transacciones directamente a través de su API.
+ * 
+ * Este archivo se mantiene solo para referencia histórica.
+ * 
+ * @deprecated Desde la migración a Trustless Work
  */
 
 // Deshabilitar display_errors para evitar output antes de headers
@@ -15,8 +20,8 @@ ini_set('error_log', __DIR__ . '/php-error.log');
 $allowed_origins = [
     'http://localhost:5173',
     'http://localhost:5174',
-    'https://arcusx.one',
-    'http://arcusx.one'
+    'https://arcusx.pro',
+    'http://arcusx.pro'
 ];
 $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
 
@@ -98,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         // Verificar que la tarea existe
         $stmt = $conn->prepare("
-            SELECT user_id, accepted_applicant_id, pending_transaction_xdr, escrow_id
+            SELECT user_id, accepted_applicant_id, pending_transaction_xdr, escrow_id, escrow_status
             FROM tasks 
             WHERE id = ? 
             FOR UPDATE
@@ -122,47 +127,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception('No tienes permisos para enviar esta transacción');
         }
 
-        // Verificar que había una transacción pendiente
-        if (empty($taskData['pending_transaction_xdr'])) {
-            throw new Exception('No hay transacción pendiente para completar');
-        }
-
-        // Limpiar transacción pendiente y actualizar estado
-        $stmt = $conn->prepare("
-            UPDATE tasks 
-            SET pending_transaction_xdr = NULL,
-                pending_transaction_signer = NULL,
-                escrow_status = 'funds_released',
-                escrow_completed_at = NOW()
-            WHERE id = ?
-        ");
-        $stmt->bind_param("i", $taskId);
-        $stmt->execute();
-        $stmt->close();
-
-        // Eliminar mensajes del chat asociados a la tarea
-        $stmt_delete_messages = $conn->prepare("DELETE FROM messages WHERE task_id = ?");
-        if ($stmt_delete_messages === false) {
-            error_log("Error al preparar el borrado de mensajes: " . $conn->error);
-        } else {
-            $stmt_delete_messages->bind_param("i", $taskId);
-            if (!$stmt_delete_messages->execute()) {
-                error_log("Error al borrar los mensajes: " . $stmt_delete_messages->error);
-            }
-            $stmt_delete_messages->close();
-        }
-
-        // Eliminar la tarea de la base de datos (ahora que los fondos están liberados)
-        $stmt_delete_task = $conn->prepare("DELETE FROM tasks WHERE id = ?");
-        if ($stmt_delete_task === false) {
-            error_log("Error al preparar el borrado de la tarea: " . $conn->error);
-        } else {
-            $stmt_delete_task->bind_param("i", $taskId);
-            if (!$stmt_delete_task->execute()) {
-                error_log("Error al borrar la tarea: " . $stmt_delete_task->error);
-            }
-            $stmt_delete_task->close();
-        }
+        // Este endpoint ya no se usa - Trustless Work maneja todo directamente
+        throw new Exception('Este endpoint está deprecado. El sistema ahora usa exclusivamente Trustless Work para manejar escrows. Los fondos se liberan directamente a través de Trustless Work API.');
 
         $conn->commit();
 

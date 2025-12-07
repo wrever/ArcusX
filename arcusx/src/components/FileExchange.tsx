@@ -56,7 +56,7 @@ const FileExchange: React.FC<FileExchangeProps> = ({
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await fetch(`https://arcusx.one/api/auth/get_task_details.php?task_id=${taskId}`, {
+        const response = await fetch(`https://arcusx.pro/api/auth/get_task_details.php?task_id=${taskId}`, {
           method: 'POST',
           body: formData
         });
@@ -107,7 +107,7 @@ const FileExchange: React.FC<FileExchangeProps> = ({
     }
 
     try {
-      const response = await fetch(`https://arcusx.one/api/auth/get_task_details.php?task_id=${taskId}`, {
+      const response = await fetch(`https://arcusx.pro/api/auth/get_task_details.php?task_id=${taskId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json'

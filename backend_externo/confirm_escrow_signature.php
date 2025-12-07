@@ -1,4 +1,14 @@
 <?php
+/**
+ * DEPRECATED: Este endpoint ya no se usa.
+ * El sistema ahora usa exclusivamente Trustless Work para manejar escrows.
+ * Trustless Work maneja las firmas automáticamente a través de su API.
+ * 
+ * Este archivo se mantiene solo para referencia histórica.
+ * 
+ * @deprecated Desde la migración a Trustless Work
+ */
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
@@ -17,8 +27,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-// Incluir configuración de base de datos
-require_once 'config.php';
+// Este endpoint está deprecado
+http_response_code(410); // Gone
+echo json_encode([
+    'success' => false,
+    'message' => 'Este endpoint está deprecado. El sistema ahora usa exclusivamente Trustless Work, que maneja las firmas automáticamente.'
+]);
+exit;
 
 // Función para obtener usuario del JWT
 function getLoggedInUserId($conn) {
@@ -85,7 +100,7 @@ try {
     $stmt = $conn->prepare("
         SELECT t.id, t.escrow_id, t.escrow_status, t.accepted_applicant_id
         FROM tasks t
-        WHERE t.id = ? AND t.user_id = ? AND t.escrow_status = 'pending_signature'
+        WHERE t.id = ? AND t.user_id = ?
     ");
     $stmt->bind_param("ii", $taskId, $clientId);
     $stmt->execute();
@@ -93,11 +108,29 @@ try {
     
     if ($result->num_rows === 0) {
         http_response_code(404);
-        echo json_encode(['message' => 'Tarea no encontrada o ya procesada']);
+        echo json_encode(['message' => 'Tarea no encontrada o no tienes permisos']);
         exit;
     }
     
     $taskData = $result->fetch_assoc();
+    
+    // Detectar si es Trustless Work (contract ID empieza con 'C')
+    $isTrustlessWork = !empty($taskData['escrow_id']) && 
+                      strlen($taskData['escrow_id']) >= 32 && 
+                      substr($taskData['escrow_id'], 0, 1) === 'C';
+    
+    if ($isTrustlessWork) {
+        http_response_code(400);
+        echo json_encode(['message' => 'Este endpoint no aplica para escrows de Trustless Work. Trustless Work maneja las firmas automáticamente.']);
+        exit;
+    }
+    
+    // Verificar que el estado es 'pending_signature' (solo para multisig)
+    if ($taskData['escrow_status'] !== 'pending_signature') {
+        http_response_code(400);
+        echo json_encode(['message' => 'El escrow no está en estado pending_signature']);
+        exit;
+    }
     
     // Verificar que el contrato coincide
     if ($taskData['escrow_id'] !== $contractAddress) {
@@ -115,11 +148,11 @@ try {
         exit;
     }
     
-    // Actualizar estado del escrow a activo
+    // Actualizar estado del escrow a activo (solo para multisig)
     $stmt = $conn->prepare("
         UPDATE tasks 
         SET escrow_status = 'active',
-            escrow_completed_at = NOW()
+            escrow_created_at = NOW()
         WHERE id = ?
     ");
     $stmt->bind_param("i", $taskId);

@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Configuración de axios
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://arcusx.one/api',
+  baseURL: import.meta.env.VITE_API_URL || 'https://arcusx.pro/api',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',

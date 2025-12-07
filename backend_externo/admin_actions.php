@@ -57,8 +57,27 @@ function handleGetStats($conn, $user) {
     }
     $stats['total_volume_usdc'] = (float)$result->fetch_assoc()['total'];
     
-    // Comisiones totales (0.3% del volumen)
-    $stats['total_commission_usdc'] = $stats['total_volume_usdc'] * 0.003;
+    // Obtener platform fee configurado (por defecto 0.3% = 0.003)
+    $platformFee = 0.003; // Valor por defecto
+    try {
+        $checkTable = $conn->query("SHOW TABLES LIKE 'system_config'");
+        if ($checkTable !== false && $checkTable->num_rows > 0) {
+            $feeResult = $conn->query("SELECT config_value FROM system_config WHERE config_key = 'platform_fee'");
+            if ($feeResult !== false && $feeResult->num_rows > 0) {
+                $feeRow = $feeResult->fetch_assoc();
+                $feeValue = $feeRow['config_value'];
+                // Convertir a float si es string
+                $platformFee = is_numeric($feeValue) ? (float)$feeValue : 0.003;
+            }
+        }
+    } catch (Exception $e) {
+        // Si hay error al obtener el fee, usar el valor por defecto
+        error_log('Error al obtener platform_fee en handleGetStats: ' . $e->getMessage());
+        $platformFee = 0.003;
+    }
+    
+    // Comisiones totales (usando el fee configurado del sistema)
+    $stats['total_commission_usdc'] = $stats['total_volume_usdc'] * $platformFee;
     
     // Transacciones pendientes
     $result = $conn->query("SELECT COUNT(*) as total FROM tasks WHERE pending_transaction_xdr IS NOT NULL");
@@ -340,6 +359,134 @@ function handleGetTasks($conn, $user, $params) {
 }
 
 /**
+ * Obtener lista de escrows con paginación y filtros
+ */
+function handleGetEscrows($conn, $user, $params) {
+    $page = isset($params['page']) ? (int)$params['page'] : 1;
+    $limit = isset($params['limit']) ? (int)$params['limit'] : 20;
+    $escrowStatus = isset($params['escrow_status']) ? trim($params['escrow_status']) : '';
+    $taskStatus = isset($params['task_status']) ? trim($params['task_status']) : '';
+    $search = isset($params['search']) ? trim($params['search']) : '';
+    $startDate = isset($params['start_date']) ? trim($params['start_date']) : '';
+    $endDate = isset($params['end_date']) ? trim($params['end_date']) : '';
+    
+    $offset = ($page - 1) * $limit;
+    
+    $where = [];
+    $bindParams = [];
+    $types = '';
+    
+    // Solo escrows que tienen escrow_id (no NULL)
+    $where[] = "t.escrow_id IS NOT NULL";
+    
+    if (!empty($escrowStatus)) {
+        $where[] = "t.escrow_status = ?";
+        $bindParams[] = $escrowStatus;
+        $types .= 's';
+    }
+    
+    if (!empty($taskStatus)) {
+        $where[] = "t.status = ?";
+        $bindParams[] = $taskStatus;
+        $types .= 's';
+    }
+    
+    if (!empty($search)) {
+        // Buscar por escrow_id o task_id
+        $where[] = "(t.escrow_id LIKE ? OR t.id = ?)";
+        $searchParam = "%$search%";
+        $bindParams[] = $searchParam;
+        // Intentar convertir search a int para task_id
+        $taskIdSearch = is_numeric($search) ? (int)$search : 0;
+        $bindParams[] = $taskIdSearch;
+        $types .= 'si';
+    }
+    
+    if (!empty($startDate)) {
+        $where[] = "t.escrow_created_at >= ?";
+        $bindParams[] = $startDate;
+        $types .= 's';
+    }
+    
+    if (!empty($endDate)) {
+        $where[] = "t.escrow_created_at <= ?";
+        $bindParams[] = $endDate . ' 23:59:59';
+        $types .= 's';
+    }
+    
+    $whereClause = 'WHERE ' . implode(' AND ', $where);
+    
+    // Contar total
+    $countSql = "SELECT COUNT(*) as total FROM tasks t $whereClause";
+    $countStmt = $conn->prepare($countSql);
+    if (!empty($bindParams)) {
+        $countStmt->bind_param($types, ...$bindParams);
+    }
+    $countStmt->execute();
+    $total = $countStmt->get_result()->fetch_assoc()['total'];
+    $countStmt->close();
+    
+    // Obtener escrows con información de la tarea asociada
+    $sql = "SELECT 
+                t.escrow_id,
+                t.id as task_id,
+                t.title as task_title,
+                t.price as task_price,
+                t.currency as task_currency,
+                t.escrow_status,
+                t.status as task_status,
+                t.escrow_created_at,
+                t.escrow_completed_at,
+                t.created_at as task_created_at,
+                u_client.username as client_username,
+                u_client.id as client_id,
+                u_worker.username as worker_username,
+                u_worker.id as worker_id
+            FROM tasks t
+            LEFT JOIN users u_client ON t.user_id = u_client.id
+            LEFT JOIN users u_worker ON t.accepted_applicant_id = u_worker.id
+            $whereClause
+            ORDER BY t.escrow_created_at DESC
+            LIMIT ? OFFSET ?";
+    
+    $stmt = $conn->prepare($sql);
+    
+    $bindParams[] = $limit;
+    $bindParams[] = $offset;
+    $types .= 'ii';
+    
+    if (!empty($bindParams)) {
+        $stmt->bind_param($types, ...$bindParams);
+    }
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $escrows = [];
+    while ($row = $result->fetch_assoc()) {
+        $escrows[] = $row;
+    }
+    $stmt->close();
+    
+    logAdminAction($conn, $user['id'], 'get_escrows', 'escrows', null, [
+        'page' => $page,
+        'limit' => $limit,
+        'escrow_status' => $escrowStatus,
+        'task_status' => $taskStatus
+    ]);
+    
+    return [
+        'success' => true,
+        'escrows' => $escrows,
+        'pagination' => [
+            'page' => $page,
+            'limit' => $limit,
+            'total' => (int)$total,
+            'total_pages' => ceil($total / $limit)
+        ]
+    ];
+}
+
+/**
  * Obtener detalles de una tarea específica
  */
 function handleGetTaskDetails($conn, $user, $params) {
@@ -451,13 +598,47 @@ function handleDeleteTask($conn, $user, $params) {
  * Obtener configuraciones del sistema
  */
 function handleGetConfig($conn, $user) {
-    // Simplificar: siempre retornar array vacío por ahora
-    // La tabla system_config puede no existir y no es crítica para el funcionamiento
-    return ['success' => true, 'configs' => []];
+    // Verificar si la tabla existe
+    $checkTable = $conn->query("SHOW TABLES LIKE 'system_config'");
+    if ($checkTable->num_rows === 0) {
+        // Si no existe, retornar array vacío
+        return ['success' => true, 'configs' => []];
+    }
+    
+    // Obtener todas las configuraciones
+    $result = $conn->query("SELECT config_key, config_value FROM system_config ORDER BY config_key");
+    
+    if ($result === false) {
+        // Si hay error, retornar array vacío en lugar de fallar
+        return ['success' => true, 'configs' => []];
+    }
+    
+    $configs = [];
+    while ($row = $result->fetch_assoc()) {
+        // Intentar parsear JSON si es posible, sino usar el valor como string
+        $value = $row['config_value'];
+        $decoded = json_decode($value, true);
+        if (json_last_error() === JSON_ERROR_NONE) {
+            $value = $decoded;
+        } else {
+            // Intentar convertir a número si es posible
+            if (is_numeric($value)) {
+                $value = (strpos($value, '.') !== false) ? (float)$value : (int)$value;
+            }
+        }
+        
+        $configs[] = [
+            'config_key' => $row['config_key'],
+            'config_value' => $value
+        ];
+    }
+    
+    return ['success' => true, 'configs' => $configs];
 }
 
 /**
  * Actualizar configuración del sistema
+ * Hace INSERT si no existe, UPDATE si existe (UPSERT)
  */
 function handleUpdateConfig($conn, $user, $data) {
     $configKey = isset($data['config_key']) ? trim($data['config_key']) : '';
@@ -474,12 +655,43 @@ function handleUpdateConfig($conn, $user, $data) {
         $configValue = (string)$configValue;
     }
     
-    $stmt = $conn->prepare("UPDATE system_config SET config_value = ?, updated_by = ? WHERE config_key = ?");
-    $stmt->bind_param("sis", $configValue, $user['id'], $configKey);
+    // Verificar si la tabla system_config existe, si no, crearla
+    $checkTable = $conn->query("SHOW TABLES LIKE 'system_config'");
+    if ($checkTable === false) {
+        throw new Exception('Error al verificar existencia de tabla system_config: ' . $conn->error);
+    }
+    
+    if ($checkTable->num_rows === 0) {
+        // Crear tabla si no existe
+        $createTable = "CREATE TABLE IF NOT EXISTS system_config (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            config_key VARCHAR(255) NOT NULL UNIQUE,
+            config_value TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            updated_by INT NULL,
+            INDEX idx_config_key (config_key)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+        
+        if ($conn->query($createTable) === false) {
+            throw new Exception('Error al crear tabla system_config: ' . $conn->error);
+        }
+    }
+    
+    // Hacer UPSERT (INSERT si no existe, UPDATE si existe)
+    $stmt = $conn->prepare("
+        INSERT INTO system_config (config_key, config_value, updated_by) 
+        VALUES (?, ?, ?)
+        ON DUPLICATE KEY UPDATE 
+            config_value = VALUES(config_value),
+            updated_by = VALUES(updated_by),
+            updated_at = CURRENT_TIMESTAMP
+    ");
+    $stmt->bind_param("ssi", $configKey, $configValue, $user['id']);
     $stmt->execute();
     
-    if ($stmt->affected_rows === 0) {
-        throw new Exception('Configuración no encontrada');
+    if ($stmt->error) {
+        throw new Exception('Error al guardar configuración: ' . $stmt->error);
     }
     
     logAdminAction($conn, $user['id'], 'update_config', 'config', null, ['key' => $configKey, 'value' => $configValue]);

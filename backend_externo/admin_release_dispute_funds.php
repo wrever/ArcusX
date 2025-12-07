@@ -76,57 +76,9 @@ try {
         exit;
     }
     
-    // Verificar que hay un escrow activo
-    if (empty($disputeData['escrow_id']) || empty($disputeData['escrow_secret'])) {
-        sendErrorResponse(400, 'No hay escrow asociado a esta disputa o falta el secret key.');
-        exit;
-    }
-    
-    // Parsear resolución
-    $resolution = json_decode($disputeData['resolution'], true);
-    if (!$resolution || !isset($resolution['decision'])) {
-        sendErrorResponse(400, 'Resolución de disputa inválida.');
-        exit;
-    }
-    
-    $decision = $resolution['decision'];
-    $refundAmount = isset($resolution['refund_to_client']) ? (float)$resolution['refund_to_client'] : 0;
-    $paymentAmount = isset($resolution['pay_to_worker']) ? (float)$resolution['pay_to_worker'] : 0;
-    
-    // Validar wallets
-    if (empty($disputeData['client_wallet']) || empty($disputeData['worker_wallet'])) {
-        sendErrorResponse(400, 'Faltan direcciones de wallet del cliente o trabajador.');
-        exit;
-    }
-    
-    // Retornar información necesaria para generar la transacción desde el frontend
-    // El frontend usará esta información para crear y firmar la transacción de Stellar
-    echo json_encode([
-        'success' => true,
-        'dispute_id' => $disputeId,
-        'task_id' => $disputeData['task_id'],
-        'escrow_id' => $disputeData['escrow_id'],
-        'escrow_secret' => $disputeData['escrow_secret'], // IMPORTANTE: Solo para generar XDR, debe manejarse con cuidado
-        'client_wallet' => $disputeData['client_wallet'],
-        'worker_wallet' => $disputeData['worker_wallet'],
-        'decision' => $decision,
-        'refund_amount' => $refundAmount,
-        'payment_amount' => $paymentAmount,
-        'instructions' => [
-            'Para reembolso completo (decision=client):',
-            '  - Usar refundFunds() con escrow_secret y client_wallet',
-            '  - Monto: ' . $refundAmount . ' USDC',
-            '',
-            'Para pago completo (decision=worker):',
-            '  - Usar releaseFunds() con escrow_secret, client_wallet y worker_wallet',
-            '  - Requiere firmas de ambas partes',
-            '  - Monto: ' . $paymentAmount . ' USDC',
-            '',
-            'Para split:',
-            '  - Primero reembolsar al cliente: ' . $refundAmount . ' USDC',
-            '  - Luego pagar al trabajador: ' . $paymentAmount . ' USDC'
-        ]
-    ]);
+    // Este endpoint está deprecado - Trustless Work maneja todo directamente
+    // La liberación de fondos se maneja desde DisputeManagement.tsx usando resolveDisputeTrustlessEscrow
+    sendErrorResponse(410, 'Este endpoint está deprecado. El sistema ahora usa exclusivamente Trustless Work. La liberación de fondos se maneja directamente a través de Trustless Work API desde el frontend.');
     
 } catch (Exception $e) {
     error_log('Error en admin_release_dispute_funds.php: ' . $e->getMessage());

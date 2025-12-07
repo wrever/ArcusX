@@ -29,7 +29,7 @@ $secret_key = "SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY"; // !! 
 // Configuración del token (opcional, ajusta según necesites)
 $issuedAt = time(); // Tiempo en que el token fue emitido
 $expirationTime = $issuedAt + (3600 * 24); // Tiempo de expiración (ej: 1 día)
-$issuer = "arcusx.one"; // Tu dominio o emisor
+$issuer = "arcusx.pro"; // Tu dominio o emisor
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 

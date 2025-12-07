@@ -1,7 +1,7 @@
 <?php
 /**
  * Script para crear/verificar disputas de prueba
- * Accede desde: http://arcusx.one/api/auth/create_test_dispute.php
+ * Accede desde: http://arcusx.pro/api/auth/create_test_dispute.php
  * 
  * Para solo verificar disputas: ?action=check
  * Para crear disputa: ?action=create (o sin parámetro)

@@ -85,7 +85,7 @@ const AdminLogin = () => {
                 id="admin-email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@arcusx.one"
+                placeholder="admin@arcusx.pro"
                 required
                 disabled={loading}
                 className="admin-input"

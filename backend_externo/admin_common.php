@@ -10,7 +10,7 @@ function getAllowedOrigin() {
     $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
     $allowedOrigins = [
         'http://localhost:5173',  // Desarrollo local
-        'https://arcusx.one',      // Producción
+        'https://arcusx.pro',      // Producción
     ];
     
     if (in_array($origin, $allowedOrigins)) {
@@ -18,7 +18,7 @@ function getAllowedOrigin() {
     }
     
     // Por defecto, usar producción
-    return 'https://arcusx.one';
+    return 'https://arcusx.pro';
 }
 
 /**
@@ -45,6 +45,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // Iniciar output buffering INMEDIATAMENTE después de OPTIONS
+// Limpiar cualquier buffer anterior
+while (ob_get_level() > 0) {
+    ob_end_clean();
+}
 ob_start();
 
 // Si llegamos aquí, no es OPTIONS, continuar con el código normal
@@ -52,6 +56,9 @@ ob_start();
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
+
+// Asegurar que no se muestren errores en pantalla
+ini_set('html_errors', 0);
 
 // Función para enviar respuesta de error JSON (definir ANTES de usarla)
 function sendErrorResponse($message, $code = 500, $error = null) {
@@ -71,7 +78,7 @@ function sendErrorResponse($message, $code = 500, $error = null) {
     }
     
     // Limpiar output buffer antes de enviar
-    while (ob_get_level() > 1) {
+    while (ob_get_level() > 0) {
         ob_end_clean();
     }
     

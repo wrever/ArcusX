@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaChartLine, FaExclamationTriangle, FaBell, FaGavel, FaUsers, FaSignOutAlt } from 'react-icons/fa';
+import { FaChartLine, FaExclamationTriangle, FaBell, FaGavel, FaUsers, FaSignOutAlt, FaCoins, FaShieldAlt, FaTasks, FaWallet } from 'react-icons/fa';
 import AdminStats from './AdminStats';
 import NotificationManagement from './NotificationManagement';
 import DisputeManagement from './DisputeManagement';
+import TaskManagement from './TaskManagement';
+import EscrowManagement from './EscrowManagement';
 import UserManagement from './UserManagement';
+import FeeManagement from './FeeManagement';
+import TokenManagement from './TokenManagement';
 import { getAdminStats, getAdminConfig, adminLogout } from '../services/adminService';
 import '../css/AdminPanel.css';
 
@@ -17,6 +21,10 @@ interface AdminStats {
   referralFee: number;
   treasury: string;
   arbitrator: string;
+  volumeThisMonth?: number;
+  feesThisMonth?: number;
+  volumeToday?: number;
+  feesToday?: number;
 }
 
 interface AdminPanelProps {
@@ -77,6 +85,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
         // Si falla, dejar en 0
       }
       
+      // Calcular estadísticas adicionales (volumen y comisiones del mes y hoy)
+      // Nota: Estas estadísticas se pueden calcular en el backend en el futuro
+      const volumeThisMonth = backendStats.total_volume_usdc || 0; // TODO: Calcular en backend con filtro de fecha
+      const feesThisMonth = backendStats.total_commission_usdc || 0; // TODO: Calcular en backend con filtro de fecha
+      const volumeToday = 0; // TODO: Calcular en backend
+      const feesToday = 0; // TODO: Calcular en backend
+      
       // Mapear datos del backend a la interfaz del frontend
       setStats({
         totalEscrows: backendStats.total_escrows || 0,
@@ -86,7 +101,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
         platformFee: platformFeeDisplay || 0.3,
         referralFee: referralFeeConfig?.config_value || 0,
         treasury: treasuryConfig?.config_value || '',
-        arbitrator: arbitratorConfig?.config_value || ''
+        arbitrator: arbitratorConfig?.config_value || '',
+        volumeThisMonth: volumeThisMonth,
+        feesThisMonth: feesThisMonth,
+        volumeToday: volumeToday,
+        feesToday: feesToday
       });
     } catch (err: any) {
       console.error('Error al cargar estadísticas:', err);
@@ -96,32 +115,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
     }
   };
 
-  // TABS ACTUALES
+  // TABS DISPONIBLES
   const tabs = [
     { id: 'overview', label: 'Resumen', icon: <FaChartLine /> },
     { id: 'users', label: 'Usuarios', icon: <FaUsers /> },
-    { id: 'notifications', label: 'Notificaciones', icon: <FaBell /> },
-    { id: 'disputes', label: 'Arbitraje', icon: <FaGavel /> }
-  ];
-
-  // TABS ADICIONALES (COMENTADAS - ACTIVAR CUANDO SE IMPLEMENTEN LOS COMPONENTES):
-  /*
-  import { FaWallet } from 'react-icons/fa';
-  import EscrowManagement from './EscrowManagement';
-  import UserManagement from './UserManagement';
-  import TaskManagement from './TaskManagement';
-  
-  const tabs = [
-    { id: 'overview', label: 'Resumen', icon: <FaChartLine /> },
+    { id: 'tasks', label: 'Tareas', icon: <FaTasks /> },
+    { id: 'escrows', label: 'Escrows', icon: <FaWallet /> },
     { id: 'fees', label: 'Gestión de Fees', icon: <FaCoins /> },
     { id: 'tokens', label: 'Tokens', icon: <FaShieldAlt /> },
     { id: 'notifications', label: 'Notificaciones', icon: <FaBell /> },
-    { id: 'disputes', label: 'Arbitraje', icon: <FaGavel /> },
-    { id: 'users', label: 'Usuarios', icon: <FaUsers /> },
-    { id: 'tasks', label: 'Tareas', icon: <FaTasks /> },
-    { id: 'escrows', label: 'Escrows', icon: <FaWallet /> }
+    { id: 'disputes', label: 'Arbitraje', icon: <FaGavel /> }
   ];
-  */
 
   if (!isAdmin) {
     return (
@@ -173,7 +177,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
         <div className="admin-header-content">
           <div>
             <h1>Panel de Administración</h1>
-            <p>Gestiona la configuración del contrato ArcusX</p>
+            <p>Gestiona la plataforma ArcusX</p>
           </div>
           <button 
             onClick={handleLogout}
@@ -207,11 +211,24 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
             stats={stats} 
             onRefresh={fetchAdminStats}
             loading={loading}
+            onNavigate={setActiveTab}
           />
         )}
         
         {activeTab === 'users' && (
           <UserManagement 
+            onUpdate={fetchAdminStats}
+          />
+        )}
+
+        {activeTab === 'tasks' && (
+          <TaskManagement 
+            onUpdate={fetchAdminStats}
+          />
+        )}
+
+        {activeTab === 'escrows' && (
+          <EscrowManagement 
             onUpdate={fetchAdminStats}
           />
         )}
@@ -222,32 +239,23 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
           />
         )}
 
+        {activeTab === 'fees' && (
+          <FeeManagement 
+            onUpdate={fetchAdminStats}
+          />
+        )}
+
+        {activeTab === 'tokens' && (
+          <TokenManagement 
+            onUpdate={fetchAdminStats}
+          />
+        )}
+
         {activeTab === 'disputes' && (
           <DisputeManagement 
             onUpdate={fetchAdminStats}
           />
         )}
-
-        {/* TABS ADICIONALES (COMENTADAS - ACTIVAR CUANDO SE IMPLEMENTEN LOS COMPONENTES): */}
-        {/*
-        {activeTab === 'users' && (
-          <UserManagement 
-            onUpdate={fetchAdminStats}
-          />
-        )}
-        
-        {activeTab === 'tasks' && (
-          <TaskManagement 
-            onUpdate={fetchAdminStats}
-          />
-        )}
-        
-        {activeTab === 'escrows' && (
-          <EscrowManagement 
-            onUpdate={fetchAdminStats}
-          />
-        )}
-        */}
       </div>
     </div>
   );

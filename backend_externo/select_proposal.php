@@ -5,8 +5,8 @@
 $allowed_origins = [
     'http://localhost:5173',
     'http://localhost:5174',
-    'https://arcusx.one',
-    'http://arcusx.one'
+    'https://arcusx.pro',
+    'http://arcusx.pro'
 ];
 $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
 

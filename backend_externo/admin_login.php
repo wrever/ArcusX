@@ -45,7 +45,7 @@ $secret_key = isset($jwt_secret) && !empty($jwt_secret) ? $jwt_secret : "SD5EHQU
 // Configuración del token - 7 días de expiración
 $issuedAt = time();
 $expirationTime = $issuedAt + (3600 * 24 * 7); // 7 días
-$issuer = "arcusx.one";
+$issuer = "arcusx.pro";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Access-Control-Allow-Origin: *');

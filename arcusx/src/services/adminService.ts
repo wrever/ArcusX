@@ -289,6 +289,31 @@ export async function getAdminTasks(params: {
 }
 
 /**
+ * Obtener lista de escrows
+ */
+export async function getAdminEscrows(params: {
+  page?: number;
+  limit?: number;
+  escrow_status?: string;
+  task_status?: string;
+  search?: string;
+  start_date?: string;
+  end_date?: string;
+}): Promise<{ escrows: any[]; pagination: any }> {
+  const queryParams = new URLSearchParams();
+  if (params.page) queryParams.append('page', params.page.toString());
+  if (params.limit) queryParams.append('limit', params.limit.toString());
+  if (params.escrow_status) queryParams.append('escrow_status', params.escrow_status);
+  if (params.task_status) queryParams.append('task_status', params.task_status);
+  if (params.search) queryParams.append('search', params.search);
+  if (params.start_date) queryParams.append('start_date', params.start_date);
+  if (params.end_date) queryParams.append('end_date', params.end_date);
+
+  const data = await adminApiCall('get_escrows', 'GET', undefined, queryParams);
+  return { escrows: data.escrows, pagination: data.pagination };
+}
+
+/**
  * Obtener detalles de una tarea
  */
 export async function getAdminTaskDetails(taskId: number): Promise<any> {
@@ -442,24 +467,6 @@ export async function getAdminNotifications(params: {
   const data = await adminApiCall('get_notifications', 'GET', undefined, queryParams);
   return { notifications: data.notifications, pagination: data.pagination };
 }
-
-/**
- * Obtener lista de escrows
- * TODO: Implementar en backend (admin.php)
- */
-/*
-export async function getAdminEscrows(params: {
-  page?: number;
-  limit?: number;
-}): Promise<{ escrows: any[]; pagination: any }> {
-  const queryParams = new URLSearchParams();
-  if (params.page) queryParams.append('page', params.page.toString());
-  if (params.limit) queryParams.append('limit', params.limit.toString());
-
-  const data = await adminApiCall('get_escrows', 'GET', undefined, queryParams);
-  return { escrows: data.escrows, pagination: data.pagination };
-}
-*/
 
 /**
  * Obtener detalles de un escrow

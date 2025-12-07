@@ -1,7 +1,12 @@
 <?php
 /**
- * Endpoint para obtener el escrowKeypairSecret de forma segura
- * Solo el cliente (dueño de la tarea) puede obtener el secret
+ * DEPRECATED: Este endpoint ya no se usa.
+ * El sistema ahora usa exclusivamente Trustless Work para manejar escrows.
+ * Trustless Work no usa secret keys - usa contract IDs.
+ * 
+ * Este archivo se mantiene solo para referencia histórica.
+ * 
+ * @deprecated Desde la migración a Trustless Work
  */
 
 header("Access-Control-Allow-Origin: *");
@@ -62,38 +67,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         exit;
     }
 
-    $taskId = intval($_GET['task_id']);
-
-    try {
-        // Verificar que la tarea existe y pertenece al usuario logueado
-        $stmt = $conn->prepare("
-            SELECT escrow_secret 
-            FROM tasks 
-            WHERE id = ? AND user_id = ?
-        ");
-        $stmt->bind_param("ii", $taskId, $loggedInUserId);
-        $stmt->execute();
-        $result = $stmt->get_result();
-
-        if ($result->num_rows === 0) {
-            http_response_code(404);
-            echo json_encode(['success' => false, 'message' => 'Tarea no encontrada o no tienes permisos']);
-            exit;
-        }
-
-        $taskData = $result->fetch_assoc();
-        $stmt->close();
-
-        if (empty($taskData['escrow_secret'])) {
-            http_response_code(404);
-            echo json_encode(['success' => false, 'message' => 'Secret key no encontrado para esta tarea']);
-            exit;
-        }
-
-        echo json_encode([
-            'success' => true,
-            'escrow_secret' => $taskData['escrow_secret']
-        ]);
+    // Este endpoint está deprecado - Trustless Work no usa secret keys
+    http_response_code(410); // Gone
+    echo json_encode([
+        'success' => false, 
+        'message' => 'Este endpoint está deprecado. El sistema ahora usa exclusivamente Trustless Work, que no requiere secret keys.'
+    ]);
+    exit;
 
     } catch (Exception $e) {
         error_log('Error en get_escrow_secret.php: ' . $e->getMessage());

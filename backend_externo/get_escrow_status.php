@@ -4,8 +4,8 @@
 // CORS headers
 $allowed_origins = [
     'http://localhost:5173',
-    'https://arcusx.one',
-    'http://arcusx.one'
+    'https://arcusx.pro',
+    'http://arcusx.pro'
 ];
 $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
 if (in_array($origin, $allowed_origins)) {
@@ -119,31 +119,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
         $escrowData = $result->fetch_assoc();
 
-        // (Opcional) Consultar balance en Stellar Horizon API
+        // El sistema ahora usa exclusivamente Trustless Work
+        // El balance debe obtenerse desde el indexer de Trustless Work (frontend)
+        // No consultamos Horizon API aquí
         $balance = null;
-        if ($escrowData['escrow_id']) {
-            try {
-                $horizonUrl = "https://horizon-testnet.stellar.org/accounts/{$escrowData['escrow_id']}";
-                $ch = curl_init($horizonUrl);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                $response = curl_exec($ch);
-                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                curl_close($ch);
-
-                if ($httpCode === 200) {
-                    $accountData = json_decode($response, true);
-                    $nativeBalance = array_filter($accountData['balances'], function($b) {
-                        return $b['asset_type'] === 'native';
-                    });
-                    if (!empty($nativeBalance)) {
-                        $balance = reset($nativeBalance)['balance'];
-                    }
-                }
-            } catch (Exception $e) {
-                error_log("Error consultando balance en Stellar: " . $e->getMessage());
-                // Continuar sin balance
-            }
-        }
 
         echo json_encode([
             'success' => true,
@@ -153,7 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 'task_status' => $escrowData['task_status'],
                 'escrow_created_at' => $escrowData['escrow_created_at'],
                 'escrow_completed_at' => $escrowData['escrow_completed_at'],
-                'balance' => $balance,
+                'balance' => $balance, // null - debe obtenerse desde Trustless Work indexer (frontend)
                 'task_id' => $escrowData['task_id'],
                 'client_id' => $escrowData['client_id'],
                 'worker_id' => $escrowData['worker_id']

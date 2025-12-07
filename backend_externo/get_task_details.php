@@ -263,7 +263,7 @@ function handleFileUpload($task_id) {
             'type' => $file['type'],
             'uploaded_at' => date('Y-m-d H:i:s'),
             'uploaded_by' => 'user',
-            'url' => "https://arcusx.one/files/" . $unique_name
+            'url' => "https://arcusx.pro/files/" . $unique_name
         ];
         
         $current_files[] = $new_file;

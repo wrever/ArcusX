@@ -96,24 +96,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                     'worker_id' => $row['accepted_applicant_id']
                 ];
             }
-            
-            // Trabajador debe firmar transacción (si cliente ya aceptó y firmó)
-            if ($row['client_accepted_completion'] == 1 && 
-                !empty($row['pending_transaction_xdr']) && 
-                $row['pending_transaction_signer'] === 'client') {
-                $pendingActions[] = [
-                    'type' => 'worker_sign',
-                    'message' => 'El trabajador debe firmar la transacción para retirar fondos',
-                    'worker_id' => $row['accepted_applicant_id']
-                ];
-            }
         }
         
         // Verificar acciones pendientes del cliente
-        if ($row['client_accepted_completion'] == 0 && $row['worker_accepted_completion'] == 1) {
+        // Para Trustless Work: cliente debe aprobar milestone y liberar fondos
+        if ($row['worker_accepted_completion'] == 1 && $row['client_accepted_completion'] == 0) {
             $pendingActions[] = [
-                'type' => 'client_accept',
-                'message' => 'Debes aceptar y firmar la transacción para liberar fondos',
+                'type' => 'client_approve_release',
+                'message' => 'Debes aprobar el milestone y liberar los fondos',
                 'worker_id' => $row['accepted_applicant_id']
             ];
         }

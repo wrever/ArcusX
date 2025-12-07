@@ -1,7 +1,7 @@
 <?php
 /**
  * Script simple para verificar si hay disputas reales en el sistema
- * Accede desde: http://arcusx.one/api/auth/check_disputes.php
+ * Accede desde: http://arcusx.pro/api/auth/check_disputes.php
  */
 
 require_once 'config.php';
