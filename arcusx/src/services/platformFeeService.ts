@@ -62,7 +62,7 @@ export async function getPlatformFee(useCache: boolean = true): Promise<number> 
       }
     } catch (adminError) {
       // Si falla, continuar con el endpoint público
-      console.warn('No se pudo obtener fee desde admin config:', adminError);
+      // Continuar con el endpoint público
     }
 
     // Intentar obtener desde endpoint público (si existe)
@@ -91,7 +91,7 @@ export async function getPlatformFee(useCache: boolean = true): Promise<number> 
       }
     } catch (publicError) {
       // Si no existe el endpoint público, usar valor por defecto
-      console.warn('No se pudo obtener fee desde endpoint público:', publicError);
+      // Usar valor por defecto
     }
 
     // Si todo falla, usar valor por defecto

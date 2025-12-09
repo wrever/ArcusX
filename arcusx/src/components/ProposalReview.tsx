@@ -216,8 +216,6 @@ const ProposalReview = () => {
       const amountString = roundedAmount.toFixed(7);
       const amount = parseFloat(amountString); // Asegurar exactamente 7 decimales
 
-      console.log('🔐 Creando escrow con Trustless Work...');
-
       const result = await createTrustlessEscrow(
         {
           signer: clientAddress,
@@ -251,7 +249,6 @@ const ProposalReview = () => {
         };
       }
 
-      console.log('✅ Escrow creado:', result.contractId);
 
       const txHash = (result as any).txHash || '';
 
@@ -335,16 +332,8 @@ const ProposalReview = () => {
         const savedAmount = parseFloat(savedAmountString);
         const amountAsInteger = Math.round(savedAmount * 10000000);
         amount = amountAsInteger / 10000000;
-        console.log('✅ Usando amount exacto guardado al crear el escrow:', {
-          savedString: savedAmountString,
-          savedAmount: savedAmount,
-          amountAsInteger: amountAsInteger,
-          finalAmount: amount,
-          finalAmountString: amount.toFixed(7)
-        });
       } else {
         // Fallback: calcular desde task.price (debería coincidir)
-        console.warn('⚠️ No se encontró amount guardado, calculando desde task.price');
         const rawAmount = parseFloat(task.price);
         
         if (isNaN(rawAmount) || rawAmount <= 0) {
@@ -357,12 +346,6 @@ const ProposalReview = () => {
         // Usar el mismo método que al crear el escrow
         const amountAsInteger = Math.round(rawAmount * 10000000);
         amount = amountAsInteger / 10000000;
-        console.log('⚠️ Amount calculado desde task.price:', {
-          rawAmount: rawAmount,
-          amountAsInteger: amountAsInteger,
-          finalAmount: amount,
-          finalAmountString: amount.toFixed(7)
-        });
       }
       
       // Validar que el amount sea válido
@@ -373,15 +356,6 @@ const ProposalReview = () => {
         };
       }
 
-      // IMPORTANTE: Esperar antes del primer intento de fondeo
-      // Trustless Work necesita tiempo para indexar el escrow en la blockchain
-      // después de crearlo. Sin esta espera, el escrow no estará disponible para fondear.
-      console.log('🔍 Verificando que el escrow esté indexado antes de fondear...');
-      console.log('💡 Verifica que:');
-      console.log('   1. Tu wallet Freighter tiene trustline de USDC configurado');
-      console.log('   2. Tu wallet tiene suficiente balance de USDC (al menos ' + amount + ' USDC + fees)');
-      console.log('   3. El issuer de USDC es: GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5');
-
       // Intentar fondear el escrow con reintentos rápidos
       // El detector de deploy en trustlessWorkEscrowService ya verifica que esté indexado
       let result: { success: boolean; txHash?: string; error?: string } | null = null;
@@ -390,7 +364,6 @@ const ProposalReview = () => {
       
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          console.log(`🔄 Intento ${attempt}/${maxRetries} de fondeo...`);
           result = await fundTrustlessEscrow(
             escrowId,
             amount,
@@ -408,18 +381,15 @@ const ProposalReview = () => {
                 // El resultado puede tener diferentes estructuras, devolvemos el resultado completo
                 return Array.isArray(result) ? result : (result as any)?.escrows || result || [];
               } catch (error) {
-                console.warn('Error al verificar indexación:', error);
                 return [];
               }
             }
           );
           
           if (result.success) {
-            console.log('✅ Escrow fondeado exitosamente');
             break;
           } else if (attempt < maxRetries) {
             const delay = retryDelays[attempt - 1];
-            console.log(`⏳ Esperando ${delay / 1000} segundos antes del siguiente intento...`);
             await new Promise(resolve => setTimeout(resolve, delay));
           }
         } catch (error: any) {
@@ -432,8 +402,6 @@ const ProposalReview = () => {
           }
           
           const delay = retryDelays[attempt - 1];
-          console.log(`⚠️ Intento ${attempt} falló: ${error.message}`);
-          console.log(`⏳ Esperando ${delay / 1000} segundos antes del siguiente intento...`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
@@ -471,16 +439,8 @@ const ProposalReview = () => {
         return { success: false, error: 'No hay propuesta seleccionada' };
       }
 
-      console.log('📋 Datos a enviar a la base de datos:', {
-        task_id: taskId,
-        proposal_id: selectedProposal.id,
-        transaction_hash: txHash,
-        escrow_id: escrowId
-      });
-      
       // Seleccionar propuesta en el backend
       try {
-        console.log(`💾 Seleccionando propuesta en backend...`);
         const selectResponse = await axios.post(
           `${API_URL}/auth/select_proposal.php`,
           {
@@ -507,31 +467,16 @@ const ProposalReview = () => {
                              `Error al seleccionar trabajador. Status: ${selectResponse.status}`;
           console.error('❌ Error al seleccionar propuesta:', errorMessage);
           // Continuar de todas formas - la transacción de Stellar ya se completó
-          console.warn('⚠️ Continuando sin guardar en backend. La transacción de Stellar ya se completó.');
         } else if (!selectResponse.data || selectResponse.data.success !== true) {
           const errorMessage = selectResponse.data?.message || 
                              'Error al seleccionar trabajador. La respuesta no indica éxito.';
           console.error('❌ Error al seleccionar propuesta:', errorMessage);
           // Continuar de todas formas
-          console.warn('⚠️ Continuando sin guardar en backend. La transacción de Stellar ya se completó.');
-        } else {
-          console.log('✅ Propuesta seleccionada en backend:', selectResponse.data);
         }
       } catch (error: any) {
         console.error('❌ Error al seleccionar propuesta en backend:', error);
-        console.error('   URL intentada:', `${API_URL}/auth/select_proposal.php`);
-        console.error('   Status:', error.response?.status);
-        console.error('   Mensaje:', error.response?.data || error.message);
         // Continuar de todas formas - la transacción de Stellar ya se completó
-        console.warn('⚠️ Continuando sin guardar en backend. La transacción de Stellar ya se completó.');
       }
-
-      console.log('📊 Datos del escrow creado:', {
-        task_id: taskId,
-        proposal_id: selectedProposal.id,
-        transaction_hash: txHash,
-        escrow_id: escrowId
-      });
 
       return { success: true };
       

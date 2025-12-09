@@ -1,28 +1,20 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    RewriteBase /
     
     # Pasar header Authorization a PHP (CRÍTICO para que PHP reciba el token)
     RewriteCond %{HTTP:Authorization} ^(.*)
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%1]
-</IfModule>
-
-<IfModule mod_headers.c>
-    # CORS: PHP manejará los orígenes dinámicamente (localhost:5173 y arcusx.one)
-    Header always set Access-Control-Allow-Origin "*"
-    Header always set Access-Control-Allow-Credentials "true"
-    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-    Header always set Access-Control-Allow-Headers "Authorization, Content-Type, X-Requested-With"
-</IfModule>
-
-<IfModule mod_rewrite.c>
-    # Handle OPTIONS preflight (Apache responds directly)
-    RewriteCond %{REQUEST_METHOD} OPTIONS
-    RewriteRule ^(.*)$ - [R=200,L]
-</IfModule>
-
-
-# Permitir métodos DELETE
-<IfModule mod_rewrite.c>
+    
+    # Permitir métodos DELETE
     RewriteCond %{REQUEST_METHOD} DELETE
     RewriteRule ^api/auth/get_task_details\.php$ - [L]
+    
+    # SPA Routing: Redirigir todas las rutas que no sean archivos/directorios a index.html
+    # Esto aplica solo para rutas que no empiecen con /api/
+    RewriteCond %{REQUEST_URI} !^/api/
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule . /index.html [L]
 </IfModule>
+

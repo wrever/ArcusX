@@ -23,6 +23,8 @@ interface AdminStats {
   arbitrator: string;
   volumeThisMonth?: number;
   feesThisMonth?: number;
+  volumeThisWeek?: number;
+  feesThisWeek?: number;
   volumeToday?: number;
   feesToday?: number;
 }
@@ -61,7 +63,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
         configs = await getAdminConfig();
       } catch (configError) {
         // Si falla obtener config, usar valores por defecto
-        console.warn('No se pudo obtener configuración del sistema, usando valores por defecto');
+        // Usar valores por defecto si falla obtener config
       }
       
       const platformFeeConfig = configs.find(c => c.config_key === 'platform_fee');
@@ -85,12 +87,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
         // Si falla, dejar en 0
       }
       
-      // Calcular estadísticas adicionales (volumen y comisiones del mes y hoy)
-      // Nota: Estas estadísticas se pueden calcular en el backend en el futuro
-      const volumeThisMonth = backendStats.total_volume_usdc || 0; // TODO: Calcular en backend con filtro de fecha
-      const feesThisMonth = backendStats.total_commission_usdc || 0; // TODO: Calcular en backend con filtro de fecha
-      const volumeToday = 0; // TODO: Calcular en backend
-      const feesToday = 0; // TODO: Calcular en backend
+      // Usar estadísticas por período del backend
+      const volumeToday = backendStats.volume_today || 0;
+      const feesToday = backendStats.fees_today || 0;
+      const volumeThisWeek = backendStats.volume_this_week || 0;
+      const feesThisWeek = backendStats.fees_this_week || 0;
+      const volumeThisMonth = backendStats.volume_this_month || 0;
+      const feesThisMonth = backendStats.fees_this_month || 0;
       
       // Mapear datos del backend a la interfaz del frontend
       setStats({
@@ -104,6 +107,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
         arbitrator: arbitratorConfig?.config_value || '',
         volumeThisMonth: volumeThisMonth,
         feesThisMonth: feesThisMonth,
+        volumeThisWeek: volumeThisWeek,
+        feesThisWeek: feesThisWeek,
         volumeToday: volumeToday,
         feesToday: feesToday
       });

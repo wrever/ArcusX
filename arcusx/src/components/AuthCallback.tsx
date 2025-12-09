@@ -10,27 +10,16 @@ const AuthCallback = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('🔐 AuthCallback iniciado en:', window.location.hostname);
     
     // Escuchar cambios en el estado de autenticación
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔔 Evento de autenticación:', event, 'Sesión:', session?.user?.email);
-      
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         if (session?.user) {
           try {
-            console.log('✅ Usuario autenticado:', session.user.email);
-            console.log('🔄 Sincronizando con backend...');
-
             // Sincronizar usuario con backend PHP para obtener token JWT
             const result = await authService.handleSupabaseCallback();
             
-            console.log('📦 Resultado de sincronización:', result);
-            
             if (result && result.user?.id) {
-              console.log('✅ Usuario sincronizado exitosamente');
-              console.log('🔑 Token guardado en localStorage');
-              
               // Esperar un momento para asegurar que el token esté guardado
               await new Promise(resolve => setTimeout(resolve, 300));
               
@@ -43,7 +32,6 @@ const AuthCallback = () => {
                 return;
               }
               
-              console.log('✅ Token verificado, redirigiendo a dashboard...');
               // Usar window.location para forzar recarga completa y asegurar que ProtectedRoute vea el token
               window.location.href = '/dashboard';
             } else {
@@ -59,7 +47,6 @@ const AuthCallback = () => {
           }
         }
       } else if (event === 'SIGNED_OUT') {
-        console.log('👋 Usuario cerró sesión');
         setError('Sesión cerrada. Por favor, inicia sesión nuevamente.');
         setLoading(false);
       }
@@ -68,7 +55,6 @@ const AuthCallback = () => {
     // También intentar obtener la sesión actual inmediatamente
     const checkSession = async () => {
       try {
-        console.log('🔍 Verificando sesión actual...');
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
@@ -78,18 +64,10 @@ const AuthCallback = () => {
         }
         
         if (session?.user) {
-          console.log('✅ Sesión encontrada, usuario:', session.user.email);
-          console.log('🔄 Sincronizando con backend...');
-
           // Sincronizar usuario con backend PHP para obtener token JWT
           const result = await authService.handleSupabaseCallback();
           
-          console.log('📦 Resultado de sincronización:', result);
-          
           if (result && result.user?.id) {
-            console.log('✅ Usuario sincronizado exitosamente');
-            console.log('🔑 Token guardado en localStorage');
-            
             // Esperar un momento para asegurar que el token esté guardado
             await new Promise(resolve => setTimeout(resolve, 300));
             
@@ -102,7 +80,6 @@ const AuthCallback = () => {
               return;
             }
             
-            console.log('✅ Token verificado, redirigiendo a dashboard...');
             // Usar window.location para forzar recarga completa y asegurar que ProtectedRoute vea el token
             window.location.href = '/dashboard';
           } else {
@@ -111,11 +88,9 @@ const AuthCallback = () => {
             setLoading(false);
           }
         } else {
-          console.log('⏳ No hay sesión activa, esperando callback de Supabase...');
           // Esperar a que Supabase procese la URL
           setTimeout(() => {
             if (loading) {
-              console.log('⏰ Timeout esperando sesión, verificando nuevamente...');
               checkSession();
             }
           }, 2000);

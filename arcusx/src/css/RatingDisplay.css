@@ -1,0 +1,107 @@
+.rating-display {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rating-stars {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.rating-stars .star {
+  color: #ddd;
+  transition: color 0.2s;
+}
+
+.rating-stars .star-full {
+  color: #ffc107;
+}
+
+.rating-stars .star-half {
+  color: #ffc107;
+  opacity: 0.5;
+}
+
+.rating-stars .star-empty {
+  color: #ddd;
+}
+
+.rating-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rating-value {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.rating-count {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+/* Tamaños */
+.rating-small .rating-stars .star {
+  font-size: 0.875rem;
+}
+
+.rating-small .rating-value {
+  font-size: 0.9rem;
+}
+
+.rating-medium .rating-stars .star {
+  font-size: 1rem;
+}
+
+.rating-large .rating-stars .star {
+  font-size: 1.25rem;
+}
+
+.rating-large .rating-value {
+  font-size: 1.3rem;
+}
+
+/* Distribución */
+.rating-distribution {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.distribution-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.distribution-rating {
+  min-width: 2rem;
+  font-size: 0.9rem;
+}
+
+.distribution-bar {
+  flex: 1;
+  height: 0.5rem;
+  background-color: #eee;
+  border-radius: 0.25rem;
+  overflow: hidden;
+}
+
+.distribution-fill {
+  height: 100%;
+  background-color: #ffc107;
+  transition: width 0.3s;
+}
+
+.distribution-count {
+  min-width: 2rem;
+  text-align: right;
+  font-size: 0.9rem;
+  color: #666;
+}
+
