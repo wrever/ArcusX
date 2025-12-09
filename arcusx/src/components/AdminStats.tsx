@@ -17,6 +17,8 @@ interface AdminStatsProps {
     arbitrator: string;
     volumeThisMonth?: number;
     feesThisMonth?: number;
+    volumeThisWeek?: number;
+    feesThisWeek?: number;
     volumeToday?: number;
     feesToday?: number;
   } | null;
@@ -165,7 +167,9 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
       icon: <FaCoins />,
       color: '#10b981',
       description: 'Volumen procesado (todos los tiempos)',
-      trend: stats?.volumeThisMonth ? `Este mes: ${formatCurrency(stats.volumeThisMonth)}` : null
+      trend: stats?.volumeThisWeek || stats?.volumeThisMonth 
+        ? `Esta semana: ${formatCurrency(stats.volumeThisWeek || 0)} | Este mes: ${formatCurrency(stats.volumeThisMonth || 0)}` 
+        : null
     },
     {
       title: 'Fees Recaudados',
@@ -173,7 +177,9 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
       icon: <FaWallet />,
       color: '#f59e0b',
       description: `Comisiones acumuladas (${stats?.platformFee || 0.3}% del volumen)`,
-      trend: stats?.feesThisMonth ? `Este mes: ${formatCurrency(stats.feesThisMonth)}` : null
+      trend: stats?.feesThisWeek || stats?.feesThisMonth 
+        ? `Esta semana: ${formatCurrency(stats.feesThisWeek || 0)} | Este mes: ${formatCurrency(stats.feesThisMonth || 0)}` 
+        : null
     },
     {
       title: 'Disputas Activas',
@@ -435,8 +441,15 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
               <p className="revenue-description">
                 {stats?.platformFee ? `${stats.platformFee}%` : '0.3%'} del volumen total
               </p>
-              {stats?.feesThisMonth && stats.feesThisMonth > 0 && (
-                <p className="revenue-trend">Este mes: {formatCurrency(stats.feesThisMonth)}</p>
+              {(stats?.feesThisWeek || stats?.feesThisMonth) && (
+                <div className="revenue-trend">
+                  {stats?.feesThisWeek && stats.feesThisWeek > 0 && (
+                    <p>Esta semana: {formatCurrency(stats.feesThisWeek)}</p>
+                  )}
+                  {stats?.feesThisMonth && stats.feesThisMonth > 0 && (
+                    <p>Este mes: {formatCurrency(stats.feesThisMonth)}</p>
+                  )}
+                </div>
               )}
             </div>
           </div>

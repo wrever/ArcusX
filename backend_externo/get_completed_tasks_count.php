@@ -1,8 +1,35 @@
 <?php
-header("Access-Control-Allow-Origin: *");
+// CORS headers - DEBEN IR PRIMERO, ANTES DE CUALQUIER OTRO OUTPUT
+$allowed_origins = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'https://arcusx.pro',
+    'http://arcusx.pro'
+];
+$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+
+// Manejar preflight OPTIONS request PRIMERO
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    if (in_array($origin, $allowed_origins)) {
+        header("Access-Control-Allow-Origin: $origin");
+        header("Access-Control-Allow-Credentials: true");
+    }
+    header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+    header("Access-Control-Max-Age: 3600");
+    http_response_code(200);
+    exit();
+}
+
+// Headers CORS para requests normales
+if (in_array($origin, $allowed_origins)) {
+    header("Access-Control-Allow-Origin: $origin");
+    header("Access-Control-Allow-Credentials: true");
+}
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization");
-header("Content-Type: application/json");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+header("Access-Control-Max-Age: 3600");
+header("Content-Type: application/json; charset=UTF-8");
 
 require_once 'config.php';
 require_once 'vendor/autoload.php';

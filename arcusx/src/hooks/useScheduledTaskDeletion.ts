@@ -18,20 +18,15 @@ export function useScheduledTaskDeletion() {
         // Este endpoint puede ser llamado sin autenticación si es necesario
         const response = await fetch(`${API_URL}/auth/delete_scheduled_tasks.php?cron_token=arcusx_scheduled_deletion_2025`, {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          mode: 'cors',
         });
 
         if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.deleted_count > 0) {
-            console.log(`✅ ${data.deleted_count} tarea(s) eliminada(s) automáticamente`);
-          }
+          await response.json();
+          // Tareas eliminadas automáticamente
         }
       } catch (error) {
-        // No mostrar error al usuario, solo loggear
-        console.warn('Error al verificar tareas programadas:', error);
+        // Error silencioso - no afecta la experiencia del usuario
       }
     };
 

@@ -101,7 +101,6 @@ export const authService = {
         ? `${window.location.origin}/auth/callback`
         : 'https://arcusx.pro/auth/callback';
       
-      console.log('Google OAuth - Redirect URL:', redirectUrl, '(Development:', isDevelopment, ')');
       
       // Usar skipBrowserRedirect para interceptar la URL
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -133,7 +132,6 @@ export const authService = {
           finalUrl = urlObj.toString();
         }
         
-        console.log('URL corregida:', finalUrl);
         window.location.href = finalUrl;
       }
       
@@ -151,7 +149,6 @@ export const authService = {
         ? `${window.location.origin}/auth/callback`
         : 'https://arcusx.pro/auth/callback';
       
-      console.log('GitHub OAuth - Redirect URL:', redirectUrl, '(Development:', isDevelopment, ')');
       
       // Usar skipBrowserRedirect para interceptar la URL
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -186,7 +183,6 @@ export const authService = {
           }
         }
         
-        console.log('URL final:', finalUrl);
         window.location.href = finalUrl;
       }
       
@@ -198,8 +194,6 @@ export const authService = {
 
   async handleSupabaseCallback() {
     try {
-      console.log('🔄 handleSupabaseCallback iniciado');
-      
       // Sincronizar usuario con backend PHP para obtener token JWT
       // La sesión ya fue obtenida en AuthCallback.tsx
       const { data: { session }, error } = await supabase.auth.getSession();
@@ -214,13 +208,6 @@ export const authService = {
         return null;
       }
 
-      console.log('📤 Enviando datos al backend para sincronización...');
-      console.log('Usuario:', {
-        id: session.user.id,
-        email: session.user.email,
-        name: session.user.user_metadata?.full_name || session.user.user_metadata?.name
-      });
-
       const syncResponse = await axios.post(`${API_URL}/auth/sync_supabase_user.php`, {
         supabase_user_id: session.user.id,
         email: session.user.email,
@@ -228,15 +215,11 @@ export const authService = {
         avatar_url: session.user.user_metadata?.avatar_url || null
       });
       
-      console.log('📥 Respuesta del backend:', syncResponse.data);
-      
       if (syncResponse.data.success && syncResponse.data.token) {
-        console.log('✅ Token recibido, guardando en localStorage...');
         localStorage.setItem('token', syncResponse.data.token);
         localStorage.setItem('user', JSON.stringify(syncResponse.data.user));
         // Guardar también el access_token de Supabase por si lo necesitamos
         localStorage.setItem('supabase_access_token', session.access_token);
-        console.log('✅ Datos guardados exitosamente');
         return syncResponse.data;
       }
       

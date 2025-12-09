@@ -29,6 +29,7 @@ import { useScheduledTaskDeletion } from '../hooks/useScheduledTaskDeletion';
 import FileExchange from './FileExchange';
 import WalletButton from './WalletButton';
 import ConfirmDialog from './ConfirmDialog';
+import RatingSystem from './RatingSystem';
 import { FaExclamationTriangle, FaTimes, FaFlag } from 'react-icons/fa';
 import '../css/ConfirmDialog.css';
 
@@ -105,6 +106,10 @@ const SuperviseTask = () => {
     // Estados para popups de éxito
     const [showPaymentSuccessPopup, setShowPaymentSuccessPopup] = useState(false);
     const [showClientPaymentPopup, setShowClientPaymentPopup] = useState(false);
+    
+    // Estados para sistema de ratings
+    const [showRatingModal, setShowRatingModal] = useState(false);
+    const [hasRated, setHasRated] = useState(false);
     const [paymentSuccessData, setPaymentSuccessData] = useState<{
         amount: string;
         txHash: string;
@@ -348,7 +353,6 @@ const SuperviseTask = () => {
                         signedBy: 'client',
                         waitingFor: 'worker'
                     });
-                    console.log('✅ Cliente ya firmó. El trabajador puede aceptar ahora.');
                 } else if (response.data?.success && response.data.complete_tx_xdr) {
                     // Transacción completamente firmada
                     setPendingTransaction({
@@ -577,7 +581,7 @@ const SuperviseTask = () => {
             }
 
             // Paso 2.5: Verificar que el escrow esté completado (balance = 0)
-            console.log('🔍 Verificando que el escrow esté completado...');
+            // Verificar que el escrow esté completado
             let escrowCompleted = false;
             let attempts = 0;
             const maxAttempts = 12; // 12 intentos = 1 minuto (5 segundos cada uno)
@@ -594,21 +598,15 @@ const SuperviseTask = () => {
                     if (escrows && escrows.length > 0) {
                         const escrow = escrows[0];
                         const balance = parseFloat(escrow.balance || '0');
-                        console.log(`📊 Balance del escrow: ${balance}`);
                         
                         if (balance === 0 || escrow.status === 'released' || escrow.status === 'completed') {
                             escrowCompleted = true;
-                            console.log('✅ Escrow completado - fondos liberados');
                         }
                     }
                 } catch (err) {
-                    console.warn('Error al verificar escrow:', err);
+                    // Error al verificar escrow, continuar
                 }
                 attempts++;
-            }
-
-            if (!escrowCompleted) {
-                console.warn('⚠️ No se pudo verificar que el escrow esté completado, pero continuamos...');
             }
 
             // Calcular monto neto para el trabajador
@@ -644,6 +642,11 @@ const SuperviseTask = () => {
                     setShowPaymentSuccessPopup(true);
                 }, 2000); // Mostrar después de 2 segundos
             }
+            
+            // Verificar si se debe mostrar el modal de rating después de 3 segundos
+            setTimeout(() => {
+                checkAndShowRatingModal();
+            }, 3000);
 
             // Actualizar estado local
             setTask(prev => prev ? {
@@ -905,6 +908,40 @@ const SuperviseTask = () => {
         checkExistingDispute();
     }, [taskId, task?.status]);
     
+    // Función para verificar si se debe mostrar el modal de rating
+    const checkAndShowRatingModal = async () => {
+        if (!task || !currentUser || !worker) return;
+        
+        // Solo mostrar si la tarea está completada y pagada
+        if (task.status !== 'completed' || task.escrow_status !== 'completed') {
+            return;
+        }
+        
+        // Verificar si ya se calificó
+        try {
+            const { getRatings } = await import('../services/ratingService');
+            const data = await getRatings(undefined, parseInt(taskId!, 10));
+            const existingRating = data.ratings.find(
+                (r) => r.rater_id === parseInt(currentUser.id, 10)
+            );
+            
+            if (!existingRating) {
+                setShowRatingModal(true);
+            } else {
+                setHasRated(true);
+            }
+        } catch (error) {
+            console.error('Error al verificar rating existente:', error);
+        }
+    };
+    
+    // Verificar rating cuando la tarea se completa
+    useEffect(() => {
+        if (task?.status === 'completed' && task?.escrow_status === 'completed') {
+            checkAndShowRatingModal();
+        }
+    }, [task?.status, task?.escrow_status]);
+    
     // Función para crear una disputa
     const handleCreateDispute = async () => {
         if (!taskId || !disputeReason.trim()) {
@@ -937,9 +974,9 @@ const SuperviseTask = () => {
                 setCreatingDispute(false);
                 return;
             }
-
+            
             // Paso 1: Iniciar disputa en Trustless Work
-            console.log('🚨 Iniciando disputa en Trustless Work...');
+            // Iniciar disputa en Trustless Work
             const trustlessResult = await startDisputeTrustlessEscrow(
                 task.escrow_id,
                 address, // signer (cliente o trabajador)
@@ -952,7 +989,6 @@ const SuperviseTask = () => {
                 throw new Error(trustlessResult.error || 'Error al iniciar disputa en Trustless Work');
             }
 
-            console.log('✅ Disputa iniciada en Trustless Work:', trustlessResult.txHash);
             
             // Paso 2: Crear registro en la base de datos
             const response = await axios.post(
@@ -2061,6 +2097,87 @@ const SuperviseTask = () => {
                                 🏠 Ir al Dashboard
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+            
+            {/* Modal de Rating */}
+            {showRatingModal && task && worker && currentUser && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 10000,
+                    backdropFilter: 'blur(10px)'
+                }} onClick={() => {
+                    // No cerrar al hacer clic fuera si no se ha calificado
+                    if (hasRated) {
+                        setShowRatingModal(false);
+                    }
+                }}>
+                    <div style={{
+                        backgroundColor: 'white',
+                        borderRadius: '20px',
+                        padding: '32px',
+                        maxWidth: '700px',
+                        width: '90%',
+                        maxHeight: '90vh',
+                        overflowY: 'auto',
+                        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
+                    }} onClick={(e) => e.stopPropagation()}>
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: '24px'
+                        }}>
+                            <h2 style={{
+                                margin: 0,
+                                color: '#333',
+                                fontSize: '24px'
+                            }}>
+                                Calificar Experiencia
+                            </h2>
+                            {hasRated && (
+                                <button
+                                    onClick={() => setShowRatingModal(false)}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#666',
+                                        fontSize: '28px',
+                                        cursor: 'pointer',
+                                        padding: '0',
+                                        width: '32px',
+                                        height: '32px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}
+                                >
+                                    <FaTimes />
+                                </button>
+                            )}
+                        </div>
+                        
+                        <RatingSystem
+                            userId={parseInt(currentUser.id, 10)}
+                            taskId={parseInt(taskId!, 10)}
+                            showForm={!hasRated}
+                            ratedUserId={isClient ? parseInt(worker.id, 10) : parseInt(task.user_id, 10)}
+                            ratedUserName={isClient ? worker.username : task.creator_username}
+                            onRatingSubmitted={() => {
+                                setHasRated(true);
+                                setShowRatingModal(false);
+                            }}
+                            compact={false}
+                        />
                     </div>
                 </div>
             )}

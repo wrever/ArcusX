@@ -16,6 +16,8 @@ import DashboardFooter from './components/DashboardFooter';
 // import PendingNotificationsPopup from './components/PendingNotificationsPopup'; // Popup eliminado
 import { getUserNotifications, Notification, markNotificationAsRead as markNotificationAsReadService } from './services/notificationService';
 import { getUserDisputes, UserDispute } from './services/disputeService';
+import { getUserTransactions, getUserEarningsSummary, Transaction } from './services/transactionService';
+import RatingDisplay from './components/RatingDisplay';
 
 interface UserData {
   id: number;
@@ -33,6 +35,9 @@ interface TaskData {
   difficulty: string;
   category: string;
   creator_username: string; // Nombre del usuario que creó la tarea
+  creator_id?: number; // ID del creador
+  creator_rating?: number; // Rating promedio del creador
+  creator_total_ratings?: number; // Total de ratings del creador
   created_at: string;
   subtitle: string;
   status: string; // Añadir el estado de la tarea
@@ -46,6 +51,10 @@ const Dashboard = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [difficultyFilter, setDifficultyFilter] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [sortBy, setSortBy] = useState('date_desc');
   const [fetchedTasks, setFetchedTasks] = useState<TaskData[]>([]); // Estado para las tareas de la API
   const [loadingTasks, setLoadingTasks] = useState(true); // Estado de carga para las tareas
   const [tasksError, setTasksError] = useState<string>(''); // Estado de error al cargar tareas
@@ -88,9 +97,9 @@ const Dashboard = () => {
   
   // Obtener usuario logeado desde localStorage
   const storedUser = localStorage.getItem('user');
-  const user: UserData | null = storedUser ? JSON.parse(storedUser) : null;
-  const [name, setName] = useState<string>(user?.username || '');
-  const [email, setEmail] = useState<string>(user?.email || '');
+  const storedUserData: UserData | null = storedUser ? JSON.parse(storedUser) : null;
+  const [name, setName] = useState<string>(storedUserData?.username || '');
+  const [email, setEmail] = useState<string>(storedUserData?.email || '');
   const [currentPassword, setCurrentPassword] = useState<string>('');
   const [newPassword, setNewPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
@@ -99,18 +108,52 @@ const Dashboard = () => {
   const [saveError, setSaveError] = useState<string>('');
   
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   
-  // Historial de transacciones de ejemplo
-  const transactions: any[] = [];
-  // Calcular ganancias totales
-  const totalEarnings = 0;
+  // Estado para transacciones reales
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
+  const [transactionsError, setTransactionsError] = useState<string>('');
+  const [totalEarnings, setTotalEarnings] = useState<number>(0);
+  const [totalPaid, setTotalPaid] = useState<number>(0);
+  const [transactionsPage, setTransactionsPage] = useState(1);
+  const [transactionsTotalPages, setTransactionsTotalPages] = useState(1);
   
-  // Función para filtrar tareas disponibles (excluye asignadas y aplica filtros de UI)
-  const filteredTasks = fetchedTasks
-    .filter(task => task.status !== 'assigned') // Excluir tareas asignadas
-    .filter(task => categoryFilter === 'all' || task.category.toLowerCase() === categoryFilter.toLowerCase())
-    .filter(task => difficultyFilter === 'all' || task.difficulty.toLowerCase() === categoryFilter.toLowerCase());
+  // Las tareas ya vienen filtradas del backend, solo excluir asignadas
+  const filteredTasks = fetchedTasks.filter(task => task.status !== 'assigned');
+  
+  // --- Lógica para obtener transacciones cuando se activa la pestaña wallet --- //
+  useEffect(() => {
+    if (activeTab === 'wallet' && user?.id) {
+      const fetchTransactions = async () => {
+        setLoadingTransactions(true);
+        setTransactionsError('');
+        try {
+          const [transactionsData, earningsData] = await Promise.all([
+            getUserTransactions(user.id, transactionsPage, 20),
+            getUserEarningsSummary(user.id)
+          ]);
+          
+          if (transactionsData.success) {
+            setTransactions(transactionsData.transactions);
+            setTransactionsTotalPages(transactionsData.pagination.total_pages);
+          }
+          
+          if (earningsData.success) {
+            setTotalEarnings(parseFloat(earningsData.total_earned));
+            setTotalPaid(parseFloat(earningsData.total_paid));
+          }
+        } catch (error: any) {
+          setTransactionsError(error.message || 'Error al cargar transacciones');
+          setTransactions([]);
+        } finally {
+          setLoadingTransactions(false);
+        }
+      };
+      
+      fetchTransactions();
+    }
+  }, [activeTab, user?.id, transactionsPage]);
   
   // --- Lógica para obtener tareas desde la API --- //
   useEffect(() => {
@@ -119,7 +162,30 @@ const Dashboard = () => {
         setLoadingTasks(true);
         setTasksError('');
         try {
-          const response = await axios.get(`${API_URL}/auth/get_tasks.php`);
+          // Construir query params con todos los filtros
+          const params = new URLSearchParams();
+          if (searchQuery.trim()) {
+            params.append('search', searchQuery.trim());
+          }
+          if (minPrice && parseFloat(minPrice) > 0) {
+            params.append('min_price', minPrice);
+          }
+          if (maxPrice && parseFloat(maxPrice) > 0) {
+            params.append('max_price', maxPrice);
+          }
+          if (categoryFilter && categoryFilter !== 'all') {
+            params.append('category', categoryFilter);
+          }
+          if (difficultyFilter && difficultyFilter !== 'all') {
+            params.append('difficulty', difficultyFilter);
+          }
+          if (sortBy) {
+            params.append('sort_by', sortBy);
+          }
+
+          const url = `${API_URL}/auth/get_tasks.php${params.toString() ? '?' + params.toString() : ''}`;
+          const response = await axios.get(url);
+          
           if (Array.isArray(response.data)) {
             setFetchedTasks(response.data); // Guardar las tareas en el estado
           } else {
@@ -136,7 +202,7 @@ const Dashboard = () => {
 
       fetchTasks();
     }
-  }, [activeTab]); // Ejecutar este efecto cuando cambie la pestaña activa
+  }, [activeTab, searchQuery, minPrice, maxPrice, categoryFilter, difficultyFilter, sortBy]); // Ejecutar cuando cambien los filtros
   // -------------------------------------------- //
 
   // --- Lógica para obtener el conteo de tareas completadas desde la API --- //
@@ -806,8 +872,52 @@ const Dashboard = () => {
                 </button>
               </div>
 
+              {/* Barra de búsqueda */}
+              <div className="search-bar" style={{
+                marginBottom: '1rem',
+                display: 'flex',
+                gap: '0.5rem',
+                alignItems: 'center'
+              }}>
+                <input
+                  type="text"
+                  placeholder="Buscar tareas..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem 1rem',
+                    backgroundColor: 'rgba(7, 35, 60, 0.95)',
+                    border: '1px solid rgba(40, 192, 240, 0.3)',
+                    borderRadius: '8px',
+                    color: '#fff',
+                    fontSize: '0.95rem'
+                  }}
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    style={{
+                      padding: '0.75rem 1rem',
+                      backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                      border: '1px solid rgba(239, 68, 68, 0.4)',
+                      borderRadius: '8px',
+                      color: '#ef4444',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Limpiar
+                  </button>
+                )}
+              </div>
+
               <div className={`filters-wrapper ${showFilters ? 'active' : ''}`}>
-                <div className="filter-container">
+                <div className="filter-container" style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                  gap: '1rem',
+                  width: '100%'
+                }}>
                   <select
                     className="filter-select"
                     value={categoryFilter}
@@ -831,6 +941,155 @@ const Dashboard = () => {
                     <option value="intermedio">Intermedio</option>
                     <option value="difícil">Difícil</option>
                   </select>
+
+                  <input
+                    type="number"
+                    placeholder="Precio mínimo (USDC)"
+                    value={minPrice}
+                    onChange={(e) => setMinPrice(e.target.value)}
+                    min="0"
+                    step="0.01"
+                    style={{
+                      padding: '0.75rem 1rem',
+                      backgroundColor: 'rgba(7, 35, 60, 0.95)',
+                      border: '1px solid rgba(40, 192, 240, 0.3)',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontSize: '0.95rem'
+                    }}
+                  />
+
+                  <input
+                    type="number"
+                    placeholder="Precio máximo (USDC)"
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(e.target.value)}
+                    min="0"
+                    step="0.01"
+                    style={{
+                      padding: '0.75rem 1rem',
+                      backgroundColor: 'rgba(7, 35, 60, 0.95)',
+                      border: '1px solid rgba(40, 192, 240, 0.3)',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontSize: '0.95rem'
+                    }}
+                  />
+
+                  <select
+                    className="filter-select"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                  >
+                    <option value="date_desc">Más recientes</option>
+                    <option value="date_asc">Más antiguos</option>
+                    <option value="price_asc">Precio: menor a mayor</option>
+                    <option value="price_desc">Precio: mayor a menor</option>
+                    <option value="popularity">Más populares</option>
+                  </select>
+                </div>
+                
+                {/* Badges de filtros activos */}
+                {(searchQuery || minPrice || maxPrice || categoryFilter !== 'all' || difficultyFilter !== 'all') && (
+                  <div style={{
+                    marginTop: '1rem',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '0.5rem',
+                    alignItems: 'center'
+                  }}>
+                    <span style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.9rem' }}>Filtros activos:</span>
+                    {searchQuery && (
+                      <span style={{
+                        padding: '0.25rem 0.75rem',
+                        backgroundColor: 'rgba(40, 192, 240, 0.2)',
+                        border: '1px solid rgba(40, 192, 240, 0.4)',
+                        borderRadius: '50px',
+                        fontSize: '0.85rem',
+                        color: '#28c0f0'
+                      }}>
+                        Búsqueda: {searchQuery}
+                      </span>
+                    )}
+                    {minPrice && (
+                      <span style={{
+                        padding: '0.25rem 0.75rem',
+                        backgroundColor: 'rgba(40, 192, 240, 0.2)',
+                        border: '1px solid rgba(40, 192, 240, 0.4)',
+                        borderRadius: '50px',
+                        fontSize: '0.85rem',
+                        color: '#28c0f0'
+                      }}>
+                        Min: {minPrice} USDC
+                      </span>
+                    )}
+                    {maxPrice && (
+                      <span style={{
+                        padding: '0.25rem 0.75rem',
+                        backgroundColor: 'rgba(40, 192, 240, 0.2)',
+                        border: '1px solid rgba(40, 192, 240, 0.4)',
+                        borderRadius: '50px',
+                        fontSize: '0.85rem',
+                        color: '#28c0f0'
+                      }}>
+                        Max: {maxPrice} USDC
+                      </span>
+                    )}
+                    {categoryFilter !== 'all' && (
+                      <span style={{
+                        padding: '0.25rem 0.75rem',
+                        backgroundColor: 'rgba(40, 192, 240, 0.2)',
+                        border: '1px solid rgba(40, 192, 240, 0.4)',
+                        borderRadius: '50px',
+                        fontSize: '0.85rem',
+                        color: '#28c0f0'
+                      }}>
+                        {categoryFilter}
+                      </span>
+                    )}
+                    {difficultyFilter !== 'all' && (
+                      <span style={{
+                        padding: '0.25rem 0.75rem',
+                        backgroundColor: 'rgba(40, 192, 240, 0.2)',
+                        border: '1px solid rgba(40, 192, 240, 0.4)',
+                        borderRadius: '50px',
+                        fontSize: '0.85rem',
+                        color: '#28c0f0'
+                      }}>
+                        {difficultyFilter}
+                      </span>
+                    )}
+                    <button
+                      onClick={() => {
+                        setSearchQuery('');
+                        setMinPrice('');
+                        setMaxPrice('');
+                        setCategoryFilter('all');
+                        setDifficultyFilter('all');
+                        setSortBy('date_desc');
+                      }}
+                      style={{
+                        padding: '0.25rem 0.75rem',
+                        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                        border: '1px solid rgba(239, 68, 68, 0.4)',
+                        borderRadius: '50px',
+                        fontSize: '0.85rem',
+                        color: '#ef4444',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Limpiar todos
+                    </button>
+                  </div>
+                )}
+                
+                {/* Contador de resultados */}
+                <div style={{
+                  marginTop: '1rem',
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  fontSize: '0.9rem'
+                }}>
+                  {filteredTasks.length} {filteredTasks.length === 1 ? 'tarea encontrada' : 'tareas encontradas'}
                 </div>
               </div>
               
@@ -858,7 +1117,16 @@ const Dashboard = () => {
                       </div>
                       <div className="task-detail">
                         <span className="task-detail-label">Creador</span>
-                        <span className="task-detail-value">{task.creator_username}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                          <span className="task-detail-value">{task.creator_username}</span>
+                          {task.creator_rating !== undefined && task.creator_rating > 0 && (
+                            <RatingDisplay
+                              averageRating={task.creator_rating}
+                              totalRatings={task.creator_total_ratings || 0}
+                              size="small"
+                            />
+                          )}
+                        </div>
                       </div>
                     </div>
                     <button className="task-button" onClick={() => handleApplyTaskClick(task.id)}>
@@ -876,6 +1144,11 @@ const Dashboard = () => {
               <div className="wallet-balance">
                 <h2>Ganancias Totales</h2>
                 <div className="balance-amount">${totalEarnings.toFixed(2)}</div>
+                {totalPaid > 0 && (
+                  <div style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: 'rgba(255, 255, 255, 0.7)' }}>
+                    Total pagado: ${totalPaid.toFixed(2)}
+                  </div>
+                )}
                 <p className="wallet-description">
                   Tus ganancias son transferidas directamente a tu wallet cuando se completan las tareas 
                   a través de nuestro sistema de escrow.
@@ -883,27 +1156,107 @@ const Dashboard = () => {
               </div>
               
               <div className="transactions-container">
-                <h2>Historial de Ganancias</h2>
-                <div className="transactions-table">
-                  <div className="transactions-header">
-                    <div className="transaction-cell">Fecha</div>
-                    <div className="transaction-cell">Tarea</div>
-                    <div className="transaction-cell">Cantidad</div>
-                    <div className="transaction-cell">Estado</div>
+                <h2>Historial de Transacciones</h2>
+                {loadingTransactions && (
+                  <div style={{ textAlign: 'center', padding: '2rem', color: 'rgba(255, 255, 255, 0.7)' }}>
+                    Cargando transacciones...
                   </div>
-                  {transactions.map(transaction => (
-                    <div key={transaction.id} className="transaction-row">
-                      <div className="transaction-cell">{transaction.date}</div>
-                      <div className="transaction-cell">{transaction.task}</div>
-                      <div className="transaction-cell">${transaction.amount.toFixed(2)}</div>
-                      <div className="transaction-cell">
-                        <span className="transaction-status completed">
-                          {transaction.status}
-                        </span>
+                )}
+                {transactionsError && (
+                  <div style={{ padding: '1rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', color: '#ef4444', marginBottom: '1rem' }}>
+                    {transactionsError}
+                  </div>
+                )}
+                {!loadingTransactions && !transactionsError && transactions.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '2rem', color: 'rgba(255, 255, 255, 0.7)' }}>
+                    No hay transacciones aún. Las transacciones aparecerán aquí cuando completes tareas.
+                  </div>
+                )}
+                {!loadingTransactions && transactions.length > 0 && (
+                  <>
+                    <div className="transactions-table">
+                      <div className="transactions-header">
+                        <div className="transaction-cell">Fecha</div>
+                        <div className="transaction-cell">Tarea</div>
+                        <div className="transaction-cell">Tipo</div>
+                        <div className="transaction-cell">Cantidad</div>
+                        <div className="transaction-cell">Estado</div>
                       </div>
+                      {transactions.map(transaction => (
+                        <div key={transaction.id} className="transaction-row">
+                          <div className="transaction-cell">
+                            {new Date(transaction.date).toLocaleDateString('es-ES', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </div>
+                          <div className="transaction-cell">
+                            <Link 
+                              to={`/task/${transaction.task_id}`}
+                              style={{ color: '#28c0f0', textDecoration: 'none' }}
+                            >
+                              {transaction.task_title}
+                            </Link>
+                          </div>
+                          <div className="transaction-cell">
+                            <span className={`transaction-type ${transaction.type}`}>
+                              {transaction.type === 'received' ? 'Recibido' : 'Pagado'}
+                            </span>
+                          </div>
+                          <div className="transaction-cell" style={{
+                            color: transaction.type === 'received' ? '#22c55e' : '#ef4444',
+                            fontWeight: '600'
+                          }}>
+                            {transaction.type === 'received' ? '+' : '-'}${parseFloat(transaction.amount).toFixed(2)} {transaction.currency}
+                          </div>
+                          <div className="transaction-cell">
+                            <span className="transaction-status completed">
+                              {transaction.status}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                    {transactionsTotalPages > 1 && (
+                      <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1.5rem' }}>
+                        <button
+                          onClick={() => setTransactionsPage(p => Math.max(1, p - 1))}
+                          disabled={transactionsPage === 1}
+                          style={{
+                            padding: '0.5rem 1rem',
+                            backgroundColor: transactionsPage === 1 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(40, 192, 240, 0.2)',
+                            border: '1px solid rgba(40, 192, 240, 0.4)',
+                            borderRadius: '6px',
+                            color: '#fff',
+                            cursor: transactionsPage === 1 ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          Anterior
+                        </button>
+                        <span style={{ padding: '0.5rem 1rem', color: 'rgba(255, 255, 255, 0.7)' }}>
+                          Página {transactionsPage} de {transactionsTotalPages}
+                        </span>
+                        <button
+                          onClick={() => setTransactionsPage(p => Math.min(transactionsTotalPages, p + 1))}
+                          disabled={transactionsPage >= transactionsTotalPages}
+                          style={{
+                            padding: '0.5rem 1rem',
+                            backgroundColor: transactionsPage >= transactionsTotalPages ? 'rgba(255, 255, 255, 0.05)' : 'rgba(40, 192, 240, 0.2)',
+                            border: '1px solid rgba(40, 192, 240, 0.4)',
+                            borderRadius: '6px',
+                            color: '#fff',
+                            cursor: transactionsPage >= transactionsTotalPages ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          Siguiente
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -1193,7 +1546,16 @@ const Dashboard = () => {
                         {task.creator_username && (
                           <div className="task-detail">
                             <span className="task-detail-label">Creador</span>
-                            <span className="task-detail-value">{task.creator_username}</span>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                              <span className="task-detail-value">{task.creator_username}</span>
+                              {task.creator_rating !== undefined && task.creator_rating > 0 && (
+                                <RatingDisplay
+                                  averageRating={task.creator_rating}
+                                  totalRatings={task.creator_total_ratings || 0}
+                                  size="small"
+                                />
+                              )}
+                            </div>
                         </div>
                         )}
                       </div>

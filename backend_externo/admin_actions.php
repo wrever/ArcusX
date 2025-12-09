@@ -79,6 +79,33 @@ function handleGetStats($conn, $user) {
     // Comisiones totales (usando el fee configurado del sistema)
     $stats['total_commission_usdc'] = $stats['total_volume_usdc'] * $platformFee;
     
+    // ========== ESTADÍSTICAS POR PERÍODO ==========
+    
+    // Volumen de hoy (tareas completadas hoy)
+    // Usar COALESCE para obtener la mejor fecha disponible: escrow_completed_at > completed_at > created_at
+    $result = $conn->query("SELECT COALESCE(SUM(price), 0) as total FROM tasks WHERE status = 'completed' AND DATE(COALESCE(escrow_completed_at, completed_at, created_at)) = CURDATE()");
+    if ($result === false) {
+        throw new Exception("Error en consulta de volumen hoy: " . $conn->error);
+    }
+    $stats['volume_today'] = (float)$result->fetch_assoc()['total'];
+    $stats['fees_today'] = $stats['volume_today'] * $platformFee;
+    
+    // Volumen de esta semana (tareas completadas esta semana)
+    $result = $conn->query("SELECT COALESCE(SUM(price), 0) as total FROM tasks WHERE status = 'completed' AND YEARWEEK(COALESCE(escrow_completed_at, completed_at, created_at), 1) = YEARWEEK(CURDATE(), 1)");
+    if ($result === false) {
+        throw new Exception("Error en consulta de volumen esta semana: " . $conn->error);
+    }
+    $stats['volume_this_week'] = (float)$result->fetch_assoc()['total'];
+    $stats['fees_this_week'] = $stats['volume_this_week'] * $platformFee;
+    
+    // Volumen de este mes (tareas completadas este mes)
+    $result = $conn->query("SELECT COALESCE(SUM(price), 0) as total FROM tasks WHERE status = 'completed' AND MONTH(COALESCE(escrow_completed_at, completed_at, created_at)) = MONTH(CURDATE()) AND YEAR(COALESCE(escrow_completed_at, completed_at, created_at)) = YEAR(CURDATE())");
+    if ($result === false) {
+        throw new Exception("Error en consulta de volumen este mes: " . $conn->error);
+    }
+    $stats['volume_this_month'] = (float)$result->fetch_assoc()['total'];
+    $stats['fees_this_month'] = $stats['volume_this_month'] * $platformFee;
+    
     // Transacciones pendientes
     $result = $conn->query("SELECT COUNT(*) as total FROM tasks WHERE pending_transaction_xdr IS NOT NULL");
     if ($result === false) {

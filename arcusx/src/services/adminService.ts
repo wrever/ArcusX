@@ -27,6 +27,12 @@ export interface AdminStats {
   pending_transactions: number;
   users_today: number;
   tasks_today: number;
+  volume_today?: number;
+  fees_today?: number;
+  volume_this_week?: number;
+  fees_this_week?: number;
+  volume_this_month?: number;
+  fees_this_month?: number;
 }
 
 /**
@@ -129,25 +135,15 @@ async function adminApiCall(action: string, method: string = 'GET', body?: any, 
       const expTime = payload.exp || 0;
       const timeUntilExpiry = expTime - currentTime;
       
-      console.log('Token info - exp:', new Date(expTime * 1000).toISOString(), 'current:', new Date(currentTime * 1000).toISOString());
-      console.log('Time until expiry:', timeUntilExpiry, 'seconds (' + Math.round(timeUntilExpiry / 3600 * 100) / 100 + ' hours)');
-      
       if (timeUntilExpiry < 0) {
-        console.warn('Token is expired, removing from localStorage');
         adminLogout();
         throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
-      }
-      
-      if (timeUntilExpiry < 300) { // Menos de 5 minutos
-        console.warn('Token expiring soon:', timeUntilExpiry, 'seconds remaining');
       }
     }
   } catch (e) {
     console.error('Error checking token expiration:', e);
     // Continuar con la petición, el backend validará el token
   }
-
-  console.log('Token encontrado, enviando petición a admin.php');
 
   // Construir URL correctamente
   // admin.php está en /api/auth/ igual que admin_login.php
@@ -164,11 +160,6 @@ async function adminApiCall(action: string, method: string = 'GET', body?: any, 
     },
   };
   
-  console.log('Enviando petición con headers:', {
-    'Authorization': `Bearer ${token.substring(0, 20)}...`,
-    'Content-Type': 'application/json'
-  });
-
   if (body && method !== 'GET') {
     options.body = JSON.stringify(body);
   }
