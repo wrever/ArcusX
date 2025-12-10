@@ -138,11 +138,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         }
         
         // Calcular total ganado (como trabajador)
+        // En el nuevo modelo: price ya es el monto que recibió el trabajador
         $platformFeeEscaped = (float)$platformFee;
         $userIdEscaped = (int)$userId;
         
         $earnedSql = "
-            SELECT COALESCE(SUM(t.price * (1 - " . $platformFeeEscaped . ")), 0) as total_earned
+            SELECT COALESCE(SUM(t.price), 0) as total_earned
             FROM tasks t
             WHERE t.accepted_applicant_id = " . $userIdEscaped . "
               AND t.status = 'completed'
@@ -158,8 +159,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $totalEarned = (float)$earnedRow['total_earned'];
         
         // Calcular total pagado (como cliente)
+        // En el nuevo modelo: el cliente paga price + commission
         $paidSql = "
-            SELECT COALESCE(SUM(t.price), 0) as total_paid
+            SELECT COALESCE(SUM(t.price * (1 + " . $platformFeeEscaped . ")), 0) as total_paid
             FROM tasks t
             WHERE t.user_id = " . $userIdEscaped . "
               AND t.status = 'completed'
@@ -224,10 +226,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $lastTransaction = null;
         
         if ($lastRow = $lastResult->fetch_assoc()) {
-            $price = (float)$lastRow['price'];
+            $price = (float)$lastRow['price']; // price ahora es workerAmount
+            // En el nuevo modelo:
+            // - received: trabajador recibe price (ya es el monto exacto)
+            // - paid: cliente pagó price + commission
             $netAmount = $lastRow['transaction_type'] === 'received' 
-                ? $price * (1 - $platformFee) 
-                : $price;
+                ? $price  // Trabajador recibe el monto exacto
+                : $price * (1 + $platformFee); // Cliente pagó price + commission
             
             $lastTransaction = [
                 'id' => $lastRow['task_id'],

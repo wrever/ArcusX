@@ -1,43 +1,113 @@
 <?php
-require_once __DIR__ . '/config.php';
+// get_task_details.php
+// Obtiene detalles de una tarea y maneja operaciones de archivos
 
-// Verificar métodos permitidos
-if (!in_array($_SERVER['REQUEST_METHOD'], ['GET', 'POST', 'DELETE'])) {
-    http_response_code(405);
-    echo json_encode(['message' => 'Método no permitido. Solo se permite GET, POST, DELETE.']);
+// CORS headers - DEBEN IR PRIMERO, ANTES DE CUALQUIER OTRO OUTPUT
+$allowed_origins = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'https://arcusx.pro',
+    'http://arcusx.pro'
+];
+$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+
+// Manejar preflight OPTIONS request PRIMERO
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    if (in_array($origin, $allowed_origins)) {
+        header("Access-Control-Allow-Origin: $origin");
+        header("Access-Control-Allow-Credentials: true");
+    }
+    header("Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS");
+    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+    header("Access-Control-Max-Age: 3600");
+    header("Content-Length: 0");
+    http_response_code(200);
     exit();
 }
 
-// Obtener el task_id de los parámetros GET
-$task_id = isset($_GET['task_id']) ? intval($_GET['task_id']) : null;
-
-if (!$task_id) {
-    http_response_code(400);
-    echo json_encode(['message' => 'task_id es requerido']);
-    exit;
+// Headers CORS para requests normales
+if (in_array($origin, $allowed_origins)) {
+    header("Access-Control-Allow-Origin: $origin");
+    header("Access-Control-Allow-Credentials: true");
+} else {
+    header("Access-Control-Allow-Origin: *");
 }
+header("Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+header("Access-Control-Max-Age: 3600");
+header("Content-Type: application/json; charset=UTF-8");
 
-// Manejar diferentes tipos de peticiones
-switch ($_SERVER['REQUEST_METHOD']) {
-    case 'GET':
-        if (isset($_GET['action']) && $_GET['action'] === 'download') {
-            handleFileDownload($task_id);
-        } else {
-            handleGetTaskDetails($task_id);
-        }
-        break;
-    case 'POST':
-        handleFileUpload($task_id);
-        break;
-    case 'DELETE':
-        handleFileDelete($task_id);
-        break;
+// Habilitar logs (pero NO mostrar errores en pantalla para evitar output antes de headers)
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+error_reporting(E_ALL);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/php-error.log');
+
+require_once __DIR__ . '/config.php';
+
+try {
+    // Verificar métodos permitidos
+    if (!in_array($_SERVER['REQUEST_METHOD'], ['GET', 'POST', 'DELETE'])) {
+        http_response_code(405);
+        echo json_encode(['success' => false, 'message' => 'Método no permitido. Solo se permite GET, POST, DELETE.']);
+        exit();
+    }
+
+    // Obtener el task_id de los parámetros GET
+    $task_id = isset($_GET['task_id']) ? intval($_GET['task_id']) : null;
+
+    if (!$task_id) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'task_id es requerido']);
+        exit();
+    }
+
+    // Manejar diferentes tipos de peticiones
+    switch ($_SERVER['REQUEST_METHOD']) {
+        case 'GET':
+            if (isset($_GET['action']) && $_GET['action'] === 'download') {
+                handleFileDownload($task_id, $allowed_origins, $origin);
+            } else {
+                handleGetTaskDetails($task_id);
+            }
+            break;
+        case 'POST':
+            handleFileUpload($task_id);
+            break;
+        case 'DELETE':
+            handleFileDelete($task_id);
+            break;
+    }
+
+} catch (Exception $e) {
+    error_log('Error en get_task_details.php: ' . $e->getMessage());
+    
+    // Asegurar que los headers CORS se envíen incluso en errores
+    if (in_array($origin, $allowed_origins)) {
+        header("Access-Control-Allow-Origin: $origin");
+        header("Access-Control-Allow-Credentials: true");
+    } else {
+        header("Access-Control-Allow-Origin: *");
+    }
+    header("Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS");
+    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+    header("Content-Type: application/json; charset=UTF-8");
+    
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Error al procesar solicitud',
+        'message' => $e->getMessage()
+    ]);
 }
 
 /**
  * Maneja la obtención de detalles de la tarea
  */
 function handleGetTaskDetails($task_id) {
+    global $conn;
+    
     try {
         // Crear conexión y seleccionar base de datos explícitamente
         $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
@@ -80,13 +150,17 @@ function handleGetTaskDetails($task_id) {
                 WHERE t.id = ?";
         
         $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            throw new Exception("Error al preparar consulta: " . $conn->error);
+        }
+        
         $stmt->bind_param("i", $task_id);
         $stmt->execute();
         $result = $stmt->get_result();
         
         if ($result->num_rows === 0) {
             http_response_code(404);
-            echo json_encode(['message' => 'Tarea no encontrada']);
+            echo json_encode(['success' => false, 'message' => 'Tarea no encontrada']);
             $stmt->close();
             $conn->close();
             return;
@@ -98,7 +172,7 @@ function handleGetTaskDetails($task_id) {
         // Verificar que user_id no sea null
         if ($task['user_id'] === null || $task['user_id'] === '') {
             http_response_code(500);
-            echo json_encode(['message' => 'Error: user_id no encontrado en la tarea']);
+            echo json_encode(['success' => false, 'message' => 'Error: user_id no encontrado en la tarea']);
             $conn->close();
             return;
         }
@@ -122,48 +196,55 @@ function handleGetTaskDetails($task_id) {
                           WHERE applicant_id = ? AND task_id = ? AND status = 'accepted' 
                           LIMIT 1";
             $stmt_wallet = $conn->prepare($sql_wallet);
-            $stmt_wallet->bind_param("ii", $task['accepted_applicant_id'], $task_id);
-            $stmt_wallet->execute();
-            $result_wallet = $stmt_wallet->get_result();
-            
-            if ($result_wallet->num_rows > 0) {
-                $wallet_data = $result_wallet->fetch_assoc();
-                $worker_wallet_address = $wallet_data['worker_wallet_address'] ?? null;
+            if ($stmt_wallet) {
+                $stmt_wallet->bind_param("ii", $task['accepted_applicant_id'], $task_id);
+                $stmt_wallet->execute();
+                $result_wallet = $stmt_wallet->get_result();
+                
+                if ($result_wallet->num_rows > 0) {
+                    $wallet_data = $result_wallet->fetch_assoc();
+                    $worker_wallet_address = $wallet_data['worker_wallet_address'] ?? null;
+                }
+                $stmt_wallet->close();
             }
-            $stmt_wallet->close();
             
             // Si no está en applications, obtener desde users como fallback
             if (empty($worker_wallet_address)) {
                 $sql_user = "SELECT username, wallet_address FROM users WHERE id = ? LIMIT 1";
                 $stmt_user = $conn->prepare($sql_user);
-                $stmt_user->bind_param("i", $task['accepted_applicant_id']);
-                $stmt_user->execute();
-                $result_user = $stmt_user->get_result();
-                
-                if ($result_user->num_rows > 0) {
-                    $user_data = $result_user->fetch_assoc();
-                    $worker_wallet_address = $user_data['wallet_address'] ?? null;
-                    $worker_username = $user_data['username'] ?? null;
+                if ($stmt_user) {
+                    $stmt_user->bind_param("i", $task['accepted_applicant_id']);
+                    $stmt_user->execute();
+                    $result_user = $stmt_user->get_result();
+                    
+                    if ($result_user->num_rows > 0) {
+                        $user_data = $result_user->fetch_assoc();
+                        $worker_wallet_address = $user_data['wallet_address'] ?? null;
+                        $worker_username = $user_data['username'] ?? null;
+                    }
+                    $stmt_user->close();
                 }
-                $stmt_user->close();
             } else {
                 // Si tenemos wallet desde applications, obtener username desde users
                 $sql_username = "SELECT username FROM users WHERE id = ? LIMIT 1";
                 $stmt_username = $conn->prepare($sql_username);
-                $stmt_username->bind_param("i", $task['accepted_applicant_id']);
-                $stmt_username->execute();
-                $result_username = $stmt_username->get_result();
-                
-                if ($result_username->num_rows > 0) {
-                    $username_data = $result_username->fetch_assoc();
-                    $worker_username = $username_data['username'] ?? null;
+                if ($stmt_username) {
+                    $stmt_username->bind_param("i", $task['accepted_applicant_id']);
+                    $stmt_username->execute();
+                    $result_username = $stmt_username->get_result();
+                    
+                    if ($result_username->num_rows > 0) {
+                        $username_data = $result_username->fetch_assoc();
+                        $worker_username = $username_data['username'] ?? null;
+                    }
+                    $stmt_username->close();
                 }
-                $stmt_username->close();
             }
         }
         
         // Preparar respuesta
         $response = [
+            'success' => true,
             'id' => intval($task['id']),
             'title' => $task['title'],
             'subtitle' => $task['subtitle'],
@@ -184,18 +265,20 @@ function handleGetTaskDetails($task_id) {
             'escrow_created_at' => $task['escrow_created_at'] ?? null,
             'escrow_completed_at' => $task['escrow_completed_at'] ?? null,
             'accepted_applicant_id' => $task['accepted_applicant_id'] ? strval($task['accepted_applicant_id']) : null,
-            'worker_wallet_address' => $worker_wallet_address, // Wallet del trabajador desde la aplicación
+            'worker_wallet_address' => $worker_wallet_address,
             'worker_username' => $worker_username,
             'can_mark_completed' => $can_mark_completed
         ];
 
+        http_response_code(200);
         echo json_encode($response);
 
         $conn->close();
 
     } catch (Exception $e) {
+        error_log('Error en handleGetTaskDetails: ' . $e->getMessage());
         http_response_code(500);
-        echo json_encode(['message' => 'Error interno del servidor: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => 'Error interno del servidor: ' . $e->getMessage()]);
     }
 }
 
@@ -244,6 +327,10 @@ function handleFileUpload($task_id) {
         
         // Obtener archivos actuales de la tarea
         $stmt = $conn->prepare("SELECT files FROM tasks WHERE id = ?");
+        if (!$stmt) {
+            throw new Exception("Error al preparar consulta: " . $conn->error);
+        }
+        
         $stmt->bind_param("i", $task_id);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -271,9 +358,14 @@ function handleFileUpload($task_id) {
         // Actualizar la columna files en la base de datos
         $files_json = json_encode($current_files);
         $stmt = $conn->prepare("UPDATE tasks SET files = ? WHERE id = ?");
+        if (!$stmt) {
+            throw new Exception("Error al preparar consulta de actualización: " . $conn->error);
+        }
+        
         $stmt->bind_param("si", $files_json, $task_id);
         $stmt->execute();
         
+        http_response_code(200);
         echo json_encode([
             'success' => true,
             'message' => 'Archivo subido exitosamente',
@@ -289,6 +381,7 @@ function handleFileUpload($task_id) {
             unlink($file_path);
         }
         
+        error_log('Error en handleFileUpload: ' . $e->getMessage());
         http_response_code(500);
         echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
     }
@@ -317,6 +410,10 @@ function handleFileDelete($task_id) {
         
         // Obtener archivos actuales de la tarea
         $stmt = $conn->prepare("SELECT files FROM tasks WHERE id = ?");
+        if (!$stmt) {
+            throw new Exception("Error al preparar consulta: " . $conn->error);
+        }
+        
         $stmt->bind_param("i", $task_id);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -325,6 +422,8 @@ function handleFileDelete($task_id) {
         if (!$task) {
             http_response_code(404);
             echo json_encode(['success' => false, 'message' => 'Tarea no encontrada']);
+            $stmt->close();
+            $conn->close();
             return;
         }
         
@@ -348,6 +447,8 @@ function handleFileDelete($task_id) {
         if (!$file_found) {
             http_response_code(404);
             echo json_encode(['success' => false, 'message' => 'Archivo no encontrado']);
+            $stmt->close();
+            $conn->close();
             return;
         }
         
@@ -359,9 +460,14 @@ function handleFileDelete($task_id) {
         // Actualizar la columna files en la base de datos
         $files_json = json_encode(array_values($current_files));
         $stmt = $conn->prepare("UPDATE tasks SET files = ? WHERE id = ?");
+        if (!$stmt) {
+            throw new Exception("Error al preparar consulta de actualización: " . $conn->error);
+        }
+        
         $stmt->bind_param("si", $files_json, $task_id);
         $stmt->execute();
         
+        http_response_code(200);
         echo json_encode([
             'success' => true,
             'message' => 'Archivo eliminado exitosamente'
@@ -371,6 +477,7 @@ function handleFileDelete($task_id) {
         $conn->close();
         
     } catch (Exception $e) {
+        error_log('Error en handleFileDelete: ' . $e->getMessage());
         http_response_code(500);
         echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
     }
@@ -379,10 +486,17 @@ function handleFileDelete($task_id) {
 /**
  * Maneja la descarga de archivos (GET con action=download)
  */
-function handleFileDownload($task_id) {
+function handleFileDownload($task_id, $allowed_origins, $origin) {
     $file_id = isset($_GET['file_id']) ? $_GET['file_id'] : null;
     
     if (!$file_id) {
+        // Headers CORS para respuesta de error
+        if (in_array($origin, $allowed_origins)) {
+            header("Access-Control-Allow-Origin: $origin");
+            header("Access-Control-Allow-Credentials: true");
+        }
+        header("Content-Type: application/json; charset=UTF-8");
+        
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'file_id es requerido']);
         return;
@@ -396,14 +510,27 @@ function handleFileDownload($task_id) {
         
         // Obtener archivos de la tarea
         $stmt = $conn->prepare("SELECT files FROM tasks WHERE id = ?");
+        if (!$stmt) {
+            throw new Exception("Error al preparar consulta: " . $conn->error);
+        }
+        
         $stmt->bind_param("i", $task_id);
         $stmt->execute();
         $result = $stmt->get_result();
         $task = $result->fetch_assoc();
         
         if (!$task) {
+            // Headers CORS para respuesta de error
+            if (in_array($origin, $allowed_origins)) {
+                header("Access-Control-Allow-Origin: $origin");
+                header("Access-Control-Allow-Credentials: true");
+            }
+            header("Content-Type: application/json; charset=UTF-8");
+            
             http_response_code(404);
             echo json_encode(['success' => false, 'message' => 'Tarea no encontrada']);
+            $stmt->close();
+            $conn->close();
             return;
         }
         
@@ -422,17 +549,41 @@ function handleFileDownload($task_id) {
         }
         
         if (!$file_info) {
+            // Headers CORS para respuesta de error
+            if (in_array($origin, $allowed_origins)) {
+                header("Access-Control-Allow-Origin: $origin");
+                header("Access-Control-Allow-Credentials: true");
+            }
+            header("Content-Type: application/json; charset=UTF-8");
+            
             http_response_code(404);
             echo json_encode(['success' => false, 'message' => 'Archivo no encontrado']);
+            $stmt->close();
+            $conn->close();
             return;
         }
         
         // Verificar que el archivo existe físicamente
         $file_path = '../../files/' . $file_info['filename'];
         if (!file_exists($file_path)) {
+            // Headers CORS para respuesta de error
+            if (in_array($origin, $allowed_origins)) {
+                header("Access-Control-Allow-Origin: $origin");
+                header("Access-Control-Allow-Credentials: true");
+            }
+            header("Content-Type: application/json; charset=UTF-8");
+            
             http_response_code(404);
             echo json_encode(['success' => false, 'message' => 'Archivo no encontrado en el servidor']);
+            $stmt->close();
+            $conn->close();
             return;
+        }
+        
+        // Headers CORS para descarga
+        if (in_array($origin, $allowed_origins)) {
+            header("Access-Control-Allow-Origin: $origin");
+            header("Access-Control-Allow-Credentials: true");
         }
         
         // Configurar headers para descarga
@@ -449,6 +600,15 @@ function handleFileDownload($task_id) {
         $conn->close();
         
     } catch (Exception $e) {
+        error_log('Error en handleFileDownload: ' . $e->getMessage());
+        
+        // Headers CORS para respuesta de error
+        if (in_array($origin, $allowed_origins)) {
+            header("Access-Control-Allow-Origin: $origin");
+            header("Access-Control-Allow-Credentials: true");
+        }
+        header("Content-Type: application/json; charset=UTF-8");
+        
         http_response_code(500);
         echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
     }

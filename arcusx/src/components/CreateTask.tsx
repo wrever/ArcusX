@@ -5,7 +5,7 @@ import '../css/CreateTask.css';
 import axios from 'axios';
 import Popup from './Popup';
 import { API_URL } from '../config/database';
-import { calculateCommissionSync, calculateNetAmountSync } from '../config/commission';
+import { calculateCommissionFromWorkerAmount, calculateTotalWithCommission } from '../config/commission';
 import { getPlatformFee } from '../services/platformFeeService';
 
 interface UserLimits {
@@ -31,9 +31,10 @@ const CreateTask = () => {
   const [loading, setLoading] = useState(false);
   const [userLimits, setUserLimits] = useState<UserLimits | null>(null);
   
-  // Estados para monto neto y comisión
-  const [netAmount, setNetAmount] = useState<string>('');
+  // Estados para monto del trabajador, comisión y total a pagar
+  const [workerAmount, setWorkerAmount] = useState<string>('');
   const [commissionAmount, setCommissionAmount] = useState<string>('');
+  const [totalAmount, setTotalAmount] = useState<string>('');
   const [platformFee, setPlatformFee] = useState<number>(0.003); // 0.3% por defecto
   const [platformFeePercent, setPlatformFeePercent] = useState<string>('0.3');
   
@@ -105,22 +106,25 @@ const CreateTask = () => {
     }
   };
 
-  // Calcular monto neto y comisión en tiempo real cuando cambia el precio o el fee
+  // Calcular comisión y total a pagar en tiempo real cuando cambia el precio o el fee
   useEffect(() => {
     if (formData.price && formData.price.trim() !== '') {
-      const price = parseFloat(formData.price);
-      if (!isNaN(price) && price > 0) {
-        const commission = calculateCommissionSync(price, platformFee);
-        const net = calculateNetAmountSync(price, platformFee);
+      const workerAmountValue = parseFloat(formData.price);
+      if (!isNaN(workerAmountValue) && workerAmountValue > 0) {
+        const commission = calculateCommissionFromWorkerAmount(workerAmountValue, platformFee);
+        const total = calculateTotalWithCommission(workerAmountValue, platformFee);
+        setWorkerAmount(workerAmountValue.toFixed(2));
         setCommissionAmount(commission.toFixed(7));
-        setNetAmount(net.toFixed(7));
+        setTotalAmount(total.toFixed(7));
       } else {
-        setNetAmount('');
+        setWorkerAmount('');
         setCommissionAmount('');
+        setTotalAmount('');
       }
     } else {
-      setNetAmount('');
+      setWorkerAmount('');
       setCommissionAmount('');
+      setTotalAmount('');
     }
   }, [formData.price, platformFee]);
 
@@ -405,13 +409,16 @@ const CreateTask = () => {
             <h3>💰 Presupuesto y Categorización</h3>
             
             {/* Información del precio - Arriba del campo */}
-            {formData.price && netAmount && commissionAmount && (
+            {formData.price && workerAmount && commissionAmount && totalAmount && (
               <div className="net-amount-display">
                 <p className="net-amount-text">
-                  💰 Trabajador recibirá: <strong>{netAmount} USDC</strong>
+                  💰 El trabajador recibirá: <strong>{workerAmount} USDC</strong>
                 </p>
                 <p className="commission-text">
-                  📊 Comisión ({platformFeePercent}%): {commissionAmount} USDC
+                  📊 Comisión de plataforma ({platformFeePercent}%): {commissionAmount} USDC
+                </p>
+                <p className="total-amount-text" style={{ fontWeight: 'bold', color: '#28c0f0', fontSize: '1.1em' }}>
+                  💳 Total a pagar: <strong>{totalAmount} USDC</strong>
                 </p>
                 <p className="contract-cost-text">
                   ⚠️ Nota: Se requiere una pequeña cantidad de XLM para fees de transacción de Stellar (~0.0001 XLM)
@@ -421,7 +428,10 @@ const CreateTask = () => {
             
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="price">Precio a Pagar *</label>
+                <label htmlFor="price">Pago al Trabajador *</label>
+                <p className="helper-text" style={{ fontSize: '0.85em', color: 'rgba(255, 255, 255, 0.7)', marginTop: '0.25rem', marginBottom: '0.5rem' }}>
+                  Ingresa el monto exacto que recibirá el trabajador. Se te cobrará este monto más una comisión del {platformFeePercent}%.
+                </p>
                 <input
                   type="number"
                   id="price"
@@ -498,9 +508,10 @@ const CreateTask = () => {
               </ul>
               <p style={{ marginTop: '1rem' }}><strong>💰 Sobre los costos:</strong></p>
               <ul>
-                <li><strong>Comisión ArcusX ({platformFeePercent}%):</strong> Se retiene automáticamente del pago al trabajador. El trabajador recibirá el monto neto ({(100 - parseFloat(platformFeePercent)).toFixed(2)}% del total) al completar la tarea.</li>
+                <li><strong>Pago al trabajador:</strong> El monto que ingreses es exactamente lo que recibirá el trabajador al completar la tarea.</li>
+                <li><strong>Comisión ArcusX ({platformFeePercent}%):</strong> Se te cobrará adicionalmente sobre el monto del trabajador. Por ejemplo, si pagas $10 al trabajador, pagarás $10.05 en total (incluye $0.05 de comisión).</li>
                 <li><strong>Moneda:</strong> El sistema usa USDC (USD Coin) como moneda principal para todos los pagos.</li>
-                <li><strong>Total a pagar:</strong> El monto de la tarea que estableces en USDC. La comisión del {platformFeePercent}% se deduce del pago al trabajador, no es un costo adicional para ti.</li>
+                <li><strong>Total a pagar:</strong> El monto del trabajador más la comisión del {platformFeePercent}%. Este es el monto total que se descontará de tu wallet al fondear el escrow.</li>
                 <li><strong>Fees de transacción:</strong> Se requiere una pequeña cantidad de XLM para fees de transacción de Stellar (~0.0001 XLM por transacción).</li>
                 <li>Estos costos garantizan la seguridad de las transacciones y el mantenimiento de la plataforma.</li>
               </ul>

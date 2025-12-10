@@ -19,7 +19,7 @@ import {
   createTrustlessEscrow, 
   fundTrustlessEscrow 
 } from '../services/trustlessWorkEscrowService';
-import { calculateCommissionSync, calculateNetAmountSync } from '../config/commission';
+import { calculateCommissionFromWorkerAmount, calculateTotalWithCommission } from '../config/commission';
 import { usePlatformFee } from '../hooks/usePlatformFee';
 import EscrowProcessPopup from './EscrowProcessPopup';
 import '../css/ProposalReview.css';
@@ -209,12 +209,13 @@ const ProposalReview = () => {
       
       // Crear escrow con Trustless Work
       const engagementId = `arcusx-${taskId}-${Date.now()}`;
+      // El price ahora es el workerAmount (lo que recibirá el trabajador)
+      const workerAmount = parseFloat(task.price);
       // Asegurar precisión de USDC (7 decimales) - usar el mismo formato que al fondear
       // DEBE coincidir exactamente con el amount usado al fondear
-      const rawAmount = parseFloat(task.price);
-      const roundedAmount = Math.round(rawAmount * 10000000) / 10000000;
+      const roundedAmount = Math.round(workerAmount * 10000000) / 10000000;
       const amountString = roundedAmount.toFixed(7);
-      const amount = parseFloat(amountString); // Asegurar exactamente 7 decimales
+      const amount = parseFloat(amountString); // Monto del escrow (lo que recibirá el trabajador)
 
       const result = await createTrustlessEscrow(
         {
@@ -277,8 +278,8 @@ const ProposalReview = () => {
         // Continuar de todas formas - el escrow ya se creó en Trustless Work
       }
       
-      // Guardar el amount exacto en localStorage para usarlo al fondear
-      localStorage.setItem(`escrow_amount_${result.contractId}`, amountString);
+      // NOTA: Ya no guardamos el amount en localStorage porque ahora calculamos totalToFund al fondear
+      // El escrow tiene amount = workerAmount, pero al fondear usamos totalToFund = workerAmount + commission
       
       return {
         success: true,
@@ -319,33 +320,30 @@ const ProposalReview = () => {
         return { success: false, error: 'Kit de wallets no inicializado. Por favor reconecta tu wallet.' };
       }
 
-      // Obtener el amount exacto que se usó al crear el escrow
-      // CRÍTICO: Debe ser EXACTAMENTE el mismo amount que se usó al crear el escrow
-      // Obtener el amount exacto que se usó al crear el escrow
-      // CRÍTICO: Debe ser EXACTAMENTE el mismo amount que se usó al crear el escrow
-      let amount: number;
-      const savedAmountString = localStorage.getItem(`escrow_amount_${escrowId}`);
+      // Calcular el monto total a fondear (workerAmount + commission)
+      // El escrow contiene workerAmount, pero debemos fondear workerAmount + commission
+      const workerAmount = parseFloat(task.price);
+      const commission = calculateCommissionFromWorkerAmount(workerAmount, platformFee);
+      const totalToFund = calculateTotalWithCommission(workerAmount, platformFee);
       
-      if (savedAmountString) {
-        // Usar el amount exacto guardado al crear el escrow
-        // Procesarlo de la misma manera que al crear para garantizar coincidencia exacta
-        const savedAmount = parseFloat(savedAmountString);
-        const amountAsInteger = Math.round(savedAmount * 10000000);
-        amount = amountAsInteger / 10000000;
-      } else {
-        // Fallback: calcular desde task.price (debería coincidir)
-        const rawAmount = parseFloat(task.price);
-        
-        if (isNaN(rawAmount) || rawAmount <= 0) {
-          return {
-            success: false,
-            error: `Amount inválido: ${task.price}. Debe ser un número positivo.`
-          };
-        }
-
-        // Usar el mismo método que al crear el escrow
-        const amountAsInteger = Math.round(rawAmount * 10000000);
-        amount = amountAsInteger / 10000000;
+      // Asegurar precisión de USDC (7 decimales)
+      const roundedTotalToFund = Math.round(totalToFund * 10000000) / 10000000;
+      const amountString = roundedTotalToFund.toFixed(7);
+      const amount = parseFloat(amountString); // Total a fondear (workerAmount + commission)
+      
+      if (isNaN(amount) || amount <= 0) {
+        return {
+          success: false,
+          error: `Amount inválido: ${amount}. Debe ser un número positivo.`
+        };
+      }
+      
+      // Validar que el monto a fondear sea al menos el monto del trabajador
+      if (amount < workerAmount) {
+        return {
+          success: false,
+          error: `El monto a fondear (${amount}) debe ser al menos el monto del trabajador (${workerAmount})`
+        };
       }
       
       // Validar que el amount sea válido
@@ -356,11 +354,10 @@ const ProposalReview = () => {
         };
       }
 
-      // Intentar fondear el escrow con reintentos rápidos
+      // Intentar fondear el escrow con reintentos inteligentes
       // El detector de deploy en trustlessWorkEscrowService ya verifica que esté indexado
       let result: { success: boolean; txHash?: string; error?: string } | null = null;
       const maxRetries = 3;
-      const retryDelays = [2000, 5000, 10000]; // 2s, 5s, 10s entre reintentos (reintentos rápidos)
       
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
@@ -389,7 +386,13 @@ const ProposalReview = () => {
           if (result.success) {
             break;
           } else if (attempt < maxRetries) {
-            const delay = retryDelays[attempt - 1];
+            // Detectar si es el error "normalize" para usar tiempos más largos
+            const isNormalizeError = result.error?.includes('normalize') || result.error?.includes('normalize');
+            const delay = isNormalizeError 
+              ? 120000 // 2 minutos si es error normalize
+              : attempt === 1 ? 30000 : 60000; // 30s, 1min para otros errores
+            
+            console.log(`⏳ Reintentando en ${delay / 1000} segundos... (intento ${attempt + 1}/${maxRetries})`);
             await new Promise(resolve => setTimeout(resolve, delay));
           }
         } catch (error: any) {
@@ -401,7 +404,13 @@ const ProposalReview = () => {
             break;
           }
           
-          const delay = retryDelays[attempt - 1];
+          // Detectar si es el error "normalize" para usar tiempos más largos
+          const isNormalizeError = error.message?.includes('normalize') || error.message?.includes('normalize');
+          const delay = isNormalizeError 
+            ? 120000 // 2 minutos si es error normalize
+            : attempt === 1 ? 30000 : 60000; // 30s, 1min para otros errores
+          
+          console.log(`⏳ Reintentando en ${delay / 1000} segundos... (intento ${attempt + 1}/${maxRetries})`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
@@ -487,18 +496,18 @@ const ProposalReview = () => {
 
   // Función para completar el proceso
   const handleProcessComplete = () => {
-    // Calcular monto neto y comisión usando el fee del backend
-    const totalAmount = task?.price ? parseFloat(task.price) : 0;
-    const netAmount = totalAmount > 0 ? calculateNetAmountSync(totalAmount, platformFee) : 0;
-    const commission = totalAmount > 0 ? calculateCommissionSync(totalAmount, platformFee) : 0;
+    // Calcular montos usando el nuevo modelo
+    const workerAmount = task?.price ? parseFloat(task.price) : 0;
+    const commission = workerAmount > 0 ? calculateCommissionFromWorkerAmount(workerAmount, platformFee) : 0;
+    const totalAmount = workerAmount > 0 ? calculateTotalWithCommission(workerAmount, platformFee) : 0;
     const feePercent = (platformFee * 100).toFixed(2);
     
     // Mostrar mensaje de éxito mejorado
     setPopupMessage(`✅ CONTRATO ACTIVADO EXITOSAMENTE!
         
-💰 Monto total: ${task?.price || 'N/A'} ${task?.currency || 'USDC'}
-💵 Recibirás: ${netAmount.toFixed(7)} USDC (neto)
-📊 Comisión ArcusX (${feePercent}%): ${commission.toFixed(7)} USDC
+💰 Trabajador recibirá: ${workerAmount.toFixed(2)} ${task?.currency || 'USDC'}
+📊 Comisión de plataforma (${feePercent}%): ${commission.toFixed(7)} ${task?.currency || 'USDC'}
+💳 Total pagado: ${totalAmount.toFixed(7)} ${task?.currency || 'USDC'}
 🌐 Red: Stellar Testnet
 👤 Trabajador: ${selectedProposal?.applicant_username}
 
@@ -643,7 +652,7 @@ const ProposalReview = () => {
               </span>
               <span className="category-tag">{task.category}</span>
               <span className="price-tag">
-                {calculateNetAmountSync(parseFloat(task.price), platformFee).toFixed(7)} {task.currency}
+                {parseFloat(task.price).toFixed(2)} {task.currency}
               </span>
             </div>
           </div>

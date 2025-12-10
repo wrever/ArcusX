@@ -9,8 +9,6 @@ import { API_URL } from './config/database';
 import React from 'react';
 import { useAuth } from './hooks/useAuth';
 import WalletButton from './components/WalletButton';
-import { calculateNetAmountSync } from './config/commission';
-import { usePlatformFee } from './hooks/usePlatformFee';
 import { useScheduledTaskDeletion } from './hooks/useScheduledTaskDeletion';
 import DashboardFooter from './components/DashboardFooter';
 // import PendingNotificationsPopup from './components/PendingNotificationsPopup'; // Popup eliminado
@@ -88,9 +86,6 @@ const Dashboard = () => {
   
   // Estado para disputas
   const [pendingDisputes, setPendingDisputes] = useState<UserDispute[]>([]);
-  
-  // Obtener platform fee del backend
-  const { platformFee } = usePlatformFee();
   
   // Verificar y eliminar tareas programadas automáticamente
   useScheduledTaskDeletion();
@@ -1112,7 +1107,7 @@ const Dashboard = () => {
                       <div className="task-detail">
                         <span className="task-detail-label">Recompensa</span>
                         <span className="task-detail-value">
-                          {calculateNetAmountSync(parseFloat(task.price), platformFee).toFixed(7)} {task.currency}
+                          {parseFloat(task.price).toFixed(2)} {task.currency}
                         </span>
                       </div>
                       <div className="task-detail">
@@ -1539,7 +1534,7 @@ const Dashboard = () => {
                           <div className="task-detail">
                             <span className="task-detail-label">Recompensa</span>
                             <span className="task-detail-value">
-                              {calculateNetAmountSync(parseFloat(task.price), platformFee).toFixed(7)} {task.currency}
+                              {parseFloat(task.price).toFixed(2)} {task.currency}
                             </span>
                         </div>
                         )}

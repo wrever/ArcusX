@@ -61,6 +61,9 @@ export async function calculateNetAmount(amount: number, commissionRate?: number
 
 /**
  * Calcula el monto neto que recibirá el trabajador (versión síncrona con rate proporcionado)
+ * @deprecated Esta función calcula el monto neto restando comisión. 
+ * En el nuevo modelo, el trabajador recibe el monto exacto ingresado.
+ * Se mantiene para compatibilidad con código legacy.
  * @param amount Monto total en USDC
  * @param commissionRate Tasa de comisión como decimal (ej: 0.005 para 0.5%)
  * @returns Monto neto (monto total - comisión) con 7 decimales
@@ -72,5 +75,40 @@ export function calculateNetAmountSync(amount: number, commissionRate: number = 
   const commission = calculateCommissionSync(amount, commissionRate);
   const netAmount = amount - commission;
   return parseFloat(netAmount.toFixed(7));
+}
+
+/**
+ * Calcula el total que debe pagar el cliente (workerAmount + commission)
+ * @param workerAmount Monto que recibirá el trabajador
+ * @param commissionRate Tasa de comisión como decimal (ej: 0.005 para 0.5%)
+ * @returns Total a pagar (workerAmount + commission) con 7 decimales
+ */
+export function calculateTotalWithCommission(
+  workerAmount: number, 
+  commissionRate: number = DEFAULT_COMMISSION_RATE
+): number {
+  if (isNaN(workerAmount) || workerAmount <= 0) {
+    return 0;
+  }
+  const commission = workerAmount * commissionRate;
+  const total = workerAmount + commission;
+  return parseFloat(total.toFixed(7));
+}
+
+/**
+ * Calcula la comisión que se cobrará al cliente sobre el monto del trabajador
+ * @param workerAmount Monto que recibirá el trabajador
+ * @param commissionRate Tasa de comisión como decimal (ej: 0.005 para 0.5%)
+ * @returns Comisión calculada con 7 decimales
+ */
+export function calculateCommissionFromWorkerAmount(
+  workerAmount: number,
+  commissionRate: number = DEFAULT_COMMISSION_RATE
+): number {
+  if (isNaN(workerAmount) || workerAmount <= 0) {
+    return 0;
+  }
+  const commission = workerAmount * commissionRate;
+  return parseFloat(commission.toFixed(7));
 }
 

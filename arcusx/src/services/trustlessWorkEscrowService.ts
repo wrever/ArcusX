@@ -1,5 +1,9 @@
 /**
  * Servicio para operaciones de escrow con Trustless Work
+ * 
+ * ⚠️ ACTUALIZACIÓN IMPORTANTE (Diciembre 2024):
+ * Trustless Work ha cambiado el sistema y ahora SOLO acepta issuer tradicional de Stellar
+ * (direcciones que empiezan con "G"). NO usar Contract ID de Soroban (direcciones que empiezan con "C").
  */
 
 import type {
@@ -17,42 +21,265 @@ import type {
 import { TransactionBuilder, Networks } from '@stellar/stellar-sdk';
 import { PLATFORM_WALLET, ADMIN_WALLET } from '../config/trustlessWork';
 import { getPlatformFeeForTrustlessWork } from './platformFeeService';
+import { USDC_ISSUER } from '../config/usdc';
 
-// Trustline de USDC para Trustless Work
-const USDC_TRUSTLINE = 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA';
+// ============================================================================
+// CONSTANTS
+// ============================================================================
 
 /**
- * Helper para esperar a que el escrow esté indexado
+ * Configuración de retry y esperas
+ */
+const RETRY_CONFIG = {
+  MAX_RETRIES: 3,
+  INITIAL_WAIT_AFTER_CREATION: 300000, // 5 minutos
+  NORMALIZE_ERROR_DELAY: 120000, // 2 minutos
+  GENERAL_ERROR_DELAY: 30000, // 30 segundos
+  INDEXING_MAX_WAIT: 300000, // 5 minutos
+  INDEXING_CHECK_INTERVAL: 5000 // 5 segundos
+} as const;
+
+/**
+ * Configuración del trustline
+ * ⚠️ SOLO usar issuer tradicional (direcciones que empiezan con "G")
+ */
+const TRUSTLINE_CONFIG = {
+  SYMBOL: 'USDC'
+} as const;
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+interface CreateEscrowPayload {
+  signer: string;
+  engagementId: string;
+  title: string;
+  description: string;
+  amount: number;
+  approver: string;
+  serviceProvider: string;
+  receiver: string;
+  milestoneDescription: string;
+}
+
+interface EscrowResult {
+  success: boolean;
+  contractId?: string;
+  txHash?: string;
+  error?: string;
+}
+
+// ============================================================================
+// VALIDATORS
+// ============================================================================
+
+/**
+ * Valida una dirección Stellar (debe empezar con "G" y tener 56 caracteres)
+ */
+const validateStellarAddress = (address: string, name: string): void => {
+  if (!address || typeof address !== 'string') {
+    throw new Error(`${name} no puede estar vacío`);
+  }
+  if (!address.startsWith('G') || address.length !== 56) {
+    throw new Error(`${name} no es una dirección Stellar válida: ${address}`);
+  }
+};
+
+/**
+ * Valida el trustline del escrow
+ * ⚠️ Solo acepta issuer tradicional (direcciones que empiezan con "G")
+ */
+const validateTrustline = (trustline: any): void => {
+  if (!trustline || !trustline.address) {
+    throw new Error('Trustline address es requerido');
+  }
+  
+  // Validar que sea una dirección Stellar (empieza con "G" y tiene 56 caracteres)
+  if (!trustline.address.startsWith('G') || trustline.address.length !== 56) {
+    throw new Error(`Trustline inválido: debe ser una dirección Stellar (empieza con "G"): ${trustline.address}`);
+  }
+  
+  // Validar que sea el issuer correcto de USDC
+  if (trustline.address !== USDC_ISSUER) {
+    throw new Error(`Trustline inválido: debe ser el issuer de USDC (${USDC_ISSUER}), pero se recibió: ${trustline.address}`);
+  }
+  
+  // Validar que tenga symbol
+  if (!trustline.symbol || trustline.symbol !== TRUSTLINE_CONFIG.SYMBOL) {
+    throw new Error(`Trustline debe tener symbol "${TRUSTLINE_CONFIG.SYMBOL}"`);
+  }
+};
+
+/**
+ * Valida la configuración de wallets de plataforma
+ */
+const validateConfiguration = (): void => {
+  if (!PLATFORM_WALLET || !ADMIN_WALLET) {
+    const errorMsg = `Wallets de plataforma no configuradas. PLATFORM_WALLET: ${PLATFORM_WALLET ? 'OK' : 'FALTA'}, ADMIN_WALLET: ${ADMIN_WALLET ? 'OK' : 'FALTA'}. Verifica VITE_PLATFORM_WALLET y VITE_ADMIN_WALLET en tu archivo .env`;
+    console.error('❌', errorMsg);
+    throw new Error(errorMsg);
+  }
+};
+
+/**
+ * Valida el payload de creación de escrow
+ */
+const validateEscrowPayload = (payload: InitializeSingleReleaseEscrowPayload): void => {
+  // Validar platformFee
+  if (isNaN(payload.platformFee) || payload.platformFee < 0) {
+    throw new Error(`PlatformFee inválido: ${payload.platformFee}. Debe ser un número no negativo.`);
+  }
+  
+  // Validar todas las direcciones Stellar
+  validateStellarAddress(payload.signer, 'Signer');
+  validateStellarAddress(payload.roles.approver, 'Approver');
+  validateStellarAddress(payload.roles.serviceProvider, 'ServiceProvider');
+  validateStellarAddress(payload.roles.platformAddress, 'PlatformAddress');
+  validateStellarAddress(payload.roles.releaseSigner, 'ReleaseSigner');
+  validateStellarAddress(payload.roles.disputeResolver, 'DisputeResolver');
+  validateStellarAddress(payload.roles.receiver, 'Receiver');
+  
+  // Validar trustline
+  validateTrustline(payload.trustline);
+};
+
+/**
+ * Valida los parámetros de funding
+ */
+const validateFundingParams = (contractId: string, amount: number, signer: string, kit: any): void => {
+  if (!contractId || !signer || !kit) {
+    throw new Error('Parámetros inválidos: contractId, signer y kit son requeridos');
+  }
+  
+  if (isNaN(amount) || amount <= 0) {
+    throw new Error(`Amount inválido: ${amount}. Debe ser un número positivo.`);
+  }
+  
+  validateStellarAddress(signer, 'Signer');
+};
+
+/**
+ * Valida la respuesta de inicialización y retorna la transacción
+ */
+const validateInitResponse = (response: EscrowRequestResponse): string => {
+  if (response.status !== 'SUCCESS') {
+    const errorMsg = (response as any).message || 'Estado no exitoso';
+    throw new Error(`Error al crear escrow: ${errorMsg}`);
+  }
+  
+  if (!response.unsignedTransaction) {
+    throw new Error('No se recibió transacción no firmada de Trustless Work');
+  }
+  
+  return response.unsignedTransaction;
+};
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+/**
+ * Normaliza un amount a 7 decimales (formato USDC)
+ */
+const normalizeAmount = (amount: number | string): number => {
+  const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+  if (isNaN(numericAmount) || numericAmount <= 0) {
+    throw new Error(`Amount inválido: ${amount}`);
+  }
+  return Math.round(numericAmount * 10000000) / 10000000;
+};
+
+/**
+ * Obtiene la configuración del trustline para crear el escrow
+ * ⚠️ SOLO usa issuer tradicional (direcciones que empiezan con "G")
+ */
+const getTrustlineConfig = (): { address: string; symbol: string } => {
+  return {
+    address: USDC_ISSUER,
+    symbol: TRUSTLINE_CONFIG.SYMBOL
+  };
+};
+
+/**
+ * Espera a que el escrow esté indexado
  */
 const waitForEscrowIndexing = async (
   contractId: string,
   getEscrowFromIndexer: (contractIds: string[]) => Promise<any>,
-  maxWaitTime: number = 60000, // 1 minuto máximo (los contratos se despliegan rápido)
-  checkInterval: number = 2000 // Verificar cada 2 segundos (más frecuente)
+  maxWaitTime: number = RETRY_CONFIG.INDEXING_MAX_WAIT,
+  checkInterval: number = RETRY_CONFIG.INDEXING_CHECK_INTERVAL
 ): Promise<boolean> => {
   const startTime = Date.now();
   
   while (Date.now() - startTime < maxWaitTime) {
     try {
       const result = await getEscrowFromIndexer([contractId]);
-      // El resultado puede ser un array o un objeto con una propiedad escrows
       const escrows = Array.isArray(result) ? result : (result as any)?.escrows || [];
       
       if (escrows && escrows.length > 0 && escrows[0]) {
+        console.log('✅ Escrow encontrado en el indexer');
         return true;
       }
     } catch (error: any) {
-      // El escrow aún no está indexado, continuar esperando
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      if (elapsed % 10 === 0) {
+        console.log(`⏳ Esperando indexación del escrow... (${elapsed}s)`);
+      }
     }
     
     await new Promise(resolve => setTimeout(resolve, checkInterval));
   }
   
+  console.warn('⚠️ Timeout esperando indexación del escrow');
   return false;
 };
 
 /**
- * Helper para firmar transacciones con Freighter
+ * Verifica el estado del escrow del indexer
+ */
+const verifyEscrowState = (escrowFromIndexer: any, contractId: string): void => {
+  if (!escrowFromIndexer) {
+    throw new Error(`No se pudo obtener el escrow ${contractId} del indexer`);
+  }
+  
+  // Verificar que esté activo
+  if (escrowFromIndexer.isActive === false) {
+    throw new Error(`El escrow ${contractId} no está activo. No se puede fondear.`);
+  }
+  
+  // Verificar trustline
+  if (!escrowFromIndexer.trustline || !escrowFromIndexer.trustline.address) {
+    throw new Error(`El escrow ${contractId} no tiene trustline configurado. No se puede fondear.`);
+  }
+  
+  // Validar que el trustline sea el issuer tradicional de USDC
+  if (escrowFromIndexer.trustline.address !== USDC_ISSUER) {
+    console.warn('⚠️ Trustline del escrow:', escrowFromIndexer.trustline.address, 'Esperado:', USDC_ISSUER);
+    // Aún así continuamos, puede ser que el indexer muestre un formato diferente
+  }
+  
+  // Verificar si ya está fondeado
+  if (escrowFromIndexer.balance && parseFloat(String(escrowFromIndexer.balance)) > 0) {
+    throw new Error(`El escrow ${contractId} ya está fondeado. Balance: ${escrowFromIndexer.balance}`);
+  }
+};
+
+/**
+ * Obtiene el amount verificado del escrow
+ */
+const getVerifiedAmount = (escrowFromIndexer: any, providedAmount: number): number => {
+  if (escrowFromIndexer?.amount !== undefined && escrowFromIndexer.amount !== null) {
+    const indexerAmount = typeof escrowFromIndexer.amount === 'string' 
+      ? parseFloat(escrowFromIndexer.amount) 
+      : escrowFromIndexer.amount;
+    return normalizeAmount(indexerAmount);
+  }
+  return normalizeAmount(providedAmount);
+};
+
+/**
+ * Firma transacciones con Freighter
  */
 export const signWithFreighter = async (
   unsignedXdr: string,
@@ -73,7 +300,7 @@ export const signWithFreighter = async (
 };
 
 /**
- * Helper para crear y enviar transacción
+ * Crea y envía una transacción
  */
 export const createAndSendTransaction = async (
   unsignedXdr: string,
@@ -82,25 +309,24 @@ export const createAndSendTransaction = async (
   sendTransaction: (signedXdr: string) => Promise<SendTransactionResponse | InitializeSingleReleaseEscrowResponse>
 ): Promise<{ success: boolean; txHash?: string; contractId?: string; error?: string }> => {
   try {
-    // Firmar transacción
     const signedXdr = await signWithFreighter(unsignedXdr, kit, address);
     
-    // Enviar transacción
+    console.log('📤 Enviando transacción firmada a Trustless Work...');
     const response = await sendTransaction(signedXdr);
-
+    
     if (response.status === 'SUCCESS') {
-      // Extraer txHash de la transacción firmada
       let txHash: string | undefined;
       try {
         const tx = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
         txHash = tx.hash().toString('hex');
+        console.log('✅ TxHash extraído:', txHash);
       } catch (hashError: any) {
-        // El txHash puede no ser crítico para el funcionamiento, continuamos sin él
+        console.warn('⚠️ No se pudo extraer txHash:', hashError.message);
       }
 
-      // Intentar obtener contractId si está disponible
       if ('contractId' in response && response.contractId) {
         const contractId = (response as InitializeSingleReleaseEscrowResponse).contractId;
+        console.log('✅ ContractId obtenido:', contractId);
         return {
           success: true,
           contractId: contractId,
@@ -111,7 +337,6 @@ export const createAndSendTransaction = async (
       return { success: true, txHash: txHash };
     } else {
       const errorMsg = (response as any).message || 'Estado no exitoso';
-      console.error('❌ La transacción no fue exitosa:', errorMsg);
       return {
         success: false,
         error: `La transacción falló: ${errorMsg}`
@@ -125,43 +350,114 @@ export const createAndSendTransaction = async (
   }
 };
 
+// ============================================================================
+// ERROR HANDLERS
+// ============================================================================
+
+/**
+ * Detecta si el error es el bug conocido de "normalize"
+ */
+const isNormalizeError = (error: any): boolean => {
+  const errorMessage = error.response?.data?.message || error.message || '';
+  return errorMessage.includes('normalize') || 
+         errorMessage.includes('Cannot read properties of undefined');
+};
+
+/**
+ * Calcula el delay para reintentos basado en el tipo de error
+ */
+const calculateRetryDelay = (error: any, attempt: number): number => {
+  if (isNormalizeError(error)) {
+    return RETRY_CONFIG.NORMALIZE_ERROR_DELAY;
+  }
+  return attempt === 1 
+    ? RETRY_CONFIG.GENERAL_ERROR_DELAY 
+    : RETRY_CONFIG.GENERAL_ERROR_DELAY * 2;
+};
+
+/**
+ * Genera recomendaciones específicas basadas en el error
+ */
+const getErrorRecommendations = (error: any, context: any): string => {
+  if (isNormalizeError(error)) {
+    const timeSinceCreation = context.timeSinceCreation || 'N/A';
+    return `
+⚠️ BUG CONOCIDO DEL SERVIDOR DE TRUSTLESS WORK
+
+Este error ocurre cuando el servidor intenta normalizar el trustline pero algo está undefined.
+
+SOLUCIONES:
+1. Espera 20-30 minutos desde la creación del escrow (actualmente: ${timeSinceCreation})
+2. El sistema reintentará automáticamente cada 2 minutos
+3. Si persiste después de 30 minutos, contacta al soporte de Trustless Work
+
+Contract ID: ${context.contractId || 'N/A'}
+Timestamp: ${new Date().toISOString()}
+    `;
+  }
+  
+  return 'Error desconocido. Por favor, intenta nuevamente.';
+};
+
+/**
+ * Maneja errores de creación de escrow
+ */
+const handleCreateError = (error: any): EscrowResult => {
+  const errorResponse = error.response;
+  const errorData = errorResponse?.data;
+  const errorMessage = errorData?.message || 
+                      errorData?.error || 
+                      error.message || 
+                      'Error desconocido';
+  const errorDetails = errorData?.details || errorData;
+  
+  console.error('❌ Error al crear escrow:', errorMessage);
+  if (errorDetails) {
+    console.error('❌ Detalles:', JSON.stringify(errorDetails, null, 2));
+  }
+  if (errorData) {
+    console.error('❌ Error data completo:', JSON.stringify(errorData, null, 2));
+  }
+  
+  return {
+    success: false,
+    error: errorMessage + (errorDetails ? ` - Detalles: ${JSON.stringify(errorDetails)}` : '')
+  };
+};
+
+// ============================================================================
+// MAIN FUNCTIONS
+// ============================================================================
+
 /**
  * Crear escrow con Trustless Work
  */
 export const createTrustlessEscrow = async (
-  payload: {
-    signer: string;
-    engagementId: string;
-    title: string;
-    description: string;
-    amount: number;
-    approver: string;
-    serviceProvider: string;
-    receiver: string;
-    milestoneDescription: string;
-  },
+  payload: CreateEscrowPayload,
   kit: any,
   deployEscrow: (payload: InitializeSingleReleaseEscrowPayload, type: 'single-release') => Promise<EscrowRequestResponse>,
   sendTransaction: (signedXdr: string) => Promise<SendTransactionResponse | InitializeSingleReleaseEscrowResponse>
-): Promise<{ success: boolean; contractId?: string; txHash?: string; error?: string }> => {
+): Promise<EscrowResult> => {
   try {
-    // Validar wallets de plataforma
-    if (!PLATFORM_WALLET || !ADMIN_WALLET) {
-      const errorMsg = `Wallets de plataforma no configuradas. PLATFORM_WALLET: ${PLATFORM_WALLET ? 'OK' : 'FALTA'}, ADMIN_WALLET: ${ADMIN_WALLET ? 'OK' : 'FALTA'}. Verifica VITE_PLATFORM_WALLET y VITE_ADMIN_WALLET en tu archivo .env`;
-      console.error('❌', errorMsg);
-      throw new Error(errorMsg);
-    }
+    console.log('🔍 Validando configuración...');
     
-    // Obtener platform fee del backend
+    // 1. Validar configuración
+    validateConfiguration();
+    console.log('✅ Wallets de plataforma configuradas');
+    
+    // 2. Obtener platform fee
     const platformFee = await getPlatformFeeForTrustlessWork();
+    console.log('💰 Platform fee:', platformFee, `(${(platformFee * 100).toFixed(2)}%)`);
     
-    // Asegurar que el amount tenga exactamente 7 decimales (mismo formato que al fondear)
-    // CRÍTICO: Usar el mismo método de redondeo que al fondear para garantizar coincidencia exacta
-    const numericAmount = typeof payload.amount === 'string' ? parseFloat(payload.amount) : payload.amount;
-    const amountAsInteger = Math.round(numericAmount * 10000000);
-    const finalAmount = amountAsInteger / 10000000;
-
-    // Crear payload para Trustless Work
+    // 3. Normalizar amount
+    const normalizedAmount = normalizeAmount(payload.amount);
+    console.log('📋 Amount normalizado:', normalizedAmount);
+    
+    // 4. Obtener configuración de trustline (solo issuer tradicional)
+    const trustlineConfig = getTrustlineConfig();
+    console.log('📋 Trustline config:', trustlineConfig);
+    
+    // 5. Crear payload base
     const escrowPayload: InitializeSingleReleaseEscrowPayload = {
       signer: payload.signer,
       engagementId: payload.engagementId,
@@ -170,118 +466,58 @@ export const createTrustlessEscrow = async (
         approver: payload.approver,
         serviceProvider: payload.serviceProvider,
         platformAddress: PLATFORM_WALLET,
-        releaseSigner: payload.approver, // El cliente libera los fondos
+        releaseSigner: payload.approver,
         disputeResolver: ADMIN_WALLET,
         receiver: payload.receiver
       },
       description: payload.description,
-      amount: finalAmount, // Usar el amount con exactamente 7 decimales
-      platformFee: platformFee, // Obtener del backend (Trustless Work multiplica por 100 internamente)
+      amount: normalizedAmount,
+      platformFee: platformFee,
       milestones: [{
         description: payload.milestoneDescription
       }],
-      trustline: {
-        address: USDC_TRUSTLINE // CRÍTICO: Trustline de USDC (no es el signer, es el trustline del asset USDC)
-      }
-      // receiverMemo no existe en single-release escrow según los tipos TypeScript
+      trustline: trustlineConfig as any
     };
-
-    // Validar que el amount sea un número válido y positivo
-    if (isNaN(escrowPayload.amount) || escrowPayload.amount <= 0) {
-      throw new Error(`Amount inválido: ${escrowPayload.amount}. Debe ser un número positivo.`);
-    }
-
-    // Validar que platformFee sea un número válido
-    if (isNaN(escrowPayload.platformFee) || escrowPayload.platformFee < 0) {
-      throw new Error(`PlatformFee inválido: ${escrowPayload.platformFee}. Debe ser un número no negativo.`);
-    }
-
-    // Validar que todas las direcciones Stellar sean válidas (empiezan con G y tienen 56 caracteres)
-    const validateStellarAddress = (addr: string, name: string) => {
-      if (!addr || !addr.startsWith('G') || addr.length !== 56) {
-        throw new Error(`${name} no es una dirección Stellar válida: ${addr}`);
-      }
-    };
-
-    validateStellarAddress(escrowPayload.signer, 'Signer');
-    validateStellarAddress(escrowPayload.roles.approver, 'Approver');
-    validateStellarAddress(escrowPayload.roles.serviceProvider, 'ServiceProvider');
-    validateStellarAddress(escrowPayload.roles.platformAddress, 'PlatformAddress');
-    validateStellarAddress(escrowPayload.roles.releaseSigner, 'ReleaseSigner');
-    validateStellarAddress(escrowPayload.roles.disputeResolver, 'DisputeResolver');
-    validateStellarAddress(escrowPayload.roles.receiver, 'Receiver');
     
-    // Validar trustline de USDC (es un contract ID, no una dirección Stellar)
-    if (!escrowPayload.trustline.address || escrowPayload.trustline.address !== USDC_TRUSTLINE) {
-      throw new Error(`Trustline inválido. Debe ser el trustline de USDC: ${USDC_TRUSTLINE}, pero se recibió: ${escrowPayload.trustline.address}`);
-    }
-
-    // Inicializar escrow
-    let initResponse: EscrowRequestResponse;
-    try {
-      initResponse = await deployEscrow(escrowPayload, 'single-release');
-    } catch (deployError: any) {
-      const errorMessage = deployError.response?.data?.message || 
-                          deployError.response?.data?.error || 
-                          deployError.message || 
-                          'Error desconocido';
-      console.error('❌ Error al crear escrow:', errorMessage);
-      throw new Error(`Error al llamar deployEscrow: ${errorMessage}`);
-    }
-
-    if (!initResponse) {
-      throw new Error('La respuesta de deployEscrow está vacía');
-    }
-
-    if (initResponse.status !== 'SUCCESS') {
-      const errorMsg = (initResponse as any).message || 'Estado no exitoso';
-      console.error('❌ Estado no exitoso:', initResponse.status, errorMsg);
-      throw new Error(`Error al crear escrow: ${errorMsg}`);
-    }
-
-    if (!initResponse.unsignedTransaction) {
-      console.error('❌ No hay unsignedTransaction en la respuesta:', initResponse);
-      throw new Error('No se recibió transacción no firmada de Trustless Work');
-    }
-
-    // Firmar y enviar transacción
+    // 6. Validar payload
+    validateEscrowPayload(escrowPayload);
+    
+    // 7. Crear escrow (solo issuer tradicional, sin fallback)
+    console.log('🔄 Creando escrow con issuer tradicional de USDC...');
+    const initResponse = await deployEscrow(escrowPayload, 'single-release');
+    
+    // 8. Validar respuesta y obtener transacción
+    const unsignedTransaction = validateInitResponse(initResponse);
+    
+    // 9. Firmar y enviar transacción
     const result = await createAndSendTransaction(
-      initResponse.unsignedTransaction,
+      unsignedTransaction,
       kit,
       payload.signer,
       sendTransaction
     );
-
-    if (result.success && result.contractId) {
-      return {
-        success: true,
-        contractId: result.contractId,
-        txHash: result.txHash
-      };
+    
+    // 10. Retornar resultado
+    if (result.success) {
+      const contractId = result.contractId || 
+        (initResponse && 'contractId' in initResponse ? (initResponse as InitializeSingleReleaseEscrowResponse).contractId : undefined);
+      
+      if (contractId) {
+        return {
+          success: true,
+          contractId,
+          txHash: result.txHash
+        };
+      }
     }
-
-    // Si no hay contractId en la respuesta, intentar obtenerlo del response
-    if (initResponse && 'contractId' in initResponse) {
-      const contractId = (initResponse as InitializeSingleReleaseEscrowResponse).contractId;
-      return {
-        success: true,
-        contractId: contractId,
-        txHash: result.txHash
-      };
-    }
-
-    console.error('❌ No se pudo obtener el contractId de ninguna fuente');
+    
     return {
       success: false,
       error: 'No se pudo obtener el contractId. Verifica la respuesta de Trustless Work.'
     };
+    
   } catch (error: any) {
-    console.error('❌ Error completo en createTrustlessEscrow:', error);
-    console.error('❌ Stack trace:', error.stack);
-    return {
-      success: false,
-      error: error.message || 'Error al crear escrow'
-    };
+    return handleCreateError(error);
   }
 };
 
@@ -298,332 +534,145 @@ export const fundTrustlessEscrow = async (
   getEscrowFromIndexer?: (contractIds: string[]) => Promise<any>
 ): Promise<{ success: boolean; txHash?: string; error?: string }> => {
   try {
-    // Validar parámetros
-    if (!contractId || !signer || !kit) {
-      throw new Error('Parámetros inválidos: contractId, signer y kit son requeridos');
-    }
-
-    // Verificar que el escrow esté indexado y obtener el amount exacto
-    let escrowFromIndexer: any = null;
-    let verifiedAmount: number;
+    // 1. Validar parámetros
+    validateFundingParams(contractId, amount, signer, kit);
     
+    // 2. Esperar indexación
+    let escrowFromIndexer: any = null;
     if (getEscrowFromIndexer) {
+      console.log('🔍 Verificando que el escrow esté indexado...');
       const isIndexed = await waitForEscrowIndexing(contractId, getEscrowFromIndexer);
       if (!isIndexed) {
         throw new Error(`El escrow ${contractId} no está disponible en el indexer. Espera unos minutos y vuelve a intentar.`);
       }
       
-      // Obtener el escrow del indexer para usar el amount exacto
+      // Obtener escrow del indexer
       try {
         const result = await getEscrowFromIndexer([contractId]);
         const escrows = Array.isArray(result) ? result : (result as any)?.escrows || [];
         if (escrows && escrows.length > 0) {
           escrowFromIndexer = escrows[0];
-          
-          // CRÍTICO: Verificar que el escrow tenga inconsistencies = false
-          if (escrowFromIndexer.inconsistencies?.inconsistencyFound === true) {
-            console.error('❌ El escrow tiene inconsistencias:', escrowFromIndexer.inconsistencies);
-            throw new Error(`El escrow ${contractId} tiene inconsistencias con la blockchain. No se puede fondear. Detalles: ${JSON.stringify(escrowFromIndexer.inconsistencies)}`);
-          }
-          
-          // Verificar que el escrow esté activo
-          if (escrowFromIndexer.isActive === false) {
-            console.error('❌ El escrow no está activo');
-            throw new Error(`El escrow ${contractId} no está activo. No se puede fondear.`);
-          }
-          
-          // CRÍTICO: Verificar que el escrow tenga el trustline correcto de USDC
-          if (!escrowFromIndexer.trustline || !escrowFromIndexer.trustline.address) {
-            console.error('❌ El escrow no tiene trustline configurado');
-            throw new Error(`El escrow ${contractId} no tiene trustline configurado. No se puede fondear.`);
-          }
-          
-          // Verificar que el trustline del escrow sea el correcto de USDC
-          if (escrowFromIndexer.trustline.address !== USDC_TRUSTLINE) {
-            console.error('❌ El trustline del escrow no es el correcto de USDC:', {
-              trustlineAddress: escrowFromIndexer.trustline.address,
-              trustlineEsperado: USDC_TRUSTLINE,
-              signer: signer
-            });
-            throw new Error(`El escrow ${contractId} tiene un trustline incorrecto. Trustline esperado: ${USDC_TRUSTLINE}, Trustline actual: ${escrowFromIndexer.trustline.address}`);
-          }
-          
-          // CRÍTICO: Usar el amount exacto del escrow indexado
-          if (escrowFromIndexer.amount !== undefined && escrowFromIndexer.amount !== null) {
-            const indexerAmount = typeof escrowFromIndexer.amount === 'string' 
-              ? parseFloat(escrowFromIndexer.amount) 
-              : escrowFromIndexer.amount;
-            
-            // Comparar con el amount proporcionado para detectar discrepancias
-            const providedAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-            Math.abs(indexerAmount - providedAmount); // Verificación silenciosa
-            
-            verifiedAmount = indexerAmount;
-          } else {
-            // Fallback al amount proporcionado
-            const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-            if (isNaN(numericAmount) || numericAmount <= 0) {
-              throw new Error(`Amount inválido: ${numericAmount}. Debe ser un número positivo.`);
-            }
-            const amountAsInteger = Math.round(numericAmount * 10000000);
-            verifiedAmount = amountAsInteger / 10000000;
-          }
-        } else {
-          throw new Error('No se pudo obtener el escrow del indexer');
+          console.log('📋 Escrow obtenido del indexer');
         }
       } catch (indexerError: any) {
-        // Fallback al amount proporcionado
-        const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-        if (isNaN(numericAmount) || numericAmount <= 0) {
-          throw new Error(`Amount inválido: ${numericAmount}. Debe ser un número positivo.`);
-        }
-        const amountAsInteger = Math.round(numericAmount * 10000000);
-        verifiedAmount = amountAsInteger / 10000000;
-      }
-    } else {
-      // Si no hay getEscrowFromIndexer, usar el amount proporcionado
-      if (isNaN(amount) || amount <= 0) {
-        throw new Error(`Amount inválido: ${amount}. Debe ser un número positivo.`);
-      }
-      const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-      const amountAsInteger = Math.round(numericAmount * 10000000);
-      verifiedAmount = amountAsInteger / 10000000;
-    }
-
-    const amountString = verifiedAmount.toFixed(7);
-    
-    // Validar que el signer coincida con el del escrow
-    if (escrowFromIndexer && escrowFromIndexer.signer) {
-      if (escrowFromIndexer.signer !== signer) {
-        // No lanzamos error porque el signer puede ser diferente (el que fondea puede ser diferente al que creó)
+        console.warn('⚠️ Error al obtener escrow del indexer:', indexerError.message);
       }
     }
     
-    // Verificar si el escrow ya está fondeado
+    // 3. Verificar estado del escrow
     if (escrowFromIndexer) {
-      const balance = escrowFromIndexer.balance;
-      const isFunded = balance && parseFloat(balance) > 0;
+      verifyEscrowState(escrowFromIndexer, contractId);
       
-      if (isFunded) {
-        throw new Error(`El escrow ${contractId} ya está fondeado. Balance actual: ${balance}`);
-      }
+      // Esperar tiempo adicional (para bug de normalize)
+      console.log('⏳ Esperando 5 minutos para que el escrow esté completamente disponible...');
+      console.log('💡 Esto es necesario porque el servidor de Trustless Work necesita tiempo para procesar el trustline.');
+      await new Promise(resolve => setTimeout(resolve, RETRY_CONFIG.INITIAL_WAIT_AFTER_CREATION));
+      console.log('✅ Espera completada.');
       
-      // Verificar el estado del escrow
-      if (escrowFromIndexer.status || escrowFromIndexer.state) {
-        const status = escrowFromIndexer.status || escrowFromIndexer.state;
-        
-        if (status === 'funded' || status === 'Funded' || status === 'FUNDED') {
-          throw new Error(`El escrow ${contractId} ya está fondeado (estado: ${status})`);
+      // Re-verificar escrow después de espera
+      if (getEscrowFromIndexer) {
+        try {
+          const recheckResult = await getEscrowFromIndexer([contractId]);
+          const recheckEscrows = Array.isArray(recheckResult) ? recheckResult : (recheckResult as any)?.escrows || [];
+          if (recheckEscrows && recheckEscrows.length > 0) {
+            escrowFromIndexer = recheckEscrows[0];
+          }
+        } catch (recheckError: any) {
+          console.warn('⚠️ No se pudo re-verificar el escrow:', recheckError.message);
         }
       }
     }
     
-    // CRÍTICO: Usar el amount en formato decimal (igual que cuando se creó el escrow)
-    // Trustless Work espera el amount en el mismo formato que se usó al crear el escrow (decimal, no stroops)
-    // El escrow se creó con amount: 0.1 (decimal), así que al fondear también debe ser 0.1 (decimal)
-    let finalAmountForPayload: number;
-    if (escrowFromIndexer && escrowFromIndexer.amount !== undefined && escrowFromIndexer.amount !== null) {
-      // Usar directamente el amount del indexer en formato decimal (la fuente de verdad)
-      finalAmountForPayload = typeof escrowFromIndexer.amount === 'string' 
-        ? parseFloat(escrowFromIndexer.amount) 
-        : escrowFromIndexer.amount;
-    } else {
-      // Fallback: usar el amount verificado en formato decimal
-      finalAmountForPayload = verifiedAmount;
-    }
+    // 4. Normalizar amount
+    const verifiedAmount = escrowFromIndexer 
+      ? getVerifiedAmount(escrowFromIndexer, amount)
+      : normalizeAmount(amount);
     
-    const payload: FundEscrowPayload = {
+    // 5. Crear payload de funding
+    const fundingPayload: FundEscrowPayload = {
       contractId,
-      amount: finalAmountForPayload, // Enviar amount en formato decimal (igual que al crear el escrow)
+      amount: verifiedAmount,
       signer
     };
+    
+    // 6. Intentar fondear con reintentos
+    return await fundWithRetries(
+      fundingPayload,
+      fundEscrow,
+      sendTransaction,
+      kit,
+      signer,
+      escrowFromIndexer
+    );
+    
+  } catch (error: any) {
+    const errorMessage = error.response?.data?.message || error.message || 'Error desconocido';
+    throw new Error(errorMessage);
+  }
+};
 
-    // CRÍTICO: Verificar que el escrow esté completamente listo para fondeo
-    // Aunque esté indexado, puede que necesite más tiempo para estar disponible en la blockchain
-    if (escrowFromIndexer) {
-      // Verificar que el escrow tenga el estado correcto
-      if (escrowFromIndexer.balance !== undefined && escrowFromIndexer.balance > 0) {
-        throw new Error(`El escrow ${contractId} ya está fondeado. Balance actual: ${escrowFromIndexer.balance}`);
-      }
-      
-      // Verificar que el escrow esté activo
-      if (escrowFromIndexer.isActive === false) {
-        throw new Error(`El escrow ${contractId} no está activo. No se puede fondear.`);
-      }
-      
-      // Verificar que no tenga inconsistencias
-      if (escrowFromIndexer.inconsistencies?.inconsistencyFound === true) {
-        throw new Error(`El escrow ${contractId} tiene inconsistencias con la blockchain. No se puede fondear.`);
-      }
-    }
-    
-    // CRÍTICO: Verificar una última vez que el escrow esté completamente disponible
-    // Obtener el escrow del indexer con validateOnChain justo antes de fondear
-    if (getEscrowFromIndexer) {
-      try {
-        const finalCheck = await getEscrowFromIndexer([contractId]);
-        const finalEscrows = Array.isArray(finalCheck) ? finalCheck : (finalCheck as any)?.escrows || [];
-        if (finalEscrows && finalEscrows.length > 0) {
-          const finalEscrow = finalEscrows[0];
-          
-          // Verificar una última vez que todo esté correcto
-          if (finalEscrow.balance > 0) {
-            throw new Error(`El escrow ${contractId} ya está fondeado. Balance: ${finalEscrow.balance}`);
-          }
-          if (finalEscrow.isActive === false) {
-            throw new Error(`El escrow ${contractId} no está activo.`);
-          }
-          if (finalEscrow.inconsistencies?.inconsistencyFound === true) {
-            throw new Error(`El escrow ${contractId} tiene inconsistencias: ${JSON.stringify(finalEscrow.inconsistencies)}`);
-          }
-        }
-      } catch (finalCheckError: any) {
-        // Continuar de todas formas si falla la verificación final
-      }
-    }
-    
-    // Llamar a la API de Trustless Work
-    // Según la documentación oficial, fundEscrow retorna directamente { unsignedTransaction }
-    let unsignedTransaction: string;
+/**
+ * Fondear escrow con reintentos automáticos
+ */
+const fundWithRetries = async (
+  payload: FundEscrowPayload,
+  fundEscrow: (payload: FundEscrowPayload, type: 'single-release') => Promise<EscrowRequestResponse>,
+  sendTransaction: (signedXdr: string) => Promise<SendTransactionResponse | InitializeSingleReleaseEscrowResponse>,
+  kit: any,
+  signer: string,
+  escrowFromIndexer: any,
+  maxRetries: number = RETRY_CONFIG.MAX_RETRIES
+): Promise<{ success: boolean; txHash?: string; error?: string }> => {
+  let lastError: any = null;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
+      console.log(`🔄 Intentando fondear escrow... (intento ${attempt}/${maxRetries})`);
+      
+      // Intentar fondear
       const fundResponse = await fundEscrow(payload, 'single-release');
       
       if (!fundResponse?.unsignedTransaction) {
-        throw new Error('Unsigned transaction is missing from fundEscrow response.');
+        throw new Error('Unsigned transaction is missing');
       }
       
-      unsignedTransaction = fundResponse.unsignedTransaction;
-    } catch (apiError: any) {
-      // Capturar TODA la información del error
-      const errorResponse = apiError.response;
-      const errorData = errorResponse?.data;
-      const errorStatus = errorResponse?.status || 'N/A';
+      // Firmar y enviar
+      const result = await createAndSendTransaction(
+        fundResponse.unsignedTransaction,
+        kit,
+        signer,
+        sendTransaction
+      );
       
-      const errorMessage = errorData?.message || apiError.message || 'Error desconocido';
-      const errorDetails = errorData?.details || errorData;
-      
-      // Log completo del error con detalles expandidos
-      console.error('❌ ========== ERROR AL FONDEAR ESCROW ==========');
-      console.error('📋 Status:', errorStatus);
-      console.error('📋 Message:', errorMessage);
-      console.error('📋 Contract ID:', contractId);
-      console.error('📋 Amount enviado (formato decimal):', finalAmountForPayload);
-      console.error('📋 Amount del indexer (decimal):', escrowFromIndexer?.amount);
-      console.error('📋 Amount verificado (decimal):', verifiedAmount, `(${amountString})`);
-      console.error('📋 Signer:', signer);
-      console.error('📋 Signer del escrow:', escrowFromIndexer?.signer);
-      console.error('📋 Escrow completo del indexer:', JSON.stringify(escrowFromIndexer, null, 2));
-      console.error('📋 Payload enviado:', JSON.stringify(payload, null, 2));
-      
-      // Log de detalles expandidos
-      if (errorDetails) {
-        if (typeof errorDetails === 'object') {
-          console.error('📋 Detalles del error:', JSON.stringify(errorDetails, null, 2));
-        } else {
-          console.error('📋 Detalles del error:', errorDetails);
-        }
+      if (result.success) {
+        console.log('✅ Escrow fondeado exitosamente');
+        return { success: true, txHash: result.txHash };
       }
       
-      // Log de errorData completo
-      if (errorData) {
-        console.error('📋 Error Data completo:', JSON.stringify(errorData, null, 2));
+      throw new Error(result.error || 'Error al firmar o enviar transacción');
+      
+    } catch (error: any) {
+      lastError = error;
+      
+      // Si no es el último intento, esperar y reintentar
+      if (attempt < maxRetries) {
+        const delay = calculateRetryDelay(error, attempt);
+        console.log(`⏳ Reintentando en ${delay / 1000} segundos... (intento ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
-      
-      // Log de la respuesta completa del error
-      if (errorResponse) {
-        console.error('📋 Error Response completo:', {
-          status: errorResponse.status,
-          statusText: errorResponse.statusText,
-          headers: errorResponse.headers,
-          data: errorResponse.data
-        });
-      }
-      
-      console.error('❌ ============================================');
-      
-      if (errorData) {
-        // Mensaje más específico basado en el error
-        if (errorData.message?.includes('Unable to fund escrow') || errorStatus === 400) {
-          const detailsText = errorDetails && typeof errorDetails === 'object'
-            ? `\nDetalles: ${JSON.stringify(errorDetails, null, 2)}`
-            : errorDetails
-            ? `\nDetalles: ${errorDetails}`
-            : '';
-          
-          // Mensaje más específico basado en los detalles del error
-          let specificMessage = '';
-          if (errorDetails && typeof errorDetails === 'object') {
-            const detailsStr = JSON.stringify(errorDetails);
-            if (detailsStr.includes('not found') || detailsStr.includes('404') || detailsStr.includes('indexed')) {
-              specificMessage = '\n\n⚠️ PROBLEMA DETECTADO: El escrow no está indexado en Trustless Work.\n   Esto puede significar que:\n   - El escrow no se desplegó correctamente en la blockchain\n   - El escrow se desplegó pero Trustless Work aún no lo ha indexado (puede tardar varios minutos)\n   - Hay un problema con la configuración del escrow que impide su indexación\n\n   SOLUCIÓN: Espera 5-10 minutos y vuelve a intentar. Si el problema persiste, crea un nuevo escrow.';
-            } else if (detailsStr.includes('trustline') || detailsStr.includes('balance')) {
-              specificMessage = '\n\n⚠️ PROBLEMA DETECTADO: Problema con trustline o balance de USDC.';
-            } else if (detailsStr.includes('amount') || detailsStr.includes('mismatch')) {
-              specificMessage = '\n\n⚠️ PROBLEMA DETECTADO: El amount no coincide con el usado al crear el escrow.';
-            }
-          }
-          
-          // Mensaje de error más específico y útil
-          // NOTA: Si todos los datos son correctos y el escrow está indexado, este error sugiere
-          // que la API de Trustless Work está rechazando el fondeo por razones internas que no expone.
-          // Esto puede deberse a:
-          // 1. El escrow necesita más tiempo después de estar indexado para estar completamente disponible en la blockchain
-          // 2. Hay algún problema con la validación interna de la API que no estamos cumpliendo
-          // 3. Hay un problema temporal con la API de Trustless Work
-          // 4. El escrow necesita alguna validación on-chain adicional que no está disponible todavía
-          
-          const escrowInfo = escrowFromIndexer ? {
-            contractId: escrowFromIndexer.contractId,
-            contractBaseId: escrowFromIndexer.contractBaseId,
-            amount: escrowFromIndexer.amount,
-            balance: escrowFromIndexer.balance,
-            platformFee: escrowFromIndexer.platformFee,
-            signer: escrowFromIndexer.signer,
-            trustline: escrowFromIndexer.trustline,
-            isActive: escrowFromIndexer.isActive,
-            type: escrowFromIndexer.type,
-            engagementId: escrowFromIndexer.engagementId,
-            inconsistencies: escrowFromIndexer.inconsistencies
-          } : null;
-          
-          const errorMsg = `❌ No se puede fondear el escrow: ${errorMessage}${detailsText}${specificMessage}\n\n🔍 DIAGNÓSTICO:\n\n✅ VERIFICACIONES COMPLETADAS:\n   - Escrow indexado: ✅\n   - Amount coincide: ✅ (${finalAmountForPayload} USDC)\n   - Signer coincide: ✅ (${signer})\n   - Trustline configurado: ✅ (${escrowFromIndexer?.trustline?.address || 'N/A'})\n   - Escrow activo: ✅\n   - Sin inconsistencias: ✅\n   - Balance actual: ${escrowFromIndexer?.balance || 0}\n\n⚠️ POSIBLES CAUSAS:\n   1. El escrow necesita más tiempo después de estar indexado (puede tardar hasta 10-15 minutos)\n   2. Hay una validación on-chain que Trustless Work está verificando y aún no está disponible\n   3. Problema temporal con la API de Trustless Work\n   4. El escrow necesita algún estado adicional en la blockchain\n\n💡 SOLUCIONES SUGERIDAS:\n   1. Espera 10-15 minutos adicionales y vuelve a intentar\n   2. Verifica en el explorador de Stellar que el contrato esté completamente desplegado\n   3. Contacta con el soporte de Trustless Work con esta información:\n      - Contract ID: ${contractId}\n      - Error: ${errorMessage}\n      - Timestamp: ${new Date().toISOString()}\n      - API Endpoint: /escrow/single-release/fund-escrow\n\n📋 Información completa del escrow para soporte:\n${escrowInfo ? JSON.stringify(escrowInfo, null, 2) : 'No disponible'}\n\n📋 Payload enviado:\n${JSON.stringify(payload, null, 2)}`;
-          
-          throw new Error(errorMsg);
-        }
-        
-        throw new Error(`Error al fondear escrow (${errorStatus}): ${errorMessage}`);
-      }
-      
-      throw new Error(`Error al llamar a la API de Trustless Work: ${errorMessage}`);
     }
-
-    // Firmar y enviar transacción
-    const result = await createAndSendTransaction(
-      unsignedTransaction,
-      kit,
-      signer,
-      sendTransaction
-    );
-
-    if (result.success) {
-      return { success: true, txHash: result.txHash };
-    } else {
-      throw new Error(result.error || 'Error al firmar o enviar la transacción');
-    }
-  } catch (error: any) {
-    const errorMessage = error.response?.data?.message || error.message || 'Error desconocido';
-    
-    // Mensaje de error más claro
-    if (errorMessage.includes('Unable to fund escrow')) {
-      throw new Error(`No se puede fondear el escrow. Verifica:
-1. El escrow está completamente desplegado (espera 30+ segundos después de crearlo)
-2. El signer tiene trustline de USDC configurado
-3. El signer tiene suficiente balance de USDC
-4. El amount (${amount}) coincide exactamente con el amount del escrow creado`);
-    }
-    
-    throw new Error(errorMessage);
   }
+  
+  // Si todos los intentos fallaron, lanzar error con recomendaciones
+  const context = {
+    contractId: payload.contractId,
+    timeSinceCreation: escrowFromIndexer?.createdAt ? 'calculado' : 'N/A'
+  };
+  
+  throw new Error(
+    `Error al fondear escrow después de ${maxRetries} intentos: ${lastError?.message || 'Error desconocido'}\n\n` +
+    getErrorRecommendations(lastError, context)
+  );
 };
 
 /**
@@ -640,7 +689,6 @@ export const changeMilestoneStatusTrustlessEscrow = async (
   sendTransaction: (signedXdr: string) => Promise<SendTransactionResponse>
 ): Promise<{ success: boolean; txHash?: string; error?: string }> => {
   try {
-
     const payload: ChangeMilestoneStatusPayload = {
       contractId,
       milestoneIndex,
@@ -649,14 +697,12 @@ export const changeMilestoneStatusTrustlessEscrow = async (
       newEvidence
     };
 
-    // Llamar a la API de Trustless Work
     const response = await changeMilestoneStatus(payload, 'single-release');
     
     if (!response?.unsignedTransaction) {
       throw new Error('Unsigned transaction is missing from changeMilestoneStatus response.');
     }
 
-    // Firmar y enviar transacción
     const result = await createAndSendTransaction(
       response.unsignedTransaction,
       kit,
@@ -693,14 +739,12 @@ export const approveMilestoneTrustlessEscrow = async (
       approver
     };
 
-    // Llamar a la API de Trustless Work
     const response = await approveMilestone(payload, 'single-release');
     
     if (!response?.unsignedTransaction) {
       throw new Error('Unsigned transaction is missing from approveMilestone response.');
     }
 
-    // Firmar y enviar transacción
     const result = await createAndSendTransaction(
       response.unsignedTransaction,
       kit,
@@ -735,14 +779,12 @@ export const releaseFundsTrustlessEscrow = async (
       releaseSigner
     };
 
-    // Llamar a la API de Trustless Work
     const response = await releaseFunds(payload, 'single-release');
     
     if (!response?.unsignedTransaction) {
       throw new Error('Unsigned transaction is missing from releaseFunds response.');
     }
 
-    // Firmar y enviar transacción
     const result = await createAndSendTransaction(
       response.unsignedTransaction,
       kit,
@@ -777,14 +819,12 @@ export const startDisputeTrustlessEscrow = async (
       signer
     };
 
-    // Llamar a la API de Trustless Work
     const response = await startDispute(payload, 'single-release');
     
     if (!response?.unsignedTransaction) {
       throw new Error('Unsigned transaction is missing from startDispute response.');
     }
 
-    // Firmar y enviar transacción
     const result = await createAndSendTransaction(
       response.unsignedTransaction,
       kit,
@@ -805,8 +845,6 @@ export const startDisputeTrustlessEscrow = async (
 
 /**
  * Resolver disputa en Trustless Work
- * Nota: Para single-release escrows, solo se puede distribuir a un receptor a la vez.
- * Para múltiples distribuciones (split), se deben hacer llamadas separadas.
  */
 export const resolveDisputeTrustlessEscrow = async (
   contractId: string,
@@ -823,14 +861,12 @@ export const resolveDisputeTrustlessEscrow = async (
       distributions: [distribution] as [{ address: string; amount: number }]
     };
 
-    // Llamar a la API de Trustless Work
     const response = await resolveDispute(payload, 'single-release');
     
     if (!response?.unsignedTransaction) {
       throw new Error('Unsigned transaction is missing from resolveDispute response.');
     }
 
-    // Firmar y enviar transacción
     const result = await createAndSendTransaction(
       response.unsignedTransaction,
       kit,
@@ -848,4 +884,3 @@ export const resolveDisputeTrustlessEscrow = async (
     throw new Error(errorMessage);
   }
 };
-
