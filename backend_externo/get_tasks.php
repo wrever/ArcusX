@@ -1,4 +1,10 @@
 <?php
+/**
+ * get_tasks.php
+ * 
+ * NOTA: El campo 'price' en la respuesta representa el monto que recibirá el trabajador (workerAmount).
+ * El frontend interpreta este valor como el pago exacto que recibirá el trabajador.
+ */
 // Deshabilitar display_errors para evitar output antes de headers
 ini_set('display_errors', 0);
 ini_set('display_startup_errors', 0);

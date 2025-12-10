@@ -50,13 +50,6 @@ function handleGetStats($conn, $user) {
     }
     $stats['total_escrows'] = (int)$result->fetch_assoc()['total'];
     
-    // Volumen total (suma de precios de tareas completadas)
-    $result = $conn->query("SELECT COALESCE(SUM(price), 0) as total FROM tasks WHERE status = 'completed'");
-    if ($result === false) {
-        throw new Exception("Error en consulta de volumen: " . $conn->error);
-    }
-    $stats['total_volume_usdc'] = (float)$result->fetch_assoc()['total'];
-    
     // Obtener platform fee configurado (por defecto 0.3% = 0.003)
     $platformFee = 0.003; // Valor por defecto
     try {
@@ -76,35 +69,65 @@ function handleGetStats($conn, $user) {
         $platformFee = 0.003;
     }
     
+    // Volumen total (suma de precios + comisiones de tareas completadas)
+    // En el nuevo modelo: el cliente paga price + commission, entonces volumen = SUM(price * (1 + platformFee))
+    $platformFeeEscaped = (float)$platformFee;
+    $result = $conn->query("SELECT COALESCE(SUM(price * (1 + " . $platformFeeEscaped . ")), 0) as total FROM tasks WHERE status = 'completed' AND escrow_status = 'completed'");
+    if ($result === false) {
+        throw new Exception("Error en consulta de volumen: " . $conn->error);
+    }
+    $stats['total_volume_usdc'] = (float)$result->fetch_assoc()['total'];
+    
     // Comisiones totales (usando el fee configurado del sistema)
-    $stats['total_commission_usdc'] = $stats['total_volume_usdc'] * $platformFee;
+    // Las comisiones son: SUM(price * platformFee)
+    $commissionResult = $conn->query("SELECT COALESCE(SUM(price * " . $platformFeeEscaped . "), 0) as total FROM tasks WHERE status = 'completed' AND escrow_status = 'completed'");
+    if ($commissionResult === false) {
+        throw new Exception("Error en consulta de comisiones: " . $conn->error);
+    }
+    $stats['total_commission_usdc'] = (float)$commissionResult->fetch_assoc()['total'];
     
     // ========== ESTADÍSTICAS POR PERÍODO ==========
     
     // Volumen de hoy (tareas completadas hoy)
+    // En el nuevo modelo: volumen = SUM(price * (1 + platformFee)) porque el cliente paga price + commission
     // Usar COALESCE para obtener la mejor fecha disponible: escrow_completed_at > completed_at > created_at
-    $result = $conn->query("SELECT COALESCE(SUM(price), 0) as total FROM tasks WHERE status = 'completed' AND DATE(COALESCE(escrow_completed_at, completed_at, created_at)) = CURDATE()");
+    $result = $conn->query("SELECT COALESCE(SUM(price * (1 + " . $platformFeeEscaped . ")), 0) as total FROM tasks WHERE status = 'completed' AND escrow_status = 'completed' AND DATE(COALESCE(escrow_completed_at, completed_at, created_at)) = CURDATE()");
     if ($result === false) {
         throw new Exception("Error en consulta de volumen hoy: " . $conn->error);
     }
     $stats['volume_today'] = (float)$result->fetch_assoc()['total'];
-    $stats['fees_today'] = $stats['volume_today'] * $platformFee;
+    // Fees de hoy: SUM(price * platformFee)
+    $feesResult = $conn->query("SELECT COALESCE(SUM(price * " . $platformFeeEscaped . "), 0) as total FROM tasks WHERE status = 'completed' AND escrow_status = 'completed' AND DATE(COALESCE(escrow_completed_at, completed_at, created_at)) = CURDATE()");
+    if ($feesResult === false) {
+        throw new Exception("Error en consulta de fees hoy: " . $conn->error);
+    }
+    $stats['fees_today'] = (float)$feesResult->fetch_assoc()['total'];
     
     // Volumen de esta semana (tareas completadas esta semana)
-    $result = $conn->query("SELECT COALESCE(SUM(price), 0) as total FROM tasks WHERE status = 'completed' AND YEARWEEK(COALESCE(escrow_completed_at, completed_at, created_at), 1) = YEARWEEK(CURDATE(), 1)");
+    $result = $conn->query("SELECT COALESCE(SUM(price * (1 + " . $platformFeeEscaped . ")), 0) as total FROM tasks WHERE status = 'completed' AND escrow_status = 'completed' AND YEARWEEK(COALESCE(escrow_completed_at, completed_at, created_at), 1) = YEARWEEK(CURDATE(), 1)");
     if ($result === false) {
         throw new Exception("Error en consulta de volumen esta semana: " . $conn->error);
     }
     $stats['volume_this_week'] = (float)$result->fetch_assoc()['total'];
-    $stats['fees_this_week'] = $stats['volume_this_week'] * $platformFee;
+    // Fees de esta semana: SUM(price * platformFee)
+    $feesResult = $conn->query("SELECT COALESCE(SUM(price * " . $platformFeeEscaped . "), 0) as total FROM tasks WHERE status = 'completed' AND escrow_status = 'completed' AND YEARWEEK(COALESCE(escrow_completed_at, completed_at, created_at), 1) = YEARWEEK(CURDATE(), 1)");
+    if ($feesResult === false) {
+        throw new Exception("Error en consulta de fees esta semana: " . $conn->error);
+    }
+    $stats['fees_this_week'] = (float)$feesResult->fetch_assoc()['total'];
     
     // Volumen de este mes (tareas completadas este mes)
-    $result = $conn->query("SELECT COALESCE(SUM(price), 0) as total FROM tasks WHERE status = 'completed' AND MONTH(COALESCE(escrow_completed_at, completed_at, created_at)) = MONTH(CURDATE()) AND YEAR(COALESCE(escrow_completed_at, completed_at, created_at)) = YEAR(CURDATE())");
+    $result = $conn->query("SELECT COALESCE(SUM(price * (1 + " . $platformFeeEscaped . ")), 0) as total FROM tasks WHERE status = 'completed' AND escrow_status = 'completed' AND MONTH(COALESCE(escrow_completed_at, completed_at, created_at)) = MONTH(CURDATE()) AND YEAR(COALESCE(escrow_completed_at, completed_at, created_at)) = YEAR(CURDATE())");
     if ($result === false) {
         throw new Exception("Error en consulta de volumen este mes: " . $conn->error);
     }
     $stats['volume_this_month'] = (float)$result->fetch_assoc()['total'];
-    $stats['fees_this_month'] = $stats['volume_this_month'] * $platformFee;
+    // Fees de este mes: SUM(price * platformFee)
+    $feesResult = $conn->query("SELECT COALESCE(SUM(price * " . $platformFeeEscaped . "), 0) as total FROM tasks WHERE status = 'completed' AND escrow_status = 'completed' AND MONTH(COALESCE(escrow_completed_at, completed_at, created_at)) = MONTH(CURDATE()) AND YEAR(COALESCE(escrow_completed_at, completed_at, created_at)) = YEAR(CURDATE())");
+    if ($feesResult === false) {
+        throw new Exception("Error en consulta de fees este mes: " . $conn->error);
+    }
+    $stats['fees_this_month'] = (float)$feesResult->fetch_assoc()['total'];
     
     // Transacciones pendientes
     $result = $conn->query("SELECT COUNT(*) as total FROM tasks WHERE pending_transaction_xdr IS NOT NULL");

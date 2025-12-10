@@ -23,7 +23,7 @@ import {
   startDisputeTrustlessEscrow
 } from '../services/trustlessWorkEscrowService';
 // ============================================
-import { calculateNetAmountSync } from '../config/commission';
+import { calculateCommissionFromWorkerAmount } from '../config/commission';
 import { usePlatformFee } from '../hooks/usePlatformFee';
 import { useScheduledTaskDeletion } from '../hooks/useScheduledTaskDeletion';
 import FileExchange from './FileExchange';
@@ -609,8 +609,9 @@ const SuperviseTask = () => {
                 attempts++;
             }
 
-            // Calcular monto neto para el trabajador
-            const netAmount = calculateNetAmountSync(parseFloat(task.price), platformFee);
+            // El price ya es el monto que recibirá el trabajador (workerAmount)
+            const workerAmount = parseFloat(task.price);
+            const commission = calculateCommissionFromWorkerAmount(workerAmount, platformFee);
 
             // Paso 3: Actualizar BD y programar eliminación después de 24 horas
             const response = await axios.post(`${API_URL}/auth/complete_task.php`, {
@@ -629,10 +630,12 @@ const SuperviseTask = () => {
             }
 
             // Mostrar popup para CLIENTE (quien paga)
+            // amount es el total pagado (workerAmount + commission), netAmount es lo que recibirá el trabajador
+            const totalPaid = workerAmount + commission;
             setPaymentSuccessData({
-                amount: task.price,
+                amount: totalPaid.toFixed(7),
                 txHash: releaseResult.txHash || 'N/A',
-                netAmount: netAmount.toFixed(7)
+                netAmount: workerAmount.toFixed(7) // Lo que recibirá el trabajador
             });
             setShowClientPaymentPopup(true);
 
@@ -1122,7 +1125,7 @@ const SuperviseTask = () => {
             <div className="task-details-section">
                 <h2>Detalles de la Tarea</h2>
                 <p><span className="detail-label">Descripción:</span> {task.description}</p>
-                <p><span className="detail-label">Recompensa:</span> {calculateNetAmountSync(parseFloat(task.price), platformFee).toFixed(7)} {task.currency}</p>
+                <p><span className="detail-label">Recompensa:</span> {parseFloat(task.price).toFixed(2)} {task.currency}</p>
                 <p><span className="detail-label">Categoría:</span> {task.category}</p>
                 <p><span className="detail-label">Dificultad:</span> {task.difficulty}</p>
             </div>
@@ -1926,10 +1929,13 @@ const SuperviseTask = () => {
                                 textAlign: 'left'
                             }}>
                                 <p style={{ margin: '8px 0', fontSize: '16px' }}>
-                                    <strong>💰 Monto pagado:</strong> {paymentSuccessData.amount} USDC
+                                    <strong>💰 Total pagado:</strong> {paymentSuccessData.amount} USDC
                                 </p>
                                 <p style={{ margin: '8px 0', fontSize: '14px', color: '#666' }}>
-                                    <strong>💵 Trabajador recibirá:</strong> {paymentSuccessData.netAmount} USDC (neto)
+                                    <strong>💵 Trabajador recibirá:</strong> {paymentSuccessData.netAmount} USDC
+                                </p>
+                                <p style={{ margin: '8px 0', fontSize: '14px', color: '#666' }}>
+                                    <strong>📊 Comisión de plataforma:</strong> {(parseFloat(paymentSuccessData.amount) - parseFloat(paymentSuccessData.netAmount || '0')).toFixed(7)} USDC
                                 </p>
                                 <p style={{ margin: '8px 0', fontSize: '14px', color: '#666' }}>
                                     <strong>🔗 Hash de transacción:</strong>

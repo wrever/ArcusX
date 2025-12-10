@@ -182,18 +182,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             throw new Exception('Error al ejecutar consulta: ' . $conn->error);
         }
         
-        $transactions = [];
-        while ($row = $result->fetch_assoc()) {
-            $price = (float)$row['price'];
-            
-            // Calcular monto neto según el tipo de transacción
-            if ($row['transaction_type'] === 'received') {
-                // Trabajador recibe: precio - comisión
-                $netAmount = $price * (1 - $platformFee);
-            } else {
-                // Cliente paga: precio completo
-                $netAmount = $price;
-            }
+            $transactions = [];
+            while ($row = $result->fetch_assoc()) {
+                $price = (float)$row['price']; // price ahora es workerAmount
+                
+                // Calcular monto según el tipo de transacción (nuevo modelo)
+                if ($row['transaction_type'] === 'received') {
+                    // Trabajador recibe: price (ya es el monto exacto que recibirá)
+                    $netAmount = $price;
+                } else {
+                    // Cliente paga: price + comisión (total que pagó)
+                    $netAmount = $price * (1 + $platformFee);
+                }
             
             $transactions[] = [
                 'id' => $row['task_id'],
