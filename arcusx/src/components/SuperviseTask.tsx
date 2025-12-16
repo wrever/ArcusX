@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios'; // Importar axios
 import { API_URL } from '../config/database'; // Asegúrate de que la ruta a tu config.js es correcta
 import '../css/SuperviseTask.css';
@@ -9,7 +9,6 @@ import { useWallet } from '../hooks/useWallet';
 // SISTEMA TRUSTLESS WORK - ÚNICO SISTEMA
 // ============================================
 import { 
-  useChangeMilestoneStatus,
   useApproveMilestone,
   useReleaseFunds,
   useSendTransaction,
@@ -17,13 +16,11 @@ import {
   useStartDispute
 } from '@trustless-work/escrow/hooks';
 import {
-  changeMilestoneStatusTrustlessEscrow,
   approveMilestoneTrustlessEscrow,
   releaseFundsTrustlessEscrow,
   startDisputeTrustlessEscrow
 } from '../services/trustlessWorkEscrowService';
 // ============================================
-import { calculateCommissionFromWorkerAmount } from '../config/commission';
 import { usePlatformFee } from '../hooks/usePlatformFee';
 import { useScheduledTaskDeletion } from '../hooks/useScheduledTaskDeletion';
 import FileExchange from './FileExchange';
@@ -132,7 +129,6 @@ const SuperviseTask = () => {
     const { address, isConnected, kit } = useWallet();
 
     // Hooks de Trustless Work
-    const { changeMilestoneStatus } = useChangeMilestoneStatus();
     const { approveMilestone } = useApproveMilestone();
     const { releaseFunds } = useReleaseFunds();
     const { sendTransaction } = useSendTransaction();
@@ -159,11 +155,14 @@ const SuperviseTask = () => {
         hasPending: boolean;
         signedBy?: string;
         waitingFor?: string;
+        escrowCompleted?: boolean; // Indica si el escrow está completado/liberado en Trustless Work
     } | null>(null);
     
     // Estados para disputa
     const [showDisputeModal, setShowDisputeModal] = useState(false);
     const [disputeReason, setDisputeReason] = useState('');
+    const [showDisputeSuccessPopup, setShowDisputeSuccessPopup] = useState(false);
+    const [disputeTxHash, setDisputeTxHash] = useState<string | null>(null);
     
     // Estados para popup de confirmación
     const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -317,6 +316,32 @@ const SuperviseTask = () => {
         }
     }, [task, worker, currentUser, taskId]); // Depende de que task, worker y currentUser estén cargados, y taskId (aunque taskId no cambiará)
 
+    // Mostrar popup de éxito automáticamente si el cliente ya aceptó el trabajo
+    useEffect(() => {
+        if (task && currentUser && task.client_accepted_completion === 1) {
+            // Verificar si es el cliente (creador de la tarea)
+            const isClientUser = String(currentUser.id) === String(task.user_id);
+            
+            if (isClientUser && !showClientPaymentPopup && !paymentSuccessData) {
+                // Calcular los montos usando la fórmula correcta
+                const workerAmount = parseFloat(task.price);
+                const escrowAmount = workerAmount / (1 - platformFee);
+                
+                // Mostrar popup automáticamente
+                setPaymentSuccessData({
+                    amount: escrowAmount.toFixed(7),
+                    txHash: task.escrow_completed_at ? 'Completado anteriormente' : 'N/A',
+                    netAmount: workerAmount.toFixed(7)
+                });
+                
+                // Mostrar popup después de un pequeño delay para asegurar que el estado se actualice
+                setTimeout(() => {
+                    setShowClientPaymentPopup(true);
+                }, 300);
+            }
+        }
+    }, [task, currentUser, showClientPaymentPopup, paymentSuccessData, platformFee]);
+
     // Scroll al último mensaje solo cuando hay mensajes nuevos
     useEffect(() => {
         if (messages.length > 0) {
@@ -327,103 +352,125 @@ const SuperviseTask = () => {
         }
     }, [messages.length]); // Solo cuando cambia la cantidad de mensajes
 
-    // Verificar si el cliente ha firmado (para habilitar botón del trabajador)
-    // Esto se verifica incluso antes de que ambos acepten
+    // Verificar estado del escrow en Trustless Work (reemplaza verificación de transacciones pendientes del sistema antiguo)
     useEffect(() => {
-        const checkClientSignature = async () => {
+        const checkEscrowStatus = async () => {
             if (!task || !taskId || !task.escrow_id) return;
+            
+            // Si la tarea ya está completada, no necesitamos verificar
+            if (task.status === 'completed' && task.escrow_status === 'completed') {
+                setPendingTransaction({ hasPending: false, escrowCompleted: true });
+                return;
+            }
+
             // Verificar si el cliente ya aceptó (client_accepted_completion === 1)
             if (task.client_accepted_completion !== 1) return;
 
             try {
-                const token = localStorage.getItem('token');
-                if (!token) return;
-
-                const response = await axios.get(`${API_URL}/auth/get_pending_transaction.php?task_id=${taskId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                // Verificar estado del escrow desde Trustless Work
+                const escrowResult = await getEscrowByContractIds({ 
+                    contractIds: [task.escrow_id],
+                    validateOnChain: true 
                 });
-
-                // Si hay una transacción firmada por el cliente, actualizar estado
-                if (response.data?.success && 
-                    response.data.signed_tx_xdr && 
-                    !response.data.complete_tx_xdr &&
-                    response.data.signed_by === 'client') {
-                    setPendingTransaction({
-                        hasPending: true,
-                        signedBy: 'client',
-                        waitingFor: 'worker'
-                    });
-                } else if (response.data?.success && response.data.complete_tx_xdr) {
-                    // Transacción completamente firmada
-                    setPendingTransaction({
-                        hasPending: true,
-                        signedBy: 'both',
-                        waitingFor: undefined
-                    });
+                
+                const escrows = Array.isArray(escrowResult) ? escrowResult : (escrowResult as any)?.escrows || [];
+                
+                if (escrows && escrows.length > 0) {
+                    const escrow = escrows[0];
+                    const balance = parseFloat(escrow.balance || '0');
+                    const isReleased = balance === 0 || escrow.status === 'released' || escrow.status === 'completed';
+                    
+                    if (isReleased) {
+                        // Escrow completado - fondos liberados
+                        setPendingTransaction({ 
+                            hasPending: false, 
+                            escrowCompleted: true 
+                        });
+                    } else {
+                        // Escrow activo pero no liberado aún
+                        setPendingTransaction({ 
+                            hasPending: true,
+                            signedBy: 'client',
+                            waitingFor: 'worker',
+                            escrowCompleted: false
+                        });
+                    }
                 } else {
                     setPendingTransaction({ hasPending: false });
                 }
-            } catch (error) {
-                // Si no hay transacción pendiente, está bien
+            } catch (error: any) {
+                // Si hay error, verificar si es porque el endpoint está deprecado (410)
+                if (error.response?.status === 410) {
+                    // El endpoint está deprecado, usar Trustless Work directamente
+                    console.log('ℹ️ Sistema antiguo deprecado, usando Trustless Work para verificar estado');
+                }
+                // Si no hay escrow o hay error, asumir que no hay transacción pendiente
                 setPendingTransaction({ hasPending: false });
             }
         };
 
-        checkClientSignature();
-        // Verificar cada 10 segundos si el cliente firmó
-        const interval = setInterval(checkClientSignature, 10000);
+        checkEscrowStatus();
+        // Verificar cada 2 segundos el estado del escrow (los contratos están listos rápidamente)
+        const interval = setInterval(checkEscrowStatus, 2000);
         return () => clearInterval(interval);
-    }, [task, taskId]);
+    }, [task, taskId, getEscrowByContractIds]);
 
-    // Verificar si hay transacción pendiente cuando ambos aceptaron
+    // Verificar estado del escrow cuando ambos aceptaron (Trustless Work)
     useEffect(() => {
-        const checkPendingTransaction = async () => {
+        const checkEscrowStatusWhenBothAccepted = async () => {
             if (!task || !taskId || !currentUser) return;
-            // Cambiar condición: verificar si ambos aceptaron, no solo si status es 'completed'
+            // Verificar si ambos aceptaron
             if (task.client_accepted_completion !== 1 || task.worker_accepted_completion !== 1) return;
             if (!task.escrow_id) return;
 
             try {
-                const token = localStorage.getItem('token');
-                if (!token) return;
-
-                const response = await axios.get(`${API_URL}/auth/get_pending_transaction.php?task_id=${taskId}`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                // Verificar estado del escrow desde Trustless Work
+                const escrowResult = await getEscrowByContractIds({ 
+                    contractIds: [task.escrow_id],
+                    validateOnChain: true 
                 });
-
-                // Verificar si la transacción está completamente firmada (signer_role = 'both')
-                if (response.data?.success && response.data.complete_tx_xdr) {
-                    setPendingTransaction({
-                        hasPending: true,
-                        signedBy: 'both', // Indica que ambas firmas están completas
-                        waitingFor: undefined
-                    });
-                } else if (response.data?.success && response.data.signed_tx_xdr && !response.data.complete_tx_xdr) {
-                    // Transacción parcialmente firmada
-                    const signedBy = response.data.signed_by;
-                    const needsSignatureFrom = response.data.needs_signature_from;
+                
+                const escrows = Array.isArray(escrowResult) ? escrowResult : (escrowResult as any)?.escrows || [];
+                
+                if (escrows && escrows.length > 0) {
+                    const escrow = escrows[0];
+                    const balance = parseFloat(escrow.balance || '0');
+                    const isReleased = balance === 0 || escrow.status === 'released' || escrow.status === 'completed';
                     
-                    setPendingTransaction({
-                        hasPending: true,
-                        signedBy: signedBy,
-                        waitingFor: needsSignatureFrom
-                    });
-                } else if (response.data?.has_pending === false) {
-                    setPendingTransaction({ hasPending: false });
+                    if (isReleased) {
+                        // Escrow completado - fondos liberados
+                        setPendingTransaction({ 
+                            hasPending: false, 
+                            escrowCompleted: true 
+                        });
+                    } else {
+                        // Escrow activo pero no liberado aún
+                        setPendingTransaction({ 
+                            hasPending: true,
+                            signedBy: 'both',
+                            waitingFor: undefined,
+                            escrowCompleted: false
+                        });
+                    }
                 } else {
                     setPendingTransaction({ hasPending: false });
                 }
-            } catch (error) {
-                // Si no hay transacción pendiente, está bien
+            } catch (error: any) {
+                // Si hay error, verificar si es porque el endpoint está deprecado (410)
+                if (error.response?.status === 410) {
+                    // El endpoint está deprecado, usar Trustless Work directamente
+                    console.log('ℹ️ Sistema antiguo deprecado, usando Trustless Work para verificar estado');
+                }
+                // Si no hay escrow o hay error, asumir que no hay transacción pendiente
                 setPendingTransaction({ hasPending: false });
             }
         };
 
-        checkPendingTransaction();
-        // Verificar cada 10 segundos si hay transacción pendiente
-        const interval = setInterval(checkPendingTransaction, 10000);
+        checkEscrowStatusWhenBothAccepted();
+        // Verificar cada 2 segundos el estado del escrow (los contratos están listos rápidamente)
+        const interval = setInterval(checkEscrowStatusWhenBothAccepted, 2000);
         return () => clearInterval(interval);
-    }, [task, taskId, currentUser, isConnected]);
+    }, [task, taskId, currentUser, isConnected, getEscrowByContractIds]);
 
 
 
@@ -553,31 +600,158 @@ const SuperviseTask = () => {
                 throw new Error('No hay escrow configurado para esta tarea');
             }
 
-            // Paso 1: Aprobar milestone
-            const approveResult = await approveMilestoneTrustlessEscrow(
-                task.escrow_id,
-                '0', // Solo un milestone
-                address, // approver (cliente)
-                kit,
-                approveMilestone,
-                sendTransaction
-            );
-
-            if (!approveResult.success) {
-                throw new Error(approveResult.error || 'Error al aprobar milestone');
+            // OPTIMIZACIÓN: Intentar liberar directamente primero (solo 1 firma si el milestone ya está aprobado)
+            // Si falla porque el milestone no está aprobado, entonces aprobar y liberar (2 firmas)
+            console.log('🚀 Intentando liberar fondos directamente (optimización: solo 1 firma si el milestone ya está aprobado)...');
+            
+            let releaseResult;
+            let needsApproval = false;
+            
+            try {
+                // Intentar liberar directamente primero
+                releaseResult = await releaseFundsTrustlessEscrow(
+                    task.escrow_id,
+                    address, // releaseSigner (cliente)
+                    kit,
+                    releaseFunds,
+                    sendTransaction
+                );
+                
+                if (releaseResult.success) {
+                    console.log('✅ ¡Fondos liberados exitosamente con solo 1 firma! El milestone ya estaba aprobado.');
+                }
+            } catch (releaseError: any) {
+                const errorMessage = releaseError.message || '';
+                
+                // Si el error es que los fondos ya fueron liberados, tratarlo como éxito
+                if (errorMessage.includes('escrow funds have been released') || 
+                    errorMessage.includes('funds have been released') ||
+                    errorMessage.includes('already released')) {
+                    console.log('✅ Los fondos ya fueron liberados anteriormente. Continuando con el proceso...');
+                    releaseResult = { 
+                        success: true, 
+                        alreadyReleased: true,
+                        txHash: undefined 
+                    };
+                } 
+                // Si el error es que el milestone no está aprobado o el escrow debe estar completado, entonces aprobar primero
+                else if (errorMessage.includes('not approved') || 
+                         errorMessage.includes('milestone must be approved') ||
+                         errorMessage.includes('cannot release') ||
+                         errorMessage.includes('approve') ||
+                         errorMessage.includes('must be completed') ||
+                         errorMessage.includes('escrow must be completed') ||
+                         errorMessage.toLowerCase().includes('completed to release')) {
+                    console.log('⚠️ El milestone no está aprobado. Aprobando primero y luego liberando (2 firmas necesarias)...');
+                    console.log('📋 Error detectado:', errorMessage);
+                    needsApproval = true;
+                } else {
+                    // Otro error, lanzarlo
+                    throw releaseError;
+                }
             }
+            
+            // Si necesitamos aprobar el milestone primero
+            if (needsApproval || !releaseResult) {
+                console.log('📝 Aprobando milestone primero...');
+                
+                // Crear wrapper para compatibilidad con approveMilestoneTrustlessEscrow
+                const indexerWrapper = async (contractIds: string[]) => {
+                    const result = await getEscrowByContractIds({ contractIds, validateOnChain: true });
+                    return result;
+                };
+                
+                // Aprobar milestone
+                const approveResult = await approveMilestoneTrustlessEscrow(
+                    task.escrow_id,
+                    '0', // Solo un milestone
+                    address, // approver (cliente)
+                    kit,
+                    approveMilestone,
+                    sendTransaction,
+                    indexerWrapper
+                );
 
-            // Paso 2: Liberar fondos automáticamente después de aprobar
-            const releaseResult = await releaseFundsTrustlessEscrow(
-                task.escrow_id,
-                address, // releaseSigner (cliente)
-                kit,
-                releaseFunds,
-                sendTransaction
-            );
+                if (!approveResult.success) {
+                    throw new Error(approveResult.error || 'Error al aprobar milestone');
+                }
+
+                // Si el milestone ya estaba aprobado (caso edge), mostrar mensaje informativo
+                if (approveResult.alreadyApproved) {
+                    console.log('ℹ️ El milestone ya estaba aprobado. Continuando con la liberación de fondos...');
+                } else {
+                    console.log('✅ Milestone aprobado. Ahora liberando fondos...');
+                }
+
+                // Ahora liberar fondos (2da firma)
+                releaseResult = await releaseFundsTrustlessEscrow(
+                    task.escrow_id,
+                    address, // releaseSigner (cliente)
+                    kit,
+                    releaseFunds,
+                    sendTransaction
+                );
+            }
 
             if (!releaseResult.success) {
                 throw new Error(releaseResult.error || 'Error al liberar fondos');
+            }
+
+            // Si los fondos ya fueron liberados, marcar como completado directamente
+            if (releaseResult.alreadyReleased) {
+                console.log('ℹ️ Los fondos ya fueron liberados. Marcando tarea como completada en BD...');
+                
+                // El price ya es el monto que recibirá el trabajador (workerAmount)
+                const workerAmount = parseFloat(task.price);
+                // Usar la fórmula correcta: escrowAmount = workerAmount / (1 - platformFee)
+                const escrowAmount = workerAmount / (1 - platformFee);
+
+                // Actualizar BD directamente como completado
+                const response = await axios.post(`${API_URL}/auth/complete_task.php`, {
+                    task_id: parseInt(taskId!, 10),
+                    action: 'accept',
+                    escrow_completed: true, // Ya está completado
+                    tx_hash: null // No hay txHash porque ya fue liberado antes
+                }, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.data.success) {
+                    throw new Error(response.data.message || 'Error al actualizar estado en BD');
+                }
+
+                // Mostrar popup para CLIENTE
+                setPaymentSuccessData({
+                    amount: escrowAmount.toFixed(7),
+                    txHash: 'N/A (ya liberado anteriormente)',
+                    netAmount: workerAmount.toFixed(7)
+                });
+                setShowClientPaymentPopup(true);
+
+                // Si el trabajador está viendo la página, mostrar popup para él también después de un delay
+                if (isWorker) {
+                    setTimeout(() => {
+                        setShowPaymentSuccessPopup(true);
+                    }, 2000);
+                }
+                
+                // Verificar si se debe mostrar el modal de rating después de 3 segundos
+                setTimeout(() => {
+                    checkAndShowRatingModal();
+                }, 3000);
+
+                // Actualizar estado local
+                setTask(prev => prev ? {
+                    ...prev,
+                    status: 'completed',
+                    client_accepted_completion: 1,
+                    worker_accepted_completion: 1
+                } : null);
+
+                setAcceptingWork(false);
+                return;
             }
 
             // Paso 2.5: Verificar que el escrow esté completado (balance = 0)
@@ -588,7 +762,7 @@ const SuperviseTask = () => {
             
             while (!escrowCompleted && attempts < maxAttempts) {
                 try {
-                    await new Promise(resolve => setTimeout(resolve, 5000)); // Esperar 5 segundos
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // Esperar 1 segundo (los contratos están listos rápidamente)
                     const escrowResult = await getEscrowByContractIds({ 
                         contractIds: [task.escrow_id],
                         validateOnChain: true 
@@ -611,7 +785,8 @@ const SuperviseTask = () => {
 
             // El price ya es el monto que recibirá el trabajador (workerAmount)
             const workerAmount = parseFloat(task.price);
-            const commission = calculateCommissionFromWorkerAmount(workerAmount, platformFee);
+            // Usar la fórmula correcta: escrowAmount = workerAmount / (1 - platformFee)
+            const escrowAmount = workerAmount / (1 - platformFee);
 
             // Paso 3: Actualizar BD y programar eliminación después de 24 horas
             const response = await axios.post(`${API_URL}/auth/complete_task.php`, {
@@ -630,10 +805,9 @@ const SuperviseTask = () => {
             }
 
             // Mostrar popup para CLIENTE (quien paga)
-            // amount es el total pagado (workerAmount + commission), netAmount es lo que recibirá el trabajador
-            const totalPaid = workerAmount + commission;
+            // amount es el total pagado (escrowAmount), netAmount es lo que recibirá el trabajador
             setPaymentSuccessData({
-                amount: totalPaid.toFixed(7),
+                amount: escrowAmount.toFixed(7),
                 txHash: releaseResult.txHash || 'N/A',
                 netAmount: workerAmount.toFixed(7) // Lo que recibirá el trabajador
             });
@@ -811,52 +985,72 @@ const SuperviseTask = () => {
                 return;
             }
 
-            // FLUJO TRUSTLESS WORK: Cambiar estado del milestone a "completed"
-            if (!task || !task.escrow_id || !address || !kit) {
-                throw new Error('Faltan datos necesarios para completar la tarea');
-            }
+            // Determinar si es trabajador o cliente
+            const isClient = String(currentUser?.id) === String(task?.user_id);
+            const isWorker = String(currentUser?.id) === String(worker?.id);
 
-            const result = await changeMilestoneStatusTrustlessEscrow(
-                task.escrow_id,
-                '0', // Solo un milestone
-                address, // serviceProvider (trabajador)
-                'completed',
-                'Tarea completada', // newEvidence
-                kit,
-                changeMilestoneStatus,
-                sendTransaction
-            );
-
-            if (!result.success) {
-                throw new Error(result.error || 'Error al cambiar estado del milestone');
-            }
-
-            // Actualizar BD
-            const response = await axios.post(`${API_URL}/auth/complete_task.php`, 
-                {
-                    task_id: parseInt(taskId, 10),
-                    action: 'accept'
-                },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
+            // SOLO EL TRABAJADOR puede notificar al cliente (sin cambiar milestone)
+            // SOLO EL CLIENTE puede aprobar el milestone y liberar fondos
+            if (isWorker) {
+                // TRABAJADOR: Solo notificar al cliente (actualizar BD)
+                // NO cambiar el estado del milestone - eso solo lo hace el cliente
+                const response = await axios.post(`${API_URL}/auth/complete_task.php`, 
+                    {
+                        task_id: parseInt(taskId, 10),
+                        action: 'accept'
+                    },
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
                     }
+                );
+
+                if (!response.data.success) {
+                    throw new Error(response.data.message || 'Error al actualizar estado en BD');
                 }
-            );
 
-            if (!response.data.success) {
-                throw new Error(response.data.message || 'Error al actualizar estado en BD');
+                // Actualizar estado local
+                setTask(prevTask => {
+                    if (!prevTask) return null;
+                    return { 
+                        ...prevTask, 
+                        status: response.data.status || prevTask.status,
+                        worker_accepted_completion: 1
+                    };
+                });
+            } else if (isClient) {
+                // CLIENTE: Puede aprobar el milestone y liberar fondos
+                // Esto se maneja en otro lugar (handleApproveMilestone, handleReleaseFunds)
+                // Por ahora, solo actualizar BD si es necesario
+                const response = await axios.post(`${API_URL}/auth/complete_task.php`, 
+                    {
+                        task_id: parseInt(taskId, 10),
+                        action: 'accept'
+                    },
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    }
+                );
+
+                if (!response.data.success) {
+                    throw new Error(response.data.message || 'Error al actualizar estado en BD');
+                }
+
+                // Actualizar estado local
+                setTask(prevTask => {
+                    if (!prevTask) return null;
+                    return { 
+                        ...prevTask, 
+                        status: response.data.status || prevTask.status,
+                        client_accepted_completion: 1
+                    };
+                });
+            } else {
+                throw new Error('No tienes permisos para completar esta tarea');
             }
-
-            // Actualizar estado local
-            setTask(prevTask => {
-                if (!prevTask) return null;
-                return { 
-                    ...prevTask, 
-                    status: response.data.status || prevTask.status,
-                    worker_accepted_completion: 1
-                };
-            });
               
             // Recargar datos para actualizar la UI
             setTimeout(() => {
@@ -865,7 +1059,7 @@ const SuperviseTask = () => {
 
             setError(null);
         } catch (err: any) {
-            setError('Error al aceptar trabajo: ' + (err.response?.data?.message || err.message));
+            setError('Error al completar tarea: ' + (err.response?.data?.message || err.message));
         } finally {
             setLoading(false);
         }
@@ -1015,6 +1209,9 @@ const SuperviseTask = () => {
                 setDisputeReason('');
                 setHasExistingDispute(true);
                 
+                // Guardar el hash de transacción para mostrarlo en el popup
+                setDisputeTxHash(trustlessResult.txHash || null);
+                
                 // Actualizar el estado de la tarea
                 setTask(prevTask => {
                     if (!prevTask) return null;
@@ -1024,8 +1221,8 @@ const SuperviseTask = () => {
                     };
                 });
               
-                // Mostrar mensaje de éxito
-                alert('✅ Disputa iniciada exitosamente en Trustless Work. Un administrador revisará tu caso.');
+                // Mostrar popup de éxito
+                setShowDisputeSuccessPopup(true);
                 
                 // Recargar datos
                 setTimeout(() => {
@@ -1099,9 +1296,9 @@ const SuperviseTask = () => {
         buttonText = 'Esperando confirmación del cliente';
         isButtonDisabled = true;
     } else if (isWorker && task.client_accepted_completion === 0) {
-        // Trabajador no puede marcar completado hasta que el cliente lo haga primero
-        buttonText = 'Esperando que el cliente marque completado';
-        isButtonDisabled = true;
+        // El trabajador puede marcar como completado para notificar al cliente
+        buttonText = 'Marcar como Completado';
+        isButtonDisabled = false; // Permitir que el trabajador marque como completado
     }
 
     return (
@@ -1111,7 +1308,25 @@ const SuperviseTask = () => {
                 <div className="header-content">
                     <div className="header-text">
                 <h1>{isClient ? 'Supervisar Tarea' : 'Progresando Tarea'}: {task.title}</h1>
-                <p className="assigned-worker-info">{isClient ? 'Trabajador Asignado' : 'Creador de Tarea'}: {worker.username}</p>
+                <p className="assigned-worker-info">
+                  {isClient ? 'Trabajador Asignado' : 'Creador de Tarea'}:{' '}
+                  <Link 
+                    to={`/profile/${isClient ? worker.id : task.user_id}`}
+                    style={{
+                      color: 'var(--primary-blue)',
+                      textDecoration: 'none',
+                      fontWeight: 500
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.textDecoration = 'underline';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.textDecoration = 'none';
+                    }}
+                  >
+                    {worker.username}
+                  </Link>
+                </p>
                     </div>
                     <div className="header-actions">
                         <WalletButton />
@@ -1560,25 +1775,58 @@ const SuperviseTask = () => {
                                 </>
                             )}
                             
-                            {/* Botón de completado - SOLO visible si el cliente ya marcó completado Y firmó */}
+                            {/* Botón de completado - El trabajador puede marcar como completado en cualquier momento */}
                             {task.worker_accepted_completion === 0 && (
                                 <>
                                     {task.client_accepted_completion === 0 ? (
-                                        <p className="info-message" style={{ color: '#856404' }}>
-                                            ⏳ Esperando que el cliente marque el trabajo como completado primero.
-                                        </p>
+                                        <div style={{ textAlign: 'center' }}>
+                                            <p className="info-message" style={{ color: '#856404', marginBottom: '15px' }}>
+                                                💡 Puedes marcar el trabajo como completado para notificar al cliente.
+                                            </p>
+                                            <button 
+                                                className="btn-primary"
+                                                onClick={handleCompleteTask}
+                                                disabled={isButtonDisabled}
+                                                style={{ display: 'inline-block' }}
+                                            >
+                                                {buttonText}
+                                            </button>
+                                        </div>
+                                    ) : pendingTransaction?.escrowCompleted ? (
+                                        <div style={{
+                                            marginBottom: '20px',
+                                            padding: '15px',
+                                            backgroundColor: '#d4edda',
+                                            borderRadius: '8px',
+                                            border: '2px solid #28a745'
+                                        }}>
+                                            <p style={{ margin: 0, color: '#155724', fontSize: '14px', fontWeight: 'bold' }}>
+                                                ✅ ¡Pago recibido! El cliente ha liberado los fondos y ya has recibido tu pago.
+                                            </p>
+                                            <p style={{ margin: '10px 0 0 0', color: '#155724', fontSize: '13px' }}>
+                                                La tarea ha sido completada exitosamente. Revisa tu wallet para confirmar la recepción.
+                                            </p>
+                                        </div>
                                     ) : !pendingTransaction?.hasPending || pendingTransaction.signedBy !== 'client' ? (
-                                        <p className="info-message" style={{ color: '#856404' }}>
-                                            ⏳ Esperando que el cliente firme la transacción primero.
-                                        </p>
+                                        <div>
+                                            <p className="info-message" style={{ color: '#856404', marginBottom: '15px' }}>
+                                                ⏳ Esperando que el cliente libere los fondos...
+                                            </p>
+                                            <p className="info-message" style={{ color: '#856404', fontSize: '13px' }}>
+                                                💡 Ya marcaste el trabajo como completado. El cliente será notificado.
+                                            </p>
+                                        </div>
                                     ) : (
-                                        <button 
-                                            className="btn-primary"
-                                            onClick={handleCompleteTask}
-                                            disabled={isButtonDisabled || task.client_accepted_completion === 0 || !pendingTransaction?.hasPending || pendingTransaction.signedBy !== 'client'}
-                                        >
-                                            {buttonText}
-                                        </button>
+                                        <div style={{ textAlign: 'center' }}>
+                                            <button 
+                                                className="btn-primary"
+                                                onClick={handleCompleteTask}
+                                                disabled={isButtonDisabled}
+                                                style={{ display: 'inline-block' }}
+                                            >
+                                                {buttonText}
+                                            </button>
+                                        </div>
                                     )}
                                 </>
                             )}
@@ -1609,11 +1857,12 @@ const SuperviseTask = () => {
 
             {/* Botón para marcar tarea como completada (visible para AMBOS roles si no está completada) */}
             {(!task.escrow_id || task.status !== 'assigned') && (isWorker || isClient) && (
-                <div className="completion-buttons">
+                <div className="completion-buttons" style={{ textAlign: 'center' }}>
                     <button 
                         className="btn-success"
                         onClick={handleCompleteTask}
-                        disabled={isButtonDisabled} 
+                        disabled={isButtonDisabled}
+                        style={{ display: 'inline-block' }} 
                     >
                         {buttonText}
                     </button>
@@ -1882,32 +2131,37 @@ const SuperviseTask = () => {
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                    background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(17, 128, 179, 0.3) 100%)',
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
                     zIndex: 10000
                 }}>
                     <div style={{
-                        backgroundColor: '#fff',
-                        borderRadius: '16px',
+                        background: 'linear-gradient(135deg, rgba(20, 30, 48, 0.95) 0%, rgba(36, 59, 85, 0.95) 100%)',
+                        borderRadius: '20px',
                         padding: '40px',
-                        maxWidth: '500px',
+                        maxWidth: '550px',
                         width: '90%',
                         textAlign: 'center',
-                        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)',
-                        animation: 'scaleIn 0.5s ease-out'
+                        boxShadow: '0 20px 60px rgba(40, 192, 240, 0.3), 0 0 0 1px rgba(40, 192, 240, 0.1)',
+                        animation: 'scaleIn 0.5s ease-out',
+                        border: '1px solid rgba(40, 192, 240, 0.2)'
                     }}>
                         <div style={{
                             fontSize: '80px',
-                            marginBottom: '20px'
+                            marginBottom: '20px',
+                            filter: 'drop-shadow(0 0 10px rgba(40, 192, 240, 0.5))'
                         }}>
                             ✅
                         </div>
                         <h3 style={{
                             fontSize: '28px',
                             fontWeight: 'bold',
-                            color: '#28a745',
+                            background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text',
                             marginBottom: '20px',
                             marginTop: 0
                         }}>
@@ -1915,60 +2169,98 @@ const SuperviseTask = () => {
                         </h3>
                         <div style={{
                             marginBottom: '30px',
-                            color: '#333',
+                            color: 'rgba(255, 255, 255, 0.9)',
                             lineHeight: '1.6'
                         }}>
-                            <p style={{ fontSize: '18px', marginBottom: '15px', fontWeight: '600' }}>
+                            <p style={{ 
+                                fontSize: '18px', 
+                                marginBottom: '15px', 
+                                fontWeight: '500',
+                                color: 'rgba(255, 255, 255, 0.8)'
+                            }}>
                                 Has pagado al trabajador y todo está bien
                             </p>
                             <div style={{
-                                backgroundColor: '#f8f9fa',
+                                background: 'linear-gradient(135deg, rgba(40, 192, 240, 0.1) 0%, rgba(17, 128, 179, 0.1) 100%)',
                                 padding: '20px',
-                                borderRadius: '8px',
+                                borderRadius: '12px',
                                 marginTop: '15px',
-                                textAlign: 'left'
+                                textAlign: 'left',
+                                border: '1px solid rgba(40, 192, 240, 0.2)'
                             }}>
-                                <p style={{ margin: '8px 0', fontSize: '16px' }}>
-                                    <strong>💰 Total pagado:</strong> {paymentSuccessData.amount} USDC
+                                <p style={{ margin: '8px 0', fontSize: '16px', color: '#fff' }}>
+                                    <strong style={{ color: '#28c0f0' }}>💰 Total pagado:</strong> {paymentSuccessData.amount} USDC
                                 </p>
-                                <p style={{ margin: '8px 0', fontSize: '14px', color: '#666' }}>
-                                    <strong>💵 Trabajador recibirá:</strong> {paymentSuccessData.netAmount} USDC
+                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                    <strong style={{ color: '#28c0f0' }}>💵 Trabajador recibirá:</strong> {paymentSuccessData.netAmount} USDC
                                 </p>
-                                <p style={{ margin: '8px 0', fontSize: '14px', color: '#666' }}>
-                                    <strong>📊 Comisión de plataforma:</strong> {(parseFloat(paymentSuccessData.amount) - parseFloat(paymentSuccessData.netAmount || '0')).toFixed(7)} USDC
+                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                    <strong style={{ color: '#28c0f0' }}>📊 Comisión de plataforma:</strong> {(parseFloat(paymentSuccessData.amount) - parseFloat(paymentSuccessData.netAmount || '0')).toFixed(7)} USDC
                                 </p>
-                                <p style={{ margin: '8px 0', fontSize: '14px', color: '#666' }}>
-                                    <strong>🔗 Hash de transacción:</strong>
+                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                    <strong style={{ color: '#28c0f0' }}>🔗 Hash de transacción:</strong>
                                 </p>
                                 <code style={{
                                     display: 'block',
                                     fontSize: '12px',
-                                    color: '#28a745',
-                                    backgroundColor: '#e8f5e9',
+                                    color: '#28c0f0',
+                                    background: 'rgba(40, 192, 240, 0.1)',
                                     padding: '8px',
                                     borderRadius: '4px',
                                     wordBreak: 'break-all',
-                                    marginTop: '5px'
+                                    marginTop: '5px',
+                                    border: '1px solid rgba(40, 192, 240, 0.2)'
                                 }}>
                                     {paymentSuccessData.txHash}
                                 </code>
-                                <p style={{ margin: '15px 0 0 0', fontSize: '13px', color: '#666', fontStyle: 'italic' }}>
+                                <p style={{ margin: '15px 0 0 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic' }}>
                                     ⏰ Esta tarea será eliminada automáticamente en 24 horas
                                 </p>
                             </div>
                         </div>
-                        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+                        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                            <button 
+                                onClick={() => {
+                                    setShowClientPaymentPopup(false);
+                                    fetchData(); // Recargar datos para actualizar la UI
+                                }}
+                                style={{
+                                    background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                                    color: '#fff',
+                                    border: 'none',
+                                    padding: '14px 32px',
+                                    borderRadius: '10px',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.3s ease',
+                                    minWidth: '200px',
+                                    boxShadow: '0 4px 12px rgba(40, 192, 240, 0.3)'
+                                }}
+                                onMouseOver={(e) => {
+                                    e.currentTarget.style.background = 'linear-gradient(90deg, #1180b3, #28c0f0)';
+                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(40, 192, 240, 0.4)';
+                                }}
+                                onMouseOut={(e) => {
+                                    e.currentTarget.style.background = 'linear-gradient(90deg, #28c0f0, #1180b3)';
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(40, 192, 240, 0.3)';
+                                }}
+                            >
+                                Volver a Tarea
+                            </button>
                             <button 
                                 onClick={() => {
                                     setShowClientPaymentPopup(false);
                                     navigate('/dashboard');
                                 }}
                                 style={{
-                                    backgroundColor: '#28a745',
+                                    background: 'rgba(255, 255, 255, 0.1)',
                                     color: '#fff',
-                                    border: 'none',
+                                    border: '1px solid rgba(255, 255, 255, 0.3)',
                                     padding: '14px 32px',
-                                    borderRadius: '8px',
+                                    borderRadius: '10px',
                                     fontSize: '16px',
                                     fontWeight: 'bold',
                                     cursor: 'pointer',
@@ -1976,15 +2268,15 @@ const SuperviseTask = () => {
                                     minWidth: '200px'
                                 }}
                                 onMouseOver={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#218838';
-                                    e.currentTarget.style.transform = 'scale(1.05)';
+                                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                                    e.currentTarget.style.transform = 'translateY(-2px)';
                                 }}
                                 onMouseOut={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#28a745';
-                                    e.currentTarget.style.transform = 'scale(1)';
+                                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                                    e.currentTarget.style.transform = 'translateY(0)';
                                 }}
                             >
-                                Entendido
+                                Ir al Dashboard
                             </button>
                         </div>
                     </div>
@@ -1999,32 +2291,37 @@ const SuperviseTask = () => {
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                    background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(17, 128, 179, 0.3) 100%)',
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
                     zIndex: 10000
                 }}>
                     <div style={{
-                        backgroundColor: '#fff',
-                        borderRadius: '16px',
+                        background: 'linear-gradient(135deg, rgba(20, 30, 48, 0.95) 0%, rgba(36, 59, 85, 0.95) 100%)',
+                        borderRadius: '20px',
                         padding: '40px',
-                        maxWidth: '500px',
+                        maxWidth: '550px',
                         width: '90%',
                         textAlign: 'center',
-                        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)',
-                        animation: 'scaleIn 0.5s ease-out'
+                        boxShadow: '0 20px 60px rgba(40, 192, 240, 0.3), 0 0 0 1px rgba(40, 192, 240, 0.1)',
+                        animation: 'scaleIn 0.5s ease-out',
+                        border: '1px solid rgba(40, 192, 240, 0.2)'
                     }}>
                         <div style={{
                             fontSize: '80px',
-                            marginBottom: '20px'
+                            marginBottom: '20px',
+                            filter: 'drop-shadow(0 0 10px rgba(40, 192, 240, 0.5))'
                         }}>
                             💰
                         </div>
                         <h3 style={{
                             fontSize: '28px',
                             fontWeight: 'bold',
-                            color: '#28a745',
+                            background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text',
                             marginBottom: '20px',
                             marginTop: 0
                         }}>
@@ -2032,59 +2329,97 @@ const SuperviseTask = () => {
                         </h3>
                         <div style={{
                             marginBottom: '30px',
-                            color: '#333',
+                            color: 'rgba(255, 255, 255, 0.9)',
                             lineHeight: '1.6'
                         }}>
-                            <p style={{ fontSize: '18px', marginBottom: '15px', fontWeight: '600' }}>
+                            <p style={{ 
+                                fontSize: '18px', 
+                                marginBottom: '15px', 
+                                fontWeight: '500',
+                                color: 'rgba(255, 255, 255, 0.8)'
+                            }}>
                                 ¡Has recibido tu pago correctamente!
                             </p>
                             <div style={{
-                                backgroundColor: '#f8f9fa',
+                                background: 'linear-gradient(135deg, rgba(40, 192, 240, 0.1) 0%, rgba(17, 128, 179, 0.1) 100%)',
                                 padding: '20px',
-                                borderRadius: '8px',
+                                borderRadius: '12px',
                                 marginTop: '15px',
-                                textAlign: 'left'
+                                textAlign: 'left',
+                                border: '1px solid rgba(40, 192, 240, 0.2)'
                             }}>
-                                <p style={{ margin: '8px 0', fontSize: '16px' }}>
-                                    <strong>💰 Monto recibido:</strong> {paymentSuccessData.netAmount || paymentSuccessData.amount} USDC
+                                <p style={{ margin: '8px 0', fontSize: '16px', color: '#fff' }}>
+                                    <strong style={{ color: '#28c0f0' }}>💰 Monto recibido:</strong> {paymentSuccessData.netAmount || paymentSuccessData.amount} USDC
                                 </p>
                                 {paymentSuccessData.netAmount && (
-                                    <p style={{ margin: '8px 0', fontSize: '14px', color: '#666' }}>
-                                        <strong>📊 Monto total:</strong> {paymentSuccessData.amount} USDC (después de comisión)
+                                    <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                        <strong style={{ color: '#28c0f0' }}>📊 Monto total:</strong> {paymentSuccessData.amount} USDC (después de comisión)
                                     </p>
                                 )}
-                                <p style={{ margin: '8px 0', fontSize: '14px', color: '#666' }}>
-                                    <strong>🔗 Hash de transacción:</strong>
+                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                    <strong style={{ color: '#28c0f0' }}>🔗 Hash de transacción:</strong>
                                 </p>
                                 <code style={{
                                     display: 'block',
                                     fontSize: '12px',
-                                    color: '#28a745',
-                                    backgroundColor: '#e8f5e9',
+                                    color: '#28c0f0',
+                                    background: 'rgba(40, 192, 240, 0.1)',
                                     padding: '8px',
                                     borderRadius: '4px',
                                     wordBreak: 'break-all',
-                                    marginTop: '5px'
+                                    marginTop: '5px',
+                                    border: '1px solid rgba(40, 192, 240, 0.2)'
                                 }}>
                                     {paymentSuccessData.txHash}
                                 </code>
-                                <p style={{ margin: '15px 0 0 0', fontSize: '13px', color: '#666', fontStyle: 'italic' }}>
+                                <p style={{ margin: '15px 0 0 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic' }}>
                                     ⏰ Esta tarea será eliminada automáticamente en 24 horas
                                 </p>
                             </div>
                         </div>
-                        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+                        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                            <button 
+                                onClick={() => {
+                                    setShowPaymentSuccessPopup(false);
+                                    fetchData(); // Recargar datos para actualizar la UI
+                                }}
+                                style={{
+                                    background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                                    color: '#fff',
+                                    border: 'none',
+                                    padding: '14px 32px',
+                                    borderRadius: '10px',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.3s ease',
+                                    minWidth: '200px',
+                                    boxShadow: '0 4px 12px rgba(40, 192, 240, 0.3)'
+                                }}
+                                onMouseOver={(e) => {
+                                    e.currentTarget.style.background = 'linear-gradient(90deg, #1180b3, #28c0f0)';
+                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(40, 192, 240, 0.4)';
+                                }}
+                                onMouseOut={(e) => {
+                                    e.currentTarget.style.background = 'linear-gradient(90deg, #28c0f0, #1180b3)';
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(40, 192, 240, 0.3)';
+                                }}
+                            >
+                                Volver a Tarea
+                            </button>
                             <button 
                                 onClick={() => {
                                     setShowPaymentSuccessPopup(false);
                                     navigate('/dashboard');
                                 }}
                                 style={{
-                                    backgroundColor: '#28a745',
+                                    background: 'rgba(255, 255, 255, 0.1)',
                                     color: '#fff',
-                                    border: 'none',
+                                    border: '1px solid rgba(255, 255, 255, 0.3)',
                                     padding: '14px 32px',
-                                    borderRadius: '8px',
+                                    borderRadius: '10px',
                                     fontSize: '16px',
                                     fontWeight: 'bold',
                                     cursor: 'pointer',
@@ -2092,15 +2427,137 @@ const SuperviseTask = () => {
                                     minWidth: '200px'
                                 }}
                                 onMouseOver={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#218838';
-                                    e.currentTarget.style.transform = 'scale(1.05)';
+                                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                                    e.currentTarget.style.transform = 'translateY(-2px)';
                                 }}
                                 onMouseOut={(e) => {
-                                    e.currentTarget.style.backgroundColor = '#28a745';
-                                    e.currentTarget.style.transform = 'scale(1)';
+                                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                                    e.currentTarget.style.transform = 'translateY(0)';
                                 }}
                             >
                                 🏠 Ir al Dashboard
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Popup de Éxito - Disputa Iniciada */}
+            {showDisputeSuccessPopup && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(17, 128, 179, 0.3) 100%)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 10000
+                }}>
+                    <div style={{
+                        background: 'linear-gradient(135deg, rgba(20, 30, 48, 0.95) 0%, rgba(36, 59, 85, 0.95) 100%)',
+                        borderRadius: '20px',
+                        padding: '40px',
+                        maxWidth: '550px',
+                        width: '90%',
+                        textAlign: 'center',
+                        boxShadow: '0 20px 60px rgba(40, 192, 240, 0.3), 0 0 0 1px rgba(40, 192, 240, 0.1)',
+                        animation: 'scaleIn 0.5s ease-out',
+                        border: '1px solid rgba(40, 192, 240, 0.2)'
+                    }}>
+                        <div style={{
+                            fontSize: '80px',
+                            marginBottom: '20px',
+                            filter: 'drop-shadow(0 0 10px rgba(40, 192, 240, 0.5))'
+                        }}>
+                            ✅
+                        </div>
+                        <h3 style={{
+                            fontSize: '28px',
+                            fontWeight: 'bold',
+                            background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text',
+                            marginBottom: '20px',
+                            marginTop: 0
+                        }}>
+                            ¡Disputa Iniciada Exitosamente!
+                        </h3>
+                        <div style={{
+                            marginBottom: '30px',
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            lineHeight: '1.6'
+                        }}>
+                            <p style={{ 
+                                fontSize: '18px', 
+                                marginBottom: '15px', 
+                                fontWeight: '500',
+                                color: 'rgba(255, 255, 255, 0.8)'
+                            }}>
+                                Tu disputa ha sido registrada en Trustless Work. Un administrador revisará tu caso.
+                            </p>
+                            {disputeTxHash && (
+                                <div style={{
+                                    background: 'linear-gradient(135deg, rgba(40, 192, 240, 0.1) 0%, rgba(17, 128, 179, 0.1) 100%)',
+                                    padding: '20px',
+                                    borderRadius: '12px',
+                                    marginTop: '15px',
+                                    textAlign: 'left',
+                                    border: '1px solid rgba(40, 192, 240, 0.2)'
+                                }}>
+                                    <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                        <strong style={{ color: '#28c0f0' }}>🔗 Hash de transacción:</strong>
+                                    </p>
+                                    <code style={{
+                                        display: 'block',
+                                        fontSize: '12px',
+                                        color: '#28c0f0',
+                                        background: 'rgba(40, 192, 240, 0.1)',
+                                        padding: '8px',
+                                        borderRadius: '4px',
+                                        wordBreak: 'break-all',
+                                        marginTop: '5px',
+                                        border: '1px solid rgba(40, 192, 240, 0.2)'
+                                    }}>
+                                        {disputeTxHash}
+                                    </code>
+                                </div>
+                            )}
+                        </div>
+                        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                            <button 
+                                onClick={() => {
+                                    setShowDisputeSuccessPopup(false);
+                                    setDisputeTxHash(null);
+                                }}
+                                style={{
+                                    background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                                    color: '#fff',
+                                    border: 'none',
+                                    padding: '14px 32px',
+                                    borderRadius: '10px',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.3s ease',
+                                    minWidth: '200px',
+                                    boxShadow: '0 4px 12px rgba(40, 192, 240, 0.3)'
+                                }}
+                                onMouseOver={(e) => {
+                                    e.currentTarget.style.background = 'linear-gradient(90deg, #1180b3, #28c0f0)';
+                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(40, 192, 240, 0.4)';
+                                }}
+                                onMouseOut={(e) => {
+                                    e.currentTarget.style.background = 'linear-gradient(90deg, #28c0f0, #1180b3)';
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(40, 192, 240, 0.3)';
+                                }}
+                            >
+                                Entendido
                             </button>
                         </div>
                     </div>

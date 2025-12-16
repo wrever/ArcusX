@@ -1,4 +1,50 @@
 <?php
+/**
+ * complete_task.php
+ * Endpoint para completar una tarea (aceptar o rechazar trabajo completado)
+ */
+
+// CORS headers - DEBEN IR PRIMERO, ANTES DE CUALQUIER OTRO OUTPUT
+$allowed_origins = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'https://arcusx.pro',
+    'http://arcusx.pro'
+];
+$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+
+// Manejar preflight OPTIONS request PRIMERO
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    if (in_array($origin, $allowed_origins)) {
+        header("Access-Control-Allow-Origin: $origin");
+        header("Access-Control-Allow-Credentials: true");
+    }
+    header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+    header("Access-Control-Max-Age: 3600");
+    header("Content-Length: 0");
+    http_response_code(200);
+    exit();
+}
+
+// Headers CORS para requests normales
+if (in_array($origin, $allowed_origins)) {
+    header("Access-Control-Allow-Origin: $origin");
+    header("Access-Control-Allow-Credentials: true");
+} else {
+    header("Access-Control-Allow-Origin: *");
+}
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+header("Access-Control-Max-Age: 3600");
+header("Content-Type: application/json; charset=UTF-8");
+
+// Habilitar logs (pero NO mostrar errores en pantalla para evitar output antes de headers)
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+error_reporting(E_ALL);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/php-error.log');
 
 require_once 'config.php';
 require_once 'vendor/autoload.php';
@@ -151,7 +197,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $conn->rollback();
                 exit;
             }
-            $message_to_send = 'Tu confirmación ha sido registrada. Esperando la confirmación del trabajador.';
+            // NUEVA LÓGICA: Cuando el cliente acepta, la tarea se marca como completada automáticamente
+            $message_to_send = 'Tarea marcada como completada. Los fondos serán liberados.';
         } elseif ($loggedInUserId === $taskAcceptedApplicantId) {
             $update_field = 'worker_accepted_completion';
             if ($workerAccepted == 1) {
@@ -160,7 +207,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $conn->rollback();
                 exit;
             }
-            $message_to_send = 'Tu confirmación ha sido registrada. Esperando la confirmación del cliente.';
+            // NUEVA LÓGICA: Cuando el trabajador acepta, solo es una notificación al cliente
+            $message_to_send = 'Tu confirmación ha sido registrada. El cliente será notificado.';
         } else {
             http_response_code(403);
             echo json_encode(['success' => false, 'message' => 'No tienes permiso para marcar esta tarea como completada.']);
@@ -188,16 +236,102 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $workerAccepted = $updated_task_data['worker_accepted_completion'];
 
         $final_status = $currentStatus;
+        
+        // NUEVA LÓGICA: Si el cliente aceptó, marcar la tarea como completada inmediatamente
+        $shouldMarkAsCompleted = false;
+        if ($loggedInUserId === $taskCreatorId && $clientAccepted == 1 && $currentStatus !== 'completed') {
+            $shouldMarkAsCompleted = true;
+            error_log("✅ Cliente aceptó la tarea. Marcando como completada automáticamente...");
+        }
 
-        // 4. Si ambos han aceptado, marcar la tarea como completada y liberar fondos
-        if ($clientAccepted == 1 && $workerAccepted == 1 && $currentStatus !== 'completed') {
+        // Verificar si viene información de que el escrow está completado (fondos liberados)
+        $escrowCompleted = isset($data['escrow_completed']) ? (bool)$data['escrow_completed'] : false;
+        $txHash = isset($data['tx_hash']) ? trim($data['tx_hash']) : null;
+        
+        // Si los fondos fueron liberados exitosamente, actualizar escrow_status a 'completed'
+        // independientemente de si ambos han aceptado
+        if ($escrowCompleted && !empty($txHash)) {
+            error_log("✅ Fondos liberados exitosamente. Actualizando escrow_status a 'completed'...");
+            error_log("TX Hash: " . $txHash);
+            
             $current_datetime = date('Y-m-d H:i:s');
             
-            error_log("✅ Ambos aceptaron la tarea. Marcando como completada...");
+            // Verificar si la columna scheduled_deletion_at existe
+            $checkColumn = $conn->query("SHOW COLUMNS FROM tasks LIKE 'scheduled_deletion_at'");
+            $hasScheduledDeletion = $checkColumn && $checkColumn->num_rows > 0;
             
-            // Verificar si viene información de que el escrow está completado
-            $escrowCompleted = isset($data['escrow_completed']) ? (bool)$data['escrow_completed'] : false;
-            $txHash = isset($data['tx_hash']) ? trim($data['tx_hash']) : null;
+            // NUEVA LÓGICA: Si el cliente aceptó, también actualizar status a 'completed'
+            if ($clientAccepted == 1 && $currentStatus !== 'completed') {
+                if ($hasScheduledDeletion) {
+                    $stmt_update_escrow = $conn->prepare("UPDATE tasks SET status = 'completed', completed_at = ?, escrow_status = 'completed', escrow_completed_at = NOW(), scheduled_deletion_at = ? WHERE id = ?");
+                    if ($stmt_update_escrow === false) { 
+                        throw new Exception('Error al preparar la actualización de escrow: ' . $conn->error); 
+                    }
+                    $scheduledDeletionAt = date('Y-m-d H:i:s', strtotime('+24 hours'));
+                    $stmt_update_escrow->bind_param("ssi", $current_datetime, $scheduledDeletionAt, $taskId);
+                } else {
+                    $stmt_update_escrow = $conn->prepare("UPDATE tasks SET status = 'completed', completed_at = ?, escrow_status = 'completed', escrow_completed_at = NOW() WHERE id = ?");
+                    if ($stmt_update_escrow === false) { 
+                        throw new Exception('Error al preparar la actualización de escrow: ' . $conn->error); 
+                    }
+                    $stmt_update_escrow->bind_param("si", $current_datetime, $taskId);
+                }
+            } else {
+                // Solo actualizar escrow_status si los fondos fueron liberados pero no ambos aceptaron
+                if ($hasScheduledDeletion) {
+                    $stmt_update_escrow = $conn->prepare("UPDATE tasks SET escrow_status = 'completed', escrow_completed_at = NOW(), scheduled_deletion_at = ? WHERE id = ?");
+                    if ($stmt_update_escrow === false) { 
+                        throw new Exception('Error al preparar la actualización de escrow: ' . $conn->error); 
+                    }
+                    $scheduledDeletionAt = date('Y-m-d H:i:s', strtotime('+24 hours'));
+                    $stmt_update_escrow->bind_param("si", $scheduledDeletionAt, $taskId);
+                } else {
+                    $stmt_update_escrow = $conn->prepare("UPDATE tasks SET escrow_status = 'completed', escrow_completed_at = NOW() WHERE id = ?");
+                    if ($stmt_update_escrow === false) { 
+                        throw new Exception('Error al preparar la actualización de escrow: ' . $conn->error); 
+                    }
+                    $stmt_update_escrow->bind_param("i", $taskId);
+                }
+            }
+            
+            if (!$stmt_update_escrow->execute()) { 
+                throw new Exception('Error al actualizar escrow_status: ' . $stmt_update_escrow->error); 
+            }
+            $stmt_update_escrow->close();
+            
+            // Si la columna scheduled_deletion_at no existe, crearla y actualizar
+            if (!$hasScheduledDeletion) {
+                $alterTable = "ALTER TABLE tasks ADD COLUMN scheduled_deletion_at DATETIME NULL AFTER escrow_completed_at";
+                $conn->query($alterTable);
+                $scheduledDeletionAt = date('Y-m-d H:i:s', strtotime('+24 hours'));
+                $stmt_update_deletion = $conn->prepare("UPDATE tasks SET scheduled_deletion_at = ? WHERE id = ?");
+                $stmt_update_deletion->bind_param("si", $scheduledDeletionAt, $taskId);
+                $stmt_update_deletion->execute();
+                $stmt_update_deletion->close();
+            }
+            
+            error_log("✅ escrow_status actualizado a 'completed' para la tarea ID: " . $taskId);
+            
+            // NUEVA LÓGICA: Si el cliente aceptó y se actualizó el status, incrementar contador de tareas completadas
+            if ($clientAccepted == 1 && $currentStatus !== 'completed') {
+                if ($taskAcceptedApplicantId !== null && $taskAcceptedApplicantId !== '') {
+                    $stmt_update_user_count = $conn->prepare("UPDATE users SET completed_tasks_count = completed_tasks_count + 1 WHERE id = ?");
+                    if ($stmt_update_user_count === false) { 
+                        throw new Exception('Error al preparar la actualización del contador de usuario: ' . $conn->error); 
+                    }
+                    $stmt_update_user_count->bind_param("i", $taskAcceptedApplicantId);
+                    if (!$stmt_update_user_count->execute()) { 
+                        throw new Exception('Error al incrementar el contador de tareas completadas del usuario: ' . $stmt_update_user_count->error); 
+                    }
+                    $stmt_update_user_count->close();
+                    error_log("Successfully incremented completed_tasks_count for user ID: " . $taskAcceptedApplicantId);
+                }
+            }
+        }
+
+        // 4. NUEVA LÓGICA: Si el cliente aceptó, marcar la tarea como completada automáticamente
+        if ($shouldMarkAsCompleted) {
+            $current_datetime = date('Y-m-d H:i:s');
             
             // Calcular fecha de eliminación programada (24 horas después)
             $scheduledDeletionAt = date('Y-m-d H:i:s', strtotime('+24 hours'));
@@ -233,7 +367,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             // Nota: La liberación de fondos se hace desde el frontend con Stellar
-            // El backend solo registra que ambos aceptaron
+            // El backend solo registra que el cliente aceptó
 
             // LOGGING CRUCIAL:
             error_log("--- complete_task.php DEBUG ---");
@@ -265,8 +399,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // La tarea se eliminará después de que los fondos se liberen exitosamente
             // en submit_complete_transaction.php
 
-            $message_to_send = '¡Tarea marcada como completada con éxito!';
             $final_status = 'completed';
+            $message_to_send = '¡Tarea marcada como completada con éxito! Los fondos serán liberados.';
         }
 
         // Confirmar la transacción

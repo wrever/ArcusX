@@ -45,6 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 t.currency,
                 t.difficulty,
                 t.category,
+                u.id AS creator_id,
                 u.username AS creator_username,
                 t.created_at,
                 a.applicant_id AS accepted_applicant_id -- **ESTA LÍNEA ES CLAVE**

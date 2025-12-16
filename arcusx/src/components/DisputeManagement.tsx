@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { FaGavel, FaEye, FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaWallet, FaLink } from 'react-icons/fa';
+import { FaGavel, FaEye, FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaWallet, FaLink, FaComments, FaFile, FaClock } from 'react-icons/fa';
 import { getAdminDisputes, getAdminDisputeDetails, resolveAdminDispute, getDisputeFundsReleaseInfo } from '../services/adminService';
 import { useWallet } from '../hooks/useWallet';
 import { useResolveDispute, useSendTransaction, useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks';
 import { resolveDisputeTrustlessEscrow } from '../services/trustlessWorkEscrowService';
 import { ADMIN_WALLET } from '../config/trustlessWork';
+import DisputeChatView from './DisputeChatView';
+import DisputeFilesView from './DisputeFilesView';
+import DisputeTimelineView from './DisputeTimelineView';
 import '../css/AdminPanel.css';
 
 interface DisputeManagementProps {
@@ -39,7 +42,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
   });
 
   // Wallet y hooks de Trustless Work
-  const { kit } = useWallet();
+  const { kit, isConnected, address: walletAddress } = useWallet();
   const { resolveDispute } = useResolveDispute();
   const { sendTransaction } = useSendTransaction();
   const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds();
@@ -47,6 +50,9 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
   // Estado para información del escrow
   const [escrowInfo, setEscrowInfo] = useState<any | null>(null);
   const [loadingEscrowInfo, setLoadingEscrowInfo] = useState(false);
+  
+  // Estado para tabs del modal de detalles
+  const [activeTab, setActiveTab] = useState<'summary' | 'chat' | 'files' | 'timeline'>('summary');
 
   useEffect(() => {
     fetchDisputes();
@@ -81,7 +87,34 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
       
       const escrows = Array.isArray(result) ? result : (result as any)?.escrows || [];
       if (escrows && escrows.length > 0) {
-        setEscrowInfo(escrows[0]);
+        const escrow = escrows[0];
+        
+        // Mapear y enriquecer la información del escrow
+        const enrichedEscrow: any = {
+          ...escrow,
+          // Balance actual
+          balance: escrow.balance || escrow.currentBalance || '0',
+          // Monto total (amount del escrow)
+          amount: escrow.amount || escrow.totalAmount || '0',
+          // Milestones
+          milestones: escrow.milestones || escrow.milestone || [],
+          // Flags del escrow
+          flags: escrow.flags || {},
+          // Determinar estado real basándose en flags y otros campos
+          status: determineEscrowStatus(escrow),
+          // Determinar si está activo
+          isActive: determineIsActive(escrow),
+          // Información de roles
+          roles: escrow.roles || {},
+          // Información de trustline
+          trustline: escrow.trustline || {},
+          // Platform fee
+          platformFee: escrow.platformFee || escrow.platform_fee,
+          // Inconsistencias si existen
+          inconsistencies: escrow.inconsistencies || null
+        };
+        
+        setEscrowInfo(enrichedEscrow);
       } else {
         setEscrowInfo(null);
       }
@@ -91,6 +124,71 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
     } finally {
       setLoadingEscrowInfo(false);
     }
+  };
+
+  // Función auxiliar para determinar el estado real del escrow
+  const determineEscrowStatus = (escrow: any): string => {
+    // Si ya tiene un status válido, usarlo
+    if (escrow.status && escrow.status !== 'unknown') {
+      return escrow.status;
+    }
+    
+    // Determinar estado basándose en flags
+    const flags = escrow.flags || {};
+    
+    if (flags.released === true) {
+      return 'released';
+    }
+    if (flags.disputed === true) {
+      return 'disputed';
+    }
+    if (flags.resolved === true) {
+      return 'resolved';
+    }
+    if (flags.approved === true && flags.released === false) {
+      return 'approved';
+    }
+    
+    // Determinar basándose en balance
+    const balance = parseFloat(escrow.balance || escrow.currentBalance || '0');
+    if (balance === 0 && escrow.amount) {
+      // Si el balance es 0 pero había un monto, probablemente fue liberado
+      return 'released';
+    }
+    
+    // Si tiene amount pero no balance, está activo pero no fondeado
+    if (escrow.amount && balance === 0) {
+      return 'active';
+    }
+    
+    // Si tiene balance > 0, está activo y fondeado
+    if (balance > 0) {
+      return 'active';
+    }
+    
+    return 'unknown';
+  };
+
+  // Función auxiliar para determinar si el escrow está activo
+  const determineIsActive = (escrow: any): boolean => {
+    if (escrow.isActive !== undefined) {
+      return escrow.isActive !== false;
+    }
+    
+    const flags = escrow.flags || {};
+    const balance = parseFloat(escrow.balance || escrow.currentBalance || '0');
+    
+    // Está activo si no está liberado, resuelto o cancelado
+    if (flags.released === true || flags.resolved === true) {
+      return false;
+    }
+    
+    // Si tiene balance o amount, está activo
+    if (balance > 0 || escrow.amount) {
+      return true;
+    }
+    
+    return false;
   };
 
   const handleViewDetails = async (disputeId: number) => {
@@ -139,6 +237,11 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
         resolutionData.refund_percentage = resolution.refund_percentage;
       }
 
+      // Verificar que la wallet esté conectada antes de resolver
+      if (!isConnected || !walletAddress) {
+        throw new Error('Debes conectar tu wallet (Freighter) para resolver disputas y liberar fondos. Por favor, conecta tu wallet e intenta nuevamente.');
+      }
+
       const resolveResponse = await resolveAdminDispute(selectedDispute.id, resolutionData);
       setSuccess('Disputa resuelta correctamente');
       
@@ -146,21 +249,27 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
       if (resolveResponse?.funds_release_required && resolveResponse?.funds_release_info) {
         try {
           // Obtener información completa para liberar fondos
-          const releaseInfo = await getDisputeFundsReleaseInfo(selectedDispute.id);
+          const releaseInfo = resolveResponse.funds_release_info;
           
-          if (releaseInfo?.success && releaseInfo?.escrow_id) {
+          if (releaseInfo?.escrow_id) {
             // Verificar si es un escrow de Trustless Work (contract_id empieza con 'C')
             const isTrustlessWork = releaseInfo.escrow_id && releaseInfo.escrow_id.startsWith('C');
             
-            if (isTrustlessWork && kit) {
+            if (isTrustlessWork && kit && isConnected && walletAddress) {
               // Usar Trustless Work para resolver la disputa
+              // IMPORTANTE: Usar la dirección de la wallet conectada del admin, no ADMIN_WALLET
               const contractId = releaseInfo.escrow_id;
-              const disputeResolver = ADMIN_WALLET;
+              const disputeResolver = walletAddress; // Usar la wallet conectada del admin
+              
+              // Obtener la decisión de la resolución
+              const decision = resolutionData.decision;
               
               // Para single-release escrows, solo se puede distribuir a un receptor a la vez
               // Para split, haremos múltiples llamadas
-              if (releaseInfo.decision === 'client' && releaseInfo.refund_amount > 0) {
+              if (decision === 'client' && releaseInfo.refund_amount > 0) {
                 // Reembolso completo al cliente
+                setSuccess('Preparando transacción de reembolso. Por favor, firma la transacción en Freighter...');
+                
                 const resolveResult = await resolveDisputeTrustlessEscrow(
                   contractId,
                   disputeResolver,
@@ -174,12 +283,14 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                 );
                 
                 if (resolveResult.success) {
-                  setSuccess(`Disputa resuelta y ${releaseInfo.refund_amount} USDC reembolsados al cliente. TX: ${resolveResult.txHash}`);
+                  setSuccess(`✅ Disputa resuelta y ${releaseInfo.refund_amount} USDC reembolsados al cliente. Hash de transacción: ${resolveResult.txHash}`);
                 } else {
                   setError(`Disputa resuelta pero error al reembolsar: ${resolveResult.error}`);
                 }
-              } else if (releaseInfo.decision === 'worker' && releaseInfo.payment_amount > 0) {
+              } else if (decision === 'worker' && releaseInfo.payment_amount > 0) {
                 // Pago completo al trabajador
+                setSuccess('Preparando transacción de pago. Por favor, firma la transacción en Freighter...');
+                
                 const resolveResult = await resolveDisputeTrustlessEscrow(
                   contractId,
                   disputeResolver,
@@ -193,11 +304,11 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                 );
                 
                 if (resolveResult.success) {
-                  setSuccess(`Disputa resuelta y ${releaseInfo.payment_amount} USDC pagados al trabajador. TX: ${resolveResult.txHash}`);
+                  setSuccess(`✅ Disputa resuelta y ${releaseInfo.payment_amount} USDC pagados al trabajador. Hash de transacción: ${resolveResult.txHash}`);
                 } else {
                   setError(`Disputa resuelta pero error al pagar: ${resolveResult.error}`);
                 }
-              } else if (releaseInfo.decision === 'split') {
+              } else if (decision === 'split') {
                 // Split: hacer dos llamadas separadas (primero cliente, luego trabajador)
                 let successMessages: string[] = [];
                 let errorMessages: string[] = [];
@@ -205,6 +316,8 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                 // Reembolsar al cliente
                 if (releaseInfo.refund_amount > 0) {
                   try {
+                    setSuccess('Preparando transacción de reembolso al cliente. Por favor, firma la transacción en Freighter...');
+                    
                     const refundResult = await resolveDisputeTrustlessEscrow(
                       contractId,
                       disputeResolver,
@@ -230,6 +343,8 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                 // Pagar al trabajador
                 if (releaseInfo.payment_amount > 0) {
                   try {
+                    setSuccess('Preparando transacción de pago al trabajador. Por favor, firma la transacción en Freighter...');
+                    
                     const paymentResult = await resolveDisputeTrustlessEscrow(
                       contractId,
                       disputeResolver,
@@ -260,13 +375,24 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                 }
               }
             } else {
-              setError('No se pudo resolver la disputa: escrow no es de Trustless Work o wallet no conectada.');
+              if (!isTrustlessWork) {
+                setError('No se pudo resolver la disputa: el escrow no es de Trustless Work.');
+              } else if (!kit || !isConnected || !walletAddress) {
+                setError('No se pudo resolver la disputa: wallet no conectada. Por favor, conecta tu wallet (Freighter) e intenta nuevamente.');
+              } else {
+                setError('No se pudo resolver la disputa: información del escrow incompleta.');
+              }
             }
+          } else {
+            setError('No se pudo obtener información del escrow para liberar fondos.');
           }
         } catch (fundsError: any) {
           console.error('Error al liberar fondos:', fundsError);
-          setError(`Disputa resuelta pero error al liberar fondos: ${fundsError.message}. Por favor, libera los fondos manualmente.`);
+          setError(`Disputa resuelta pero error al liberar fondos: ${fundsError.message}. Por favor, libera los fondos manualmente desde el panel de administración.`);
         }
+      } else {
+        // Si no hay fondos que liberar, solo mostrar mensaje de éxito
+        setSuccess('Disputa resuelta correctamente. No se requieren fondos para liberar.');
       }
       
       setShowResolveForm(false);
@@ -454,6 +580,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
           setShowResolveForm(false);
           setSelectedDispute(null);
           setEscrowInfo(null);
+          setActiveTab('summary');
         }}>
           <div className="admin-modal dispute-modal" onClick={(e) => e.stopPropagation()}>
             <div className="admin-modal-header">
@@ -468,6 +595,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                   setShowResolveForm(false);
                   setSelectedDispute(null);
                   setEscrowInfo(null);
+                  setActiveTab('summary');
                 }}
               >
                 ×
@@ -481,7 +609,151 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
               </div>
             ) : (
               <div className="admin-modal-content">
-                {/* Información de la disputa */}
+                {/* Sistema de Tabs */}
+                <div style={{
+                  display: 'flex',
+                  gap: '10px',
+                  padding: '0 0 20px 0',
+                  borderBottom: '2px solid rgba(40, 192, 240, 0.2)',
+                  marginBottom: '20px'
+                }}>
+                  <button
+                    onClick={() => setActiveTab('summary')}
+                    style={{
+                      padding: '12px 24px',
+                      background: activeTab === 'summary' 
+                        ? 'linear-gradient(90deg, #28c0f0, #1180b3)'
+                        : 'rgba(255, 255, 255, 0.1)',
+                      border: `1px solid ${activeTab === 'summary' ? 'transparent' : 'rgba(40, 192, 240, 0.3)'}`,
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontSize: '14px'
+                    }}
+                    onMouseOver={(e) => {
+                      if (activeTab !== 'summary') {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                      }
+                    }}
+                    onMouseOut={(e) => {
+                      if (activeTab !== 'summary') {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                      }
+                    }}
+                  >
+                    <FaGavel />
+                    Resumen
+                  </button>
+                  
+                  <button
+                    onClick={() => setActiveTab('chat')}
+                    style={{
+                      padding: '12px 24px',
+                      background: activeTab === 'chat' 
+                        ? 'linear-gradient(90deg, #28c0f0, #1180b3)'
+                        : 'rgba(255, 255, 255, 0.1)',
+                      border: `1px solid ${activeTab === 'chat' ? 'transparent' : 'rgba(40, 192, 240, 0.3)'}`,
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontSize: '14px'
+                    }}
+                    onMouseOver={(e) => {
+                      if (activeTab !== 'chat') {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                      }
+                    }}
+                    onMouseOut={(e) => {
+                      if (activeTab !== 'chat') {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                      }
+                    }}
+                  >
+                    <FaComments />
+                    Chat
+                  </button>
+                  
+                  <button
+                    onClick={() => setActiveTab('files')}
+                    style={{
+                      padding: '12px 24px',
+                      background: activeTab === 'files' 
+                        ? 'linear-gradient(90deg, #28c0f0, #1180b3)'
+                        : 'rgba(255, 255, 255, 0.1)',
+                      border: `1px solid ${activeTab === 'files' ? 'transparent' : 'rgba(40, 192, 240, 0.3)'}`,
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontSize: '14px'
+                    }}
+                    onMouseOver={(e) => {
+                      if (activeTab !== 'files') {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                      }
+                    }}
+                    onMouseOut={(e) => {
+                      if (activeTab !== 'files') {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                      }
+                    }}
+                  >
+                    <FaFile />
+                    Archivos
+                  </button>
+                  
+                  <button
+                    onClick={() => setActiveTab('timeline')}
+                    style={{
+                      padding: '12px 24px',
+                      background: activeTab === 'timeline' 
+                        ? 'linear-gradient(90deg, #28c0f0, #1180b3)'
+                        : 'rgba(255, 255, 255, 0.1)',
+                      border: `1px solid ${activeTab === 'timeline' ? 'transparent' : 'rgba(40, 192, 240, 0.3)'}`,
+                      borderRadius: '8px',
+                      color: '#fff',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      fontSize: '14px'
+                    }}
+                    onMouseOver={(e) => {
+                      if (activeTab !== 'timeline') {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                      }
+                    }}
+                    onMouseOut={(e) => {
+                      if (activeTab !== 'timeline') {
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                      }
+                    }}
+                  >
+                    <FaClock />
+                    Timeline
+                  </button>
+                </div>
+
+                {/* Contenido de los tabs */}
+                {activeTab === 'summary' && (
+                  <>
+                    {/* Información de la disputa */}
                 <div className="dispute-details-section">
                   <h4>Información General</h4>
                   <div className="detail-grid">
@@ -637,18 +909,95 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                             <div style={{ marginTop: '8px' }}>
                               {escrowInfo.milestones.map((milestone: any, idx: number) => (
                                 <div key={idx} style={{
-                                  padding: '8px',
+                                  padding: '12px',
                                   backgroundColor: 'rgba(255, 255, 255, 0.05)',
                                   borderRadius: '6px',
-                                  marginBottom: '6px'
+                                  marginBottom: '8px',
+                                  border: '1px solid rgba(255, 255, 255, 0.1)'
                                 }}>
-                                  <strong>Milestone {idx}:</strong> {milestone.description || 'Sin descripción'}
+                                  <div style={{ marginBottom: '6px' }}>
+                                    <strong style={{ color: '#28c0f0' }}>Milestone {idx}:</strong> {milestone.description || 'Sin descripción'}
+                                  </div>
                                   {milestone.amount && (
-                                    <span style={{ marginLeft: '10px', color: '#10b981' }}>
-                                      {parseFloat(milestone.amount).toFixed(7)} USDC
-                                    </span>
+                                    <div style={{ marginTop: '4px', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                      <strong>Monto:</strong> {parseFloat(milestone.amount).toFixed(7)} USDC
+                                    </div>
+                                  )}
+                                  {milestone.status && (
+                                    <div style={{ marginTop: '4px', fontSize: '14px' }}>
+                                      <strong>Estado:</strong> <span className={`badge ${
+                                        milestone.status === 'approved' ? 'success' :
+                                        milestone.status === 'completed' ? 'success' :
+                                        milestone.status === 'pending' ? 'info' : 'warning'
+                                      }`}>
+                                        {milestone.status}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {milestone.evidence && (
+                                    <div style={{ marginTop: '4px', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic' }}>
+                                      <strong>Evidencia:</strong> {milestone.evidence}
+                                    </div>
                                   )}
                                 </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {escrowInfo.roles && Object.keys(escrowInfo.roles).length > 0 && (
+                          <div className="detail-item full-width">
+                            <label>Roles del Escrow:</label>
+                            <div style={{ marginTop: '8px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
+                              {Object.entries(escrowInfo.roles).map(([role, address]: [string, any]) => (
+                                <div key={role} style={{
+                                  padding: '8px',
+                                  backgroundColor: 'rgba(40, 192, 240, 0.1)',
+                                  borderRadius: '6px',
+                                  border: '1px solid rgba(40, 192, 240, 0.2)'
+                                }}>
+                                  <div style={{ fontSize: '12px', color: '#28c0f0', fontWeight: 'bold', marginBottom: '4px' }}>
+                                    {role.charAt(0).toUpperCase() + role.slice(1)}:
+                                  </div>
+                                  <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.7)', wordBreak: 'break-all' }}>
+                                    {String(address).slice(0, 8)}...{String(address).slice(-6)}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {escrowInfo.trustline && escrowInfo.trustline.address && (
+                          <div className="detail-item">
+                            <label>Trustline Address:</label>
+                            <span style={{ 
+                              fontSize: '12px', 
+                              color: '#28c0f0',
+                              wordBreak: 'break-all',
+                              fontFamily: 'monospace'
+                            }}>
+                              {escrowInfo.trustline.address}
+                            </span>
+                          </div>
+                        )}
+                        {escrowInfo.platformFee !== undefined && escrowInfo.platformFee !== null && (
+                          <div className="detail-item">
+                            <label>Platform Fee:</label>
+                            <span>
+                              {typeof escrowInfo.platformFee === 'number' 
+                                ? `${(escrowInfo.platformFee * 100).toFixed(2)}%`
+                                : escrowInfo.platformFee
+                              }
+                            </span>
+                          </div>
+                        )}
+                        {escrowInfo.flags && Object.keys(escrowInfo.flags).length > 0 && (
+                          <div className="detail-item full-width">
+                            <label>Flags del Escrow:</label>
+                            <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                              {Object.entries(escrowInfo.flags).map(([flag, value]: [string, any]) => (
+                                <span key={flag} className={`badge ${value === true ? 'success' : 'error'}`} style={{ fontSize: '11px' }}>
+                                  {flag}: {value ? 'Sí' : 'No'}
+                                </span>
                               ))}
                             </div>
                           </div>
@@ -708,7 +1057,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                 )}
 
                 {/* Botones de acción */}
-                {selectedDispute.status === 'pending' && (
+                {selectedDispute.status === 'pending' && activeTab === 'summary' && (
                   <div className="admin-modal-actions">
                     {!showResolveForm ? (
                       <button
@@ -779,6 +1128,46 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                             />
                           </div>
 
+                          {/* Indicador de wallet conectada */}
+                          <div className="admin-form-group" style={{
+                            padding: '12px',
+                            borderRadius: '8px',
+                            background: isConnected && walletAddress 
+                              ? 'rgba(40, 192, 240, 0.1)' 
+                              : 'rgba(255, 152, 0, 0.1)',
+                            border: `1px solid ${isConnected && walletAddress 
+                              ? 'rgba(40, 192, 240, 0.3)' 
+                              : 'rgba(255, 152, 0, 0.3)'}`,
+                            marginBottom: '20px'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <FaWallet style={{ 
+                                color: isConnected && walletAddress ? '#28c0f0' : '#ff9800',
+                                fontSize: '18px'
+                              }} />
+                              <div style={{ flex: 1 }}>
+                                <strong style={{ 
+                                  color: isConnected && walletAddress ? '#28c0f0' : '#ff9800',
+                                  display: 'block',
+                                  marginBottom: '4px'
+                                }}>
+                                  {isConnected && walletAddress 
+                                    ? '✅ Wallet conectada' 
+                                    : '⚠️ Wallet no conectada'}
+                                </strong>
+                                {isConnected && walletAddress ? (
+                                  <small style={{ color: '#ccc', fontSize: '12px' }}>
+                                    {walletAddress.substring(0, 8)}...{walletAddress.substring(walletAddress.length - 8)}
+                                  </small>
+                                ) : (
+                                  <small style={{ color: '#ff9800', fontSize: '12px' }}>
+                                    Debes conectar tu wallet (Freighter) para resolver disputas y liberar fondos.
+                                  </small>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
                           <div className="form-actions">
                             <button
                               type="button"
@@ -794,7 +1183,10 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                             <button
                               type="submit"
                               className="admin-button primary"
-                              disabled={resolving}
+                              disabled={resolving || !isConnected || !walletAddress}
+                              title={!isConnected || !walletAddress 
+                                ? 'Debes conectar tu wallet para resolver disputas' 
+                                : ''}
                             >
                               {resolving ? (
                                 <>
@@ -812,6 +1204,26 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                         </form>
                       </div>
                     )}
+                  </div>
+                )}
+                  </>
+                )}
+
+                {activeTab === 'chat' && selectedDispute && (
+                  <div style={{ minHeight: '400px' }}>
+                    <DisputeChatView disputeId={selectedDispute.id} />
+                  </div>
+                )}
+
+                {activeTab === 'files' && selectedDispute && (
+                  <div style={{ minHeight: '400px' }}>
+                    <DisputeFilesView disputeId={selectedDispute.id} />
+                  </div>
+                )}
+
+                {activeTab === 'timeline' && selectedDispute && (
+                  <div style={{ minHeight: '400px' }}>
+                    <DisputeTimelineView disputeId={selectedDispute.id} />
                   </div>
                 )}
               </div>

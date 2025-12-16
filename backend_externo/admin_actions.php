@@ -69,65 +69,431 @@ function handleGetStats($conn, $user) {
         $platformFee = 0.003;
     }
     
-    // Volumen total (suma de precios + comisiones de tareas completadas)
-    // En el nuevo modelo: el cliente paga price + commission, entonces volumen = SUM(price * (1 + platformFee))
+    // Volumen total (suma de lo que pagaron los clientes)
+    // CORRECCIÓN: Usar escrow_amount si existe, sino calcular: price / (1 - platformFee)
+    // Porque price es el workerAmount, y el cliente paga: workerAmount / (1 - platformFee)
     $platformFeeEscaped = (float)$platformFee;
-    $result = $conn->query("SELECT COALESCE(SUM(price * (1 + " . $platformFeeEscaped . ")), 0) as total FROM tasks WHERE status = 'completed' AND escrow_status = 'completed'");
+    
+    // Verificar si las columnas existen
+    $checkEscrowAmount = $conn->query("SHOW COLUMNS FROM tasks LIKE 'escrow_amount'");
+    $hasEscrowAmount = $checkEscrowAmount && $checkEscrowAmount->num_rows > 0;
+    $checkEscrowPlatformFee = $conn->query("SHOW COLUMNS FROM tasks LIKE 'escrow_platform_fee'");
+    $hasEscrowPlatformFee = $checkEscrowPlatformFee && $checkEscrowPlatformFee->num_rows > 0;
+    
+    // Construir consulta de volumen según columnas disponibles
+    if ($hasEscrowAmount) {
+        if ($hasEscrowPlatformFee) {
+            $volumeQuery = "
+                SELECT COALESCE(
+                    SUM(COALESCE(
+                        escrow_amount, 
+                        price / (1 - COALESCE(escrow_platform_fee, " . $platformFeeEscaped . "))
+                    )), 
+                    0
+                ) as total 
+                FROM tasks 
+                WHERE status = 'completed' AND escrow_status = 'completed'
+            ";
+        } else {
+            $volumeQuery = "
+                SELECT COALESCE(
+                    SUM(COALESCE(
+                        escrow_amount, 
+                        price / (1 - " . $platformFeeEscaped . ")
+                    )), 
+                    0
+                ) as total 
+                FROM tasks 
+                WHERE status = 'completed' AND escrow_status = 'completed'
+            ";
+        }
+    } else {
+        $volumeQuery = "
+            SELECT COALESCE(
+                SUM(price / (1 - " . $platformFeeEscaped . ")), 
+                0
+            ) as total 
+            FROM tasks 
+            WHERE status = 'completed' AND escrow_status = 'completed'
+        ";
+    }
+    
+    $result = $conn->query($volumeQuery);
     if ($result === false) {
         throw new Exception("Error en consulta de volumen: " . $conn->error);
     }
     $stats['total_volume_usdc'] = (float)$result->fetch_assoc()['total'];
     
-    // Comisiones totales (usando el fee configurado del sistema)
-    // Las comisiones son: SUM(price * platformFee)
-    $commissionResult = $conn->query("SELECT COALESCE(SUM(price * " . $platformFeeEscaped . "), 0) as total FROM tasks WHERE status = 'completed' AND escrow_status = 'completed'");
+    // Comisiones totales (diferencia entre lo que pagó el cliente y lo que recibió el trabajador)
+    // CORRECCIÓN: Fees = SUM(escrow_amount - price) = SUM(lo que pagó el cliente - lo que recibió el trabajador)
+    // IMPORTANTE: Usar CAST para preservar precisión decimal completa
+    if ($hasEscrowAmount) {
+        if ($hasEscrowPlatformFee) {
+            $feesQuery = "
+                SELECT COALESCE(
+                    CAST(SUM(
+                        CAST(COALESCE(
+                            escrow_amount, 
+                            CAST(price AS DECIMAL(18,8)) / (1 - COALESCE(escrow_platform_fee, " . $platformFeeEscaped . "))
+                        ) AS DECIMAL(18,8)) - CAST(price AS DECIMAL(18,8))
+                    ) AS DECIMAL(18,8)), 
+                    0
+                ) as total 
+                FROM tasks 
+                WHERE status = 'completed' AND escrow_status = 'completed'
+            ";
+        } else {
+            $feesQuery = "
+                SELECT COALESCE(
+                    CAST(SUM(
+                        CAST(COALESCE(
+                            escrow_amount, 
+                            CAST(price AS DECIMAL(18,8)) / (1 - " . $platformFeeEscaped . ")
+                        ) AS DECIMAL(18,8)) - CAST(price AS DECIMAL(18,8))
+                    ) AS DECIMAL(18,8)), 
+                    0
+                ) as total 
+                FROM tasks 
+                WHERE status = 'completed' AND escrow_status = 'completed'
+            ";
+        }
+    } else {
+        $feesQuery = "
+            SELECT COALESCE(
+                CAST(SUM(
+                    CAST(price AS DECIMAL(18,8)) / (1 - " . $platformFeeEscaped . ") - CAST(price AS DECIMAL(18,8))
+                ) AS DECIMAL(18,8)), 
+                0
+            ) as total 
+            FROM tasks 
+            WHERE status = 'completed' AND escrow_status = 'completed'
+        ";
+    }
+    
+    $commissionResult = $conn->query($feesQuery);
     if ($commissionResult === false) {
         throw new Exception("Error en consulta de comisiones: " . $conn->error);
     }
-    $stats['total_commission_usdc'] = (float)$commissionResult->fetch_assoc()['total'];
+    $commissionRow = $commissionResult->fetch_assoc();
+    // Usar número como string y luego convertir para preservar precisión
+    $stats['total_commission_usdc'] = is_numeric($commissionRow['total']) ? (float)$commissionRow['total'] : 0.0;
     
     // ========== ESTADÍSTICAS POR PERÍODO ==========
     
     // Volumen de hoy (tareas completadas hoy)
-    // En el nuevo modelo: volumen = SUM(price * (1 + platformFee)) porque el cliente paga price + commission
-    // Usar COALESCE para obtener la mejor fecha disponible: escrow_completed_at > completed_at > created_at
-    $result = $conn->query("SELECT COALESCE(SUM(price * (1 + " . $platformFeeEscaped . ")), 0) as total FROM tasks WHERE status = 'completed' AND escrow_status = 'completed' AND DATE(COALESCE(escrow_completed_at, completed_at, created_at)) = CURDATE()");
+    // CORRECCIÓN: Usar escrow_amount si existe, sino calcular retroactivamente
+    if ($hasEscrowAmount) {
+        if ($hasEscrowPlatformFee) {
+            $volumeTodayQuery = "
+                SELECT COALESCE(
+                    SUM(COALESCE(
+                        escrow_amount, 
+                        price / (1 - COALESCE(escrow_platform_fee, " . $platformFeeEscaped . "))
+                    )), 
+                    0
+                ) as total 
+                FROM tasks 
+                WHERE status = 'completed' AND escrow_status = 'completed' 
+                AND DATE(COALESCE(escrow_completed_at, completed_at, created_at)) = CURDATE()
+            ";
+        } else {
+            $volumeTodayQuery = "
+                SELECT COALESCE(
+                    SUM(COALESCE(
+                        escrow_amount, 
+                        price / (1 - " . $platformFeeEscaped . ")
+                    )), 
+                    0
+                ) as total 
+                FROM tasks 
+                WHERE status = 'completed' AND escrow_status = 'completed' 
+                AND DATE(COALESCE(escrow_completed_at, completed_at, created_at)) = CURDATE()
+            ";
+        }
+    } else {
+        $volumeTodayQuery = "
+            SELECT COALESCE(
+                SUM(price / (1 - " . $platformFeeEscaped . ")), 
+                0
+            ) as total 
+            FROM tasks 
+            WHERE status = 'completed' AND escrow_status = 'completed' 
+            AND DATE(COALESCE(escrow_completed_at, completed_at, created_at)) = CURDATE()
+        ";
+    }
+    
+    $result = $conn->query($volumeTodayQuery);
     if ($result === false) {
         throw new Exception("Error en consulta de volumen hoy: " . $conn->error);
     }
     $stats['volume_today'] = (float)$result->fetch_assoc()['total'];
-    // Fees de hoy: SUM(price * platformFee)
-    $feesResult = $conn->query("SELECT COALESCE(SUM(price * " . $platformFeeEscaped . "), 0) as total FROM tasks WHERE status = 'completed' AND escrow_status = 'completed' AND DATE(COALESCE(escrow_completed_at, completed_at, created_at)) = CURDATE()");
+    
+    // Fees de hoy: diferencia entre lo pagado y lo recibido
+    // IMPORTANTE: Usar CAST para preservar precisión decimal completa
+    if ($hasEscrowAmount) {
+        if ($hasEscrowPlatformFee) {
+            $feesTodayQuery = "
+                SELECT COALESCE(
+                    CAST(SUM(
+                        CAST(COALESCE(
+                            escrow_amount, 
+                            CAST(price AS DECIMAL(18,8)) / (1 - COALESCE(escrow_platform_fee, " . $platformFeeEscaped . "))
+                        ) AS DECIMAL(18,8)) - CAST(price AS DECIMAL(18,8))
+                    ) AS DECIMAL(18,8)), 
+                    0
+                ) as total 
+                FROM tasks 
+                WHERE status = 'completed' AND escrow_status = 'completed' 
+                AND DATE(COALESCE(escrow_completed_at, completed_at, created_at)) = CURDATE()
+            ";
+        } else {
+            $feesTodayQuery = "
+                SELECT COALESCE(
+                    CAST(SUM(
+                        CAST(COALESCE(
+                            escrow_amount, 
+                            CAST(price AS DECIMAL(18,8)) / (1 - " . $platformFeeEscaped . ")
+                        ) AS DECIMAL(18,8)) - CAST(price AS DECIMAL(18,8))
+                    ) AS DECIMAL(18,8)), 
+                    0
+                ) as total 
+                FROM tasks 
+                WHERE status = 'completed' AND escrow_status = 'completed' 
+                AND DATE(COALESCE(escrow_completed_at, completed_at, created_at)) = CURDATE()
+            ";
+        }
+    } else {
+        $feesTodayQuery = "
+            SELECT COALESCE(
+                CAST(SUM(
+                    CAST(price AS DECIMAL(18,8)) / (1 - " . $platformFeeEscaped . ") - CAST(price AS DECIMAL(18,8))
+                ) AS DECIMAL(18,8)), 
+                0
+            ) as total 
+            FROM tasks 
+            WHERE status = 'completed' AND escrow_status = 'completed' 
+            AND DATE(COALESCE(escrow_completed_at, completed_at, created_at)) = CURDATE()
+        ";
+    }
+    
+    $feesResult = $conn->query($feesTodayQuery);
     if ($feesResult === false) {
         throw new Exception("Error en consulta de fees hoy: " . $conn->error);
     }
-    $stats['fees_today'] = (float)$feesResult->fetch_assoc()['total'];
+    $feesTodayRow = $feesResult->fetch_assoc();
+    $stats['fees_today'] = is_numeric($feesTodayRow['total']) ? (float)$feesTodayRow['total'] : 0.0;
     
     // Volumen de esta semana (tareas completadas esta semana)
-    $result = $conn->query("SELECT COALESCE(SUM(price * (1 + " . $platformFeeEscaped . ")), 0) as total FROM tasks WHERE status = 'completed' AND escrow_status = 'completed' AND YEARWEEK(COALESCE(escrow_completed_at, completed_at, created_at), 1) = YEARWEEK(CURDATE(), 1)");
+    // CORRECCIÓN: Usar escrow_amount si existe, sino calcular retroactivamente
+    if ($hasEscrowAmount) {
+        if ($hasEscrowPlatformFee) {
+            $volumeWeekQuery = "
+                SELECT COALESCE(
+                    SUM(COALESCE(
+                        escrow_amount, 
+                        price / (1 - COALESCE(escrow_platform_fee, " . $platformFeeEscaped . "))
+                    )), 
+                    0
+                ) as total 
+                FROM tasks 
+                WHERE status = 'completed' AND escrow_status = 'completed' 
+                AND YEARWEEK(COALESCE(escrow_completed_at, completed_at, created_at), 1) = YEARWEEK(CURDATE(), 1)
+            ";
+        } else {
+            $volumeWeekQuery = "
+                SELECT COALESCE(
+                    SUM(COALESCE(
+                        escrow_amount, 
+                        price / (1 - " . $platformFeeEscaped . ")
+                    )), 
+                    0
+                ) as total 
+                FROM tasks 
+                WHERE status = 'completed' AND escrow_status = 'completed' 
+                AND YEARWEEK(COALESCE(escrow_completed_at, completed_at, created_at), 1) = YEARWEEK(CURDATE(), 1)
+            ";
+        }
+    } else {
+        $volumeWeekQuery = "
+            SELECT COALESCE(
+                SUM(price / (1 - " . $platformFeeEscaped . ")), 
+                0
+            ) as total 
+            FROM tasks 
+            WHERE status = 'completed' AND escrow_status = 'completed' 
+            AND YEARWEEK(COALESCE(escrow_completed_at, completed_at, created_at), 1) = YEARWEEK(CURDATE(), 1)
+        ";
+    }
+    
+    $result = $conn->query($volumeWeekQuery);
     if ($result === false) {
         throw new Exception("Error en consulta de volumen esta semana: " . $conn->error);
     }
     $stats['volume_this_week'] = (float)$result->fetch_assoc()['total'];
-    // Fees de esta semana: SUM(price * platformFee)
-    $feesResult = $conn->query("SELECT COALESCE(SUM(price * " . $platformFeeEscaped . "), 0) as total FROM tasks WHERE status = 'completed' AND escrow_status = 'completed' AND YEARWEEK(COALESCE(escrow_completed_at, completed_at, created_at), 1) = YEARWEEK(CURDATE(), 1)");
+    
+    // Fees de esta semana: diferencia entre lo pagado y lo recibido
+    // IMPORTANTE: Usar CAST para preservar precisión decimal completa
+    if ($hasEscrowAmount) {
+        if ($hasEscrowPlatformFee) {
+            $feesWeekQuery = "
+                SELECT COALESCE(
+                    CAST(SUM(
+                        CAST(COALESCE(
+                            escrow_amount, 
+                            CAST(price AS DECIMAL(18,8)) / (1 - COALESCE(escrow_platform_fee, " . $platformFeeEscaped . "))
+                        ) AS DECIMAL(18,8)) - CAST(price AS DECIMAL(18,8))
+                    ) AS DECIMAL(18,8)), 
+                    0
+                ) as total 
+                FROM tasks 
+                WHERE status = 'completed' AND escrow_status = 'completed' 
+                AND YEARWEEK(COALESCE(escrow_completed_at, completed_at, created_at), 1) = YEARWEEK(CURDATE(), 1)
+            ";
+        } else {
+            $feesWeekQuery = "
+                SELECT COALESCE(
+                    CAST(SUM(
+                        CAST(COALESCE(
+                            escrow_amount, 
+                            CAST(price AS DECIMAL(18,8)) / (1 - " . $platformFeeEscaped . ")
+                        ) AS DECIMAL(18,8)) - CAST(price AS DECIMAL(18,8))
+                    ) AS DECIMAL(18,8)), 
+                    0
+                ) as total 
+                FROM tasks 
+                WHERE status = 'completed' AND escrow_status = 'completed' 
+                AND YEARWEEK(COALESCE(escrow_completed_at, completed_at, created_at), 1) = YEARWEEK(CURDATE(), 1)
+            ";
+        }
+    } else {
+        $feesWeekQuery = "
+            SELECT COALESCE(
+                CAST(SUM(
+                    CAST(price AS DECIMAL(18,8)) / (1 - " . $platformFeeEscaped . ") - CAST(price AS DECIMAL(18,8))
+                ) AS DECIMAL(18,8)), 
+                0
+            ) as total 
+            FROM tasks 
+            WHERE status = 'completed' AND escrow_status = 'completed' 
+            AND YEARWEEK(COALESCE(escrow_completed_at, completed_at, created_at), 1) = YEARWEEK(CURDATE(), 1)
+        ";
+    }
+    
+    $feesResult = $conn->query($feesWeekQuery);
     if ($feesResult === false) {
         throw new Exception("Error en consulta de fees esta semana: " . $conn->error);
     }
-    $stats['fees_this_week'] = (float)$feesResult->fetch_assoc()['total'];
+    $feesWeekRow = $feesResult->fetch_assoc();
+    $stats['fees_this_week'] = is_numeric($feesWeekRow['total']) ? (float)$feesWeekRow['total'] : 0.0;
     
     // Volumen de este mes (tareas completadas este mes)
-    $result = $conn->query("SELECT COALESCE(SUM(price * (1 + " . $platformFeeEscaped . ")), 0) as total FROM tasks WHERE status = 'completed' AND escrow_status = 'completed' AND MONTH(COALESCE(escrow_completed_at, completed_at, created_at)) = MONTH(CURDATE()) AND YEAR(COALESCE(escrow_completed_at, completed_at, created_at)) = YEAR(CURDATE())");
+    // CORRECCIÓN: Usar escrow_amount si existe, sino calcular retroactivamente
+    if ($hasEscrowAmount) {
+        if ($hasEscrowPlatformFee) {
+            $volumeMonthQuery = "
+                SELECT COALESCE(
+                    SUM(COALESCE(
+                        escrow_amount, 
+                        price / (1 - COALESCE(escrow_platform_fee, " . $platformFeeEscaped . "))
+                    )), 
+                    0
+                ) as total 
+                FROM tasks 
+                WHERE status = 'completed' AND escrow_status = 'completed' 
+                AND MONTH(COALESCE(escrow_completed_at, completed_at, created_at)) = MONTH(CURDATE()) 
+                AND YEAR(COALESCE(escrow_completed_at, completed_at, created_at)) = YEAR(CURDATE())
+            ";
+        } else {
+            $volumeMonthQuery = "
+                SELECT COALESCE(
+                    SUM(COALESCE(
+                        escrow_amount, 
+                        price / (1 - " . $platformFeeEscaped . ")
+                    )), 
+                    0
+                ) as total 
+                FROM tasks 
+                WHERE status = 'completed' AND escrow_status = 'completed' 
+                AND MONTH(COALESCE(escrow_completed_at, completed_at, created_at)) = MONTH(CURDATE()) 
+                AND YEAR(COALESCE(escrow_completed_at, completed_at, created_at)) = YEAR(CURDATE())
+            ";
+        }
+    } else {
+        $volumeMonthQuery = "
+            SELECT COALESCE(
+                SUM(price / (1 - " . $platformFeeEscaped . ")), 
+                0
+            ) as total 
+            FROM tasks 
+            WHERE status = 'completed' AND escrow_status = 'completed' 
+            AND MONTH(COALESCE(escrow_completed_at, completed_at, created_at)) = MONTH(CURDATE()) 
+            AND YEAR(COALESCE(escrow_completed_at, completed_at, created_at)) = YEAR(CURDATE())
+        ";
+    }
+    
+    $result = $conn->query($volumeMonthQuery);
     if ($result === false) {
         throw new Exception("Error en consulta de volumen este mes: " . $conn->error);
     }
     $stats['volume_this_month'] = (float)$result->fetch_assoc()['total'];
-    // Fees de este mes: SUM(price * platformFee)
-    $feesResult = $conn->query("SELECT COALESCE(SUM(price * " . $platformFeeEscaped . "), 0) as total FROM tasks WHERE status = 'completed' AND escrow_status = 'completed' AND MONTH(COALESCE(escrow_completed_at, completed_at, created_at)) = MONTH(CURDATE()) AND YEAR(COALESCE(escrow_completed_at, completed_at, created_at)) = YEAR(CURDATE())");
+    
+    // Fees de este mes: diferencia entre lo pagado y lo recibido
+    // IMPORTANTE: Usar CAST para preservar precisión decimal completa
+    if ($hasEscrowAmount) {
+        if ($hasEscrowPlatformFee) {
+            $feesMonthQuery = "
+                SELECT COALESCE(
+                    CAST(SUM(
+                        CAST(COALESCE(
+                            escrow_amount, 
+                            CAST(price AS DECIMAL(18,8)) / (1 - COALESCE(escrow_platform_fee, " . $platformFeeEscaped . "))
+                        ) AS DECIMAL(18,8)) - CAST(price AS DECIMAL(18,8))
+                    ) AS DECIMAL(18,8)), 
+                    0
+                ) as total 
+                FROM tasks 
+                WHERE status = 'completed' AND escrow_status = 'completed' 
+                AND MONTH(COALESCE(escrow_completed_at, completed_at, created_at)) = MONTH(CURDATE()) 
+                AND YEAR(COALESCE(escrow_completed_at, completed_at, created_at)) = YEAR(CURDATE())
+            ";
+        } else {
+            $feesMonthQuery = "
+                SELECT COALESCE(
+                    CAST(SUM(
+                        CAST(COALESCE(
+                            escrow_amount, 
+                            CAST(price AS DECIMAL(18,8)) / (1 - " . $platformFeeEscaped . ")
+                        ) AS DECIMAL(18,8)) - CAST(price AS DECIMAL(18,8))
+                    ) AS DECIMAL(18,8)), 
+                    0
+                ) as total 
+                FROM tasks 
+                WHERE status = 'completed' AND escrow_status = 'completed' 
+                AND MONTH(COALESCE(escrow_completed_at, completed_at, created_at)) = MONTH(CURDATE()) 
+                AND YEAR(COALESCE(escrow_completed_at, completed_at, created_at)) = YEAR(CURDATE())
+            ";
+        }
+    } else {
+        $feesMonthQuery = "
+            SELECT COALESCE(
+                CAST(SUM(
+                    CAST(price AS DECIMAL(18,8)) / (1 - " . $platformFeeEscaped . ") - CAST(price AS DECIMAL(18,8))
+                ) AS DECIMAL(18,8)), 
+                0
+            ) as total 
+            FROM tasks 
+            WHERE status = 'completed' AND escrow_status = 'completed' 
+            AND MONTH(COALESCE(escrow_completed_at, completed_at, created_at)) = MONTH(CURDATE()) 
+            AND YEAR(COALESCE(escrow_completed_at, completed_at, created_at)) = YEAR(CURDATE())
+        ";
+    }
+    
+    $feesResult = $conn->query($feesMonthQuery);
     if ($feesResult === false) {
         throw new Exception("Error en consulta de fees este mes: " . $conn->error);
     }
-    $stats['fees_this_month'] = (float)$feesResult->fetch_assoc()['total'];
+    $feesMonthRow = $feesResult->fetch_assoc();
+    $stats['fees_this_month'] = is_numeric($feesMonthRow['total']) ? (float)$feesMonthRow['total'] : 0.0;
     
     // Transacciones pendientes
     $result = $conn->query("SELECT COUNT(*) as total FROM tasks WHERE pending_transaction_xdr IS NOT NULL");
@@ -1324,12 +1690,13 @@ function handleResolveDispute($conn, $user, $data) {
             'escrow_id' => $fundsReleaseInfo['escrow_id'],
             'client_wallet' => $fundsReleaseInfo['client_wallet'],
             'worker_wallet' => $fundsReleaseInfo['worker_wallet'],
+            'decision' => $decision, // Agregar la decisión para que el frontend sepa qué hacer
             'needs_refund' => $fundsReleaseInfo['needs_refund'],
             'needs_payment' => $fundsReleaseInfo['needs_payment'],
             'needs_split' => $fundsReleaseInfo['needs_split'],
             'refund_amount' => $fundsReleaseInfo['refund_amount'],
             'payment_amount' => $fundsReleaseInfo['payment_amount'],
-            'message' => 'Los fondos del escrow necesitan ser liberados. Por favor, usa el panel de administración para completar la transacción.'
+            'message' => 'Los fondos del escrow necesitan ser liberados. Por favor, firma la transacción en Freighter para completar la liberación.'
         ];
     }
     
