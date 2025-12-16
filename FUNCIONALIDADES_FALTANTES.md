@@ -13,14 +13,16 @@
 - ✅ Creación y gestión de tareas
 - ✅ Sistema de propuestas/aplicaciones
 - ✅ Integración completa con Trustless Work (escrow)
-- ✅ Sistema de ratings y reviews (frontend + backend)
+- ✅ Sistema de ratings y reviews (frontend + backend) - **COMPLETADO**
 - ✅ Historial de transacciones real
 - ✅ Panel de administración completo
-- ✅ Sistema de disputas
+- ✅ Sistema de disputas - **COMPLETADO** (creación, resolución, vista completa con chat/archivos/timeline)
 - ✅ Mensajería en tiempo real
 - ✅ Notificaciones in-app
 - ✅ Eliminación automática de tareas (24 horas)
 - ✅ Estadísticas básicas en admin panel
+- ✅ Vista completa de disputas en admin (chat, archivos, timeline) - **NUEVO**
+- ✅ Permisos de acceso a disputas (admin, cliente, trabajador) - **NUEVO**
 
 ### ⚠️ Funcionalidades Parcialmente Implementadas
 - ⚠️ Gestión de tokens (usa datos mock)
@@ -96,15 +98,17 @@ const mockTokens: Token[] = [...]
 - ✅ Búsqueda por texto (searchQuery)
 - ✅ Filtro por rango de precio (minPrice, maxPrice)
 - ✅ Ordenamiento (sortBy)
+- ✅ Búsqueda en panel de admin (usuarios, tareas)
 
 **Faltante:**
 - Búsqueda por tags/palabras clave
 - Filtro por rango de fecha
 - Filtro por rating del creador
-- Filtro por estado de tarea
+- Filtro por estado de tarea en dashboard
 - Guardar filtros favoritos del usuario
 - Historial de búsquedas
 - Sugerencias de búsqueda
+- Búsqueda avanzada con múltiples criterios simultáneos
 
 **Impacto:** Medio - Mejora la experiencia de búsqueda
 
@@ -256,6 +260,11 @@ const mockTokens: Token[] = [...]
 - ✅ `delete_scheduled_tasks.php` (eliminación automática)
 - ✅ `create_rating.php` / `get_ratings.php` (sistema de ratings)
 - ✅ `get_user_rating_summary.php` (resumen de ratings)
+- ✅ `get_dispute_chat.php` (chat completo de disputa)
+- ✅ `get_dispute_files.php` (archivos relacionados con disputa)
+- ✅ `get_dispute_timeline.php` (timeline de eventos de disputa)
+- ✅ `create_dispute.php` (crear disputa)
+- ✅ `resolve_dispute` (resolver disputa desde admin panel)
 
 **Faltantes identificados:**
 - `get_allowed_tokens.php` / `add_allowed_token.php` / `toggle_token.php` / `remove_token.php` (gestión de tokens)
@@ -615,17 +624,25 @@ const mockTokens: Token[] = [...]
 - ✅ **Estructura de Endpoints Backend** - Estandarización de estructura siguiendo patrones exitosos
 - ✅ **Corrección de Estadísticas Admin** - Corregido uso de `updated_at` por `COALESCE(escrow_completed_at, completed_at, created_at)`
 - ✅ **Sistema de Ratings** - Frontend y backend completamente implementados (`RatingSystem.tsx`, `create_rating.php`, `get_ratings.php`)
+- ✅ **Vista Completa de Disputas en Admin** - Sistema de tabs implementado con:
+  - ✅ Chat completo entre cliente y trabajador (`get_dispute_chat.php`, `DisputeChatView.tsx`)
+  - ✅ Archivos relacionados (tarea, chat, entregas) (`get_dispute_files.php`, `DisputeFilesView.tsx`)
+  - ✅ Timeline de eventos (`get_dispute_timeline.php`, `DisputeTimelineView.tsx`)
+- ✅ **Permisos de Acceso a Disputas** - Cliente, trabajador y administradores pueden ver el chat/archivos/timeline de sus disputas
+- ✅ **Corrección de Autenticación Admin** - Login de administrador ahora guarda token en ambos formatos (`token` y `admin_token`) para compatibilidad
+- ✅ **Corrección de Columna `files` en Mensajes** - Eliminadas referencias a columna inexistente en tabla `messages`
 
 ---
 
 ## 📝 Notas Adicionales
 
 - **Total de funcionalidades faltantes identificadas:** 26
-- **Funcionalidades completadas recientemente:** 6
-- **Archivos TypeScript/TSX:** 52
+- **Funcionalidades completadas recientemente:** 10 (incluyendo vista completa de disputas)
+- **Archivos TypeScript/TSX:** 52+
 - **Console.log encontrados:** ~210 (necesitan limpieza)
 - **TODOs encontrados:** Múltiples en código
 - **Componentes grandes a refactorizar:** 2 (`SuperviseTask.tsx`, `dashboard.tsx`)
+- **Endpoints backend completados:** 8 nuevos endpoints de disputas y chat
 
 ---
 
@@ -653,4 +670,20 @@ const mockTokens: Token[] = [...]
 
 **Última actualización:** Enero 2025  
 **Mantenido por:** AI Assistant  
-**Versión del documento:** 3.0
+**Versión del documento:** 3.1
+
+---
+
+## 📝 Cambios Recientes (Versión 3.1)
+
+### Funcionalidades Completadas
+- ✅ Vista completa de disputas en admin panel con tabs (chat, archivos, timeline)
+- ✅ Endpoints backend para obtener chat, archivos y timeline de disputas
+- ✅ Permisos de acceso ampliados (cliente y trabajador pueden ver sus disputas)
+- ✅ Corrección de autenticación admin (compatibilidad con ambos formatos de token)
+- ✅ Corrección de errores en consultas SQL (columna `files` inexistente en `messages`)
+
+### Mejoras Técnicas
+- ✅ Manejo de errores mejorado con try-catch en endpoints de disputas
+- ✅ Validación de permisos mejorada (admin, cliente, trabajador)
+- ✅ Estructura de código más robusta y consistente

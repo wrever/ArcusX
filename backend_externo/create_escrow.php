@@ -388,7 +388,65 @@ try {
             exit;
         }
         
+        // Verificar y crear columnas para platformFee, trustline_address y escrow_amount si no existen
+        try {
+            $checkPlatformFee = $conn->query("SHOW COLUMNS FROM tasks LIKE 'escrow_platform_fee'");
+            if ($checkPlatformFee->num_rows === 0) {
+                $conn->query("ALTER TABLE tasks ADD COLUMN escrow_platform_fee DECIMAL(10,7) NULL AFTER escrow_id");
+                error_log("Columna escrow_platform_fee creada exitosamente");
+            }
+            
+            $checkTrustline = $conn->query("SHOW COLUMNS FROM tasks LIKE 'escrow_trustline_address'");
+            if ($checkTrustline->num_rows === 0) {
+                $conn->query("ALTER TABLE tasks ADD COLUMN escrow_trustline_address VARCHAR(56) NULL AFTER escrow_platform_fee");
+                error_log("Columna escrow_trustline_address creada exitosamente");
+            }
+            
+            $checkEscrowAmount = $conn->query("SHOW COLUMNS FROM tasks LIKE 'escrow_amount'");
+            if ($checkEscrowAmount->num_rows === 0) {
+                $conn->query("ALTER TABLE tasks ADD COLUMN escrow_amount DECIMAL(18, 8) NULL AFTER escrow_trustline_address");
+                error_log("Columna escrow_amount creada exitosamente");
+            }
+        } catch (Exception $e) {
+            error_log("Error verificando/creando columnas de escrow: " . $e->getMessage());
+            // Continuar de todas formas
+        }
+        
+        // Obtener platformFee, trustline_address y escrow_amount del input si están disponibles
+        // IMPORTANTE: Usar conversión que preserve precisión decimal
+        $platformFee = isset($input['platform_fee']) ? (is_numeric($input['platform_fee']) ? (float)$input['platform_fee'] : null) : null;
+        $trustlineAddress = isset($input['trustline_address']) ? trim($input['trustline_address']) : null;
+        // Preservar precisión decimal completa para escrow_amount
+        $escrowAmount = isset($input['escrow_amount']) ? (is_numeric($input['escrow_amount']) ? (float)$input['escrow_amount'] : null) : null;
+        
         // Actualizar la tarea con información del escrow (PENDIENTE de fondeo)
+        if ($platformFee !== null && $trustlineAddress !== null && $escrowAmount !== null) {
+            // Caso ideal: tenemos todos los datos
+            $stmt = $conn->prepare("
+                UPDATE tasks 
+                SET escrow_id = ?, 
+                    escrow_status = 'pending_funding',
+                    escrow_created_at = NOW(),
+                    escrow_amount = ?,
+                    escrow_platform_fee = ?,
+                    escrow_trustline_address = ?
+                WHERE id = ?
+            ");
+            $stmt->bind_param("sddsi", $escrowId, $escrowAmount, $platformFee, $trustlineAddress, $taskId);
+        } elseif ($platformFee !== null && $trustlineAddress !== null) {
+            // Caso: tenemos platformFee y trustline pero no escrow_amount
+            $stmt = $conn->prepare("
+                UPDATE tasks 
+                SET escrow_id = ?, 
+                    escrow_status = 'pending_funding',
+                    escrow_created_at = NOW(),
+                    escrow_platform_fee = ?,
+                    escrow_trustline_address = ?
+                WHERE id = ?
+            ");
+            $stmt->bind_param("sdsi", $escrowId, $platformFee, $trustlineAddress, $taskId);
+        } else {
+            // Caso mínimo: solo escrow_id
         $stmt = $conn->prepare("
             UPDATE tasks 
             SET escrow_id = ?, 
@@ -397,6 +455,7 @@ try {
             WHERE id = ?
         ");
         $stmt->bind_param("si", $escrowId, $taskId);
+        }
         $stmt->execute();
         
         // Log de éxito

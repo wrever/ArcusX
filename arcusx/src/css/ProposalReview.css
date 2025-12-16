@@ -795,8 +795,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(10px);
+  background: rgba(7, 35, 60, 0.95);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -805,15 +804,15 @@
 }
 
 .escrow-process-content {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  border-radius: 20px;
+  background: linear-gradient(135deg, #07233c 0%, #0a2d4a 100%);
+  border-radius: 16px;
   padding: 2rem;
   max-width: 500px;
   width: 100%;
   max-height: 90vh;
   overflow-y: auto;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(40, 192, 240, 0.2);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 .escrow-process-header {
@@ -950,7 +949,7 @@
 }
 
 .escrow-step-button {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(90deg, #28c0f0, #1180b3);
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -964,7 +963,8 @@
 
 .escrow-step-button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+  background: linear-gradient(90deg, #1180b3, #28c0f0);
+  box-shadow: 0 4px 12px rgba(40, 192, 240, 0.4);
 }
 
 .escrow-step-button:disabled {
@@ -1011,7 +1011,7 @@
 
 .escrow-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #28c0f0 0%, #667eea 100%);
+  background: linear-gradient(90deg, #28c0f0 0%, #1180b3 100%);
   border-radius: 4px;
   transition: width 0.3s ease;
 }

@@ -111,8 +111,15 @@ const CreateTask = () => {
     if (formData.price && formData.price.trim() !== '') {
       const workerAmountValue = parseFloat(formData.price);
       if (!isNaN(workerAmountValue) && workerAmountValue > 0) {
-        const commission = calculateCommissionFromWorkerAmount(workerAmountValue, platformFee);
-        const total = calculateTotalWithCommission(workerAmountValue, platformFee);
+        // IMPORTANTE: Usar la misma fórmula que en ProposalReview
+        // Trustless Work calcula la comisión sobre el amount del escrow al liberar
+        // Para que el trabajador reciba exactamente workerAmount:
+        // escrowAmount = workerAmount / (1 - platformFee)
+        // commission = escrowAmount - workerAmount
+        const escrowAmount = workerAmountValue / (1 - platformFee);
+        const commission = escrowAmount - workerAmountValue;
+        const total = escrowAmount; // Total que debe pagar el cliente
+        
         setWorkerAmount(workerAmountValue.toFixed(2));
         setCommissionAmount(commission.toFixed(7));
         setTotalAmount(total.toFixed(7));

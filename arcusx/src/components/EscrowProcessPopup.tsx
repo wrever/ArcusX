@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FaWallet, FaFileContract, FaCoins, FaCheckCircle, FaSpinner, FaTimes } from 'react-icons/fa';
+import { usePlatformFee } from '../hooks/usePlatformFee';
 
 interface ProcessStep {
   id: string;
@@ -18,6 +20,8 @@ interface EscrowProcessPopupProps {
   taskPrice: string;
   contributorAddress: string;
   contributorName: string;
+  taskId?: string;
+  acceptedApplicantId?: number | string;
   onCreateEscrow: () => Promise<{ success: boolean; escrowId?: string; error?: string }>;
   onFundEscrow: (escrowId: string) => Promise<{ success: boolean; txHash?: string; error?: string }>;
   onSelectWorker: (escrowId: string, txHash: string) => Promise<{ success: boolean; error?: string }>;
@@ -31,11 +35,32 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
   taskPrice,
   contributorAddress,
   contributorName,
+  taskId,
+  acceptedApplicantId,
   onCreateEscrow,
   onFundEscrow,
   onSelectWorker,
   onConnectWallet
 }) => {
+  const navigate = useNavigate();
+  // Obtener platform fee para calcular el total con comisión
+  const { platformFee } = usePlatformFee();
+  
+  // Calcular montos usando la fórmula correcta
+  // Trustless Work calcula la comisión sobre el amount del escrow al liberar
+  // Para que el trabajador reciba exactamente workerAmount:
+  // escrowAmount = workerAmount / (1 - platformFee)
+  // commission = escrowAmount - workerAmount
+  const workerAmount = parseFloat(taskPrice) || 0;
+  const escrowAmount = workerAmount > 0 ? workerAmount / (1 - platformFee) : 0;
+  const commission = escrowAmount - workerAmount;
+  const platformFeePercent = (platformFee * 100).toFixed(2);
+  
+  // Formatear montos con 7 decimales (USDC)
+  const formattedWorkerAmount = workerAmount.toFixed(7);
+  const formattedCommission = commission.toFixed(7);
+  const formattedTotal = escrowAmount.toFixed(7);
+  
   const [currentStep, setCurrentStep] = useState(0);
   const [steps, setSteps] = useState<ProcessStep[]>([
     {
@@ -57,7 +82,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
     {
       id: 'fund',
       title: 'Enviar Dinero',
-      description: `Envía ${taskPrice} USDC al contrato escrow`,
+      description: `Envía ${formattedTotal} USDC al contrato escrow`,
       icon: <FaCoins />,
       status: 'pending',
       buttonText: 'Enviar Dinero'
@@ -73,11 +98,59 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
   ]);
 
   const [escrowId, setEscrowId] = useState<string | null>(null);
+  const [hasRedirected, setHasRedirected] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
   const updateStepStatus = (stepIndex: number, status: ProcessStep['status']) => {
     setSteps(prev => prev.map((step, index) => 
       index === stepIndex ? { ...step, status } : step
     ));
+  };
+
+  // Actualizar la descripción del paso "fund" cuando cambien los valores
+  // IMPORTANTE: Solo actualizar la descripción, preservar el status para NO perder el progreso
+  useEffect(() => {
+    setSteps(prev => prev.map((step: ProcessStep) => {
+      if (step.id === 'fund') {
+        // CRÍTICO: Preservar el status actual, solo actualizar la descripción
+        // Si el paso ya está completado o en progreso, NO cambiar el status
+        return {
+          ...step,
+          description: `Envía ${formattedTotal} USDC al contrato escrow (incluye ${formattedCommission} USDC de comisión de plataforma)`
+          // NO tocar step.status - preservar el progreso
+        };
+      }
+      return step;
+    }));
+  }, [formattedTotal, formattedCommission]);
+
+  // Verificar cuando todos los 4 pasos estén completados y mostrar popup de éxito
+  useEffect(() => {
+    const allStepsCompleted = steps.every(step => step.status === 'completed');
+    
+    if (allStepsCompleted && !hasRedirected && isOpen) {
+      setHasRedirected(true);
+      // Mostrar popup de éxito en lugar de redirigir automáticamente
+      setShowSuccessPopup(true);
+    }
+  }, [steps, hasRedirected, isOpen]);
+
+  // Función para manejar el botón del popup de éxito
+  const handleSuccessPopupClose = () => {
+    setShowSuccessPopup(false);
+    onClose();
+    onComplete();
+  };
+
+  const handleGoToSupervise = () => {
+    setShowSuccessPopup(false);
+    onClose();
+    if (taskId && acceptedApplicantId) {
+      navigate(`/supervise-task/${taskId}/${acceptedApplicantId}`);
+    } else {
+      // Si no hay taskId o acceptedApplicantId, ir al dashboard
+      onComplete();
+    }
   };
 
   const handleStepAction = async (stepIndex: number) => {
@@ -131,6 +204,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
             if (selectResult.success) {
               updateStepStatus(3, 'completed');
               setCurrentStep(3); // Avanzar al último paso (índice 3, que es el paso 4)
+              // El useEffect se encargará de redirigir cuando todos los pasos estén completados
             } else {
               updateStepStatus(3, 'error');
             }
@@ -149,12 +223,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
       // El trabajador ya fue seleccionado automáticamente en el paso anterior
       // Solo ejecutar la función de completar el proceso
       updateStepStatus(stepIndex, 'completed');
-      
-      // Cerrar el popup de proceso y mostrar el popup de éxito
-      setTimeout(() => {
-        onComplete();
-        onClose();
-      }, 500);
+      // El useEffect se encargará de redirigir cuando todos los pasos estén completados
     }
   };
 
@@ -293,12 +362,301 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
         <div className="escrow-process-note">
           <p>💡 <strong>Nota:</strong> Este proceso requiere 2 transacciones:</p>
           <p>1. Crear el contrato escrow</p>
-          <p>2. Enviar el dinero al contrato ({taskPrice} USDC)</p>
-          <p style={{ marginTop: '0.5rem', fontWeight: 'bold' }}>
-            💰 Total a pagar: {taskPrice} USDC + fees de XLM (~0.0001 XLM)
-          </p>
+          <p>2. Enviar el dinero al contrato</p>
+          <div style={{ 
+            marginTop: '0.5rem', 
+            padding: '16px', 
+            background: 'linear-gradient(135deg, rgba(40, 192, 240, 0.1) 0%, rgba(17, 128, 179, 0.1) 100%)',
+            borderRadius: '12px', 
+            border: '1px solid rgba(40, 192, 240, 0.3)'
+          }}>
+            <p style={{ 
+              fontWeight: 'bold', 
+              marginBottom: '12px',
+              color: '#28c0f0',
+              fontSize: '15px'
+            }}>
+              💰 Desglose del pago:
+            </p>
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '8px',
+              marginBottom: '12px'
+            }}>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '8px 0',
+                borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
+              }}>
+                <span style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.8)' }}>
+                  Pago al trabajador:
+                </span>
+                <strong style={{ fontSize: '14px', color: '#fff' }}>
+                  {formattedWorkerAmount} USDC
+                </strong>
+              </div>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '8px 0',
+                borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
+              }}>
+                <span style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.8)' }}>
+                  Comisión de plataforma ({platformFeePercent}%):
+                </span>
+                <strong style={{ fontSize: '14px', color: '#fff' }}>
+                  {formattedCommission} USDC
+                </strong>
+              </div>
+            </div>
+            <div style={{ 
+              padding: '12px',
+              background: 'linear-gradient(90deg, rgba(40, 192, 240, 0.2) 0%, rgba(17, 128, 179, 0.2) 100%)',
+              borderRadius: '8px',
+              border: '1px solid rgba(40, 192, 240, 0.4)',
+              marginTop: '8px'
+            }}>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <span style={{ 
+                  fontWeight: 'bold', 
+                  color: '#28c0f0', 
+                  fontSize: '16px' 
+                }}>
+                  💵 Total a enviar:
+                </span>
+                <strong style={{ 
+                  fontSize: '18px', 
+                  background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text'
+                }}>
+                  {formattedTotal} USDC
+                </strong>
+              </div>
+              <p style={{ 
+                margin: '8px 0 0 0', 
+                fontSize: '12px', 
+                color: 'rgba(255, 255, 255, 0.6)', 
+                fontStyle: 'italic',
+                textAlign: 'center'
+              }}>
+                + fees de XLM (~0.0001 XLM)
+              </p>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Popup de Éxito */}
+      {showSuccessPopup && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'linear-gradient(135deg, rgba(7, 35, 60, 0.95) 0%, rgba(10, 45, 74, 0.95) 100%)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 10001
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #07233c 0%, #0a2d4a 100%)',
+            borderRadius: '20px',
+            padding: '40px',
+            maxWidth: '550px',
+            width: '90%',
+            textAlign: 'center',
+            border: '1px solid rgba(40, 192, 240, 0.3)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            {/* Borde superior con gradiente Arcus X */}
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '4px',
+              background: 'linear-gradient(90deg, #28c0f0, #1180b3)'
+            }} />
+            
+            <div style={{
+              fontSize: '72px',
+              marginBottom: '24px',
+              filter: 'drop-shadow(0 4px 8px rgba(40, 192, 240, 0.3))'
+            }}>
+              ✅
+            </div>
+            
+            <h3 style={{
+              fontSize: '28px',
+              fontWeight: 'bold',
+              background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              marginBottom: '20px',
+              marginTop: 0
+            }}>
+              ¡Proceso Completado Exitosamente!
+            </h3>
+            
+            <div style={{
+              marginBottom: '30px',
+              color: 'rgba(255, 255, 255, 0.9)',
+              lineHeight: '1.6'
+            }}>
+              <p style={{ 
+                fontSize: '16px', 
+                marginBottom: '20px', 
+                fontWeight: '500',
+                color: 'rgba(255, 255, 255, 0.8)'
+              }}>
+                El trabajador ha sido seleccionado y el escrow está configurado correctamente
+              </p>
+              
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(40, 192, 240, 0.1) 0%, rgba(17, 128, 179, 0.1) 100%)',
+                padding: '20px',
+                borderRadius: '12px',
+                marginTop: '15px',
+                textAlign: 'left',
+                border: '1px solid rgba(40, 192, 240, 0.2)'
+              }}>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '10px',
+                  marginBottom: '12px',
+                  paddingBottom: '12px',
+                  borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
+                }}>
+                  <span style={{ fontSize: '18px' }}>✅</span>
+                  <strong style={{ fontSize: '15px', color: '#fff' }}>
+                    Contrato escrow creado
+                  </strong>
+                </div>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '10px',
+                  marginBottom: '12px',
+                  paddingBottom: '12px',
+                  borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
+                }}>
+                  <span style={{ fontSize: '18px' }}>✅</span>
+                  <strong style={{ fontSize: '15px', color: '#fff' }}>
+                    Fondos enviados al escrow
+                  </strong>
+                </div>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '10px',
+                  marginBottom: '12px'
+                }}>
+                  <span style={{ fontSize: '18px' }}>✅</span>
+                  <strong style={{ fontSize: '15px', color: '#fff' }}>
+                    Trabajador seleccionado
+                  </strong>
+                </div>
+                {escrowId && (
+                  <div style={{ 
+                    marginTop: '16px',
+                    paddingTop: '16px',
+                    borderTop: '1px solid rgba(40, 192, 240, 0.2)'
+                  }}>
+                    <p style={{ 
+                      fontSize: '13px', 
+                      color: 'rgba(255, 255, 255, 0.6)',
+                      margin: 0
+                    }}>
+                      <strong style={{ color: '#28c0f0' }}>Contract ID:</strong>{' '}
+                      <code style={{ 
+                        color: '#28c0f0',
+                        background: 'rgba(40, 192, 240, 0.1)',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '12px'
+                      }}>
+                        {escrowId.slice(0, 8)}...{escrowId.slice(-8)}
+                      </code>
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button 
+                onClick={handleGoToSupervise}
+                style={{
+                  background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '14px 32px',
+                  borderRadius: '10px',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  minWidth: '200px',
+                  boxShadow: '0 4px 12px rgba(40, 192, 240, 0.3)'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'linear-gradient(90deg, #1180b3, #28c0f0)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(40, 192, 240, 0.4)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'linear-gradient(90deg, #28c0f0, #1180b3)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(40, 192, 240, 0.3)';
+                }}
+              >
+                👁️ Supervisar Tarea
+              </button>
+              <button 
+                onClick={handleSuccessPopupClose}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  color: '#fff',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  padding: '14px 32px',
+                  borderRadius: '10px',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  minWidth: '200px'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                🏠 Ir al Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

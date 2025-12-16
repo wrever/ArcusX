@@ -1,87 +1,82 @@
 <?php
-// get_user_earnings_summary.php
-// Obtiene un resumen de ganancias del usuario
-
-// CORS headers - DEBEN IR PRIMERO, ANTES DE CUALQUIER OTRO OUTPUT
-$allowed_origins = [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'https://arcusx.pro',
-    'http://arcusx.pro'
-];
-$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
-
-// Manejar preflight OPTIONS request PRIMERO
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    if (in_array($origin, $allowed_origins)) {
-        header("Access-Control-Allow-Origin: $origin");
-        header("Access-Control-Allow-Credentials: true");
-    }
-    header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-    header("Access-Control-Max-Age: 3600");
-    http_response_code(200);
-    exit();
-}
-
-// Headers CORS para requests normales
-if (in_array($origin, $allowed_origins)) {
-    header("Access-Control-Allow-Origin: $origin");
-    header("Access-Control-Allow-Credentials: true");
-}
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-header("Access-Control-Max-Age: 3600");
-header("Content-Type: application/json; charset=UTF-8");
-
-// Habilitar logs (pero NO mostrar errores en pantalla para evitar output antes de headers)
-ini_set('display_errors', 0);
-ini_set('display_startup_errors', 0);
-error_reporting(E_ALL);
-ini_set('log_errors', 1);
-ini_set('error_log', __DIR__ . '/php-error.log');
+/**
+ * get_user_earnings_summary.php
+ * Obtiene un resumen de ganancias del usuario
+ * GET /api/auth/get_user_earnings_summary.php?user_id=123
+ * Headers: Authorization: Bearer {JWT_TOKEN}
+ */
 
 require_once 'config.php';
-require_once 'vendor/autoload.php';
+
+$autoload_path = __DIR__ . '/vendor/autoload.php';
+if (!file_exists($autoload_path)) {
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Error en el servidor: Falta la carpeta de dependencias (vendor).'
+    ]);
+    exit();
+}
+require $autoload_path;
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
-$secret_key = "SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY";
+// Headers CORS
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+header("Access-Control-Max-Age: 3600");
+header("Content-Type: application/json; charset=UTF-8");
 
-// Función para obtener el ID del usuario logueado desde el token JWT
-function getLoggedInUserId($conn, $secret_key) {
-    // Método 1: $_SERVER['HTTP_AUTHORIZATION'] (configurado por .htaccess)
-    $authHeader = '';
-    if (isset($_SERVER['HTTP_AUTHORIZATION'])) {
-        $authHeader = trim($_SERVER['HTTP_AUTHORIZATION']);
-    } 
-    // Método 2: getallheaders() (fallback)
-    else if (function_exists('getallheaders')) {
-        $headers = getallheaders();
-        if ($headers && isset($headers['Authorization'])) {
-            $authHeader = trim($headers['Authorization']);
-        }
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
+
+$jwt_secret = "SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY";
+
+/**
+ * Obtener el ID del usuario autenticado desde el JWT
+ */
+function getLoggedInUserId($secret_key) {
+    $headers = getallheaders();
+    $authHeader = isset($headers['Authorization']) ? $headers['Authorization'] : '';
+    
+    // También verificar $_SERVER por si getallheaders() no funciona
+    if (empty($authHeader) && isset($_SERVER['HTTP_AUTHORIZATION'])) {
+        $authHeader = $_SERVER['HTTP_AUTHORIZATION'];
     }
-
+    
     if (preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
         $jwt = $matches[1];
-        if (!$jwt) return null;
         try {
+            JWT::$leeway = 300;
             $decoded = JWT::decode($jwt, new Key($secret_key, 'HS256'));
-            return $decoded->data->id;
+            if (isset($decoded->data->id)) {
+                return (int)$decoded->data->id;
+            }
         } catch (Exception $e) {
-            error_log("JWT Error: " . $e->getMessage());
+            error_log("JWT Error en get_user_earnings_summary.php: " . $e->getMessage());
             return null;
         }
     }
     return null;
 }
 
-// Función para verificar si es admin
+/**
+ * Verificar si el usuario es administrador
+ */
 function isAdmin($conn, $userId) {
-    $stmt = $conn->prepare("SELECT is_admin, role FROM users WHERE id = ?");
-    if (!$stmt) return false;
+    if (!$userId) {
+        return false;
+    }
+    
+    $stmt = $conn->prepare("SELECT is_admin FROM users WHERE id = ?");
+    if (!$stmt) {
+        error_log("Error preparando consulta isAdmin: " . $conn->error);
+        return false;
+    }
     
     $stmt->bind_param("i", $userId);
     $stmt->execute();
@@ -95,32 +90,37 @@ function isAdmin($conn, $userId) {
     $user = $result->fetch_assoc();
     $stmt->close();
     
-    return ($user['is_admin'] == 1 || $user['role'] === 'admin');
+    return isset($user['is_admin']) && $user['is_admin'] == 1;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $loggedInUserId = getLoggedInUserId($conn, $secret_key);
-    
-    if (!$loggedInUserId) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'Acceso no autorizado: Token JWT no proporcionado o inválido.']);
-        $conn->close();
-        exit;
-    }
-    
-    // Obtener user_id (del token o parámetro)
-    $userId = isset($_GET['user_id']) ? (int)$_GET['user_id'] : $loggedInUserId;
-    
-    // Solo permitir que un usuario vea sus propios datos (a menos que sea admin)
-    $userIsAdmin = isAdmin($conn, $loggedInUserId);
-    if ($userId !== $loggedInUserId && !$userIsAdmin) {
-        http_response_code(403);
-        echo json_encode(['success' => false, 'message' => 'No tienes permiso para ver estos datos']);
-        $conn->close();
-        exit;
-    }
-    
     try {
+        $loggedInUserId = getLoggedInUserId($jwt_secret);
+        
+        if (!$loggedInUserId) {
+            http_response_code(401);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Acceso no autorizado: Token JWT no proporcionado o inválido.'
+            ]);
+            $conn->close();
+            exit;
+        }
+        
+        // Obtener user_id (del token o parámetro)
+        $userId = isset($_GET['user_id']) ? (int)$_GET['user_id'] : $loggedInUserId;
+        
+        // Solo permitir que un usuario vea sus propios datos (a menos que sea admin)
+        $userIsAdmin = isAdmin($conn, $loggedInUserId);
+        if ($userId !== $loggedInUserId && !$userIsAdmin) {
+            http_response_code(403);
+            echo json_encode([
+                'success' => false,
+                'message' => 'No tienes permiso para ver estos datos'
+            ]);
+            $conn->close();
+            exit;
+        }
         // Obtener platform fee
         $platformFee = 0.003; // Valor por defecto
         try {
@@ -139,6 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         
         // Calcular total ganado (como trabajador)
         // En el nuevo modelo: price ya es el monto que recibió el trabajador
+        // Incluir tareas con status='completed' que tengan escrow_id (indica que hubo escrow)
         $platformFeeEscaped = (float)$platformFee;
         $userIdEscaped = (int)$userId;
         
@@ -147,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             FROM tasks t
             WHERE t.accepted_applicant_id = " . $userIdEscaped . "
               AND t.status = 'completed'
-              AND t.escrow_status = 'completed'
+              AND (t.escrow_status = 'completed' OR (t.escrow_id IS NOT NULL AND (t.escrow_status IS NULL OR t.escrow_status != 'refunded')))
         ";
         
         $earnedResult = $conn->query($earnedSql);
@@ -159,14 +160,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $totalEarned = (float)$earnedRow['total_earned'];
         
         // Calcular total pagado (como cliente)
-        // En el nuevo modelo: el cliente paga price + commission
-        $paidSql = "
-            SELECT COALESCE(SUM(t.price * (1 + " . $platformFeeEscaped . ")), 0) as total_paid
-            FROM tasks t
-            WHERE t.user_id = " . $userIdEscaped . "
-              AND t.status = 'completed'
-              AND t.escrow_status = 'completed'
-        ";
+        // Usar escrow_amount si existe, sino calcular con fórmula: escrowAmount = workerAmount / (1 - platformFee)
+        $checkEscrowAmount = $conn->query("SHOW COLUMNS FROM tasks LIKE 'escrow_amount'");
+        $hasEscrowAmount = $checkEscrowAmount && $checkEscrowAmount->num_rows > 0;
+        
+        // Incluir tareas con status='completed' que tengan escrow_id (indica que hubo escrow)
+        if ($hasEscrowAmount) {
+            $paidSql = "
+                SELECT COALESCE(SUM(COALESCE(t.escrow_amount, t.price / (1 - " . $platformFeeEscaped . "))), 0) as total_paid
+                FROM tasks t
+                WHERE t.user_id = " . $userIdEscaped . "
+                  AND t.status = 'completed'
+                  AND (t.escrow_status = 'completed' OR (t.escrow_id IS NOT NULL AND (t.escrow_status IS NULL OR t.escrow_status != 'refunded')))
+            ";
+        } else {
+            $paidSql = "
+                SELECT COALESCE(SUM(t.price / (1 - " . $platformFeeEscaped . ")), 0) as total_paid
+                FROM tasks t
+                WHERE t.user_id = " . $userIdEscaped . "
+                  AND t.status = 'completed'
+                  AND (t.escrow_status = 'completed' OR (t.escrow_id IS NOT NULL AND (t.escrow_status IS NULL OR t.escrow_status != 'refunded')))
+            ";
+        }
         
         $paidResult = $conn->query($paidSql);
         if ($paidResult === false) {
@@ -177,16 +192,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $totalPaid = (float)$paidRow['total_paid'];
         
         // Contar total de transacciones
+        // Incluir tareas con status='completed' que tengan escrow_id (indica que hubo escrow)
         $countSql = "
             SELECT COUNT(*) as total
             FROM (
                 SELECT t.id
                 FROM tasks t
-                WHERE t.user_id = " . $userIdEscaped . " AND t.status = 'completed' AND t.escrow_status = 'completed'
+                WHERE t.user_id = " . $userIdEscaped . " 
+                  AND t.status = 'completed'
+                  AND (t.escrow_status = 'completed' OR (t.escrow_id IS NOT NULL AND (t.escrow_status IS NULL OR t.escrow_status != 'refunded')))
                 UNION ALL
                 SELECT t.id
                 FROM tasks t
-                WHERE t.accepted_applicant_id = " . $userIdEscaped . " AND t.status = 'completed' AND t.escrow_status = 'completed'
+                WHERE t.accepted_applicant_id = " . $userIdEscaped . " 
+                  AND t.status = 'completed'
+                  AND (t.escrow_status = 'completed' OR (t.escrow_id IS NOT NULL AND (t.escrow_status IS NULL OR t.escrow_status != 'refunded')))
             ) as combined
         ";
         
@@ -199,24 +219,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $totalTransactions = (int)$countRow['total'];
         
         // Obtener última transacción
-        $lastTransactionSql = "
-            SELECT 
-                t.id as task_id,
-                t.title as task_title,
-                t.price,
-                COALESCE(t.escrow_completed_at, t.completed_at, t.created_at) as completed_date,
-                CASE 
-                    WHEN t.user_id = " . $userIdEscaped . " THEN 'paid'
-                    ELSE 'received'
-                END as transaction_type,
-                t.escrow_id
-            FROM tasks t
-            WHERE (t.user_id = " . $userIdEscaped . " OR t.accepted_applicant_id = " . $userIdEscaped . ")
-              AND t.status = 'completed'
-              AND t.escrow_status = 'completed'
-            ORDER BY completed_date DESC
-            LIMIT 1
-        ";
+        // Incluir escrow_amount directamente en el SELECT para evitar consultas adicionales
+        // Incluir tareas con status='completed' que tengan escrow_id (indica que hubo escrow)
+        if ($hasEscrowAmount) {
+            $lastTransactionSql = "
+                SELECT 
+                    t.id as task_id,
+                    t.title as task_title,
+                    t.price,
+                    t.escrow_amount,
+                    COALESCE(t.escrow_completed_at, t.completed_at, t.created_at) as completed_date,
+                    CASE 
+                        WHEN t.user_id = " . $userIdEscaped . " THEN 'paid'
+                        ELSE 'received'
+                    END as transaction_type,
+                    t.escrow_id
+                FROM tasks t
+                WHERE (t.user_id = " . $userIdEscaped . " OR t.accepted_applicant_id = " . $userIdEscaped . ")
+                  AND t.status = 'completed'
+                  AND (t.escrow_status = 'completed' OR (t.escrow_id IS NOT NULL AND (t.escrow_status IS NULL OR t.escrow_status != 'refunded')))
+                ORDER BY completed_date DESC
+                LIMIT 1
+            ";
+        } else {
+            $lastTransactionSql = "
+                SELECT 
+                    t.id as task_id,
+                    t.title as task_title,
+                    t.price,
+                    NULL as escrow_amount,
+                    COALESCE(t.escrow_completed_at, t.completed_at, t.created_at) as completed_date,
+                    CASE 
+                        WHEN t.user_id = " . $userIdEscaped . " THEN 'paid'
+                        ELSE 'received'
+                    END as transaction_type,
+                    t.escrow_id
+                FROM tasks t
+                WHERE (t.user_id = " . $userIdEscaped . " OR t.accepted_applicant_id = " . $userIdEscaped . ")
+                  AND t.status = 'completed'
+                  AND (t.escrow_status = 'completed' OR (t.escrow_id IS NOT NULL AND (t.escrow_status IS NULL OR t.escrow_status != 'refunded')))
+                ORDER BY completed_date DESC
+                LIMIT 1
+            ";
+        }
         
         $lastResult = $conn->query($lastTransactionSql);
         if ($lastResult === false) {
@@ -229,10 +274,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $price = (float)$lastRow['price']; // price ahora es workerAmount
             // En el nuevo modelo:
             // - received: trabajador recibe price (ya es el monto exacto)
-            // - paid: cliente pagó price + commission
-            $netAmount = $lastRow['transaction_type'] === 'received' 
-                ? $price  // Trabajador recibe el monto exacto
-                : $price * (1 + $platformFee); // Cliente pagó price + commission
+            // - paid: cliente pagó escrow_amount o calcular con fórmula
+            if ($lastRow['transaction_type'] === 'received') {
+                $netAmount = $price; // Trabajador recibe el monto exacto
+            } else {
+                // Cliente pagó: usar escrow_amount si existe, sino calcular con fórmula
+                $escrowAmount = isset($lastRow['escrow_amount']) ? $lastRow['escrow_amount'] : null;
+                
+                if ($escrowAmount !== null && $escrowAmount > 0) {
+                    $netAmount = (float)$escrowAmount;
+                } else {
+                    // Fallback: calcular con fórmula escrowAmount = workerAmount / (1 - platformFee)
+                    $netAmount = $price / (1 - $platformFee);
+                }
+            }
             
             $lastTransaction = [
                 'id' => $lastRow['task_id'],
@@ -263,11 +318,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             'success' => false,
             'message' => 'Error al obtener resumen de ganancias: ' . $e->getMessage()
         ]);
+        $conn->close();
+        exit;
     }
     
     $conn->close();
 } else {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+    $conn->close();
+    exit;
 }
 ?>

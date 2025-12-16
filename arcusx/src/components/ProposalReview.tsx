@@ -37,6 +37,7 @@ interface TaskData {
   contract_id?: string | null;
   escrow_id?: string | null;
   escrow_status?: string | null;
+  accepted_applicant_id?: number | null;
 }
 
 interface ProposalData {
@@ -109,15 +110,50 @@ const ProposalReview = () => {
       // Cargar detalles de la tarea
       const taskResponse = await axios.get(`${API_URL}/auth/get_task_details.php?task_id=${taskId}`);
       if (taskResponse.data) {
-        setTask(taskResponse.data);
-      }
+        const taskData = taskResponse.data;
+        setTask(taskData);
 
-      // Cargar propuestas de la tarea
+        // Verificar si ya hay un escrow creado y un trabajador aceptado
+        if (taskData.escrow_id && taskData.accepted_applicant_id) {
+          console.log('✅ Tarea ya tiene escrow completado. Cargando propuesta aceptada...');
+          // Cargar la propuesta aceptada para mostrar en el popup de éxito
       const proposalsResponse = await axios.get(`${API_URL}/auth/get_task_proposals.php?task_id=${taskId}`);
       if (Array.isArray(proposalsResponse.data)) {
+            // Buscar la propuesta aceptada por applicant_id o por status
+            const acceptedProposal = proposalsResponse.data.find(
+              (p: ProposalData) => p.applicant_id === taskData.accepted_applicant_id || p.status === 'accepted'
+            );
+            if (acceptedProposal) {
+              console.log('✅ Propuesta aceptada encontrada:', acceptedProposal.applicant_username);
+              setSelectedProposal(acceptedProposal);
+              // Mostrar popup de éxito automáticamente después de un pequeño delay para asegurar que el estado se actualice
+              setTimeout(() => {
+                setShowSuccessPopup(true);
+              }, 100);
+            } else {
+              console.warn('⚠️ No se encontró la propuesta aceptada, pero hay escrow_id y accepted_applicant_id');
+              // Aún así mostrar el popup si hay escrow_id
+              setTimeout(() => {
+                setShowSuccessPopup(true);
+              }, 100);
+            }
         setProposals(proposalsResponse.data);
       } else {
         setProposals([]);
+            // Aún así mostrar el popup si hay escrow_id
+            setTimeout(() => {
+              setShowSuccessPopup(true);
+            }, 100);
+          }
+        } else {
+          // Cargar propuestas de la tarea normalmente
+          const proposalsResponse = await axios.get(`${API_URL}/auth/get_task_proposals.php?task_id=${taskId}`);
+          if (Array.isArray(proposalsResponse.data)) {
+            setProposals(proposalsResponse.data);
+          } else {
+            setProposals([]);
+          }
+        }
       }
 
     } catch (err: any) {
@@ -209,13 +245,35 @@ const ProposalReview = () => {
       
       // Crear escrow con Trustless Work
       const engagementId = `arcusx-${taskId}-${Date.now()}`;
-      // El price ahora es el workerAmount (lo que recibirá el trabajador)
+      // El price es el workerAmount (lo que debe recibir el trabajador después de la comisión)
       const workerAmount = parseFloat(task.price);
-      // Asegurar precisión de USDC (7 decimales) - usar el mismo formato que al fondear
-      // DEBE coincidir exactamente con el amount usado al fondear
-      const roundedAmount = Math.round(workerAmount * 10000000) / 10000000;
+      
+      // IMPORTANTE: Trustless Work calcula la comisión sobre el amount del escrow al liberar
+      // Si el escrow tiene X USDC y la comisión es R%, entonces:
+      // - Comisión = X * R
+      // - Trabajador recibe = X - (X * R) = X * (1 - R)
+      // 
+      // Para que el trabajador reciba exactamente workerAmount:
+      // workerAmount = X * (1 - R)
+      // X = workerAmount / (1 - R)
+      //
+      // Ejemplo: workerAmount = 1 USDC, R = 0.005 (0.5%)
+      // X = 1 / (1 - 0.005) = 1 / 0.995 = 1.005025... USDC
+      const escrowAmount = workerAmount / (1 - platformFee);
+      
+      // Asegurar precisión de USDC (7 decimales)
+      const roundedAmount = Math.round(escrowAmount * 10000000) / 10000000;
       const amountString = roundedAmount.toFixed(7);
-      const amount = parseFloat(amountString); // Monto del escrow (lo que recibirá el trabajador)
+      const amount = parseFloat(amountString); // Monto del escrow calculado para que el trabajador reciba workerAmount
+      
+      const commission = escrowAmount - workerAmount; // Comisión que se deducirá
+      
+      console.log('💰 Cálculo del escrow:');
+      console.log('  - Worker amount (lo que recibirá):', workerAmount);
+      console.log('  - Platform fee:', platformFee, `(${(platformFee * 100).toFixed(2)}%)`);
+      console.log('  - Escrow amount (calculado):', amount);
+      console.log('  - Commission (que se deducirá):', commission.toFixed(7));
+      console.log('  - Verificación: workerAmount recibido =', (amount * (1 - platformFee)).toFixed(7));
 
       const result = await createTrustlessEscrow(
         {
@@ -253,11 +311,44 @@ const ProposalReview = () => {
 
       const txHash = (result as any).txHash || '';
 
-      // Guardar escrow_id y amount exacto en el backend
+      // Obtener información completa del escrow desde Trustless Work para guardar platformFee y trustline
+      let platformFeeToSave = platformFee;
+      let trustlineAddress = null;
+      
+      try {
+        // Esperar un poco para que el escrow se indexe
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Obtener datos del escrow desde el indexer
+        const escrowData = await getEscrowByContractIds({
+          contractIds: [result.contractId],
+          validateOnChain: true
+        });
+        
+        const escrows = Array.isArray(escrowData) ? escrowData : (escrowData as any)?.escrows || [];
+        if (escrows && escrows.length > 0) {
+          const escrow = escrows[0];
+          // Obtener platformFee del escrow (si está disponible)
+          if (escrow.platformFee !== undefined && escrow.platformFee !== null) {
+            platformFeeToSave = typeof escrow.platformFee === 'number' 
+              ? escrow.platformFee 
+              : parseFloat(escrow.platformFee);
+          }
+          // Obtener trustline address
+          if (escrow.trustline?.address) {
+            trustlineAddress = escrow.trustline.address;
+          }
+        }
+      } catch (error: any) {
+        console.warn('⚠️ No se pudieron obtener datos completos del escrow:', error.message);
+        // Continuar de todas formas - usaremos los valores por defecto
+      }
+
+      // Guardar escrow_id, amount, platformFee y trustline_address en el backend
       try {
         const token = localStorage.getItem('token');
         if (token && taskId && selectedProposal) {
-          const payload = {
+          const payload: any = {
             task_id: parseInt(taskId, 10),
             proposal_id: selectedProposal.id,
             escrow_id: result.contractId,
@@ -265,6 +356,14 @@ const ProposalReview = () => {
             client_wallet_address: clientAddress,
             escrow_amount: amount // Guardar el amount exacto usado al crear el escrow
           };
+          
+          // Agregar platformFee y trustline_address si están disponibles
+          if (platformFeeToSave !== null && platformFeeToSave !== undefined) {
+            payload.platform_fee = platformFeeToSave;
+          }
+          if (trustlineAddress) {
+            payload.trustline_address = trustlineAddress;
+          }
 
           await axios.post(`${API_URL}/auth/create_escrow.php`, payload, {
             headers: {
@@ -320,20 +419,28 @@ const ProposalReview = () => {
         return { success: false, error: 'Kit de wallets no inicializado. Por favor reconecta tu wallet.' };
       }
 
-      // Calcular el monto total a fondear (workerAmount + commission)
-      // El escrow contiene workerAmount, pero debemos fondear workerAmount + commission
+      // IMPORTANTE: El escrow se creó con workerAmount / (1 - platformFee)
+      // Por lo tanto, debemos fondear exactamente el mismo monto para que coincida
       const workerAmount = parseFloat(task.price);
-      const commission = calculateCommissionFromWorkerAmount(workerAmount, platformFee);
-      const totalToFund = calculateTotalWithCommission(workerAmount, platformFee);
+      
+      // Usar la misma fórmula que al crear el escrow
+      // X = workerAmount / (1 - platformFee)
+      // Esto asegura que después de deducir la comisión, el trabajador reciba exactamente workerAmount
+      const escrowAmount = workerAmount / (1 - platformFee);
       
       // Asegurar precisión de USDC (7 decimales)
-      const roundedTotalToFund = Math.round(totalToFund * 10000000) / 10000000;
-      const amountString = roundedTotalToFund.toFixed(7);
-      const amount = parseFloat(amountString); // Total a fondear (workerAmount + commission)
+      const roundedAmount = Math.round(escrowAmount * 10000000) / 10000000;
+      const amountString = roundedAmount.toFixed(7);
+      const amount = parseFloat(amountString); // Monto a fondear (debe coincidir con el amount del escrow)
+      
+      console.log('💰 Cálculo del fondeo:');
+      console.log('  - Worker amount (lo que recibirá):', workerAmount);
+      console.log('  - Platform fee:', platformFee, `(${(platformFee * 100).toFixed(2)}%)`);
+      console.log('  - Amount a fondear (debe coincidir con escrow):', amount);
       
       if (isNaN(amount) || amount <= 0) {
-        return {
-          success: false,
+          return {
+            success: false,
           error: `Amount inválido: ${amount}. Debe ser un número positivo.`
         };
       }
@@ -368,16 +475,46 @@ const ProposalReview = () => {
             kit,
             fundEscrow,
             sendTransaction,
-            async (contractIds: string[]) => {
+            async (contractIds: string[] | { contractIds: string[]; validateOnChain?: boolean }) => {
               try {
+                // Manejar caso donde se recibe un objeto en lugar de un array
+                // waitForEscrowIndexing pasa un array, pero getEscrowFromIndexer puede pasar un objeto
+                let contractIdsArray: string[];
+                if (Array.isArray(contractIds)) {
+                  // Caso normal: se recibe un array directamente
+                  contractIdsArray = contractIds;
+                } else if (contractIds && typeof contractIds === 'object' && 'contractIds' in contractIds) {
+                  // Caso donde se recibe un objeto con la propiedad contractIds
+                  contractIdsArray = contractIds.contractIds;
+                } else {
+                  console.warn('⚠️ contractIds inválido en ProposalReview (tipo desconocido):', contractIds);
+                  return [];
+                }
+                
+                console.log('🔍 ProposalReview wrapper recibió contractIds:', contractIdsArray);
+                
+                // Validar que contractIds sea un array válido y no esté vacío
+                if (!contractIdsArray || !Array.isArray(contractIdsArray) || contractIdsArray.length === 0) {
+                  console.warn('⚠️ contractIds inválido o vacío en ProposalReview:', contractIdsArray);
+                  return [];
+                }
+                
+                // Filtrar contractIds vacíos o inválidos
+                const validContractIds = contractIdsArray.filter(id => id && typeof id === 'string' && id.trim() !== '');
+                if (validContractIds.length === 0) {
+                  console.warn('⚠️ No hay contractIds válidos después de filtrar:', contractIdsArray);
+                  return [];
+                }
+                
                 // CRÍTICO: Usar validateOnChain: true para verificar que el escrow esté completamente disponible en la blockchain
                 const result = await getEscrowByContractIds({ 
-                  contractIds,
+                  contractIds: validContractIds,
                   validateOnChain: true 
                 });
                 // El resultado puede tener diferentes estructuras, devolvemos el resultado completo
                 return Array.isArray(result) ? result : (result as any)?.escrows || result || [];
-              } catch (error) {
+              } catch (error: any) {
+                console.error('❌ Error en wrapper de getEscrowByContractIds:', error.message);
                 return [];
               }
             }
@@ -447,7 +584,7 @@ const ProposalReview = () => {
       if (!selectedProposal) {
         return { success: false, error: 'No hay propuesta seleccionada' };
       }
-
+      
       // Seleccionar propuesta en el backend
       try {
         const selectResponse = await axios.post(
@@ -527,6 +664,9 @@ const ProposalReview = () => {
     }
     setSelectingProposal(false);
     setSelectedProposal(null);
+    
+    // Redirigir al dashboard (el EscrowProcessPopup ya esperó 2 segundos antes de llamar a onComplete)
+    navigate('/dashboard');
   };
 
   // Función para conectar wallet (Paso 1 del popup)
@@ -574,6 +714,18 @@ const ProposalReview = () => {
   const handleGoToDashboard = () => {
     setShowSuccessPopup(false);
     navigate('/dashboard');
+  };
+
+  // Función para ir a supervisar la tarea desde el popup
+  const handleGoToSupervise = () => {
+    setShowSuccessPopup(false);
+    if (taskId && (task?.accepted_applicant_id || selectedProposal?.applicant_id)) {
+      const applicantId = task?.accepted_applicant_id || selectedProposal?.applicant_id;
+      navigate(`/supervise-task/${taskId}/${applicantId}`);
+    } else {
+      // Si no hay applicant_id, ir al dashboard
+      navigate('/dashboard');
+    }
   };
 
   // Función para manejar el popup de error
@@ -664,7 +816,8 @@ const ProposalReview = () => {
 
         </div>
 
-        {/* Lista de propuestas */}
+        {/* Lista de propuestas - Ocultar si ya hay escrow completado */}
+        {!(task?.escrow_id && task?.accepted_applicant_id) && (
         <div className="proposals-section">
           <div className="proposals-header">
             <h2>Propuestas Recibidas ({proposals.length})</h2>
@@ -765,8 +918,8 @@ const ProposalReview = () => {
                 </div>
             )}
 
-          {/* Panel de confirmación de selección */}
-          {selectingProposal && selectedProposal && (
+          {/* Panel de confirmación de selección - Ocultar si ya hay escrow completado */}
+          {!(task?.escrow_id && task?.accepted_applicant_id) && selectingProposal && selectedProposal && (
             <div className="selection-confirmation">
               <div className="confirmation-header">
                 <h3>Confirmar Selección</h3>
@@ -824,6 +977,8 @@ const ProposalReview = () => {
             </div>
           )}
         </div>
+        )}
+
       </div>
 
       {/* Popup de Éxito - Proceso Completado */}
@@ -897,7 +1052,7 @@ const ProposalReview = () => {
               lineHeight: '1.7',
               fontSize: '16px'
             }}>
-              {popupMessage.includes('CONTRATO ACTIVADO') ? (
+              {(popupMessage.includes('CONTRATO ACTIVADO') || (task?.escrow_id && task?.accepted_applicant_id)) ? (
                 <div className="escrow-info">
                   <p style={{ 
                     fontSize: '20px', 
@@ -905,42 +1060,122 @@ const ProposalReview = () => {
                     fontWeight: '600',
                     color: '#28c0f0'
                   }}>
-                    🎉 ¡Todo está listo!
+                    🎉 ¡Proceso Completado Exitosamente!
+                  </p>
+                  <p style={{ 
+                    fontSize: '16px', 
+                    marginBottom: '24px', 
+                    color: 'rgba(255, 255, 255, 0.8)'
+                  }}>
+                    El trabajador ha sido seleccionado y el escrow está configurado correctamente
                   </p>
                   <div className="contract-details" style={{
-                    background: 'rgba(40, 192, 240, 0.1)',
+                    background: 'linear-gradient(135deg, rgba(40, 192, 240, 0.1) 0%, rgba(17, 128, 179, 0.1) 100%)',
                     border: '1px solid rgba(40, 192, 240, 0.3)',
                     padding: '24px',
                     borderRadius: '12px',
                     marginTop: '20px',
                     textAlign: 'left'
                   }}>
-                    {popupMessage.split('\n').filter(line => line.trim()).map((line, index) => {
-                      if (line.includes('💰')) {
-                        return (
-                          <p key={index} style={{ 
-                            margin: '10px 0', 
-                            fontSize: '17px',
-                            color: '#fff',
-                            fontWeight: '600'
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '10px',
+                      marginBottom: '12px',
+                      paddingBottom: '12px',
+                      borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
+                    }}>
+                      <span style={{ fontSize: '18px' }}>✅</span>
+                      <strong style={{ fontSize: '15px', color: '#fff' }}>
+                        Contrato escrow creado
+                      </strong>
+                    </div>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '10px',
+                      marginBottom: '12px',
+                      paddingBottom: '12px',
+                      borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
+                    }}>
+                      <span style={{ fontSize: '18px' }}>✅</span>
+                      <strong style={{ fontSize: '15px', color: '#fff' }}>
+                        Fondos enviados al escrow
+                      </strong>
+                    </div>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '10px',
+                      marginBottom: '12px',
+                      paddingBottom: '12px',
+                      borderBottom: selectedProposal || task?.escrow_id ? '1px solid rgba(40, 192, 240, 0.2)' : 'none'
+                    }}>
+                      <span style={{ fontSize: '18px' }}>✅</span>
+                      <strong style={{ fontSize: '15px', color: '#fff' }}>
+                        Trabajador seleccionado{selectedProposal ? `: ${selectedProposal.applicant_username}` : ''}
+                      </strong>
+                    </div>
+                    {selectedProposal && (
+                      <div style={{ 
+                        marginTop: '12px',
+                        padding: '12px',
+                        background: 'rgba(40, 192, 240, 0.05)',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(40, 192, 240, 0.15)'
+                      }}>
+                        <p style={{ 
+                          fontSize: '13px', 
+                          color: 'rgba(255, 255, 255, 0.8)',
+                          margin: '4px 0'
+                        }}>
+                          <strong style={{ color: '#28c0f0' }}>Wallet:</strong>{' '}
+                          <code style={{ 
+                            color: '#28c0f0',
+                            background: 'rgba(40, 192, 240, 0.1)',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            fontSize: '11px'
                           }}>
-                            <strong>{line}</strong>
-                          </p>
-                        );
-                      }
-                      if (line.includes('🌐') || line.includes('👤') || line.includes('🎉')) {
-                        return (
-                          <p key={index} style={{ 
-                            margin: '8px 0', 
-                            fontSize: '15px',
-                            color: 'rgba(255, 255, 255, 0.8)'
+                            {selectedProposal.worker_wallet_address}
+                          </code>
+                        </p>
+                        {selectedProposal.message && (
+                          <p style={{ 
+                            fontSize: '12px', 
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            margin: '8px 0 0 0',
+                            fontStyle: 'italic'
                           }}>
-                            {line}
+                            "{selectedProposal.message.substring(0, 100)}{selectedProposal.message.length > 100 ? '...' : ''}"
                           </p>
-                        );
-                      }
-                      return null;
-                    })}
+                        )}
+                      </div>
+                    )}
+                    {task?.escrow_id && (
+                      <div style={{ 
+                        marginTop: '16px',
+                        paddingTop: '16px',
+                        borderTop: '1px solid rgba(40, 192, 240, 0.2)'
+                      }}>
+                        <p style={{ 
+                          fontSize: '13px', 
+                          color: 'rgba(255, 255, 255, 0.6)',
+                          margin: 0
+                        }}>
+                          <strong style={{ color: '#28c0f0' }}>Contract ID:</strong>{' '}
+                          <code style={{ 
+                            color: '#28c0f0',
+                            background: 'rgba(40, 192, 240, 0.1)',
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            fontSize: '12px'
+                          }}>
+                            {task.escrow_id.slice(0, 8)}...{task.escrow_id.slice(-8)}
+                          </code>
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : popupMessage.includes('Contrato escrow creado') ? (
@@ -989,10 +1224,10 @@ const ProposalReview = () => {
               )}
             </div>
 
-            {/* Botón de acción */}
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
+            {/* Botones de acción */}
+            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
               <button 
-                onClick={handleGoToDashboard} 
+                onClick={handleGoToSupervise} 
                 className="popup-button success-button"
                 style={{
                   background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
@@ -1020,6 +1255,36 @@ const ProposalReview = () => {
                   e.currentTarget.style.boxShadow = '0 4px 16px rgba(40, 192, 240, 0.4)';
                 }}
               >
+                👁️ Supervisar Tarea
+              </button>
+              <button 
+                onClick={handleGoToDashboard} 
+                className="popup-button secondary-button"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  color: '#fff',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  padding: '16px 40px',
+                  borderRadius: '12px',
+                  fontSize: '17px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  minWidth: '220px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
                 🏠 Ir al Dashboard
               </button>
             </div>
@@ -1044,12 +1309,15 @@ const ProposalReview = () => {
       {/* Popup de Proceso Escrow Paso a Paso */}
       {showEscrowProcessPopup && selectedProposal && (
         <EscrowProcessPopup
+          key={`escrow-${selectedProposal.id}-${taskId}`}
           isOpen={showEscrowProcessPopup}
           onClose={() => setShowEscrowProcessPopup(false)}
           onComplete={handleProcessComplete}
           taskPrice={task?.price || '0'}
           contributorAddress={selectedProposal.worker_wallet_address}
           contributorName={selectedProposal.applicant_username}
+          taskId={taskId}
+          acceptedApplicantId={selectedProposal.applicant_id}
           onCreateEscrow={handleCreateEscrow}
           onFundEscrow={handleFundEscrow}
           onSelectWorker={handleSelectWorker}

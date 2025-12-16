@@ -60,9 +60,14 @@ export async function adminLogin(email: string, password: string): Promise<Admin
     }
 
     if (data.success && data.token) {
-      // Guardar token en localStorage
+      // Guardar token en localStorage (tanto como 'token' como 'admin_token' para compatibilidad)
+      localStorage.setItem('token', data.token);
       localStorage.setItem('admin_token', data.token);
       localStorage.setItem('admin_user', JSON.stringify(data.user));
+      // También guardar como 'user' para compatibilidad con otros componentes
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
       return data;
     }
 

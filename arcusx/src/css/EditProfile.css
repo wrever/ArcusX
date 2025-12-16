@@ -1,0 +1,521 @@
+.edit-profile-page {
+  min-height: 100vh;
+  padding: 2rem;
+  background: var(--dark-blue);
+  color: var(--text-light);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.edit-profile-header {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.edit-profile-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.4rem;
+  border-radius: 999px;
+  border: 1px solid rgba(40, 192, 240, 0.4);
+  background: rgba(40, 192, 240, 0.12);
+  color: var(--primary-blue);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: var(--transition);
+}
+
+.edit-profile-back:hover {
+  background: rgba(40, 192, 240, 0.2);
+  transform: translateX(-2px);
+}
+
+.edit-profile-card {
+  width: 100%;
+  max-width: 900px;
+  background: rgba(7, 35, 60, 0.95);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55);
+  padding: 2rem 2.5rem 2.25rem;
+}
+
+.edit-profile-card-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.avatar-circle,
+.avatar-image {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(40, 192, 240, 0.5);
+  object-fit: cover;
+}
+
+.avatar-upload-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(40, 192, 240, 0.4);
+  background: rgba(40, 192, 240, 0.1);
+  color: var(--primary-blue);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  transition: var(--transition);
+}
+
+.avatar-upload-btn:hover:not(:disabled) {
+  background: rgba(40, 192, 240, 0.2);
+}
+
+.avatar-upload-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.title-block h1 {
+  font-size: 1.8rem;
+  margin: 0 0 0.25rem;
+}
+
+.title-block p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.edit-profile-alert {
+  padding: 0.85rem 1.1rem;
+  border-radius: 10px;
+  margin-bottom: 1.25rem;
+  font-size: 0.9rem;
+}
+
+.edit-profile-alert.error {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #fecaca;
+}
+
+.edit-profile-alert.success {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  color: #bbf7d0;
+}
+
+.edit-profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.form-section {
+  padding: 1.25rem 1.4rem;
+  border-radius: 16px;
+  background: radial-gradient(circle at top left, rgba(40, 192, 240, 0.18), transparent 55%),
+              radial-gradient(circle at bottom right, rgba(248, 113, 113, 0.14), transparent 55%),
+              rgba(5, 23, 43, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.form-section h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.85rem;
+}
+
+.section-help {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.9rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0.95rem;
+}
+
+.form-group label {
+  font-size: 0.9rem;
+  margin-bottom: 0.35rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--text-light);
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(15, 23, 42, 0.95);
+  padding: 0.65rem 0.85rem;
+  font-size: 0.95rem;
+  color: #e5e7eb;
+  outline: none;
+  transition: var(--transition);
+  font-family: inherit;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.char-count {
+  display: block;
+  text-align: right;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+.form-group input::placeholder {
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.form-group input:focus {
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 1px rgba(40, 192, 240, 0.6);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.edit-profile-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.7rem 1.6rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+  border: none;
+  transition: var(--transition);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(40, 192, 240, 0.5);
+}
+
+.btn-primary:hover:enabled {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(40, 192, 240, 0.7);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: rgba(148, 163, 184, 0.1);
+  color: #e5e7eb;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.btn-secondary:hover {
+  background: rgba(148, 163, 184, 0.18);
+}
+
+.edit-profile-loading {
+  margin-top: 5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  color: var(--text-light);
+}
+
+.edit-profile-loading .spinner {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid rgba(148, 163, 184, 0.4);
+  border-top-color: var(--primary-blue);
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 768px) {
+  .edit-profile-page {
+    padding: 1.25rem;
+  }
+
+  .edit-profile-card {
+    padding: 1.5rem 1.3rem;
+  }
+
+  .edit-profile-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .edit-profile-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    justify-content: center;
+  }
+}
+
+/* Checkbox personalizado */
+.checkbox-group {
+  margin-bottom: 0;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  cursor: pointer;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: var(--transition);
+}
+
+.checkbox-label:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(40, 192, 240, 0.3);
+}
+
+.checkbox-label input[type="checkbox"] {
+  display: none;
+}
+
+.checkbox-custom {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(40, 192, 240, 0.1);
+  border: 2px solid rgba(40, 192, 240, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary-blue);
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  transition: var(--transition);
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkbox-custom {
+  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+  border-color: var(--primary-blue);
+  color: white;
+}
+
+.checkbox-text {
+  flex: 1;
+}
+
+.checkbox-text strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--text-light);
+}
+
+.checkbox-text p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* Portfolio */
+.portfolio-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.portfolio-item-card {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+.portfolio-item-image {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  background: rgba(40, 192, 240, 0.1);
+}
+
+.portfolio-item-content {
+  padding: 1rem;
+  flex: 1;
+}
+
+.portfolio-item-content h3 {
+  margin: 0 0 0.5rem 0;
+  color: var(--text-light);
+  font-size: 1.1rem;
+}
+
+.portfolio-item-content p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+
+.portfolio-item-content a {
+  color: var(--primary-blue);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.portfolio-item-content a:hover {
+  text-decoration: underline;
+}
+
+.portfolio-category {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  background: rgba(40, 192, 240, 0.2);
+  border: 1px solid rgba(40, 192, 240, 0.3);
+  border-radius: 12px;
+  font-size: 0.85rem;
+  color: var(--primary-blue);
+  margin-top: 0.5rem;
+}
+
+.portfolio-item-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.edit-button,
+.delete-button {
+  flex: 1;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.edit-button {
+  background: rgba(40, 192, 240, 0.2);
+  color: var(--primary-blue);
+}
+
+.edit-button:hover {
+  background: rgba(40, 192, 240, 0.3);
+}
+
+.delete-button {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.delete-button:hover {
+  background: rgba(239, 68, 68, 0.3);
+}
+
+.portfolio-form {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 1rem;
+}
+
+.portfolio-form h3 {
+  margin: 0 0 1.5rem 0;
+  color: var(--text-light);
+}
+
+.portfolio-form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.add-portfolio-button {
+  width: 100%;
+  padding: 1rem;
+  background: rgba(40, 192, 240, 0.1);
+  border: 2px dashed rgba(40, 192, 240, 0.3);
+  border-radius: 12px;
+  color: var(--primary-blue);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  transition: var(--transition);
+  font-size: 1rem;
+}
+
+.add-portfolio-button:hover {
+  background: rgba(40, 192, 240, 0.2);
+  border-color: var(--primary-blue);
+    width: 100%;
+  }
+}
+
+

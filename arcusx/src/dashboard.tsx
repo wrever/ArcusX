@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaUser, FaTasks, FaWallet, FaChartLine, FaBell, FaCog, FaSignOutAlt, FaPlus, FaTimes, FaExclamationTriangle, FaUsers } from 'react-icons/fa';
+import { FaUser, FaTasks, FaWallet, FaChartLine, FaBell, FaCog, FaSignOutAlt, FaPlus, FaTimes, FaExclamationTriangle, FaUsers, FaCheckCircle, FaGlobe, FaLock } from 'react-icons/fa';
 import { FiMenu } from 'react-icons/fi';
 import './css/dashboard.css';
 import arcusLogo from './images/arcus-logo.png';
 import axios from 'axios';
 import { API_URL } from './config/database';
-import React from 'react';
 import { useAuth } from './hooks/useAuth';
 import WalletButton from './components/WalletButton';
 import { useScheduledTaskDeletion } from './hooks/useScheduledTaskDeletion';
@@ -15,6 +14,8 @@ import DashboardFooter from './components/DashboardFooter';
 import { getUserNotifications, Notification, markNotificationAsRead as markNotificationAsReadService } from './services/notificationService';
 import { getUserDisputes, UserDispute } from './services/disputeService';
 import { getUserTransactions, getUserEarningsSummary, Transaction } from './services/transactionService';
+import { getUserProfile, getUserPublicStats } from './services/profileService';
+import type { UserProfile as UserProfileType, UserStatistics } from './types/profile';
 import RatingDisplay from './components/RatingDisplay';
 
 interface UserData {
@@ -70,10 +71,6 @@ const Dashboard = () => {
   // Nuevo estado para tareas completadas
   const [completedTasksCount, setCompletedTasksCount] = useState<number>(0);
   
-  // Estado para tareas con acciones pendientes
-  const [pendingActionsTasks, setPendingActionsTasks] = useState<any[]>([]);
-  const [_loadingPendingActions, setLoadingPendingActions] = useState(false);
-  // const [showPendingNotificationsPopup, setShowPendingNotificationsPopup] = useState(false); // Popup eliminado
   
   
   // Estado para notificaciones
@@ -93,14 +90,8 @@ const Dashboard = () => {
   // Obtener usuario logeado desde localStorage
   const storedUser = localStorage.getItem('user');
   const storedUserData: UserData | null = storedUser ? JSON.parse(storedUser) : null;
-  const [name, setName] = useState<string>(storedUserData?.username || '');
-  const [email, setEmail] = useState<string>(storedUserData?.email || '');
-  const [currentPassword, setCurrentPassword] = useState<string>('');
-  const [newPassword, setNewPassword] = useState<string>('');
-  const [confirmPassword, setConfirmPassword] = useState<string>('');
-  const [saving, setSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState<string>('');
-  const [saveError, setSaveError] = useState<string>('');
+  const [name] = useState<string>(storedUserData?.username || '');
+  const [email] = useState<string>(storedUserData?.email || '');
   
   const navigate = useNavigate();
   const { logout, user } = useAuth();
@@ -111,6 +102,11 @@ const Dashboard = () => {
   const [transactionsError, setTransactionsError] = useState<string>('');
   const [totalEarnings, setTotalEarnings] = useState<number>(0);
   const [totalPaid, setTotalPaid] = useState<number>(0);
+
+  // Estado para perfil de usuario
+  const [userProfile, setUserProfile] = useState<UserProfileType | null>(null);
+  const [userStats, setUserStats] = useState<UserStatistics | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
   const [transactionsPage, setTransactionsPage] = useState(1);
   const [transactionsTotalPages, setTransactionsTotalPages] = useState(1);
   
@@ -254,41 +250,6 @@ const Dashboard = () => {
     }
   }, [activeTab, user?.id]);
 
-  // --- Lógica para obtener tareas con acciones pendientes --- //
-  useEffect(() => {
-    if (activeTab === 'manage-tasks' && user?.id) {
-      const fetchPendingActions = async () => {
-        setLoadingPendingActions(true);
-        try {
-          const token = localStorage.getItem('token');
-          const response = await axios.get(`${API_URL}/auth/get_pending_actions.php?user_id=${user.id}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          if (response.data.success) {
-            const tasks = response.data.pending_tasks || [];
-            setPendingActionsTasks(tasks);
-            // Popup eliminado - ya no se muestra automáticamente
-            // if (tasks.length > 0) {
-            //   setShowPendingNotificationsPopup(true);
-            // }
-          }
-        } catch (error: any) {
-          setPendingActionsTasks([]);
-        } finally {
-          setLoadingPendingActions(false);
-        }
-      };
-
-      fetchPendingActions();
-    }
-    // Popup eliminado - ya no se cierra al cambiar de pestaña
-    // else {
-    //   setShowPendingNotificationsPopup(false);
-    // }
-  }, [activeTab, user?.id]); // Ejecutar este efecto cuando cambie la pestaña activa o el user.id
-  // -------------------------------------------- //
 
   // --- Lógica para obtener tareas aceptadas por el usuario desde la API --- //
   useEffect(() => {
@@ -318,56 +279,57 @@ const Dashboard = () => {
   }, [activeTab, user?.id]); // Ejecutar este efecto cuando cambie la pestaña activa o el user.id
   // -------------------------------------------- //
 
-  
-  // Función para guardar cambios de configuración
-  const handleSaveChanges = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaveMessage('');
-    setSaveError('');
-    setSaving(true);
-    
-    if (!user?.id) {
-        setSaveError('Usuario no autenticado.');
-        setSaving(false);
-        return;
-    }
+  // --- Lógica para obtener perfil del usuario cuando se activa la pestaña settings --- //
+  useEffect(() => {
+    if (activeTab === 'settings' && user?.id) {
+      const fetchUserProfile = async () => {
+        setLoadingProfile(true);
+        try {
+          const [profileData, statsData] = await Promise.all([
+            getUserProfile(user.id),
+            getUserPublicStats(user.id)
+          ]);
+          setUserProfile(profileData);
+          setUserStats(statsData);
+        } catch (error: any) {
+          console.error('Error cargando perfil:', error);
+          // Si falla, usar datos básicos del localStorage
+          const stored = localStorage.getItem('user');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            setUserProfile({
+              id: parsed.id,
+              username: parsed.username,
+              email: parsed.email,
+              avatar_url: parsed.avatar_url || undefined,
+              bio: undefined,
+              portfolio_url: undefined,
+              verified: false,
+              public_profile: true,
+              member_since: parsed.created_at || new Date().toISOString(),
+              skills: [],
+              portfolio: [],
+              statistics: {
+                tasks_completed: 0,
+                tasks_created: 0,
+                total_earned: 0,
+                total_spent: 0,
+                average_rating: 0,
+                total_ratings: 0,
+                completion_rate: 0,
+                response_time_avg: undefined
+              }
+            });
+          }
+        } finally {
+          setLoadingProfile(false);
+        }
+      };
 
-    try {
-      if (!name || !email) {
-        setSaveError('El nombre y el correo electrónico son obligatorios.');
-        setSaving(false);
-        return;
-      }
-      if (newPassword && newPassword !== confirmPassword) {
-        setSaveError('Las contraseñas nuevas no coinciden.');
-        setSaving(false);
-        return;
-      }
-      // Llamada a la API para actualizar datos
-      const response = await axios.post(`${API_URL}/auth/update_user.php`, {
-        id: user.id, // Usar user.id directamente ya que se validó arriba
-        name,
-        email,
-        currentPassword,
-        newPassword
-      });
-      // Actualizar localStorage si el nombre o email cambian
-      if (response.data && response.data.user) {
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        // También actualiza los estados locales si la API devuelve los nuevos datos
-        setName(response.data.user.username || '');
-        setEmail(response.data.user.email || '');
-      }
-      setSaveMessage('¡Datos actualizados correctamente!');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-    } catch (error: any) { // Especificar tipo 'any' para el error
-      setSaveError(error.response?.data?.message || 'Error al guardar los cambios.');
-    } finally {
-      setSaving(false);
+      fetchUserProfile();
     }
-  };
+  }, [activeTab, user?.id]);
+  // -------------------------------------------- //
   
   // Función para navegar a la página de creación de tarea
   const handleCreateTaskClick = () => {
@@ -1113,7 +1075,25 @@ const Dashboard = () => {
                       <div className="task-detail">
                         <span className="task-detail-label">Creador</span>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                          <span className="task-detail-value">{task.creator_username}</span>
+                          <Link 
+                            to={`/profile/${task.creator_id || task.id}`}
+                            className="task-creator-link"
+                            style={{
+                              color: 'var(--primary-blue)',
+                              textDecoration: 'none',
+                              fontWeight: 500,
+                              transition: 'all 0.3s ease'
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.textDecoration = 'underline';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.textDecoration = 'none';
+                            }}
+                          >
+                            {task.creator_username}
+                          </Link>
                           {task.creator_rating !== undefined && task.creator_rating > 0 && (
                             <RatingDisplay
                               averageRating={task.creator_rating}
@@ -1169,16 +1149,16 @@ const Dashboard = () => {
                 )}
                 {!loadingTransactions && transactions.length > 0 && (
                   <>
-                    <div className="transactions-table">
-                      <div className="transactions-header">
-                        <div className="transaction-cell">Fecha</div>
-                        <div className="transaction-cell">Tarea</div>
+                <div className="transactions-table">
+                  <div className="transactions-header">
+                    <div className="transaction-cell">Fecha</div>
+                    <div className="transaction-cell">Tarea</div>
                         <div className="transaction-cell">Tipo</div>
-                        <div className="transaction-cell">Cantidad</div>
-                        <div className="transaction-cell">Estado</div>
-                      </div>
-                      {transactions.map(transaction => (
-                        <div key={transaction.id} className="transaction-row">
+                    <div className="transaction-cell">Cantidad</div>
+                    <div className="transaction-cell">Estado</div>
+                  </div>
+                  {transactions.map(transaction => (
+                    <div key={transaction.id} className="transaction-row">
                           <div className="transaction-cell">
                             {new Date(transaction.date).toLocaleDateString('es-ES', {
                               year: 'numeric',
@@ -1207,14 +1187,14 @@ const Dashboard = () => {
                           }}>
                             {transaction.type === 'received' ? '+' : '-'}${parseFloat(transaction.amount).toFixed(2)} {transaction.currency}
                           </div>
-                          <div className="transaction-cell">
-                            <span className="transaction-status completed">
-                              {transaction.status}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
+                      <div className="transaction-cell">
+                        <span className="transaction-status completed">
+                          {transaction.status}
+                        </span>
+                      </div>
                     </div>
+                  ))}
+                </div>
                     {transactionsTotalPages > 1 && (
                       <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1.5rem' }}>
                         <button
@@ -1405,90 +1385,171 @@ const Dashboard = () => {
           {/* Settings Tab */}
           {activeTab === 'settings' && (
             <div className="settings-container">
+              <div className="settings-header">
               <h2>Configuración de la Cuenta</h2>
-              <form className="settings-form" onSubmit={handleSaveChanges}>
-                <div className="settings-section">
-                  <h3>Información Personal</h3>
-                  <div className="form-group">
-                    <label htmlFor="name">Nombre</label>
-                    <input
-                      type="text"
-                      id="name"
-                      value={name}
-                      onChange={e => setName(e.target.value)}
-                      required
-                    />
+                <Link 
+                  to="/dashboard/settings/profile" 
+                  className="edit-profile-button"
+                >
+                  <FaUser />
+                  <span>Editar Perfil Completo</span>
+                </Link>
                   </div>
-                  <div className="form-group">
-                    <label htmlFor="email">Correo Electrónico</label>
-                    <input
-                      type="email"
-                      id="email"
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                      required
-                    />
+
+              {loadingProfile ? (
+                <div className="settings-loading">
+                  <div className="spinner"></div>
+                  <p>Cargando información del perfil...</p>
+                </div>
+              ) : (
+                <>
+                  {/* Perfil Visual */}
+                  <div className="profile-display-card">
+                    <div className="profile-display-header">
+                      <div className="profile-avatar-display">
+                        {userProfile?.avatar_url ? (
+                          <img 
+                            src={`${API_URL.replace('/api', '')}${userProfile.avatar_url}`} 
+                            alt={userProfile.username}
+                            className="profile-avatar-img"
+                          />
+                        ) : (
+                          <div className="profile-avatar-placeholder-display">
+                            <FaUser />
+                          </div>
+                        )}
+                        {userProfile?.verified && (
+                          <div className="verified-badge-display" title="Usuario verificado">
+                            <FaCheckCircle />
+                          </div>
+                        )}
+                      </div>
+                      <div className="profile-info-display">
+                        <h3>{userProfile?.username || name}</h3>
+                        <p className="profile-email">{userProfile?.email || email}</p>
+                        {userProfile?.bio && (
+                          <p className="profile-bio-display">{userProfile.bio}</p>
+                        )}
+                        {userProfile?.portfolio_url && (
+                          <a 
+                            href={userProfile.portfolio_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="portfolio-link-display"
+                          >
+                            <FaGlobe />
+                            <span>Ver Portfolio</span>
+                          </a>
+                        )}
                   </div>
                 </div>
                 
-                <div className="settings-section">
-                  <h3>Preferencias</h3>
-                  <div className="form-group">
-                    <label htmlFor="language">Idioma</label>
-                    <select id="language">
-                      <option value="es">Español</option>
-                      <option value="en">English</option>
-                    </select>
+                    {/* Estadísticas rápidas */}
+                    {userStats && (
+                      <div className="profile-stats-display">
+                        <div className="stat-item-display">
+                          <span className="stat-label-display">Tareas Completadas</span>
+                          <span className="stat-value-display">{userStats.tasks_completed}</span>
                   </div>
-                  <div className="form-group">
-                    <label htmlFor="notifications">Notificaciones</label>
-                    <select id="notifications">
-                      <option value="all">Todas</option>
-                      <option value="important">Solo importantes</option>
-                      <option value="none">Ninguna</option>
-                    </select>
+                        <div className="stat-item-display">
+                          <span className="stat-label-display">Tareas Creadas</span>
+                          <span className="stat-value-display">{userStats.tasks_created}</span>
+                  </div>
+                        <div className="stat-item-display">
+                          <span className="stat-label-display">Total Ganado</span>
+                          <span className="stat-value-display">${userStats.total_earned.toFixed(2)}</span>
+                </div>
+                        {userStats.average_rating > 0 && (
+                          <div className="stat-item-display">
+                            <span className="stat-label-display">Rating Promedio</span>
+                            <span className="stat-value-display">
+                              {userStats.average_rating.toFixed(1)} ⭐
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Configuración de privacidad */}
+                    <div className="privacy-setting-display">
+                      <div className="privacy-info">
+                        <FaLock />
+                        <div>
+                          <strong>Perfil {userProfile?.public_profile ? 'Público' : 'Privado'}</strong>
+                          <p>{userProfile?.public_profile ? 'Tu perfil es visible para otros usuarios' : 'Tu perfil es privado y solo tú puedes verlo'}</p>
+                  </div>
+                  </div>
                   </div>
                 </div>
                 
-                <div className="settings-section">
-                  <h3>Seguridad</h3>
-                  <div className="form-group">
-                    <label htmlFor="current-password">Contraseña Actual</label>
-                    <input
-                      type="password"
-                      id="current-password"
-                      value={currentPassword}
-                      onChange={e => setCurrentPassword(e.target.value)}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="new-password">Nueva Contraseña</label>
-                    <input
-                      type="password"
-                      id="new-password"
-                      value={newPassword}
-                      onChange={e => setNewPassword(e.target.value)}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="confirm-password">Confirmar Contraseña</label>
-                    <input
-                      type="password"
-                      id="confirm-password"
-                      value={confirmPassword}
-                      onChange={e => setConfirmPassword(e.target.value)}
-                    />
-                  </div>
+                  {/* Información de cuenta básica */}
+                  <div className="settings-info-card">
+                    <h3>Información de Cuenta</h3>
+                    <div className="info-row">
+                      <span className="info-label">Nombre de Usuario</span>
+                      <span className="info-value">{userProfile?.username || name}</span>
+                    </div>
+                    <div className="info-row">
+                      <span className="info-label">Correo Electrónico</span>
+                      <span className="info-value">{userProfile?.email || email}</span>
+                    </div>
+                    {userProfile?.member_since && (
+                      <div className="info-row">
+                        <span className="info-label">Miembro desde</span>
+                        <span className="info-value">
+                          {new Date(userProfile.member_since).toLocaleDateString('es-ES', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                    )}
                 </div>
                 
-                <div className="settings-actions">
-                  <button className="settings-button" type="submit" disabled={saving}>
-                    {saving ? 'Guardando...' : 'Guardar Cambios'}
-                  </button>
-                  {saveMessage && <div className="save-success">{saveMessage}</div>}
-                  {saveError && <div className="save-error">{saveError}</div>}
+                  {/* Skills y Portfolio Preview */}
+                  {userProfile && (userProfile.skills?.length > 0 || userProfile.portfolio?.length > 0) && (
+                    <div className="settings-preview-card">
+                      <h3>Habilidades y Portfolio</h3>
+                      {userProfile.skills && userProfile.skills.length > 0 && (
+                        <div className="skills-preview">
+                          <span className="preview-label">Habilidades:</span>
+                          <div className="skills-tags">
+                            {userProfile.skills.slice(0, 5).map((skill, idx) => (
+                              <span key={idx} className="skill-tag-preview">
+                                {skill.name}
+                              </span>
+                            ))}
+                            {userProfile.skills.length > 5 && (
+                              <span className="skill-tag-preview more">
+                                +{userProfile.skills.length - 5} más
+                              </span>
+                            )}
                 </div>
-              </form>
+                        </div>
+                      )}
+                      {userProfile.portfolio && userProfile.portfolio.length > 0 && (
+                        <div className="portfolio-preview">
+                          <span className="preview-label">Proyectos en Portfolio:</span>
+                          <span className="portfolio-count">{userProfile.portfolio.length} proyecto(s)</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Botón para editar */}
+                  <div className="settings-edit-section">
+                    <Link 
+                      to="/dashboard/settings/profile" 
+                      className="edit-full-profile-button"
+                    >
+                      <FaUser />
+                      <span>Editar Perfil Completo</span>
+                    </Link>
+                    <p className="edit-hint">Haz clic aquí para editar tu avatar, biografía, portfolio, habilidades y más</p>
+                  </div>
+                </>
+              )}
             </div>
           )}
           
@@ -1542,7 +1603,25 @@ const Dashboard = () => {
                           <div className="task-detail">
                             <span className="task-detail-label">Creador</span>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                              <span className="task-detail-value">{task.creator_username}</span>
+                              <Link 
+                                to={`/profile/${task.creator_id || task.id}`}
+                                className="task-creator-link"
+                                style={{
+                                  color: 'var(--primary-blue)',
+                                  textDecoration: 'none',
+                                  fontWeight: 500,
+                                  transition: 'all 0.3s ease'
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.textDecoration = 'underline';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.textDecoration = 'none';
+                                }}
+                              >
+                                {task.creator_username}
+                              </Link>
                               {task.creator_rating !== undefined && task.creator_rating > 0 && (
                                 <RatingDisplay
                                   averageRating={task.creator_rating}
@@ -1581,25 +1660,6 @@ const Dashboard = () => {
                 </button>
               </div>
 
-              {/* Sección de Notificaciones a Pendientes */}
-              {pendingActionsTasks.length > 0 && (
-                <div className="pending-actions-section">
-                  <div className="pending-actions-header">
-                    <div className="pending-actions-title">
-                      <FaExclamationTriangle style={{ color: '#ffc107', marginRight: '0.5rem' }} />
-                      <h3>Acciones Pendientes ({pendingActionsTasks.length})</h3>
-                    </div>
-                    {/* Botón eliminado - popup de notificaciones deshabilitado */}
-                    {/* <button 
-                      className="notify-all-button"
-                      onClick={() => setShowPendingNotificationsPopup(true)}
-                    >
-                      <FaPaperPlane />
-                      <span>Notificar a Todos los Pendientes</span>
-                    </button> */}
-                  </div>
-                </div>
-              )}
               {/* Aquí se listarán las tareas creadas por el usuario */}
               {loadingUserTasks && <p>Cargando tus tareas...</p>}
               {userTasksError && <p className="error-message">{userTasksError}</p>}
