@@ -349,7 +349,7 @@ export const createAndSendTransaction = async (
         operations.forEach((op: any, index: number) => {
           console.log(`   🔹 Operación ${index + 1}: ${op.type || 'Unknown'}`);
         });
-      } else {
+    } else {
         console.log('📊 Transacción FeeBump detectada (transacción anidada)');
       }
     } catch (inspectError: any) {
@@ -367,7 +367,7 @@ export const createAndSendTransaction = async (
       status: response.status,
       hasContractId: 'contractId' in response
     });
-    
+
     if (response.status === 'SUCCESS') {
       let txHash: string | undefined;
       try {
@@ -553,19 +553,19 @@ export const createTrustlessEscrow = async (
       payload.signer,
       sendTransaction
     );
-    
+
     // 10. Retornar resultado
     if (result.success) {
       const contractId = result.contractId || 
         (initResponse && 'contractId' in initResponse ? (initResponse as InitializeSingleReleaseEscrowResponse).contractId : undefined);
-      
+
       if (contractId) {
-        return {
-          success: true,
+      return {
+        success: true,
           contractId,
-          txHash: result.txHash
-        };
-      }
+        txHash: result.txHash
+      };
+    }
     }
     
     return {
@@ -864,7 +864,7 @@ export const approveMilestoneTrustlessEscrow = async (
     
     // 2. Intentar aprobar el milestone
     const payload: ApproveMilestonePayload = {
-      contractId,
+        contractId,
       milestoneIndex,
       approver
     };
@@ -898,7 +898,7 @@ export const approveMilestoneTrustlessEscrow = async (
     if (result.success) {
       console.log('✅ Milestone aprobado exitosamente');
       return { success: true, txHash: result.txHash };
-    } else {
+        } else {
       throw new Error(result.error || 'Error al firmar o enviar la transacción');
     }
   } catch (error: any) {
