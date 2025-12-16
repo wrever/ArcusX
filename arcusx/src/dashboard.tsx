@@ -113,6 +113,25 @@ const Dashboard = () => {
   // Las tareas ya vienen filtradas del backend, solo excluir asignadas
   const filteredTasks = fetchedTasks.filter(task => task.status !== 'assigned');
   
+  // --- Lógica para obtener ganancias totales al cargar el dashboard --- //
+  useEffect(() => {
+    if (user?.id) {
+      const fetchEarnings = async () => {
+        try {
+          const earningsData = await getUserEarningsSummary(user.id);
+          if (earningsData.success) {
+            setTotalEarnings(parseFloat(earningsData.total_earned));
+            setTotalPaid(parseFloat(earningsData.total_paid));
+          }
+        } catch (error: any) {
+          console.error('Error al cargar ganancias:', error);
+        }
+      };
+      
+      fetchEarnings();
+    }
+  }, [user?.id]); // Cargar ganancias cuando el usuario esté disponible
+
   // --- Lógica para obtener transacciones cuando se activa la pestaña wallet --- //
   useEffect(() => {
     if (activeTab === 'wallet' && user?.id) {
