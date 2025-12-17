@@ -53,10 +53,18 @@ export async function getPlatformFee(useCache: boolean = true): Promise<number> 
             ? platformFeeConfig.config_value 
             : parseFloat(platformFeeConfig.config_value);
           if (!isNaN(fee)) {
-            cachedFee = fee;
+            // Guardrail: el fee debe venir como decimal (ej 0.003 = 0.3%).
+            // Si alguien lo configuró como porcentaje (ej 0.3 = 30% o 3 = 300%), usamos el default.
+            let normalizedFee = fee;
+            if (fee > 0.2) {
+              console.warn('⚠️ platform_fee parece mal configurado (se espera decimal). Valor recibido:', fee, '→ usando 0.003 (0.3%)');
+              normalizedFee = 0.003;
+            }
+
+            cachedFee = normalizedFee;
             cacheTimestamp = Date.now();
-            localStorage.setItem('admin_config_platform_fee', fee.toString());
-            return fee;
+            localStorage.setItem('admin_config_platform_fee', normalizedFee.toString());
+            return normalizedFee;
           }
         }
       }

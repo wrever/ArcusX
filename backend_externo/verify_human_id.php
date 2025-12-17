@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/lib/security_headers.php';
+require_once __DIR__ . '/lib/require_autoload.php';
 /**
  * Endpoint para verificar Human ID de un usuario
  * HUMAN ID REACTIVADO

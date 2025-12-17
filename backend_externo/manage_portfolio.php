@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/lib/security_headers.php';
+require_once __DIR__ . '/lib/require_autoload.php';
 /**
  * Endpoint para gestionar el portfolio de usuario
  * 
@@ -11,13 +13,6 @@
  */
 
 require_once 'config.php';
-
-$autoload_path = __DIR__ . '/vendor/autoload.php';
-if (file_exists($autoload_path)) {
-    require $autoload_path;
-    use Firebase\JWT\JWT;
-    use Firebase\JWT\Key;
-}
 
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");

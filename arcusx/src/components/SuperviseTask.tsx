@@ -161,6 +161,7 @@ const SuperviseTask = () => {
     // Estados para disputa
     const [showDisputeModal, setShowDisputeModal] = useState(false);
     const [disputeReason, setDisputeReason] = useState('');
+    const [disputeMode, setDisputeMode] = useState<'dispute' | 'cancellation'>('dispute');
     const [showDisputeSuccessPopup, setShowDisputeSuccessPopup] = useState(false);
     const [disputeTxHash, setDisputeTxHash] = useState<string | null>(null);
     
@@ -515,6 +516,10 @@ const SuperviseTask = () => {
                 return;
             }
             
+            const finalReason = disputeMode === 'cancellation'
+                ? `[CANCEL_REQUEST][${isClient ? 'CLIENT' : 'WORKER'}] ${disputeReason.trim()}`
+                : disputeReason.trim();
+
             const response = await axios.post(`${API_URL}/auth/send_message.php`, 
                 {
                     task_id: taskIdNum,
@@ -1192,7 +1197,7 @@ const SuperviseTask = () => {
                 `${API_URL}/auth/create_dispute.php`,
                 {
                     task_id: parseInt(taskId, 10),
-                    reason: disputeReason.trim(),
+                    reason: finalReason,
                     tx_hash: trustlessResult.txHash // Enviar hash de transacción
                 },
                 {
@@ -1207,6 +1212,7 @@ const SuperviseTask = () => {
                 // Cerrar el modal y limpiar el formulario
                 setShowDisputeModal(false);
                 setDisputeReason('');
+                                        setDisputeMode('dispute');
                 setHasExistingDispute(true);
                 
                 // Guardar el hash de transacción para mostrarlo en el popup
@@ -1281,6 +1287,9 @@ const SuperviseTask = () => {
     
     // Determinar si se puede mostrar el botón de disputa
     const canShowDisputeButton = condition1 && condition2 && condition3 && condition4 && condition5 && condition6;
+
+    // Botón de cancelación supervisada (se crea disputa y el admin resuelve con reembolso/pago)
+    const canShowCancelButton = condition1 && condition2 && condition3 && (task?.status === 'assigned' || task?.status === 'in_progress') && condition5 && condition6;
 
     // Determinar el mensaje del botón y si está deshabilitado
     let buttonText = 'Marcar como Completada';
@@ -1452,39 +1461,64 @@ const SuperviseTask = () => {
                     marginBottom: '20px'
                 }}>
                     <h2 style={{ margin: 0 }}>Chat con {chatPartnerName}</h2>
-                    {/* Botón Denuncia - Solo visible si se puede disputar */}
-                    {canShowDisputeButton && (
-                        <button
-                            onClick={() => setShowDisputeModal(true)}
-                            style={{
-                                backgroundColor: '#dc2626',
-                                color: '#fff',
-                                border: 'none',
-                                padding: '10px 20px',
-                                borderRadius: '8px',
-                                fontSize: '14px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                transition: 'all 0.3s ease',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                boxShadow: '0 2px 8px rgba(220, 38, 38, 0.3)'
-                            }}
-                            onMouseOver={(e) => {
-                                e.currentTarget.style.backgroundColor = '#b91c1c';
-                                e.currentTarget.style.transform = 'translateY(-2px)';
-                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(220, 38, 38, 0.4)';
-                            }}
-                            onMouseOut={(e) => {
-                                e.currentTarget.style.backgroundColor = '#dc2626';
-                                e.currentTarget.style.transform = 'translateY(0)';
-                                e.currentTarget.style.boxShadow = '0 2px 8px rgba(220, 38, 38, 0.3)';
-                            }}
-                        >
-                            <FaFlag />
-                            Denuncia
-                        </button>
+                    {/* Botón {disputeMode === 'cancellation' ? 'Solicitud de cancelación' : 'Denuncia'} - Solo visible si se puede disputar */}
+                    {(canShowDisputeButton || canShowCancelButton) && (
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                            {canShowCancelButton && (
+                                <button
+                                    onClick={() => {
+                                        setDisputeMode('cancellation');
+                                        setDisputeReason('');
+                                        setShowDisputeModal(true);
+                                    }}
+                                    style={{
+                                        backgroundColor: '#f59e0b',
+                                        color: '#111827',
+                                        border: 'none',
+                                        padding: '10px 16px',
+                                        borderRadius: '8px',
+                                        fontSize: '14px',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.3s ease',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                                    }}
+                                >
+                                    <FaExclamationTriangle />
+                                    Solicitar cancelación
+                                </button>
+                            )}
+
+                            {canShowDisputeButton && (
+                                <button
+                                    onClick={() => {
+                                        setDisputeMode('dispute');
+                                        setShowDisputeModal(true);
+                                    }}
+                                    style={{
+                                        backgroundColor: '#dc2626',
+                                        color: '#fff',
+                                        border: 'none',
+                                        padding: '10px 20px',
+                                        borderRadius: '8px',
+                                        fontSize: '14px',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.3s ease',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                                    }}
+                                >
+                                    <FaExclamationTriangle />
+                                    Denuncia
+                                </button>
+                            )}
+                        </div>
                     )}
                 </div>
                 <div className="messages-area">
@@ -1999,7 +2033,7 @@ const SuperviseTask = () => {
                                 fontWeight: '600',
                                 fontSize: '14px'
                             }}>
-                                Razón de la Disputa *
+                                {disputeMode === 'cancellation' ? 'Motivo de cancelación *' : 'Razón de la Disputa *'}
                             </label>
                             <textarea
                                 value={disputeReason}
@@ -2007,7 +2041,7 @@ const SuperviseTask = () => {
                                     setDisputeReason(e.target.value);
                                     setError(null);
                                 }}
-                                placeholder="Ej: El trabajador no cumplió con los requisitos acordados..."
+                                placeholder={disputeMode === 'cancellation' ? "Ej: Necesito cancelar porque el proyecto cambió de alcance..." : "Ej: El trabajador no cumplió con los requisitos acordados..."}
                                 disabled={creatingDispute}
                                 style={{
                                     width: '100%',

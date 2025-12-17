@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/lib/security_headers.php';
+require_once __DIR__ . '/lib/require_autoload.php';
 /**
  * Endpoint para obtener todas las tareas del cliente con acciones pendientes
  * GET /api/auth/get_pending_actions.php?user_id={user_id}

@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/lib/security_headers.php';
+require_once __DIR__ . '/lib/require_autoload.php';
 // select_proposal.php
 
 // CORS headers - DEBEN IR PRIMERO, ANTES DE CUALQUIER OTRO OUTPUT

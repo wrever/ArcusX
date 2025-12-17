@@ -21,6 +21,7 @@ import type {
 import { TransactionBuilder, Networks } from '@stellar/stellar-sdk';
 import { PLATFORM_WALLET, ADMIN_WALLET } from '../config/trustlessWork';
 import { getPlatformFeeForTrustlessWork } from './platformFeeService';
+import { sendAuditEvent } from './auditService';
 import { USDC_ISSUER } from '../config/usdc';
 
 // ============================================================================
@@ -393,8 +394,9 @@ export const createAndSendTransaction = async (
     } else {
       const errorMsg = (response as any).message || 'Estado no exitoso';
       console.error('❌ La transacción no fue exitosa:', errorMsg);
-      return {
-        success: false,
+          await sendAuditEvent('escrow_create_failure', String(Date.now()), { error: errorMessage });
+    return {
+      success: false,
         error: `La transacción falló: ${errorMsg}`
       };
     }
@@ -500,6 +502,14 @@ export const createTrustlessEscrow = async (
     
     // 1. Validar configuración
     validateConfiguration();
+    // Audit: intento de creación de escrow (no bloquea el flujo)
+    await sendAuditEvent('escrow_create_attempt', `${Date.now()}_${Math.random().toString(16).slice(2)}`, {
+      amount: payload.amount,
+      receiver: payload.receiver,
+      platform_wallet: PLATFORM_WALLET,
+      admin_wallet: ADMIN_WALLET,
+      env: import.meta.env.VITE_TRUSTLESS_WORK_BASE_URL || 'development'
+    });
     console.log('✅ Wallets de plataforma configuradas');
     
     // 2. Obtener platform fee
@@ -556,6 +566,17 @@ export const createTrustlessEscrow = async (
 
     // 10. Retornar resultado
     if (result.success) {
+        // Audit success (best-effort)
+        await sendAuditEvent('escrow_create_success', (result.txHash || result.contractId || String(Date.now())), {
+          contract_id: result.contractId,
+          tx_hash: result.txHash,
+          amount: normalizedAmount,
+          platform_fee: platformFee,
+          platform_wallet: PLATFORM_WALLET,
+          admin_wallet: ADMIN_WALLET,
+          asset_code: (trustlineConfig as any).symbol || 'USDC',
+          expected_platform_fee_amount: Number((Number(normalizedAmount) * Number(platformFee)).toFixed(7))
+        });
       const contractId = result.contractId || 
         (initResponse && 'contractId' in initResponse ? (initResponse as InitializeSingleReleaseEscrowResponse).contractId : undefined);
 

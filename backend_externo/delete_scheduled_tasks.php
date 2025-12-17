@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/lib/security_headers.php';
+require_once __DIR__ . '/lib/require_autoload.php';
 // delete_scheduled_tasks.php
 // Script para eliminar tareas programadas después de 24 horas
 

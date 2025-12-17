@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/lib/security_headers.php';
+require_once __DIR__ . '/lib/require_autoload.php';
 /**
  * Endpoint para actualizar datos de perfil público del usuario
  * POST /api/auth/update_user_profile.php
@@ -8,15 +10,6 @@
 
 require_once 'config.php';
 
-$autoload_path = __DIR__ . '/vendor/autoload.php';
-if (!file_exists($autoload_path)) {
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Error en el servidor: Falta la carpeta de dependencias (vendor).'
-    ]);
-    exit();
-}
 require $autoload_path;
 
 use Firebase\JWT\JWT;

@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/lib/security_headers.php';
+require_once __DIR__ . '/lib/require_autoload.php';
 /**
  * DEPRECATED: Este endpoint ya no se usa.
  * El sistema ahora usa exclusivamente Trustless Work para manejar escrows.

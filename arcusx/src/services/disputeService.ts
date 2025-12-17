@@ -303,3 +303,30 @@ export async function getDisputeTimeline(disputeId: number): Promise<DisputeTime
   return data;
 }
 
+
+
+/**
+ * Solicita cancelación supervisada (se crea disputa pending y se marca la tarea como disputed).
+ * El frontend además debe iniciar la disputa en Trustless Work con startDisputeTrustlessEscrow.
+ */
+export async function requestCancellation(taskId: number, reason: string): Promise<{ success: boolean; dispute_id: number; task: any; message?: string }> {
+  const token = getAuthToken();
+  if (!token) throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
+
+  const response = await fetch(`${API_URL}/auth/request_cancellation.php`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ task_id: taskId, reason }),
+  });
+
+  const data = await response.json().catch(() => ({ success: false, message: 'Respuesta inválida del servidor' }));
+
+  if (!response.ok || !data.success) {
+    throw new Error(data.message || `Error ${response.status}: ${response.statusText}`);
+  }
+
+  return data;
+}

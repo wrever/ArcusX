@@ -1,139 +1,92 @@
 <?php
-// Al inicio del archivo, agrega estas líneas para mostrar errores
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-require_once 'config.php';
-
-// Verificar si el archivo autoload.php existe y es legible
-$autoload_path = __DIR__ . '/vendor/autoload.php';
-if (!file_exists($autoload_path)) {
-    // Si no se encuentra, muestra un error claro
-    http_response_code(500); // O 501 Not Implemented si quieres ser específico sobre la dependencia
-    echo json_encode([
-        'message' => 'Error en el servidor: Falta la carpeta de dependencias (vendor).',
-        'details' => 'El archivo ' . $autoload_path . ' no fue encontrado. Asegúrate de haber instalado Composer y subido la carpeta vendor a este directorio.'
-    ]);
-    exit(); // Detener la ejecución si autoload.php no existe
-}
-
-require $autoload_path; // Ahora requerimos el archivo si existe
+require_once __DIR__ . '/lib/security_headers.php';
+require_once __DIR__ . '/lib/rate_limit.php';
+require_once __DIR__ . '/lib/require_autoload.php';
+require_once __DIR__ . '/config.php';
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
-// Definir una clave secreta fuerte para firmar tus tokens
-// ¡Cambia esto por una cadena aleatoria y segura en producción!
-$secret_key = "SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY"; // !! IMPORTANTE: CAMBIA ESTO !!
-
-// Configuración del token (opcional, ajusta según necesites)
-$issuedAt = time(); // Tiempo en que el token fue emitido
-$expirationTime = $issuedAt + (3600 * 24); // Tiempo de expiración (ej: 1 día)
-$issuer = "arcusx.pro"; // Tu dominio o emisor
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
-    $raw_data = file_get_contents('php://input');
-    // error_log('Datos recibidos: ' . $raw_data); // Puedes usar esto si tienes acceso a los logs de error de PHP en cPanel
-
-    $data = json_decode($raw_data, true);
-
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        http_response_code(400);
-        echo json_encode(['message' => 'Error al decodificar JSON: ' . json_last_error_msg()]);
-        exit();
-    }
-
-
-    if (!isset($data['email'], $data['password'])) {
-         http_response_code(400);
-         echo json_encode(['message' => 'Faltan email o password.']);
-         exit();
-    }
-
-    $email = $data['email'];
-    $password = $data['password'];
-
-    // Consulta preparada para obtener usuario por email (¡Seguro!)
-    // Asegúrate de que $conn es accesible aquí (definido en config.php)
-    if (!isset($conn) || $conn->connect_error) {
-         http_response_code(500);
-         echo json_encode(['message' => 'Error de conexión a la base de datos.']);
-         exit();
-    }
-
-    $stmt = $conn->prepare("SELECT id, username, email, password FROM users WHERE email = ?");
-
-    if ($stmt === false) {
-        // Manejar error en la preparación de la consulta
-        http_response_code(500);
-        echo json_encode(['message' => 'Error interno al preparar la consulta SQL.', 'error' => $conn->error]);
-        exit();
-    }
-
-
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result->num_rows === 1) {
-        $user = $result->fetch_assoc();
-
-        // Verificar la contraseña hasheada
-        if (password_verify($password, $user['password'])) {
-
-            // Payload del token JWT
-            $payload = [
-                'iat' => $issuedAt, // Issued at: time when the token was generated
-                'exp' => $expirationTime, // Expire
-                'iss' => $issuer, // Issuer
-                'data' => [ // Información del usuario (¡no pongas datos sensibles como la contraseña!)
-                    'id' => $user['id'], // Incluimos el ID del usuario
-                    'username' => $user['username'], // Incluimos el username
-                    // Puedes añadir otros datos NO sensibles aquí si los necesitas en el frontend
-                ]
-            ];
-
-            // Generar el token JWT
-            // Asegúrate de usar 'HS256' o el algoritmo que prefieras y soporta tu librería
-            // Asegúrate de que $secret_key es accesible aquí
-            if (!isset($secret_key)) {
-                 http_response_code(500);
-                 echo json_encode(['message' => 'Error interno: Clave secreta JWT no definida.']);
-                 exit();
-            }
-            $jwt = JWT::encode($payload, $secret_key, 'HS256');
-
-            // Devolver el token JWT y la información básica del usuario en la respuesta
-            http_response_code(200);
-            echo json_encode([
-                'message' => 'Login exitoso',
-                'token' => $jwt, // ¡Ahora devolvemos el JWT válido!
-                // Opcional: devolver info básica del user si es necesaria inmediatamente después del login
-                'user' => [
-                    'id' => $user['id'],
-                    'username' => $user['username']
-                ]
-            ]);
-
-        } else {
-            // Contraseña incorrecta
-            http_response_code(401);
-            echo json_encode(['message' => 'Credenciales incorrectas.']);
-        }
-    } else {
-        // Usuario no encontrado (o más de uno, aunque la consulta debería evitarlo)
-        http_response_code(401);
-        echo json_encode(['message' => 'Credenciales incorrectas.']);
-    }
-
-    // Cerrar el statement y la conexión a la base de datos
-    $stmt->close();
-    $conn->close();
-
-} else {
-    // Si la solicitud no es POST, devolver método no permitido
-    http_response_code(405);
-    echo json_encode(['message' => 'Método no permitido.']);
+// Preflight
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+  http_response_code(200);
+  exit;
 }
-?>
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+  http_response_code(405);
+  echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+  exit;
+}
+
+$debug = getenv('ARCUSX_DEBUG') === '1';
+error_reporting($debug ? E_ALL : 0);
+ini_set('display_errors', $debug ? '1' : '0');
+ini_set('log_errors', '1');
+
+// Rate limit: 10 intentos por 5 minutos por IP
+$ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+arcusx_rate_limit('login_' . $ip, 10, 300);
+
+try {
+  $raw = file_get_contents('php://input');
+  $data = json_decode($raw, true);
+
+  if (!is_array($data)) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'JSON inválido']);
+    exit;
+  }
+
+  if (!isset($data['email'], $data['password'])) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Faltan email o password']);
+    exit;
+  }
+
+  $email = trim((string)$data['email']);
+  $password = (string)$data['password'];
+
+  $stmt = $conn->prepare("SELECT id, username, email, password FROM users WHERE email = ?");
+  if (!$stmt) throw new Exception('Error interno (prepare)');
+  $stmt->bind_param("s", $email);
+  $stmt->execute();
+  $result = $stmt->get_result();
+  $user = $result ? $result->fetch_assoc() : null;
+  $stmt->close();
+
+  if (!$user || !password_verify($password, $user['password'])) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'message' => 'Credenciales inválidas']);
+    exit;
+  }
+
+  $issuedAt = time();
+  $expire = $issuedAt + (int)(getenv('ARCUSX_JWT_TTL') ?: 86400); // 24h default
+
+  $payload = [
+    'iat' => $issuedAt,
+    'exp' => $expire,
+    'data' => [
+      'id' => (int)$user['id'],
+      'username' => $user['username'],
+      'email' => $user['email']
+    ]
+  ];
+
+  $jwt = JWT::encode($payload, $jwt_secret, 'HS256');
+
+  echo json_encode([
+    'success' => true,
+    'token' => $jwt,
+    'user' => [
+      'id' => (int)$user['id'],
+      'username' => $user['username'],
+      'email' => $user['email']
+    ]
+  ]);
+} catch (Exception $e) {
+  http_response_code(500);
+  $msg = $debug ? $e->getMessage() : 'Error interno del servidor';
+  echo json_encode(['success' => false, 'message' => $msg]);
+}

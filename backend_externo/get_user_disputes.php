@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/lib/security_headers.php';
+require_once __DIR__ . '/lib/require_autoload.php';
 /**
  * Endpoint para obtener disputas del usuario que requieren su firma
  * GET /api/auth/get_user_disputes.php

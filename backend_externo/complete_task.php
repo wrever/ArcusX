@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/lib/security_headers.php';
+require_once __DIR__ . '/lib/require_autoload.php';
 /**
  * complete_task.php
  * Endpoint para completar una tarea (aceptar o rechazar trabajo completado)
