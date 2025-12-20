@@ -13,13 +13,21 @@ import {
   useReleaseFunds,
   useSendTransaction,
   useGetEscrowFromIndexerByContractIds,
-  useStartDispute
+  useStartDispute,
+  useResolveDispute
 } from '@trustless-work/escrow/hooks';
 import {
   approveMilestoneTrustlessEscrow,
   releaseFundsTrustlessEscrow,
-  startDisputeTrustlessEscrow
+  startDisputeTrustlessEscrow,
+  cancelTaskTrustlessEscrow,
+  signAndSendRefundTransaction
 } from '../services/trustlessWorkEscrowService';
+import {
+  checkCancellationAllowed,
+  cancelTask as cancelTaskService,
+  confirmCancellation
+} from '../services/cancelTaskService';
 // ============================================
 import { usePlatformFee } from '../hooks/usePlatformFee';
 import { useScheduledTaskDeletion } from '../hooks/useScheduledTaskDeletion';
@@ -27,6 +35,7 @@ import FileExchange from './FileExchange';
 import WalletButton from './WalletButton';
 import ConfirmDialog from './ConfirmDialog';
 import RatingSystem from './RatingSystem';
+import TipModal from './TipModal';
 import { FaExclamationTriangle, FaTimes, FaFlag } from 'react-icons/fa';
 import '../css/ConfirmDialog.css';
 
@@ -49,6 +58,7 @@ interface TaskDetails {
     escrow_status?: string; // Estado del escrow
     escrow_created_at?: string; // Fecha de creación del escrow
     escrow_completed_at?: string; // Fecha de finalización
+    escrow_amount?: number | string; // Monto del escrow
     accepted_applicant_id?: string; // ID del trabajador asignado
     worker_wallet_address?: string; // Wallet del trabajador desde la aplicación
     worker_username?: string; // Username del trabajador
@@ -91,6 +101,108 @@ interface CurrentUser {
     // Agrega otros campos del usuario si los necesitas frecuentemente en el frontend
 }
 
+// Componente para mostrar el estado de la disputa
+const DisputeStatusNotificationComponent = ({ 
+    task, 
+    getEscrowByContractIds 
+}: { 
+    task: TaskDetails | null; 
+    getEscrowByContractIds?: (params: { contractIds: string[]; validateOnChain?: boolean }) => Promise<any>;
+}) => {
+    const [escrowInfo, setEscrowInfo] = useState<{
+        isDisputed: boolean;
+        isResolved: boolean;
+        isRefunded: boolean;
+        balance: number;
+    } | null>(null);
+    const [loadingEscrowInfo, setLoadingEscrowInfo] = useState(false);
+
+    useEffect(() => {
+        const fetchEscrowInfo = async () => {
+            if (!task?.escrow_id || !getEscrowByContractIds) return;
+            
+            setLoadingEscrowInfo(true);
+            try {
+                const escrowResult = await getEscrowByContractIds({ 
+                    contractIds: [task.escrow_id],
+                    validateOnChain: true 
+                });
+                
+                const escrows = Array.isArray(escrowResult) ? escrowResult : (escrowResult as any)?.escrows || [];
+                
+                if (escrows && escrows.length > 0) {
+                    const escrow = escrows[0];
+                    const flags = escrow.flags || {};
+                    const balance = parseFloat(escrow.balance || escrow.currentBalance || '0');
+                    
+                    setEscrowInfo({
+                        isDisputed: flags.disputed === true || escrow.isDisputed === true || escrow.disputed === true,
+                        isResolved: flags.resolved === true,
+                        isRefunded: flags.resolved === true && balance === 0,
+                        balance: balance
+                    });
+                }
+            } catch (error: any) {
+                console.warn('⚠️ Error al obtener información del escrow:', error.message);
+            } finally {
+                setLoadingEscrowInfo(false);
+            }
+        };
+
+        fetchEscrowInfo();
+        // Actualizar cada 5 segundos
+        const interval = setInterval(fetchEscrowInfo, 5000);
+        return () => clearInterval(interval);
+    }, [task?.escrow_id, getEscrowByContractIds]);
+
+    if (loadingEscrowInfo) {
+        return (
+            <div style={{
+                padding: '15px',
+                marginBottom: '15px',
+                backgroundColor: '#fff3cd',
+                border: '1px solid #ffc107',
+                borderRadius: '5px',
+                color: '#856404'
+            }}>
+                <strong>⚠️ Escrow en Disputa</strong>
+                <p style={{ margin: '5px 0 0 0' }}>
+                    Verificando estado de la disputa...
+                </p>
+            </div>
+        );
+    }
+
+    const isRefunded = escrowInfo?.isRefunded || task?.escrow_status === 'refunded';
+    const isResolved = escrowInfo?.isResolved || false;
+
+    return (
+        <div style={{
+            padding: '15px',
+            marginBottom: '15px',
+            backgroundColor: isRefunded ? '#d4edda' : '#fff3cd',
+            border: `1px solid ${isRefunded ? '#28a745' : '#ffc107'}`,
+            borderRadius: '5px',
+            color: isRefunded ? '#155724' : '#856404'
+        }}>
+            <strong>{isRefunded ? '✅' : '⚠️'} Escrow en Disputa</strong>
+            <p style={{ margin: '5px 0 0 0' }}>
+                {isRefunded 
+                    ? 'La disputa ha sido resuelta y el reembolso ha sido procesado. Los fondos han sido devueltos.'
+                    : isResolved
+                    ? 'La disputa ha sido resuelta. Los fondos están siendo procesados.'
+                    : 'Esta tarea está en disputa. Los botones de aceptar y cancelar están deshabilitados hasta que se resuelva la disputa.'
+                }
+            </p>
+            {escrowInfo && (
+                <p style={{ margin: '5px 0 0 0', fontSize: '14px', fontStyle: 'italic' }}>
+                    Balance del escrow: {escrowInfo.balance.toFixed(7)} USDC
+                </p>
+            )}
+        </div>
+    );
+};
+
 const SuperviseTask = () => {
     const { taskId, acceptedApplicantId } = useParams<{ taskId: string, acceptedApplicantId: string }>();
     const navigate = useNavigate();
@@ -111,6 +223,13 @@ const SuperviseTask = () => {
         amount: string;
         txHash: string;
         netAmount?: string;
+    } | null>(null);
+    
+    // Estados para sistema de tips
+    const [showTipModal, setShowTipModal] = useState(false);
+    const [tipSuccessData, setTipSuccessData] = useState<{
+        txHash: string;
+        amount: number;
     } | null>(null);
     
     // Estados para el chat
@@ -134,6 +253,7 @@ const SuperviseTask = () => {
     const { sendTransaction } = useSendTransaction();
     const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds();
     const { startDispute } = useStartDispute();
+    const { resolveDispute } = useResolveDispute();
     
     // Obtener platform fee del backend
     const { platformFee } = usePlatformFee();
@@ -150,7 +270,24 @@ const SuperviseTask = () => {
     
     // Estados para acciones de trabajo
     const [acceptingWork, setAcceptingWork] = useState(false);
-    const [rejectingWork, setRejectingWork] = useState(false);
+    
+    // Estados para cancelación y reembolso
+    const [cancellingTask, setCancellingTask] = useState(false);
+    const [checkingCancellation, setCheckingCancellation] = useState(false);
+    const [showRefundSignature, setShowRefundSignature] = useState(false);
+    const [refundTransaction, setRefundTransaction] = useState<{
+      unsignedXdr: string;
+      refundAmount: number;
+      contractId: string;
+    } | null>(null);
+    const [showRefundNotification, setShowRefundNotification] = useState(false);
+    const [refundNotificationMessage, setRefundNotificationMessage] = useState<string>('');
+    const [, setCancellationAllowed] = useState<{
+      allowed: boolean;
+      reason?: string;
+      requiresDispute: boolean;
+      refundAmount?: number;
+    } | null>(null);
     const [pendingTransaction, setPendingTransaction] = useState<{
         hasPending: boolean;
         signedBy?: string;
@@ -214,7 +351,43 @@ const SuperviseTask = () => {
                         return;
                     }
 
-                    setTask(taskResponse.data);
+                    // Verificar estado del escrow desde Trustless Work si hay escrow_id
+                    let updatedTaskData = { ...taskResponse.data };
+                    if (taskResponse.data.escrow_id && getEscrowByContractIds) {
+                        try {
+                            const escrowResult = await getEscrowByContractIds({ 
+                                contractIds: [taskResponse.data.escrow_id],
+                                validateOnChain: true 
+                            });
+                            
+                            const escrows = Array.isArray(escrowResult) ? escrowResult : (escrowResult as any)?.escrows || [];
+                            
+                            if (escrows && escrows.length > 0) {
+                                const escrow = escrows[0];
+                                const flags = escrow.flags || {};
+                                // Verificar disputa usando flags.disputed (método correcto según DisputeManagement)
+                                const isDisputed = flags.disputed === true || 
+                                                  escrow.isDisputed === true || 
+                                                  escrow.disputed === true || 
+                                                  escrow.status === 'disputed';
+                                
+                                // Actualizar escrow_status con el estado real de Trustless Work
+                                if (isDisputed) {
+                                    updatedTaskData.escrow_status = 'disputed';
+                                    updatedTaskData.status = 'disputed';
+                                    setHasExistingDispute(true);
+                                } else if (escrow.status) {
+                                    // Actualizar con el estado del escrow si está disponible
+                                    updatedTaskData.escrow_status = escrow.status;
+                                }
+                            }
+                        } catch (escrowError: any) {
+                            console.warn('⚠️ No se pudo verificar el estado del escrow desde Trustless Work:', escrowError.message);
+                            // Continuar con los datos del backend
+                        }
+                    }
+
+                    setTask(updatedTaskData);
                 } else {
                     setError('No se pudieron cargar los detalles de la tarea.');
                     setLoading(false);
@@ -382,18 +555,18 @@ const SuperviseTask = () => {
                     
                     if (isReleased) {
                         // Escrow completado - fondos liberados
-                        setPendingTransaction({ 
+                    setPendingTransaction({
                             hasPending: false, 
                             escrowCompleted: true 
-                        });
+                    });
                     } else {
                         // Escrow activo pero no liberado aún
-                        setPendingTransaction({ 
-                            hasPending: true,
+                    setPendingTransaction({
+                        hasPending: true,
                             signedBy: 'client',
                             waitingFor: 'worker',
                             escrowCompleted: false
-                        });
+                    });
                     }
                 } else {
                     setPendingTransaction({ hasPending: false });
@@ -439,18 +612,18 @@ const SuperviseTask = () => {
                     
                     if (isReleased) {
                         // Escrow completado - fondos liberados
-                        setPendingTransaction({ 
+                    setPendingTransaction({
                             hasPending: false, 
                             escrowCompleted: true 
                         });
                     } else {
                         // Escrow activo pero no liberado aún
-                        setPendingTransaction({ 
-                            hasPending: true,
+                    setPendingTransaction({
+                        hasPending: true,
                             signedBy: 'both',
                             waitingFor: undefined,
                             escrowCompleted: false
-                        });
+                    });
                     }
                 } else {
                     setPendingTransaction({ hasPending: false });
@@ -471,6 +644,68 @@ const SuperviseTask = () => {
         const interval = setInterval(checkEscrowStatusWhenBothAccepted, 2000);
         return () => clearInterval(interval);
     }, [task, taskId, currentUser, isConnected, getEscrowByContractIds]);
+
+    // Verificar estado del escrow periódicamente para detectar disputas
+    useEffect(() => {
+        const checkEscrowDisputeStatus = async () => {
+            if (!task || !taskId || !task.escrow_id || !getEscrowByContractIds) return;
+            
+            // Solo verificar si la tarea no está completada
+            if (task.status === 'completed' && task.escrow_status === 'completed') return;
+
+            try {
+                const escrowResult = await getEscrowByContractIds({ 
+                    contractIds: [task.escrow_id],
+                    validateOnChain: true 
+                });
+                
+                const escrows = Array.isArray(escrowResult) ? escrowResult : (escrowResult as any)?.escrows || [];
+                
+                if (escrows && escrows.length > 0) {
+                    const escrow = escrows[0];
+                    const flags = escrow.flags || {};
+                    // Verificar disputa usando flags.disputed (método correcto según DisputeManagement)
+                    const isDisputed = flags.disputed === true || 
+                                      escrow.isDisputed === true || 
+                                      escrow.disputed === true || 
+                                      escrow.status === 'disputed';
+                    
+                    // Si el escrow está en disputa pero el estado local no lo refleja, actualizar
+                    if (isDisputed && task.escrow_status !== 'disputed' && task.status !== 'disputed') {
+                        console.log('🔄 Detectado cambio de estado: Escrow ahora está en disputa');
+                        console.log('📊 Estado del escrow:', {
+                            flags: flags,
+                            isDisputed: escrow.isDisputed,
+                            disputed: escrow.disputed,
+                            status: escrow.status,
+                            balance: escrow.balance,
+                            resolved: flags.resolved,
+                            released: flags.released
+                        });
+                        setTask(prevTask => {
+                            if (!prevTask) return null;
+                            return { 
+                                ...prevTask, 
+                                status: 'disputed',
+                                escrow_status: 'disputed'
+                            };
+                        });
+                        setHasExistingDispute(true);
+                    }
+                }
+            } catch (error: any) {
+                // Silenciar errores de verificación periódica
+                console.warn('⚠️ Error al verificar estado de disputa del escrow:', error.message);
+            }
+        };
+
+        // Verificar inmediatamente
+        checkEscrowDisputeStatus();
+        
+        // Verificar cada 5 segundos para detectar cambios en el estado del escrow
+        const interval = setInterval(checkEscrowDisputeStatus, 5000);
+        return () => clearInterval(interval);
+    }, [task, taskId, getEscrowByContractIds]);
 
 
 
@@ -790,7 +1025,7 @@ const SuperviseTask = () => {
 
             // Paso 3: Actualizar BD y programar eliminación después de 24 horas
             const response = await axios.post(`${API_URL}/auth/complete_task.php`, {
-                    task_id: parseInt(taskId!, 10),
+                task_id: parseInt(taskId!, 10),
                 action: 'accept',
                 escrow_completed: escrowCompleted,
                 tx_hash: releaseResult.txHash
@@ -845,70 +1080,278 @@ const SuperviseTask = () => {
 
     // Función para rechazar trabajo - En Trustless Work se usa startDispute
     // Por ahora, solo actualizamos el estado en el backend
-    const handleRejectWork = async () => {
+    // Nueva función para cancelar tarea con reembolso
+    const handleCancelTask = async () => {
         if (!task || !task.escrow_id || !isConnected || !address || !kit) {
-            setError('Debes conectar tu wallet Freighter para rechazar el trabajo');
+            setError('Debes conectar tu wallet Freighter para cancelar la tarea y recibir el reembolso');
             return;
         }
 
-        // Mostrar popup de confirmación
-        setConfirmDialogConfig({
-            title: 'Confirmar Rechazo',
-            message: '¿Estás seguro de que quieres rechazar este trabajo? Esto iniciará una disputa.',
-            type: 'danger',
-            onConfirm: () => {
-                setShowConfirmDialog(false);
-                executeRejectWork();
-            }
-        });
-        setShowConfirmDialog(true);
-    };
-
-    const executeRejectWork = async () => {
-        if (!task || !isConnected || !address) {
-            setError('Debes conectar tu wallet Freighter para rechazar el trabajo');
-            return;
-        }
-
-        setRejectingWork(true);
+        setCheckingCancellation(true);
         setError(null);
 
         try {
-            // En Trustless Work, el rechazo se maneja mediante disputas
-            // Por ahora, solo actualizamos el estado en el backend
-            const token = localStorage.getItem('token');
-            const response = await axios.post(`${API_URL}/auth/complete_task.php`, {
-                task_id: parseInt(taskId!, 10),
-                action: 'reject'
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
+            // 1. Verificar si cancelación está permitida
+            const checkResult = await checkCancellationAllowed(parseInt(taskId!, 10));
+            setCancellationAllowed(checkResult);
+
+            if (!checkResult.allowed) {
+                // Si requiere disputa, mostrar opción de iniciar disputa
+                if (checkResult.requiresDispute) {
+        setConfirmDialogConfig({
+                        title: 'Cancelación No Permitida',
+                        message: checkResult.reason || 'No puedes cancelar esta tarea directamente. El trabajador ya ha comenzado. ¿Deseas iniciar una disputa?',
+                        type: 'warning',
+            onConfirm: () => {
+                setShowConfirmDialog(false);
+                            // Iniciar disputa
+                            handleCreateDispute();
+            }
+        });
+        setShowConfirmDialog(true);
+                } else {
+                    setError(checkResult.reason || 'No puedes cancelar esta tarea');
+                }
+            return;
+        }
+
+            // 2. Si está permitida, mostrar popup de confirmación
+            setConfirmDialogConfig({
+                title: 'Confirmar Cancelación',
+                message: `¿Estás seguro de que quieres cancelar esta tarea? Recibirás un reembolso completo de ${checkResult.canRefund ? (task.escrow_amount || task.price || '0') : '0'} USDC.`,
+                type: 'info',
+                onConfirm: () => {
+                    setShowConfirmDialog(false);
+                    executeCancelTask();
                 }
             });
-
-            if (response.data.success) {
-                setTask(prev => prev ? {
-                    ...prev,
-                    status: 'rejected'
-                } : null);
-            } else {
-                throw new Error(response.data.message || 'Error al rechazar trabajo');
-            }
+            setShowConfirmDialog(true);
 
         } catch (err: any) {
-            setError('Error al rechazar trabajo: ' + (err.response?.data?.message || err.message));
+            setError('Error al verificar cancelación: ' + (err.response?.data?.message || err.message));
         } finally {
-            setRejectingWork(false);
+            setCheckingCancellation(false);
         }
     };
+
+    const executeCancelTask = async () => {
+        if (!task || !task.escrow_id || !isConnected || !address || !kit) {
+            setError('Debes conectar tu wallet Freighter para cancelar la tarea');
+            return;
+        }
+
+        setCancellingTask(true);
+        setError(null);
+
+        try {
+            // 1. Validar cancelación en backend
+            const cancelResult = await cancelTaskService(parseInt(taskId!, 10));
+            
+            console.log('📋 Resultado completo de cancelTask:', JSON.stringify(cancelResult, null, 2));
+            
+            if (!cancelResult.allowed || cancelResult.requiresDispute) {
+                throw new Error(cancelResult.message || 'Cancelación no permitida');
+            }
+
+            // Normalizar campos (el servicio ya lo hace, pero verificamos por si acaso)
+            const requiresSignature = cancelResult.requiresSignature ?? (cancelResult as any).requires_signature ?? false;
+            const refundAmount = cancelResult.refundAmount ?? (cancelResult as any).refund_amount ?? 0;
+            
+            console.log('📊 Campos normalizados:', {
+                requiresSignature,
+                refundAmount,
+                originalRequiresSignature: cancelResult.requiresSignature,
+                originalRefundAmount: cancelResult.refundAmount
+            });
+            
+            if (!requiresSignature || !refundAmount || refundAmount <= 0) {
+                console.error('❌ Error: Información incompleta para reembolso');
+                console.error('   requiresSignature:', requiresSignature);
+                console.error('   refundAmount:', refundAmount);
+                console.error('   cancelResult completo:', cancelResult);
+                throw new Error(`No se puede procesar el reembolso. Información incompleta. requiresSignature: ${requiresSignature}, refundAmount: ${refundAmount}`);
+            }
+
+            // 2. Obtener transacción no firmada de Trustless Work
+            // NOTA: cancelTaskTrustlessEscrow ahora maneja automáticamente:
+            // - Iniciar disputa si el escrow no está en disputa
+            // - NO intenta resolver la disputa (eso lo hace el ADMIN)
+            const refundResult = await cancelTaskTrustlessEscrow(
+                task.escrow_id,
+                address, // Cliente (receiver del reembolso)
+                refundAmount, // Usar el valor normalizado
+                kit,
+                startDispute, // Necesario para iniciar disputa si no está en disputa
+                resolveDispute, // No se usa actualmente, pero se requiere en la firma
+                sendTransaction, // Necesario para enviar la transacción de inicio de disputa
+                getEscrowByContractIds // Necesario para verificar estado del escrow
+            );
+
+            // 3. Verificar si requiere resolución por ADMIN
+            if (refundResult.requiresAdminResolution) {
+                // El ADMIN debe procesar la resolución
+                setCancellingTask(false);
+                
+                // Actualizar estado local inmediatamente
+                setTask(prevTask => {
+                    if (!prevTask) return null;
+                    return { 
+                        ...prevTask, 
+                        status: 'disputed',
+                        escrow_status: 'disputed'
+                    };
+                });
+                setHasExistingDispute(true);
+                
+                // Verificar estado del escrow desde Trustless Work para confirmar
+                if (task.escrow_id) {
+                    try {
+                        // Esperar un poco para que la disputa se procese en la blockchain
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        
+                        const escrowResult = await getEscrowByContractIds({ 
+                            contractIds: [task.escrow_id],
+                            validateOnChain: true 
+                        });
+                        
+                        const escrows = Array.isArray(escrowResult) ? escrowResult : (escrowResult as any)?.escrows || [];
+                        
+                        if (escrows && escrows.length > 0) {
+                            const escrow = escrows[0];
+                            const flags = escrow.flags || {};
+                            const isDisputed = flags.disputed === true || 
+                                              escrow.isDisputed === true || 
+                                              escrow.disputed === true || 
+                                              escrow.status === 'disputed';
+                            
+                            // Actualizar estado local con el estado real del escrow
+                            if (isDisputed) {
+                                setTask(prevTask => {
+                                    if (!prevTask) return null;
+                                    return { 
+                                        ...prevTask, 
+                                        status: 'disputed',
+                                        escrow_status: 'disputed'
+                                    };
+                                });
+                            }
+                        }
+                    } catch (escrowError: any) {
+                        console.warn('⚠️ No se pudo verificar el estado del escrow desde Trustless Work:', escrowError.message);
+                        // Continuar de todas formas, el estado local ya está actualizado
+                    }
+                }
+                
+                setRefundNotificationMessage(refundResult.message || 'Disputa iniciada exitosamente. El sistema procesará tu reembolso automáticamente. Recibirás una notificación cuando esté completo.');
+                setShowRefundNotification(true);
+                
+                // Recargar datos del backend para sincronizar
+                setTimeout(() => {
+                    fetchData();
+                }, 1000);
+                
+                // Cerrar automáticamente después de 8 segundos
+                setTimeout(() => {
+                    setShowRefundNotification(false);
+                }, 8000);
+                return;
+            }
+
+            // 4. Si hay transacción para firmar (esto no debería pasar con el flujo actual)
+            if (!refundResult.unsignedTransaction) {
+                throw new Error('No se recibió transacción de reembolso de Trustless Work');
+            }
+
+            // 5. Mostrar popup de firma (solo si hay transacción para firmar)
+            // IMPORTANTE: Poner cancellingTask en false para que el usuario pueda hacer clic en el botón
+            setCancellingTask(false);
+            setRefundTransaction({
+                unsignedXdr: refundResult.unsignedTransaction,
+                refundAmount: refundAmount, // Usar el valor normalizado
+                contractId: task.escrow_id
+            });
+            setShowRefundSignature(true);
+
+        } catch (err: any) {
+            const errorMessage = err.response?.data?.message || err.message || 'Error desconocido';
+            
+            // Si el error indica que el ADMIN debe procesar la resolución
+            if (errorMessage.includes('ADMIN') || errorMessage.includes('disputeResolver')) {
+                setError('La cancelación se ha iniciado correctamente. El sistema procesará tu reembolso automáticamente. Recibirás una notificación cuando el reembolso esté completo.');
+                // Cerrar el popup de firma si está abierto
+                setShowRefundSignature(false);
+                setRefundTransaction(null);
+                    } else {
+                setError('Error al cancelar tarea: ' + errorMessage);
+            }
+            setCancellingTask(false);
+        }
+    };
+
+    // Función para firmar y enviar transacción de reembolso
+    const handleSignRefundTransaction = async () => {
+        if (!refundTransaction || !kit || !address) {
+            setError('Error: Información de transacción no disponible');
+            return;
+        }
+
+        setCancellingTask(true);
+        setError(null);
+
+        try {
+            // Firmar y enviar transacción
+            const result = await signAndSendRefundTransaction(
+                refundTransaction.unsignedXdr,
+                address,
+                kit,
+                sendTransaction
+            );
+
+            if (!result.success || !result.txHash) {
+                throw new Error(result.error || 'Error al procesar reembolso');
+            }
+
+            // Confirmar cancelación en backend con tx_hash
+            const confirmResult = await confirmCancellation(
+                parseInt(taskId!, 10),
+                result.txHash
+            );
+
+            if (!confirmResult.success) {
+                throw new Error(confirmResult.message || 'Error al confirmar cancelación');
+            }
+
+            // Cerrar popup de firma
+            setShowRefundSignature(false);
+            setRefundTransaction(null);
+
+            // Actualizar estado de la tarea
+            setTask(prev => prev ? {
+                ...prev,
+                status: 'cancelled',
+                escrow_status: 'refunded'
+            } : null);
+
+            // Mostrar mensaje de éxito
+            setError(null);
+            alert(`✅ Tarea cancelada exitosamente. Reembolso de ${refundTransaction.refundAmount} USDC procesado.\n\nTX Hash: ${result.txHash}\n\nLos fondos han sido transferidos a tu wallet.`);
+
+        } catch (err: any) {
+            setError('Error al procesar reembolso: ' + (err.response?.data?.message || err.message));
+        } finally {
+            setCancellingTask(false);
+        }
+    };
+
+    // handleRejectWork ahora es handleCancelTask (mantener compatibilidad con código existente)
 
     // En Trustless Work, el trabajador NO retira fondos directamente
     // El cliente debe aprobar y liberar los fondos
     const handleWithdrawFunds = async () => {
         if (!task || !task.escrow_id) {
             setError('Error: No hay escrow configurado para esta tarea.');
-            return;
-        }
+                return;
+            }
 
         // Verificar que es el trabajador
     const isWorker = currentUser?.id === worker?.id;
@@ -942,7 +1385,7 @@ const SuperviseTask = () => {
             
             setError('Error al retirar fondos: ' + errorMessage);
         } finally {
-            setWithdrawingFunds(false);
+        setWithdrawingFunds(false);
         }
     };
 
@@ -1023,31 +1466,31 @@ const SuperviseTask = () => {
                 // CLIENTE: Puede aprobar el milestone y liberar fondos
                 // Esto se maneja en otro lugar (handleApproveMilestone, handleReleaseFunds)
                 // Por ahora, solo actualizar BD si es necesario
-                const response = await axios.post(`${API_URL}/auth/complete_task.php`, 
-                    {
-                        task_id: parseInt(taskId, 10),
-                        action: 'accept'
-                    },
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        }
+            const response = await axios.post(`${API_URL}/auth/complete_task.php`, 
+                {
+                    task_id: parseInt(taskId, 10),
+                    action: 'accept'
+                },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
                     }
-                );
-
-                if (!response.data.success) {
-                    throw new Error(response.data.message || 'Error al actualizar estado en BD');
                 }
+            );
+
+            if (!response.data.success) {
+                    throw new Error(response.data.message || 'Error al actualizar estado en BD');
+            }
 
                 // Actualizar estado local
-                setTask(prevTask => {
-                    if (!prevTask) return null;
-                    return { 
-                        ...prevTask, 
-                        status: response.data.status || prevTask.status,
+            setTask(prevTask => {
+                if (!prevTask) return null;
+                return { 
+                    ...prevTask, 
+                    status: response.data.status || prevTask.status,
                         client_accepted_completion: 1
-                    };
-                });
+                };
+            });
             } else {
                 throw new Error('No tienes permisos para completar esta tarea');
             }
@@ -1212,22 +1655,62 @@ const SuperviseTask = () => {
                 // Guardar el hash de transacción para mostrarlo en el popup
                 setDisputeTxHash(trustlessResult.txHash || null);
                 
-                // Actualizar el estado de la tarea
+                // Actualizar el estado de la tarea localmente
                 setTask(prevTask => {
                     if (!prevTask) return null;
                     return { 
                         ...prevTask, 
-                        status: 'disputed'
+                        status: 'disputed',
+                        escrow_status: 'disputed'
                     };
                 });
+              
+                // Verificar estado del escrow desde Trustless Work para actualizar el estado real
+                if (task.escrow_id) {
+                    try {
+                        // Esperar un poco para que la disputa se procese en la blockchain
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        
+                        const escrowResult = await getEscrowByContractIds({ 
+                            contractIds: [task.escrow_id],
+                            validateOnChain: true 
+                        });
+                        
+                        const escrows = Array.isArray(escrowResult) ? escrowResult : (escrowResult as any)?.escrows || [];
+                        
+                        if (escrows && escrows.length > 0) {
+                            const escrow = escrows[0];
+                            const flags = escrow.flags || {};
+                            const isDisputed = flags.disputed === true || 
+                                              escrow.isDisputed === true || 
+                                              escrow.disputed === true || 
+                                              escrow.status === 'disputed';
+                            
+                            // Actualizar estado local con el estado real del escrow
+                            if (isDisputed) {
+                                setTask(prevTask => {
+                                    if (!prevTask) return null;
+                                    return { 
+                                        ...prevTask, 
+                                        status: 'disputed',
+                                        escrow_status: 'disputed'
+                                    };
+                                });
+                            }
+                        }
+                    } catch (escrowError: any) {
+                        console.warn('⚠️ No se pudo verificar el estado del escrow desde Trustless Work:', escrowError.message);
+                        // Continuar de todas formas, el estado local ya está actualizado
+                    }
+                }
               
                 // Mostrar popup de éxito
                 setShowDisputeSuccessPopup(true);
                 
-                // Recargar datos
+                // Recargar datos del backend
                 setTimeout(() => {
                     fetchData();
-                }, 500);
+                }, 1000);
             } else {
                 throw new Error(response.data.message || 'Error al crear la disputa en la base de datos');
             }
@@ -1396,8 +1879,20 @@ const SuperviseTask = () => {
                                     Estado
                                 </div>
                                 <div className="blockchain-info-value">
-                                    <span className={`status-badge ${task.escrow_status}`}>
-                                        {task.escrow_status?.toUpperCase()}
+                                    <span className={`status-badge ${(() => {
+                                        // Si está en disputa, usar clase 'disputed'
+                                        if (task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute) {
+                                            return 'disputed';
+                                        }
+                                        return task.escrow_status || 'active';
+                                    })()}`}>
+                                        {(() => {
+                                            // Si está en disputa, mostrar "DISPUTED" en lugar del estado del backend
+                                            if (task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute) {
+                                                return 'DISPUTED';
+                                            }
+                                            return task.escrow_status?.toUpperCase() || 'ACTIVE';
+                                        })()}
                                     </span>
                                 </div>
                             </div>
@@ -1641,6 +2136,9 @@ const SuperviseTask = () => {
                         <div className="client-actions">
                             {task.client_accepted_completion === 0 && (
                                 <>
+                                    {/* Verificar si el escrow está en disputa - Ocultar botones si está en disputa */}
+                                    {!(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute) ? (
+                                <>
                                     <button 
                                         className="btn-success"
                                         onClick={handleAcceptWork}
@@ -1650,41 +2148,58 @@ const SuperviseTask = () => {
                                     </button>
                                     <button 
                                         className="btn-danger"
-                                        onClick={handleRejectWork}
-                                        disabled={rejectingWork || !isConnected}
+                                                onClick={handleCancelTask}
+                                                disabled={cancellingTask || checkingCancellation || !isConnected}
                                     >
-                                        {rejectingWork ? 'Procesando...' : '❌ Rechazar Trabajo (Reembolsar)'}
+                                                {checkingCancellation ? 'Verificando...' : cancellingTask ? 'Procesando...' : '❌ Cancelar Tarea (Reembolsar)'}
                                     </button>
+                                        </>
+                                    ) : (
+                                        <DisputeStatusNotificationComponent 
+                                            task={task}
+                                            getEscrowByContractIds={getEscrowByContractIds}
+                                        />
+                                    )}
                                 </>
                             )}
                             {task.client_accepted_completion === 1 && task.worker_accepted_completion === 1 && (
                                 <>
-                                    <p className="info-message" style={{ marginBottom: '10px' }}>✅ Ambos han aceptado la finalización.</p>
-                                    {/* Si hay transacción pendiente firmada por el trabajador, el cliente puede completarla */}
-                                    {pendingTransaction?.hasPending && pendingTransaction.signedBy === 'worker' && (
+                                    {/* Verificar si el escrow está en disputa - Ocultar botones si está en disputa */}
+                                    {!(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute) ? (
                                         <>
-                                            <p className="info-message" style={{ marginBottom: '10px', color: '#856404' }}>
-                                                El trabajador ya firmó la transacción. Conecta tu wallet y completa la firma para liberar los fondos.
-                                            </p>
-                                            <button 
-                                                className="btn-success"
-                                                onClick={handleWithdrawFunds}
-                                                disabled={withdrawingFunds || !isConnected || !address}
-                                                style={{
-                                                    fontSize: '16px',
-                                                    padding: '12px 24px',
-                                                    fontWeight: 'bold'
-                                                }}
-                                            >
-                                                {withdrawingFunds ? '⏳ Procesando...' : '✅ Completar Firma y Liberar Fondos'}
-                                            </button>
+                                            <p className="info-message" style={{ marginBottom: '10px' }}>✅ Ambos han aceptado la finalización.</p>
+                                            {/* Si hay transacción pendiente firmada por el trabajador, el cliente puede completarla */}
+                                            {pendingTransaction?.hasPending && pendingTransaction.signedBy === 'worker' && (
+                                                <>
+                                                    <p className="info-message" style={{ marginBottom: '10px', color: '#856404' }}>
+                                                        El trabajador ya firmó la transacción. Conecta tu wallet y completa la firma para liberar los fondos.
+                                                    </p>
+                                                    <button 
+                                                        className="btn-success"
+                                                        onClick={handleWithdrawFunds}
+                                                        disabled={withdrawingFunds || !isConnected || !address}
+                                                        style={{
+                                                            fontSize: '16px',
+                                                            padding: '12px 24px',
+                                                            fontWeight: 'bold'
+                                                        }}
+                                                    >
+                                                        {withdrawingFunds ? '⏳ Procesando...' : '✅ Completar Firma y Liberar Fondos'}
+                                                    </button>
+                                                </>
+                                            )}
+                                            {pendingTransaction?.hasPending && pendingTransaction.signedBy === 'client' && (
+                                                <p className="info-message">Ya firmaste la transacción. Esperando que el trabajador complete la firma para liberar los fondos.</p>
+                                            )}
+                                            {(!pendingTransaction?.hasPending) && (
+                                                <p className="info-message">Esperando que el trabajador inicie el retiro de fondos.</p>
+                                            )}
                                         </>
-                                    )}
-                                    {pendingTransaction?.hasPending && pendingTransaction.signedBy === 'client' && (
-                                        <p className="info-message">Ya firmaste la transacción. Esperando que el trabajador complete la firma para liberar los fondos.</p>
-                                    )}
-                                    {(!pendingTransaction?.hasPending) && (
-                                        <p className="info-message">Esperando que el trabajador inicie el retiro de fondos.</p>
+                                    ) : (
+                                        <DisputeStatusNotificationComponent 
+                                            task={task}
+                                            getEscrowByContractIds={getEscrowByContractIds}
+                                        />
                                     )}
                                 </>
                             )}
@@ -1700,7 +2215,8 @@ const SuperviseTask = () => {
                             {isWorker &&
                              Number(task.client_accepted_completion) === 1 && 
                              Number(task.worker_accepted_completion) === 1 && 
-                             task.escrow_id && task.escrow_id.trim() !== '' && (
+                             task.escrow_id && task.escrow_id.trim() !== '' && 
+                             !(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute) && (
                                 <div className="withdraw-funds-section" style={{
                                     marginBottom: '20px',
                                     padding: '15px',
@@ -1737,7 +2253,8 @@ const SuperviseTask = () => {
                             {/* Mensajes de estado para mostrar el progreso - SOLO para trabajador */}
                             {isWorker && Number(task.client_accepted_completion) === 1 && 
                              Number(task.worker_accepted_completion) === 1 && 
-                             task.escrow_id && task.escrow_id.trim() !== '' && (
+                             task.escrow_id && task.escrow_id.trim() !== '' && 
+                             !(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute) && (
                                 <>
                                     {pendingTransaction?.hasPending && pendingTransaction.signedBy !== 'both' && (
                                         <div style={{
@@ -1776,7 +2293,8 @@ const SuperviseTask = () => {
                             )}
                             
                             {/* Botón de completado - El trabajador puede marcar como completado en cualquier momento */}
-                            {task.worker_accepted_completion === 0 && (
+                            {task.worker_accepted_completion === 0 && 
+                             !(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute) && (
                                 <>
                                     {task.client_accepted_completion === 0 ? (
                                         <div style={{ textAlign: 'center' }}>
@@ -1811,24 +2329,32 @@ const SuperviseTask = () => {
                                         <div>
                                             <p className="info-message" style={{ color: '#856404', marginBottom: '15px' }}>
                                                 ⏳ Esperando que el cliente libere los fondos...
-                                            </p>
+                                        </p>
                                             <p className="info-message" style={{ color: '#856404', fontSize: '13px' }}>
                                                 💡 Ya marcaste el trabajo como completado. El cliente será notificado.
                                             </p>
                                         </div>
                                     ) : (
                                         <div style={{ textAlign: 'center' }}>
-                                            <button 
-                                                className="btn-primary"
-                                                onClick={handleCompleteTask}
+                                        <button 
+                                            className="btn-primary"
+                                            onClick={handleCompleteTask}
                                                 disabled={isButtonDisabled}
                                                 style={{ display: 'inline-block' }}
-                                            >
-                                                {buttonText}
-                                            </button>
+                                        >
+                                            {buttonText}
+                                        </button>
                                         </div>
                                     )}
                                 </>
+                            )}
+                            {/* Mostrar notificación de disputa para trabajador si está en disputa */}
+                            {task.worker_accepted_completion === 0 && 
+                             (task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute) && (
+                                <DisputeStatusNotificationComponent 
+                                    task={task}
+                                    getEscrowByContractIds={getEscrowByContractIds}
+                                />
                             )}
                             {task.worker_accepted_completion === 1 && task.client_accepted_completion === 0 && (
                                 <p className="info-message">✅ Has marcado el trabajo como completado. Esperando confirmación del cliente.</p>
@@ -1856,12 +2382,13 @@ const SuperviseTask = () => {
 
 
             {/* Botón para marcar tarea como completada (visible para AMBOS roles si no está completada) */}
-            {(!task.escrow_id || task.status !== 'assigned') && (isWorker || isClient) && (
+            {(!task.escrow_id || task.status !== 'assigned') && (isWorker || isClient) && 
+             !(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute) && (
                 <div className="completion-buttons" style={{ textAlign: 'center' }}>
                     <button 
                         className="btn-success"
                         onClick={handleCompleteTask}
-                        disabled={isButtonDisabled}
+                        disabled={isButtonDisabled} 
                         style={{ display: 'inline-block' }} 
                     >
                         {buttonText}
@@ -2442,6 +2969,288 @@ const SuperviseTask = () => {
                 </div>
             )}
 
+            {/* Popup de Firma de Reembolso - CRÍTICO: Cliente debe firmar para recibir reembolso */}
+            {showRefundSignature && refundTransaction && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(17, 128, 179, 0.3) 100%)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 10001
+                }}>
+                    <div style={{
+                        background: 'linear-gradient(135deg, rgba(20, 30, 48, 0.95) 0%, rgba(36, 59, 85, 0.95) 100%)',
+                        borderRadius: '20px',
+                        padding: '40px',
+                        maxWidth: '550px',
+                        width: '90%',
+                        textAlign: 'center',
+                        boxShadow: '0 20px 60px rgba(40, 192, 240, 0.3), 0 0 0 1px rgba(40, 192, 240, 0.1)',
+                        animation: 'scaleIn 0.5s ease-out',
+                        border: '1px solid rgba(40, 192, 240, 0.2)'
+                    }}>
+                        <div style={{
+                            fontSize: '80px',
+                            marginBottom: '20px',
+                            filter: 'drop-shadow(0 0 10px rgba(40, 192, 240, 0.5))'
+                        }}>
+                            🔐
+                        </div>
+                        <h3 style={{
+                            fontSize: '28px',
+                            fontWeight: 'bold',
+                            background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text',
+                            marginBottom: '20px',
+                            marginTop: 0
+                        }}>
+                            Firma para Recibir Reembolso
+                        </h3>
+                        <div style={{
+                            marginBottom: '30px',
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            lineHeight: '1.6'
+                        }}>
+                            <p style={{ 
+                                fontSize: '18px', 
+                                marginBottom: '15px', 
+                                fontWeight: '500',
+                                color: 'rgba(255, 255, 255, 0.8)'
+                            }}>
+                                Para recibir tu reembolso, debes firmar la transacción con Freighter
+                            </p>
+                            <div style={{
+                                background: 'linear-gradient(135deg, rgba(40, 192, 240, 0.1) 0%, rgba(17, 128, 179, 0.1) 100%)',
+                                padding: '20px',
+                                borderRadius: '12px',
+                                marginTop: '15px',
+                                textAlign: 'left',
+                                border: '1px solid rgba(40, 192, 240, 0.2)'
+                            }}>
+                                <p style={{ margin: '8px 0', fontSize: '16px', color: '#fff' }}>
+                                    <strong style={{ color: '#28c0f0' }}>💰 Monto a reembolsar:</strong> {refundTransaction.refundAmount.toFixed(7)} USDC
+                                </p>
+                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                    <strong style={{ color: '#28c0f0' }}>📍 Tu dirección:</strong> {address?.slice(0, 6)}...{address?.slice(-4)}
+                                </p>
+                                <p style={{ margin: '8px 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic' }}>
+                                    ⚠️ Sin firmar esta transacción, NO recibirás el reembolso
+                                </p>
+                            </div>
+                        </div>
+                        {error && (
+                            <div style={{
+                                padding: '12px',
+                                marginBottom: '20px',
+                                backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                                border: '1px solid rgba(239, 68, 68, 0.5)',
+                                borderRadius: '8px',
+                                color: '#ff6b6b'
+                            }}>
+                                {error}
+                            </div>
+                        )}
+                        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                            <button 
+                                onClick={() => {
+                                    setShowRefundSignature(false);
+                                    setRefundTransaction(null);
+                                    setCancellingTask(false);
+                                    setError(null);
+                                }}
+                                disabled={cancellingTask}
+                                style={{
+                                    background: 'rgba(255, 255, 255, 0.1)',
+                                    color: '#fff',
+                                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                                    padding: '14px 32px',
+                                    borderRadius: '10px',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    cursor: cancellingTask ? 'not-allowed' : 'pointer',
+                                    transition: 'all 0.3s ease',
+                                    minWidth: '200px',
+                                    opacity: cancellingTask ? 0.5 : 1
+                                }}
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={handleSignRefundTransaction}
+                                disabled={cancellingTask || !isConnected || !kit}
+                                style={{
+                                    background: cancellingTask || !isConnected || !kit ? 'rgba(40, 192, 240, 0.5)' : 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                                    color: '#fff',
+                                    border: 'none',
+                                    padding: '14px 32px',
+                                    borderRadius: '10px',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    cursor: cancellingTask || !isConnected || !kit ? 'not-allowed' : 'pointer',
+                                    transition: 'all 0.3s ease',
+                                    minWidth: '200px',
+                                    boxShadow: cancellingTask || !isConnected || !kit ? 'none' : '0 4px 12px rgba(40, 192, 240, 0.3)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px'
+                                }}
+                                onMouseOver={(e) => {
+                                    if (!cancellingTask && isConnected && kit) {
+                                        e.currentTarget.style.background = 'linear-gradient(90deg, #1180b3, #28c0f0)';
+                                        e.currentTarget.style.transform = 'translateY(-2px)';
+                                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(40, 192, 240, 0.4)';
+                                    }
+                                }}
+                                onMouseOut={(e) => {
+                                    if (!cancellingTask && isConnected && kit) {
+                                        e.currentTarget.style.background = 'linear-gradient(90deg, #28c0f0, #1180b3)';
+                                        e.currentTarget.style.transform = 'translateY(0)';
+                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(40, 192, 240, 0.3)';
+                                    }
+                                }}
+                            >
+                                {cancellingTask ? (
+                                    <>
+                                        <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⏳</span>
+                                        Firmando y Enviando...
+                                    </>
+                                ) : (
+                                    <>
+                                        🔐 Firmar con Freighter
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Popup de Notificación - Reembolso en Proceso */}
+            {showRefundNotification && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(17, 128, 179, 0.3) 100%)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 10002
+                }}>
+                    <div style={{
+                        background: 'linear-gradient(135deg, rgba(20, 30, 48, 0.95) 0%, rgba(36, 59, 85, 0.95) 100%)',
+                        borderRadius: '20px',
+                        padding: '40px',
+                        maxWidth: '550px',
+                        width: '90%',
+                        textAlign: 'center',
+                        boxShadow: '0 20px 60px rgba(40, 192, 240, 0.3), 0 0 0 1px rgba(40, 192, 240, 0.1)',
+                        animation: 'scaleIn 0.5s ease-out',
+                        border: '1px solid rgba(40, 192, 240, 0.2)'
+                    }}>
+                        <div style={{
+                            fontSize: '80px',
+                            marginBottom: '20px',
+                            filter: 'drop-shadow(0 0 10px rgba(40, 192, 240, 0.5))'
+                        }}>
+                            ✅
+                        </div>
+                        <h3 style={{
+                            fontSize: '28px',
+                            fontWeight: 'bold',
+                            background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text',
+                            marginBottom: '20px',
+                            marginTop: 0
+                        }}>
+                            Cancelación Procesada
+                        </h3>
+                        <div style={{
+                            marginBottom: '30px',
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            lineHeight: '1.6'
+                        }}>
+                            <p style={{ 
+                                fontSize: '18px', 
+                                marginBottom: '15px', 
+                                fontWeight: '500',
+                                color: 'rgba(255, 255, 255, 0.9)'
+                            }}>
+                                {refundNotificationMessage}
+                            </p>
+                            <div style={{
+                                background: 'linear-gradient(135deg, rgba(40, 192, 240, 0.1) 0%, rgba(17, 128, 179, 0.1) 100%)',
+                                padding: '20px',
+                                borderRadius: '12px',
+                                marginTop: '15px',
+                                textAlign: 'left',
+                                border: '1px solid rgba(40, 192, 240, 0.2)'
+                            }}>
+                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.8)' }}>
+                                    <strong style={{ color: '#28c0f0' }}>📋 Próximos pasos:</strong>
+                                </p>
+                                <ul style={{ 
+                                    margin: '10px 0', 
+                                    paddingLeft: '20px', 
+                                    fontSize: '14px', 
+                                    color: 'rgba(255, 255, 255, 0.7)',
+                                    lineHeight: '1.8'
+                                }}>
+                                    <li>El administrador procesará tu reembolso automáticamente</li>
+                                    <li>Recibirás una notificación cuando el reembolso esté completo</li>
+                                    <li>Los fondos serán transferidos a tu wallet</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                            <button 
+                                onClick={() => {
+                                    setShowRefundNotification(false);
+                                    setRefundNotificationMessage('');
+                                }}
+                                style={{
+                                    background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                                    color: '#fff',
+                                    border: 'none',
+                                    padding: '14px 32px',
+                                    borderRadius: '10px',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.3s ease',
+                                    minWidth: '200px',
+                                    boxShadow: '0 4px 12px rgba(40, 192, 240, 0.3)'
+                                }}
+                                onMouseOver={(e) => {
+                                    e.currentTarget.style.background = 'linear-gradient(90deg, #1180b3, #28c0f0)';
+                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(40, 192, 240, 0.4)';
+                                }}
+                                onMouseOut={(e) => {
+                                    e.currentTarget.style.background = 'linear-gradient(90deg, #28c0f0, #1180b3)';
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(40, 192, 240, 0.3)';
+                                }}
+                            >
+                                Entendido
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Popup de Éxito - Disputa Iniciada */}
             {showDisputeSuccessPopup && (
                 <div style={{
@@ -2660,6 +3469,140 @@ const SuperviseTask = () => {
                         setConfirmDialogConfig(null);
                     }}
                 />
+            )}
+
+            {/* Modal de Tip */}
+            {task && task.worker_wallet_address && task.worker_username && (
+                <TipModal
+                    isOpen={showTipModal}
+                    onClose={() => setShowTipModal(false)}
+                    workerAddress={task.worker_wallet_address}
+                    workerUsername={task.worker_username}
+                    clientAddress={address || ''}
+                    kit={kit}
+                    onSuccess={(txHash, amount) => {
+                        setTipSuccessData({ txHash, amount });
+                        setShowTipModal(false);
+                    }}
+                />
+            )}
+
+            {/* Popup de Éxito - Tip Enviado */}
+            {tipSuccessData && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(17, 128, 179, 0.3) 100%)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 10000
+                }}>
+                    <div style={{
+                        background: 'linear-gradient(135deg, rgba(20, 30, 48, 0.95) 0%, rgba(36, 59, 85, 0.95) 100%)',
+                        borderRadius: '20px',
+                        padding: '40px',
+                        maxWidth: '550px',
+                        width: '90%',
+                        textAlign: 'center',
+                        boxShadow: '0 20px 60px rgba(40, 192, 240, 0.3), 0 0 0 1px rgba(40, 192, 240, 0.1)',
+                        animation: 'scaleIn 0.5s ease-out',
+                        border: '1px solid rgba(40, 192, 240, 0.2)'
+                    }}>
+                        <div style={{
+                            fontSize: '80px',
+                            marginBottom: '20px',
+                            filter: 'drop-shadow(0 0 10px rgba(40, 192, 240, 0.5))'
+                        }}>
+                            💝
+                        </div>
+                        <h3 style={{
+                            fontSize: '28px',
+                            fontWeight: 'bold',
+                            background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text',
+                            marginBottom: '20px',
+                            marginTop: 0
+                        }}>
+                            ¡Gratificación Enviada!
+                        </h3>
+                        <div style={{
+                            marginBottom: '30px',
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            lineHeight: '1.6'
+                        }}>
+                            <p style={{ 
+                                fontSize: '18px', 
+                                marginBottom: '15px', 
+                                fontWeight: '500',
+                                color: 'rgba(255, 255, 255, 0.9)'
+                            }}>
+                                Has enviado <strong style={{ color: '#28c0f0' }}>{tipSuccessData.amount} XLM</strong> como gratificación
+                            </p>
+                            <div style={{
+                                background: 'linear-gradient(135deg, rgba(40, 192, 240, 0.1) 0%, rgba(17, 128, 179, 0.1) 100%)',
+                                padding: '20px',
+                                borderRadius: '12px',
+                                marginTop: '15px',
+                                textAlign: 'left',
+                                border: '1px solid rgba(40, 192, 240, 0.2)'
+                            }}>
+                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                    <strong style={{ color: '#28c0f0' }}>🔗 Hash de transacción:</strong>
+                                </p>
+                                <code style={{
+                                    display: 'block',
+                                    fontSize: '12px',
+                                    color: '#28c0f0',
+                                    background: 'rgba(40, 192, 240, 0.1)',
+                                    padding: '10px',
+                                    borderRadius: '6px',
+                                    wordBreak: 'break-all',
+                                    marginTop: '8px'
+                                }}>
+                                    {tipSuccessData.txHash}
+                                </code>
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                            <button 
+                                onClick={() => {
+                                    setTipSuccessData(null);
+                                }}
+                                style={{
+                                    background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                                    color: '#fff',
+                                    border: 'none',
+                                    padding: '14px 32px',
+                                    borderRadius: '10px',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.3s ease',
+                                    minWidth: '200px',
+                                    boxShadow: '0 4px 12px rgba(40, 192, 240, 0.3)'
+                                }}
+                                onMouseOver={(e) => {
+                                    e.currentTarget.style.background = 'linear-gradient(90deg, #1180b3, #28c0f0)';
+                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(40, 192, 240, 0.4)';
+                                }}
+                                onMouseOut={(e) => {
+                                    e.currentTarget.style.background = 'linear-gradient(90deg, #28c0f0, #1180b3)';
+                                    e.currentTarget.style.transform = 'translateY(0)';
+                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(40, 192, 240, 0.3)';
+                                }}
+                            >
+                                Entendido
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
