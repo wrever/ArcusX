@@ -38,6 +38,8 @@ interface TaskData {
   escrow_id?: string | null;
   escrow_status?: string | null;
   accepted_applicant_id?: number | null;
+  escrow_amount?: number | string | null;
+  escrow_platform_fee?: number | string | null;
 }
 
 interface ProposalData {
@@ -423,20 +425,36 @@ const ProposalReview = () => {
       // Por lo tanto, debemos fondear exactamente el mismo monto para que coincida
       const workerAmount = parseFloat(task.price);
       
+      // ⚠️ CRÍTICO: Usar el mismo platformFee que al crear el escrow
+      // Si el escrow tiene un platformFee guardado, usarlo; si no, usar el actual
+      let feeToUse = platformFee;
+      if (task.escrow_platform_fee !== undefined && task.escrow_platform_fee !== null) {
+        feeToUse = typeof task.escrow_platform_fee === 'number' 
+          ? task.escrow_platform_fee 
+          : parseFloat(task.escrow_platform_fee);
+        console.log('💡 Usando platformFee del escrow guardado:', feeToUse);
+      } else {
+        console.log('💡 Usando platformFee actual:', feeToUse);
+      }
+      
       // Usar la misma fórmula que al crear el escrow
       // X = workerAmount / (1 - platformFee)
       // Esto asegura que después de deducir la comisión, el trabajador reciba exactamente workerAmount
-      const escrowAmount = workerAmount / (1 - platformFee);
+      const escrowAmount = workerAmount / (1 - feeToUse);
       
-      // Asegurar precisión de USDC (7 decimales)
+      // Asegurar precisión de USDC (7 decimales) - EXACTAMENTE igual que al crear
       const roundedAmount = Math.round(escrowAmount * 10000000) / 10000000;
       const amountString = roundedAmount.toFixed(7);
       const amount = parseFloat(amountString); // Monto a fondear (debe coincidir con el amount del escrow)
       
-      console.log('💰 Cálculo del fondeo:');
+      console.log('💰 Cálculo del fondeo (DEBE SER IDÉNTICO AL CREAR):');
       console.log('  - Worker amount (lo que recibirá):', workerAmount);
-      console.log('  - Platform fee:', platformFee, `(${(platformFee * 100).toFixed(2)}%)`);
-      console.log('  - Amount a fondear (debe coincidir con escrow):', amount);
+      console.log('  - Platform fee usado:', feeToUse, `(${(feeToUse * 100).toFixed(2)}%)`);
+      console.log('  - Escrow amount calculado:', escrowAmount);
+      console.log('  - Rounded amount:', roundedAmount);
+      console.log('  - Amount string (7 decimales):', amountString);
+      console.log('  - Amount final a fondear:', amount);
+      console.log('  - Amount del escrow guardado (si existe):', task.escrow_amount);
       
       if (isNaN(amount) || amount <= 0) {
           return {
