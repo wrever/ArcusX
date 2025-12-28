@@ -100,24 +100,26 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
           const escrows = Array.isArray(result) ? result : (result as any)?.escrows || [];
           
           escrows.forEach((escrow: any) => {
-            const balance = parseFloat(escrow.balance || '0');
-            const status = escrow.status || 'unknown';
-            const isActive = escrow.isActive !== false;
+            const balance = parseFloat(escrow.balance || escrow.currentBalance || '0');
+            const flags = escrow.flags || {};
+            const isDisputed = flags.disputed === true || escrow.isDisputed === true || escrow.disputed === true;
+            const isResolved = flags.resolved === true || escrow.isResolved === true || escrow.resolved === true;
+            const isReleased = flags.released === true || escrow.isReleased === true || escrow.released === true;
+            const isActive = escrow.isActive === true;
 
             // Verificar inconsistencias
             if (escrow.inconsistencies?.inconsistencyFound) {
               inconsistencies++;
             }
 
-            if (balance > 0 && isActive) {
+            // ✅ MEJORA: Determinar estado real basándose en flags de Trustless Work
+            if (isDisputed) {
+              disputedCount++;
+            } else if (isResolved || isReleased || balance === 0) {
+              completedCount++;
+            } else if (isActive && balance > 0) {
               activeCount++;
               totalBalance += balance;
-            } else if (status === 'released' || status === 'completed' || balance === 0) {
-              completedCount++;
-            }
-
-            if (status === 'disputed') {
-              disputedCount++;
             }
           });
         } catch (err) {
@@ -198,6 +200,18 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
       color: '#10b981',
       description: `Balance bloqueado: ${formatCurrency(escrowsStats.totalBalance)}`,
       trend: escrowsStats.completedCount > 0 ? `Completados: ${escrowsStats.completedCount}` : null
+    },
+    {
+      title: 'Escrows en Disputa',
+      value: escrowsStats.loading ? (
+        <FaSpinner className="spinning" style={{ fontSize: '20px' }} />
+      ) : escrowsStats.disputedCount,
+      icon: <FaGavel />,
+      color: '#ef4444',
+      description: 'Escrows en disputa (desde Trustless Work)',
+      trend: escrowsStats.inconsistencies > 0 
+        ? `⚠️ ${escrowsStats.inconsistencies} inconsistencias detectadas` 
+        : null
     }
   ];
 

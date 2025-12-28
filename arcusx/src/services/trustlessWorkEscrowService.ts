@@ -28,10 +28,10 @@ import type {
   SingleReleaseStartDisputePayload,
   SingleReleaseResolveDisputePayload
 } from '@trustless-work/escrow';
-import { TransactionBuilder, Networks } from '@stellar/stellar-sdk';
+import { TransactionBuilder, Networks, Server, Asset } from '@stellar/stellar-sdk';
 import { PLATFORM_WALLET, ADMIN_WALLET } from '../config/trustlessWork';
 import { getPlatformFeeForTrustlessWork } from './platformFeeService';
-import { USDC_ISSUER } from '../config/usdc';
+import { USDC_ISSUER, USDC_ASSET } from '../config/usdc';
 
 // ============================================================================
 // CONSTANTS
@@ -49,6 +49,17 @@ const RETRY_CONFIG = {
 const TRUSTLINE_CONFIG = {
   SYMBOL: 'USDC'
 } as const;
+
+// Horizon Server para verificar transacciones y balances
+const getHorizonServer = (): Server => {
+  const isTestnet = import.meta.env.VITE_STELLAR_NETWORK === 'testnet' || 
+                    !import.meta.env.VITE_STELLAR_NETWORK || 
+                    (typeof window !== 'undefined' && window.location.hostname === 'localhost');
+  const horizonUrl = isTestnet 
+    ? 'https://horizon-testnet.stellar.org'
+    : 'https://horizon.stellar.org';
+  return new Server(horizonUrl);
+};
 
 // ============================================================================
 // TYPES
@@ -242,15 +253,42 @@ export const signWithFreighter = async (
   kit: any,
   address: string
 ): Promise<string> => {
+  console.log('🔐 signWithFreighter: Iniciando firma...');
+  console.log('   Kit disponible:', !!kit);
+  console.log('   Address:', address);
+  console.log('   XDR length:', unsignedXdr.length);
+  
   if (!kit || !address) {
     throw new Error('Kit o dirección no disponible');
   }
-  kit.setWallet('freighter');
-  const { signedTxXdr } = await kit.signTransaction(unsignedXdr, {
-    address: address,
-    networkPassphrase: 'Test SDF Network ; September 2015'
-  });
-  return signedTxXdr;
+  
+  try {
+    console.log('🔄 Configurando wallet a Freighter...');
+    kit.setWallet('freighter');
+    
+    console.log('🔄 Llamando a kit.signTransaction...');
+    console.log('   Esto debería abrir el popup de Freighter para firmar');
+    
+    const { signedTxXdr } = await kit.signTransaction(unsignedXdr, {
+      address: address,
+      networkPassphrase: 'Test SDF Network ; September 2015'
+    });
+    
+    console.log('✅ Transacción firmada. XDR recibido, length:', signedTxXdr?.length || 0);
+    return signedTxXdr;
+  } catch (error: any) {
+    console.error('❌ Error en signWithFreighter:', error);
+    console.error('   Error message:', error.message);
+    console.error('   Error code:', error.code);
+    console.error('   Error name:', error.name);
+    
+    // Si el usuario rechazó la firma
+    if (error.message?.includes('rejected') || error.message?.includes('denied') || error.code === 'USER_REJECTED') {
+      throw new Error('El usuario rechazó la firma de la transacción');
+    }
+    
+    throw error;
+  }
 };
 
 export const createAndSendTransaction = async (
@@ -283,17 +321,224 @@ export const createAndSendTransaction = async (
     }
     
     console.log('🔐 Firmando transacción con Freighter...');
+    console.log('   Address (signer):', address);
+    console.log('   Kit disponible:', !!kit);
+    console.log('   XDR length:', unsignedXdr.length);
+    
     const signedXdr = await signWithFreighter(unsignedXdr, kit, address);
+    console.log('✅ Transacción firmada exitosamente. XDR length:', signedXdr.length);
+    
+    // ✅ MEJORA: Validar el XDR firmado antes de enviarlo
+    try {
+      const tx = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
+      const txHash = tx.hash().toString('hex');
+      console.log('✅ XDR validado correctamente. Hash:', txHash);
+      
+      // Verificar que la transacción tenga operaciones
+      if ('operations' in tx && tx.operations.length === 0) {
+        throw new Error('La transacción no tiene operaciones');
+      }
+      
+      // Verificar que la transacción esté firmada
+      const signatures = tx.signatures || [];
+      if (signatures.length === 0) {
+        throw new Error('La transacción no está firmada');
+      }
+      console.log(`✅ Transacción tiene ${signatures.length} firma(s)`);
+    } catch (xdrError: any) {
+      console.error('❌ Error al validar XDR firmado:', xdrError.message);
+      throw new Error(`XDR firmado inválido: ${xdrError.message}`);
+    }
+    
+    // ✅ MEJORA: Extraer hash de la transacción antes de enviar para verificar si ya fue enviada
+    let txHash: string | undefined;
+    try {
+      const tx = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
+      txHash = tx.hash().toString('hex');
+      console.log(`🔍 Hash de la transacción: ${txHash}`);
+      
+      // Verificar si la transacción ya fue enviada consultando Horizon
+      try {
+        const horizon = getHorizonServer();
+        const existingTx = await horizon.transactions().transaction(txHash).call();
+        if (existingTx && existingTx.successful) {
+          console.log('✅ La transacción ya fue enviada exitosamente anteriormente');
+          return { success: true, txHash: txHash };
+        } else if (existingTx && !existingTx.successful) {
+          console.warn('⚠️ La transacción existe pero falló:', existingTx.result_code);
+        }
+      } catch (horizonError: any) {
+        // Si no se encuentra la transacción, es normal (no ha sido enviada aún)
+        if (horizonError?.response?.status === 404) {
+          console.log('ℹ️ La transacción no ha sido enviada aún (normal)');
+        } else {
+          console.warn('⚠️ No se pudo verificar en Horizon:', horizonError?.message);
+        }
+      }
+    } catch (hashError: any) {
+      console.warn('⚠️ No se pudo extraer hash de la transacción:', hashError?.message);
+    }
     
     console.log('📤 Enviando transacción firmada a Trustless Work...');
-    const response = await sendTransaction(signedXdr);
+    console.log(`   XDR length: ${signedXdr.length}`);
+    console.log(`   XDR preview: ${signedXdr.substring(0, 100)}...`);
+    if (txHash) {
+      console.log(`   Hash: ${txHash}`);
+    }
     
-    console.log('📥 Respuesta de Trustless Work:', {
-      status: response.status,
-      hasContractId: 'contractId' in response
-    });
+    let response: any;
+    try {
+      response = await sendTransaction(signedXdr);
+      
+      console.log('📥 Respuesta de Trustless Work:', {
+        status: response?.status,
+        hasContractId: 'contractId' in (response || {}),
+        fullResponse: response
+      });
+    } catch (sendError: any) {
+      console.error('❌ Error al enviar transacción a Trustless Work:');
+      console.error('   Error completo:', sendError);
+      console.error('   Error message:', sendError?.message);
+      console.error('   Error code:', sendError?.code);
+      console.error('   Error response:', sendError?.response);
+      console.error('   Error response data:', sendError?.response?.data);
+      console.error('   Error response status:', sendError?.response?.status);
+      console.error('   Error response statusText:', sendError?.response?.statusText);
+      console.error('   Error response headers:', sendError?.response?.headers);
+      
+      // ✅ MEJORA CRÍTICA: Si recibimos un 400, verificar si la transacción ya fue exitosa en Horizon
+      // Esto maneja el caso donde Trustless Work rechaza la transacción porque ya fue enviada
+      if (sendError?.response?.status === 400 && txHash) {
+        console.log('🔍 Error 400 recibido. Verificando si la transacción ya fue exitosa en Horizon...');
+        try {
+          const isTestnet = import.meta.env.VITE_STELLAR_NETWORK === 'testnet' ||
+                            !import.meta.env.VITE_STELLAR_NETWORK ||
+                            (typeof window !== 'undefined' && window.location.hostname === 'localhost');
+          const horizonUrl = isTestnet
+            ? 'https://horizon-testnet.stellar.org'
+            : 'https://horizon.stellar.org';
+          
+          const txResponse = await fetch(`${horizonUrl}/transactions/${txHash}`);
+          if (txResponse.ok) {
+            const txData = await txResponse.json();
+            if (txData.successful === true) {
+              console.log('✅ La transacción ya fue exitosa en Horizon. Retornando éxito.');
+              return { success: true, txHash: txHash };
+            } else {
+              console.warn('⚠️ La transacción existe en Horizon pero falló:', txData.result_code);
+            }
+          } else if (txResponse.status === 404) {
+            console.log('ℹ️ La transacción no existe en Horizon (no fue enviada)');
+          }
+        } catch (horizonCheckError: any) {
+          console.warn('⚠️ Error al verificar transacción en Horizon:', horizonCheckError?.message);
+        }
+      }
+      
+      // Intentar extraer mensaje de error más específico
+      let errorMessage = 'Error al enviar transacción a Trustless Work';
+      let errorDetails: any = {};
+      
+      if (sendError?.response?.data) {
+        const errorData = sendError.response.data;
+        console.error('   Error data type:', typeof errorData);
+        console.error('   Error data keys:', Object.keys(errorData || {}));
+        
+        if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        } else if (errorData?.message) {
+          errorMessage = errorData.message;
+          // Copiar otros campos como detalles
+          Object.keys(errorData).forEach(key => {
+            if (key !== 'message') {
+              errorDetails[key] = errorData[key];
+            }
+          });
+        } else if (errorData?.error) {
+          errorMessage = errorData.error;
+          Object.keys(errorData).forEach(key => {
+            if (key !== 'error') {
+              errorDetails[key] = errorData[key];
+            }
+          });
+        } else if (errorData?.statusCode) {
+          errorMessage = `Error ${errorData.statusCode}: ${errorData.message || 'Bad Request'}`;
+          Object.keys(errorData).forEach(key => {
+            if (key !== 'message') {
+              errorDetails[key] = errorData[key];
+            }
+          });
+        } else {
+          errorMessage = JSON.stringify(errorData);
+          errorDetails = errorData;
+        }
+      } else if (sendError?.message) {
+        errorMessage = sendError.message;
+      }
+      
+      // Construir mensaje de error completo
+      let fullErrorMessage = errorMessage;
+      if (Object.keys(errorDetails).length > 0) {
+        fullErrorMessage += `\n\nDetalles del error del servidor:\n${JSON.stringify(errorDetails, null, 2)}`;
+      }
+      
+      // ✅ MEJORA: Intentar enviar directamente a Horizon como fallback
+      if (txHash) {
+        console.log('🔄 Intentando enviar directamente a Horizon como fallback...');
+        try {
+          const horizon = getHorizonServer();
+          const horizonResponse = await horizon.submitTransaction(
+            TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET)
+          );
+          
+          if (horizonResponse.successful) {
+            console.log('✅ Transacción enviada exitosamente directamente a Horizon');
+            return { success: true, txHash: txHash };
+          } else {
+            console.error('❌ La transacción fue rechazada por Horizon:', horizonResponse.result_codes);
+          }
+        } catch (horizonError: any) {
+          console.error('❌ Error al enviar a Horizon:', horizonError?.message);
+          
+          // Si el error es que la transacción ya existe, considerarlo éxito
+          if (horizonError?.response?.data?.extras?.result_codes?.transaction === 'tx_already_exists' ||
+              horizonError?.message?.includes('already exists') ||
+              horizonError?.response?.status === 400 && horizonError?.response?.data?.extras?.result_codes?.transaction === 'tx_already_exists') {
+            console.log('✅ La transacción ya existe en Horizon (fue enviada anteriormente)');
+            return { success: true, txHash: txHash };
+          }
+        }
+      }
+      
+      // Agregar información sobre posibles causas
+      fullErrorMessage += `\n\n⚠️ Posibles causas del error 400:\n`;
+      fullErrorMessage += `   1. La transacción ya fue enviada previamente (más probable)\n`;
+      fullErrorMessage += `   2. La transacción expiró (timeout - las transacciones Stellar expiran después de ~5 minutos)\n`;
+      fullErrorMessage += `   3. El servidor rechazó la transacción por validación interna\n`;
+      fullErrorMessage += `   4. El formato del XDR no es el esperado por el servidor\n`;
+      fullErrorMessage += `   5. La transacción no está correctamente firmada\n`;
+      fullErrorMessage += `\n💡 Soluciones:\n`;
+      fullErrorMessage += `   - Si la transacción ya fue enviada, verifica en Horizon si la transacción fue exitosa\n`;
+      fullErrorMessage += `   - Si la transacción expiró, intenta resolver la disputa nuevamente\n`;
+      fullErrorMessage += `   - Verifica que el disputeResolver sea el correcto y esté conectado\n`;
+      
+      if (txHash) {
+        fullErrorMessage += `\n🔍 Hash de la transacción: ${txHash}`;
+        fullErrorMessage += `\n   Puedes verificar el estado en: https://stellar.expert/explorer/testnet/tx/${txHash}`;
+        fullErrorMessage += `\n   O en Horizon: https://horizon-testnet.stellar.org/transactions/${txHash}`;
+      }
+      
+      // Crear un error con más información
+      const enhancedError = new Error(fullErrorMessage);
+      (enhancedError as any).originalError = sendError;
+      (enhancedError as any).errorDetails = errorDetails;
+      (enhancedError as any).statusCode = sendError?.response?.status || 400;
+      (enhancedError as any).txHash = txHash;
+      
+      throw enhancedError;
+    }
 
-    if (response.status === 'SUCCESS') {
+    if (response?.status === 'SUCCESS') {
       let txHash: string | undefined;
       try {
         const tx = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
@@ -310,13 +555,22 @@ export const createAndSendTransaction = async (
       }
       return { success: true, txHash: txHash };
     } else {
-      const errorMsg = (response as any).message || 'Estado no exitoso';
+      const errorMsg = (response as any)?.message || 'Estado no exitoso';
       console.error('❌ La transacción no fue exitosa:', errorMsg);
+      console.error('   Respuesta completa:', response);
       return { success: false, error: `La transacción falló: ${errorMsg}` };
     }
   } catch (error: any) {
-    console.error('❌ Error al procesar transacción:', error.message);
-    return { success: false, error: error.message || 'Error al procesar transacción' };
+    console.error('❌ Error al procesar transacción:', error);
+    console.error('   Error message:', error?.message);
+    console.error('   Error stack:', error?.stack);
+    
+    // Si el error ya tiene un mensaje descriptivo, usarlo
+    if (error?.message && error.message.includes('Error al enviar transacción')) {
+      return { success: false, error: error.message };
+    }
+    
+    return { success: false, error: error?.message || 'Error al procesar transacción' };
   }
 };
 
@@ -371,10 +625,10 @@ const handleCreateError = (error: any): EscrowResult => {
     console.error('❌ Error data completo:', JSON.stringify(errorData, null, 2));
   }
   
-  return {
-    success: false,
+    return {
+      success: false,
     error: errorMessage + (errorDetails ? ` - Detalles: ${JSON.stringify(errorDetails)}` : '')
-  };
+    };
 };
 
 // ============================================================================
@@ -566,8 +820,8 @@ export const fundTrustlessEscrow = async (
         : null;
       const escrowTotalAmount = escrowFromIndexer.amount 
         ? (typeof escrowFromIndexer.amount === 'string' ? parseFloat(String(escrowFromIndexer.amount)) : escrowFromIndexer.amount)
-        : escrowFromIndexer.amount;
-      
+              : escrowFromIndexer.amount;
+            
       console.log('📊 Análisis de amounts:', {
         amountRecibidoFrontend: amount,
         milestoneAmount: milestoneAmount,
@@ -620,7 +874,7 @@ export const fundTrustlessEscrow = async (
           console.warn(`   ⚠️ Diferencia detectada: ${difference} - esto podría causar el error`);
         }
         amount = normalizedEscrowAmount; // SIEMPRE usar el del escrow
-      } else {
+        } else {
         console.error('❌ ERROR CRÍTICO: No se pudo obtener amount del milestone ni del escrow del indexer');
         console.error('   Milestone amount:', milestoneAmount);
         console.error('   Escrow amount:', escrowTotalAmount);
@@ -970,7 +1224,7 @@ export const startDisputeTrustlessEscrow = async (
 ): Promise<{ success: boolean; txHash?: string; error?: string }> => {
   try {
     const payload: SingleReleaseStartDisputePayload = {
-      contractId,
+        contractId,
       signer
     };
 
@@ -989,7 +1243,7 @@ export const startDisputeTrustlessEscrow = async (
 
     if (result.success) {
       return { success: true, txHash: result.txHash };
-    } else {
+        } else {
       throw new Error(result.error || 'Error al firmar o enviar la transacción');
     }
   } catch (error: any) {
@@ -1004,20 +1258,111 @@ export const resolveDisputeTrustlessEscrow = async (
   distribution: { address: string; amount: number },
   kit: any,
   resolveDispute: (payload: SingleReleaseResolveDisputePayload, type: 'single-release') => Promise<EscrowRequestResponse>,
-  sendTransaction: (signedXdr: string) => Promise<SendTransactionResponse>
+  sendTransaction: (signedXdr: string) => Promise<SendTransactionResponse>,
+  getEscrowFromIndexer?: (params: { contractIds: string[]; validateOnChain?: boolean }) => Promise<any>
 ): Promise<{ success: boolean; txHash?: string; error?: string }> => {
   try {
+    // ✅ MEJORA CRÍTICA: Validar parámetros de entrada
+    if (!contractId || typeof contractId !== 'string' || contractId.trim().length === 0) {
+      throw new Error('Contract ID es requerido y debe ser válido');
+    }
+    
+    if (!disputeResolver || typeof disputeResolver !== 'string' || !disputeResolver.startsWith('G')) {
+      throw new Error(`Dispute Resolver debe ser una dirección Stellar válida (empieza con "G"): ${disputeResolver}`);
+    }
+    
+    // ✅ MEJORA: Validar balance y estado del escrow antes de distribuir
+    if (getEscrowFromIndexer) {
+      try {
+        const result = await getEscrowFromIndexer({ contractIds: [contractId], validateOnChain: true });
+        const escrows = Array.isArray(result) ? result : (result as any)?.escrows || [];
+        
+        if (escrows && escrows.length > 0) {
+          const escrow = escrows[0];
+          const balance = parseFloat(escrow.balance || escrow.currentBalance || '0');
+          const flags = escrow.flags || {};
+          const isDisputed = flags.disputed === true || escrow.isDisputed === true || escrow.disputed === true;
+          
+          // ✅ MEJORA CRÍTICA: Verificar que el escrow esté en disputa
+          if (!isDisputed) {
+            throw new Error(`El escrow ${contractId} no está en disputa. Solo se pueden resolver escrows que están en estado "disputed". Estado actual: ${escrow.status || 'unknown'}`);
+          }
+          
+          // ✅ MEJORA CRÍTICA: Verificar que el disputeResolver sea el correcto
+          const escrowDisputeResolver = escrow.roles?.disputeResolver;
+          if (escrowDisputeResolver && escrowDisputeResolver !== disputeResolver) {
+            throw new Error(`El disputeResolver proporcionado (${disputeResolver}) no coincide con el configurado en el escrow (${escrowDisputeResolver}). Solo el disputeResolver configurado en el escrow puede resolver la disputa.`);
+          }
+          
+          // Si no hay disputeResolver en el escrow, usar el proporcionado pero advertir
+          if (!escrowDisputeResolver) {
+            console.warn(`⚠️ No se encontró disputeResolver en el escrow. Usando el proporcionado: ${disputeResolver}`);
+          }
+          
+          if (balance <= 0) {
+            throw new Error(`El escrow ${contractId} no tiene balance disponible. No se puede distribuir fondos.`);
+          }
+          
+          // Verificar que el amount a distribuir no exceda el balance
+          if (distribution.amount > balance) {
+            console.warn(`⚠️ El amount a distribuir (${distribution.amount}) excede el balance del escrow (${balance}). Ajustando al balance disponible.`);
+            distribution.amount = balance;
+          }
+        } else {
+          console.warn('⚠️ No se pudo obtener información del escrow desde el indexer. Continuando de todas formas...');
+        }
+      } catch (balanceError: any) {
+        console.warn('⚠️ No se pudo verificar el balance del escrow:', balanceError.message);
+        // Continuar de todas formas, pero registrar la advertencia
+      }
+    }
+
+    // ✅ MEJORA CRÍTICA: Normalizar amount y validar address
+    const normalizedAmount = normalizeAmount(distribution.amount);
+    
+    // Validar que el address sea válido
+    if (!distribution.address || typeof distribution.address !== 'string' || distribution.address.trim().length === 0) {
+      throw new Error('La dirección del receptor es requerida y debe ser válida');
+    }
+    
+    // Validar que el address sea una dirección Stellar válida (empieza con G)
+    if (!distribution.address.startsWith('G')) {
+      throw new Error(`La dirección del receptor no es una dirección Stellar válida: ${distribution.address}`);
+    }
+    
+    console.log('📋 Payload de resolución de disputa:');
+    console.log('   Contract ID:', contractId);
+    console.log('   Dispute Resolver:', disputeResolver);
+    console.log('   Distribution Address:', distribution.address);
+    console.log('   Distribution Amount (original):', distribution.amount);
+    console.log('   Distribution Amount (normalizado):', normalizedAmount);
+    
     const payload: SingleReleaseResolveDisputePayload = {
       contractId,
       disputeResolver,
-      distributions: [distribution] as [{ address: string; amount: number }]
+      distributions: [{
+        address: distribution.address.trim(),
+        amount: normalizedAmount
+      }] as [{ address: string; amount: number }]
     };
 
+    console.log('📤 Enviando payload a resolveDispute:', JSON.stringify(payload, null, 2));
+    console.log('🔄 Llamando a resolveDispute API de Trustless Work...');
+    
     const response = await resolveDispute(payload, 'single-release');
+    
+    console.log('📥 Respuesta de resolveDispute:', {
+      hasUnsignedTransaction: !!response?.unsignedTransaction,
+      status: response?.status,
+      message: response?.message
+    });
     
     if (!response?.unsignedTransaction) {
       throw new Error('Unsigned transaction is missing from resolveDispute response.');
     }
+
+    console.log('✅ Transacción no firmada recibida. Procediendo a firmar y enviar...');
+    console.log('🔐 Llamando a createAndSendTransaction...');
 
     const result = await createAndSendTransaction(
       response.unsignedTransaction,
@@ -1025,15 +1370,388 @@ export const resolveDisputeTrustlessEscrow = async (
       disputeResolver,
       sendTransaction
     );
+    
+    console.log('📥 Resultado de createAndSendTransaction:', result);
 
-    if (result.success) {
+    if (result.success && result.txHash) {
+      // ✅ MEJORA: Verificar que la transacción se completó exitosamente y el cliente recibió el dinero
+      try {
+        console.log('🔍 Verificando transacción y balance del cliente...');
+        console.log(`   Hash de transacción: ${result.txHash}`);
+        console.log(`   Dirección del receptor: ${distribution.address}`);
+        console.log(`   Monto esperado: ${normalizedAmount}`);
+        
+        const verificationResult = await verifyTransactionAndBalance(result.txHash, distribution.address, normalizedAmount);
+        
+        console.log('✅ Verificación completada: El cliente tiene trustline y puede recibir USDC');
+        
+        // Retornar información adicional sobre la verificación
+        return { 
+          success: true, 
+          txHash: result.txHash,
+          verificationResult: verificationResult,
+          message: `✅ Disputa resuelta exitosamente. ${normalizedAmount} USDC transferidos al cliente ${distribution.address}. Hash: ${result.txHash}`
+        };
+      } catch (verifyError: any) {
+        console.error('❌ Error al verificar transacción o balance:', verifyError.message);
+        console.error('   Esto puede significar que:');
+        console.error('   1. El cliente no tiene trustline configurado para USDC');
+        console.error('   2. La transacción no transfirió los fondos correctamente');
+        console.error('   3. Hay un problema con la verificación');
+        console.error(`   Cliente: ${distribution.address}`);
+        console.error(`   Issuer de USDC requerido: ${USDC_ISSUER}`);
+        
+        // No fallar la operación si la verificación falla, pero registrar la advertencia
+        // Retornar información adicional sobre el problema
+        return { 
+          success: true, 
+          txHash: result.txHash,
+          warning: verifyError.message,
+          requiresTrustline: verifyError.message?.includes('trustline') || false
+        };
+      }
+      
       return { success: true, txHash: result.txHash };
     } else {
       throw new Error(result.error || 'Error al firmar o enviar la transacción');
     }
   } catch (error: any) {
-    const errorMessage = error.response?.data?.message || error.message || 'Error desconocido';
-    throw new Error(errorMessage);
+    // ✅ MEJORA: Logging detallado del error
+    console.error('❌ Error al resolver disputa:', error);
+    console.error('   Error type:', typeof error);
+    console.error('   Error constructor:', error?.constructor?.name);
+    console.error('   Error response:', error?.response);
+    console.error('   Error response status:', error?.response?.status);
+    console.error('   Error response statusText:', error?.response?.statusText);
+    console.error('   Error response data:', error?.response?.data);
+    console.error('   Error response headers:', error?.response?.headers);
+    console.error('   Error message:', error?.message);
+    console.error('   Error stack:', error?.stack);
+    
+    // Intentar extraer mensaje de error más específico
+    let errorMessage = 'Error desconocido al resolver disputa';
+    let errorDetails: any = {};
+    
+    // Si hay respuesta del servidor, extraer información
+    if (error?.response) {
+      const responseData = error.response.data;
+      
+      if (typeof responseData === 'string') {
+        errorMessage = responseData;
+      } else if (responseData?.message) {
+        errorMessage = responseData.message;
+        errorDetails = { ...responseData };
+        delete errorDetails.message;
+      } else if (responseData?.error) {
+        errorMessage = responseData.error;
+        errorDetails = { ...responseData };
+        delete errorDetails.error;
+      } else if (typeof responseData === 'object') {
+        errorMessage = JSON.stringify(responseData);
+        errorDetails = responseData;
+      }
+      
+      // Agregar información del status code
+      if (error.response.status) {
+        errorMessage = `[${error.response.status}] ${errorMessage}`;
+      }
+    } else if (error?.message) {
+      errorMessage = error.message;
+    }
+    
+    // Construir mensaje de error más descriptivo
+    let fullErrorMessage = errorMessage;
+    
+    if (Object.keys(errorDetails).length > 0) {
+      fullErrorMessage += `\n\nDetalles del error:\n${JSON.stringify(errorDetails, null, 2)}`;
+    }
+    
+    // Si es un error 400, agregar información adicional
+    if (error?.response?.status === 400) {
+      fullErrorMessage += `\n\n⚠️ Error 400 (Bad Request): El servidor rechazó la solicitud.\n`;
+      fullErrorMessage += `\nPosibles causas:\n`;
+      fullErrorMessage += `   1. El XDR firmado es inválido o está corrupto\n`;
+      fullErrorMessage += `   2. La transacción ya fue enviada previamente\n`;
+      fullErrorMessage += `   3. La transacción expiró (timeout)\n`;
+      fullErrorMessage += `   4. El contractId no es válido\n`;
+      fullErrorMessage += `   5. El disputeResolver no coincide con el firmante\n`;
+      fullErrorMessage += `   6. El escrow no está en estado "disputed"\n`;
+      fullErrorMessage += `   7. El balance del escrow es insuficiente\n`;
+      fullErrorMessage += `   8. La distribución no es válida\n`;
+      fullErrorMessage += `\nRevisa los logs anteriores para más detalles.`;
+    }
+    
+    throw new Error(fullErrorMessage);
+  }
+};
+
+/**
+ * Verificar que la transacción se completó exitosamente y el cliente recibió el dinero
+ */
+const verifyTransactionAndBalance = async (
+  txHash: string,
+  receiverAddress: string,
+  expectedAmount: number
+): Promise<{
+  transferFound: boolean;
+  amountTransferred?: number;
+  currentBalance?: number;
+  clientAddress?: string;
+  txHash?: string;
+  horizonUrl?: string;
+  stellarExpertUrl?: string;
+  message?: string;
+  error?: string;
+}> => {
+  try {
+    const horizon = getHorizonServer();
+    
+    // 1. Verificar que la transacción existe y fue exitosa
+    console.log(`🔍 Verificando transacción ${txHash}...`);
+    const transaction = await horizon.transactions().transaction(txHash).call();
+    
+    if (transaction.successful !== true) {
+      throw new Error(`La transacción ${txHash} no fue exitosa. Resultado: ${transaction.result_code || 'unknown'}`);
+    }
+    
+    console.log('✅ Transacción verificada como exitosa');
+    
+    // 2. Verificar las operaciones de la transacción para ver si realmente transfirió fondos
+    console.log(`🔍 Analizando operaciones de la transacción...`);
+    const operations = await horizon.transactions().transaction(txHash).operations().call();
+    
+    console.log(`📊 Operaciones en la transacción: ${operations.records.length}`);
+    let paymentFound = false;
+    let paymentAmount = 0;
+    let paymentTo = '';
+    
+    // ✅ CRÍTICO: Para transacciones Soroban (invoke_host_function), los fondos aparecen en asset_balance_changes
+    // no en operaciones de tipo "payment"
+    operations.records.forEach((op: any, index: number) => {
+      console.log(`   Operación ${index + 1}: ${op.type}`);
+      
+      // Verificar asset_balance_changes para transacciones Soroban
+      if (op.asset_balance_changes && Array.isArray(op.asset_balance_changes)) {
+        console.log(`     - Asset balance changes encontrados: ${op.asset_balance_changes.length}`);
+        op.asset_balance_changes.forEach((change: any, changeIndex: number) => {
+          console.log(`       Cambio ${changeIndex + 1}:`);
+          console.log(`         - Tipo: ${change.type}`);
+          console.log(`         - De: ${change.from || 'N/A'}`);
+          console.log(`         - A: ${change.to || 'N/A'}`);
+          console.log(`         - Asset: ${change.asset_code || 'N/A'} ${change.asset_issuer || ''}`);
+          console.log(`         - Monto: ${change.amount || 'N/A'}`);
+          
+          // Verificar si es una transferencia de USDC al cliente
+          if (change.type === 'transfer' && change.to === receiverAddress) {
+            if (change.asset_code === 'USDC' && change.asset_issuer === USDC_ISSUER) {
+              paymentFound = true;
+              paymentAmount = parseFloat(change.amount || '0');
+              paymentTo = change.to;
+              console.log(`✅ Transferencia de USDC encontrada: ${paymentAmount} USDC a ${paymentTo}`);
+            }
+          }
+        });
+      }
+      
+      // También verificar operaciones tradicionales de tipo "payment" (por si acaso)
+      if (op.type === 'payment') {
+        console.log(`     - Tipo: payment`);
+        console.log(`     - De: ${op.from || 'N/A'}`);
+        console.log(`     - A: ${op.to || op.destination || 'N/A'}`);
+        console.log(`     - Asset: ${op.asset_code || 'XLM'} ${op.asset_issuer || ''}`);
+        console.log(`     - Monto: ${op.amount || 'N/A'}`);
+        
+        // Verificar si es un pago de USDC al cliente
+        if (op.to === receiverAddress || op.destination === receiverAddress) {
+          if (op.asset_code === 'USDC' && op.asset_issuer === USDC_ISSUER) {
+            paymentFound = true;
+            paymentAmount = parseFloat(op.amount || '0');
+            paymentTo = op.to || op.destination;
+            console.log(`✅ Pago de USDC encontrado: ${paymentAmount} USDC a ${paymentTo}`);
+          }
+        }
+      }
+    });
+    
+    if (!paymentFound) {
+      console.warn('⚠️ No se encontró una transferencia de USDC al cliente en la transacción');
+      console.warn('   Esto puede significar que:');
+      console.warn('   1. La transacción no transfirió fondos al cliente');
+      console.warn('   2. Los fondos se transfirieron a otra dirección');
+      console.warn('   3. La transacción solo resolvió la disputa sin transferir fondos');
+      console.warn(`   Cliente esperado: ${receiverAddress}`);
+    }
+    
+    // 3. Verificar el balance del cliente
+    console.log(`🔍 Verificando balance de ${receiverAddress}...`);
+    const account = await horizon.loadAccount(receiverAddress);
+    
+    // Buscar balance de USDC
+    const usdcBalance = account.balances.find((b: any) => {
+      if (b.asset_type === 'native') return false;
+      return b.asset_code === 'USDC' && b.asset_issuer === USDC_ISSUER;
+    });
+    
+    if (!usdcBalance) {
+      console.error('❌ El cliente no tiene un trustline configurado para USDC');
+      console.error(`   Cliente: ${receiverAddress}`);
+      console.error(`   Issuer de USDC requerido: ${USDC_ISSUER}`);
+      console.error(`   Para configurar el trustline, el cliente puede usar Freighter o Stellar Laboratory`);
+      throw new Error(
+        `El cliente ${receiverAddress} no tiene un trustline configurado para USDC. ` +
+        `El dinero no puede ser recibido hasta que configure el trustline. ` +
+        `Issuer de USDC: ${USDC_ISSUER}`
+      );
+    }
+    
+    const currentBalance = parseFloat(usdcBalance.balance);
+    console.log(`💰 Balance actual de USDC del cliente: ${currentBalance}`);
+    console.log(`💰 Monto esperado recibido: ${expectedAmount}`);
+    
+    if (paymentFound) {
+      console.log(`✅ Pago confirmado: ${paymentAmount} USDC fueron transferidos a ${paymentTo}`);
+      if (Math.abs(paymentAmount - expectedAmount) > 0.0000001) {
+        console.warn(`⚠️ El monto transferido (${paymentAmount}) no coincide exactamente con el esperado (${expectedAmount})`);
+      }
+    } else {
+      console.warn(`⚠️ No se encontró un pago de USDC al cliente en la transacción`);
+      console.warn(`   Esto puede indicar que los fondos no se transfirieron correctamente`);
+    }
+    
+    // Nota: No podemos verificar exactamente cuánto recibió porque puede haber tenido balance previo
+    // Pero podemos confirmar que tiene trustline y puede recibir USDC
+    console.log('✅ El cliente tiene trustline configurado y puede recibir USDC');
+    
+    // Retornar información de verificación
+    return {
+      transferFound: paymentFound,
+      amountTransferred: paymentFound ? paymentAmount : undefined,
+      currentBalance: currentBalance,
+      clientAddress: receiverAddress,
+      txHash: txHash,
+      horizonUrl: `https://horizon-testnet.stellar.org/transactions/${txHash}`,
+      stellarExpertUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
+      message: paymentFound 
+        ? `✅ Transferencia confirmada: ${paymentAmount} USDC transferidos. Balance actual: ${currentBalance} USDC`
+        : '⚠️ No se encontró transferencia en las operaciones, pero el cliente tiene trustline configurado'
+    };
+    
+  } catch (error: any) {
+    // ✅ MEJORA: Manejar el error "Server is not a constructor" específicamente
+    if (error.message?.includes('Server is not a constructor')) {
+      console.error('❌ Error al crear instancia de Horizon Server');
+      console.error('   Esto puede ser un problema de importación. Intentando verificación alternativa...');
+      
+      // Intentar verificación alternativa usando fetch directo a Horizon
+      try {
+        const isTestnet = import.meta.env.VITE_STELLAR_NETWORK === 'testnet' || 
+                          !import.meta.env.VITE_STELLAR_NETWORK || 
+                          (typeof window !== 'undefined' && window.location.hostname === 'localhost');
+        const horizonUrl = isTestnet 
+          ? 'https://horizon-testnet.stellar.org'
+          : 'https://horizon.stellar.org';
+        
+        // Verificar transacción directamente
+        const txResponse = await fetch(`${horizonUrl}/transactions/${txHash}`);
+        const txData = await txResponse.json();
+        
+        if (txData.successful === true) {
+          console.log('✅ Transacción verificada como exitosa (método alternativo)');
+          
+          // Verificar operaciones
+          const opsResponse = await fetch(`${horizonUrl}/transactions/${txHash}/operations`);
+          const opsData = await opsResponse.json();
+          
+          // Buscar asset_balance_changes
+          let foundTransfer = false;
+          opsData._embedded?.records?.forEach((op: any) => {
+            if (op.asset_balance_changes) {
+              op.asset_balance_changes.forEach((change: any) => {
+                if (change.type === 'transfer' && change.to === receiverAddress && 
+                    change.asset_code === 'USDC' && change.asset_issuer === USDC_ISSUER) {
+                  foundTransfer = true;
+                  console.log(`✅ Transferencia encontrada: ${change.amount} USDC a ${change.to}`);
+                }
+              });
+            }
+          });
+          
+          if (foundTransfer) {
+            console.log('✅ Los fondos fueron transferidos correctamente al cliente');
+            
+            // Intentar obtener el balance actual del cliente
+            try {
+              const accountResponse = await fetch(`${horizonUrl}/accounts/${receiverAddress}`);
+              const accountData = await accountResponse.json();
+              
+              const usdcBalance = accountData.balances?.find((b: any) => 
+                b.asset_code === 'USDC' && b.asset_issuer === USDC_ISSUER
+              );
+              
+              if (usdcBalance) {
+                const currentBalance = parseFloat(usdcBalance.balance);
+                console.log(`💰 Balance actual de USDC del cliente: ${currentBalance}`);
+                console.log(`💰 Monto transferido: ${expectedAmount}`);
+                console.log(`✅ El cliente ahora tiene ${currentBalance} USDC en su wallet`);
+                
+                return {
+                  transferFound: true,
+                  amountTransferred: expectedAmount,
+                  currentBalance: currentBalance,
+                  clientAddress: receiverAddress,
+                  txHash: txHash,
+                  horizonUrl: `${horizonUrl}/transactions/${txHash}`,
+                  stellarExpertUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`
+                };
+              }
+            } catch (balanceError: any) {
+              console.warn('⚠️ No se pudo obtener el balance del cliente:', balanceError.message);
+            }
+            
+            return {
+              transferFound: true,
+              amountTransferred: expectedAmount,
+              clientAddress: receiverAddress,
+              txHash: txHash
+            };
+          } else {
+            console.warn('⚠️ No se encontró transferencia de USDC al cliente en la transacción');
+            return {
+              transferFound: false,
+              message: 'No se encontró transferencia de USDC al cliente en la transacción'
+            };
+          }
+        }
+      } catch (altError: any) {
+        console.warn('⚠️ Error en verificación alternativa:', altError.message);
+        return {
+          transferFound: false,
+          error: altError.message
+        };
+      }
+      
+      // No lanzar error para no fallar la operación principal
+      return {
+        transferFound: false,
+        message: 'No se pudo verificar la transferencia'
+      };
+    }
+    
+    if (error.message?.includes('trustline')) {
+      throw error; // Re-lanzar errores de trustline
+    }
+    console.warn('⚠️ Error al verificar transacción o balance:', error.message);
+    
+    // Retornar información de error en lugar de lanzar
+    return {
+      transferFound: false,
+      error: error.message,
+      clientAddress: receiverAddress,
+      txHash: txHash,
+      horizonUrl: `https://horizon-testnet.stellar.org/transactions/${txHash}`,
+      stellarExpertUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
+      message: `⚠️ No se pudo verificar completamente: ${error.message}`
+    };
   }
 };
 

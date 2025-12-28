@@ -91,16 +91,121 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
       }
       
       const data = await getAdminEscrows(params);
-      setEscrows(data.escrows);
+      
+      // ✅ MEJORA: Consultar Trustless Work para obtener estados reales de los contratos
+      const enrichedEscrows = await enrichEscrowsWithTrustlessWorkStatus(data.escrows);
+      
+      setEscrows(enrichedEscrows);
       setTotalPages(data.pagination.total_pages);
       setTotal(data.pagination.total);
       
-      // Calcular estadísticas básicas
-      calculateStats(data.escrows);
+      // Calcular estadísticas básicas con estados reales
+      calculateStats(enrichedEscrows);
     } catch (err: any) {
       setError(err.message || 'Error al cargar escrows');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ✅ MEJORA: Enriquecer escrows con estados reales desde Trustless Work
+  const enrichEscrowsWithTrustlessWorkStatus = async (escrows: any[]): Promise<any[]> => {
+    if (!escrows || escrows.length === 0) {
+      return escrows;
+    }
+
+    // Obtener todos los escrow_ids únicos
+    const escrowIds = escrows
+      .map(e => e.escrow_id)
+      .filter((id): id is string => id !== null && id !== undefined && typeof id === 'string' && id.startsWith('C'));
+
+    if (escrowIds.length === 0) {
+      return escrows;
+    }
+
+    try {
+      // Consultar Trustless Work para obtener estados reales
+      const result = await getEscrowByContractIds({ 
+        contractIds: escrowIds,
+        validateOnChain: true 
+      });
+
+      const trustlessEscrows = Array.isArray(result) ? result : (result as any)?.escrows || [];
+      
+      // Crear un mapa de escrow_id -> estado real
+      const escrowStatusMap = new Map<string, any>();
+      trustlessEscrows.forEach((escrow: any) => {
+        const contractId = escrow.contractId || escrow.id;
+        if (contractId) {
+          const flags = escrow.flags || {};
+          const isDisputed = flags.disputed === true || escrow.isDisputed === true || escrow.disputed === true;
+          const isResolved = flags.resolved === true || escrow.isResolved === true || escrow.resolved === true;
+          const isReleased = flags.released === true || escrow.isReleased === true || escrow.released === true;
+          const isActive = escrow.isActive === true;
+          const balance = parseFloat(escrow.balance || escrow.currentBalance || '0');
+          
+          // Determinar estado real
+          let realStatus = escrow.escrow_status || 'unknown';
+          if (isDisputed) {
+            realStatus = 'disputed';
+          } else if (isResolved) {
+            realStatus = 'resolved';
+          } else if (isReleased) {
+            realStatus = 'released';
+          } else if (isActive && balance > 0) {
+            realStatus = 'active';
+          } else if (isActive && balance === 0) {
+            realStatus = 'completed';
+          }
+          
+          escrowStatusMap.set(contractId, {
+            realStatus,
+            isDisputed,
+            isResolved,
+            isReleased,
+            isActive,
+            balance,
+            flags,
+            escrowData: escrow
+          });
+        }
+      });
+
+      // Enriquecer cada escrow con el estado real
+      return escrows.map(escrow => {
+        const escrowId = escrow.escrow_id;
+        // Guardar el estado original de BD antes de actualizar
+        const dbStatus = escrow.escrow_status;
+        
+        if (escrowId && escrowStatusMap.has(escrowId)) {
+          const realStatus = escrowStatusMap.get(escrowId)!;
+          return {
+            ...escrow,
+            // ✅ Estado real desde Trustless Work (prioridad sobre BD)
+            escrow_status: realStatus.realStatus,
+            // Información adicional
+            trustlessWorkStatus: realStatus.realStatus,
+            trustlessWorkIsDisputed: realStatus.isDisputed,
+            trustlessWorkIsResolved: realStatus.isResolved,
+            trustlessWorkIsReleased: realStatus.isReleased,
+            trustlessWorkBalance: realStatus.balance,
+            trustlessWorkFlags: realStatus.flags,
+            // Mantener el estado de BD para referencia y detección de inconsistencias
+            db_escrow_status: dbStatus,
+            hasInconsistency: dbStatus !== realStatus.realStatus
+          };
+        }
+        // Si no se encontró en Trustless Work, mantener estado de BD
+        return {
+          ...escrow,
+          db_escrow_status: dbStatus,
+          hasInconsistency: false
+        };
+      });
+    } catch (err: any) {
+      console.warn('⚠️ Error al consultar Trustless Work para estados reales:', err.message);
+      // Si falla, retornar escrows sin enriquecer
+      return escrows;
     }
   };
 
@@ -563,7 +668,19 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
                           ? `${parseFloat(escrow.task_price).toFixed(7)} ${escrow.task_currency || 'USDC'}`
                           : 'N/A'}
                       </td>
-                      <td>{getStatusBadge(escrow.escrow_status)}</td>
+                      <td>
+                        {getStatusBadge(escrow.escrow_status)}
+                        {escrow.hasInconsistency && (
+                          <div className="text-muted" style={{ fontSize: '0.75em', marginTop: '2px', color: '#ff9800' }}>
+                            ⚠️ BD: {escrow.db_escrow_status} → TW: {escrow.trustlessWorkStatus || escrow.escrow_status}
+                          </div>
+                        )}
+                        {escrow.trustlessWorkBalance !== undefined && (
+                          <div className="text-muted" style={{ fontSize: '0.75em', marginTop: '2px' }}>
+                            Balance: {escrow.trustlessWorkBalance.toFixed(7)} USDC
+                          </div>
+                        )}
+                      </td>
                       <td>{getTaskStatusBadge(escrow.task_status)}</td>
                       <td>
                         {escrow.escrow_created_at 

@@ -35,7 +35,7 @@ import FileExchange from './FileExchange';
 import WalletButton from './WalletButton';
 import ConfirmDialog from './ConfirmDialog';
 import RatingSystem from './RatingSystem';
-import TipModal from './TipModal';
+import CompleteTaskPopup from './CompleteTaskPopup';
 import { FaExclamationTriangle, FaTimes, FaFlag } from 'react-icons/fa';
 import '../css/ConfirmDialog.css';
 
@@ -225,12 +225,6 @@ const SuperviseTask = () => {
         netAmount?: string;
     } | null>(null);
     
-    // Estados para sistema de tips
-    const [showTipModal, setShowTipModal] = useState(false);
-    const [tipSuccessData, setTipSuccessData] = useState<{
-        txHash: string;
-        amount: number;
-    } | null>(null);
     
     // Estados para el chat
     const [messages, setMessages] = useState<Message[]>([]);
@@ -270,6 +264,13 @@ const SuperviseTask = () => {
     
     // Estados para acciones de trabajo
     const [acceptingWork, setAcceptingWork] = useState(false);
+    const [showCompleteTaskPopup, setShowCompleteTaskPopup] = useState(false);
+    
+    // Cache para escrow data y debouncing
+    const [escrowCache, setEscrowCache] = useState<any>(null);
+    const [lastEscrowFetch, setLastEscrowFetch] = useState<number>(0);
+    const escrowFetchInProgress = useRef<boolean>(false);
+    const escrowFetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     
     // Estados para cancelación y reembolso
     const [cancellingTask, setCancellingTask] = useState(false);
@@ -311,6 +312,8 @@ const SuperviseTask = () => {
     } | null>(null);
     const [creatingDispute, setCreatingDispute] = useState(false);
     const [hasExistingDispute, setHasExistingDispute] = useState(false);
+    const [isRefunded, setIsRefunded] = useState(false);
+    const [isResolved, setIsResolved] = useState(false);
 
     // Cargar usuario actual desde localStorage al montar el componente
     useEffect(() => {
@@ -371,8 +374,20 @@ const SuperviseTask = () => {
                                                   escrow.disputed === true || 
                                                   escrow.status === 'disputed';
                                 
+                                // ✅ CRÍTICO: Verificar si el escrow está resuelto
+                                const escrowIsResolved = flags.resolved === true || 
+                                                         escrow.isResolved === true || 
+                                                         escrow.resolved === true || 
+                                                         escrow.status === 'resolved';
+                                
+                                // Actualizar estado local
+                                setIsResolved(escrowIsResolved);
+                                
                                 // Actualizar escrow_status con el estado real de Trustless Work
-                                if (isDisputed) {
+                                if (escrowIsResolved) {
+                                    updatedTaskData.escrow_status = 'resolved';
+                                    updatedTaskData.status = 'resolved';
+                                } else if (isDisputed) {
                                     updatedTaskData.escrow_status = 'disputed';
                                     updatedTaskData.status = 'disputed';
                                     setHasExistingDispute(true);
@@ -525,6 +540,70 @@ const SuperviseTask = () => {
         }
     }, [messages.length]); // Solo cuando cambia la cantidad de mensajes
 
+    // Función optimizada para obtener escrow con cache y debouncing (definida antes de los useEffect que la usan)
+    const getEscrowDataOptimized = async (forceRefresh: boolean = false): Promise<any> => {
+        if (!task || !task.escrow_id || !getEscrowByContractIds) {
+            return null;
+        }
+
+        const now = Date.now();
+        const CACHE_DURATION = 5000; // 5 segundos de cache
+        const MIN_FETCH_INTERVAL = 3000; // Mínimo 3 segundos entre fetches
+
+        // Si hay una petición en progreso, esperar
+        if (escrowFetchInProgress.current && !forceRefresh) {
+            return escrowCache;
+        }
+
+        // Si el cache es válido y no se fuerza refresh, usar cache
+        if (!forceRefresh && escrowCache && (now - lastEscrowFetch) < CACHE_DURATION) {
+            return escrowCache;
+        }
+
+        // Si la última petición fue hace menos de MIN_FETCH_INTERVAL, usar cache
+        if (!forceRefresh && (now - lastEscrowFetch) < MIN_FETCH_INTERVAL) {
+            return escrowCache;
+        }
+
+        // Limpiar timeout anterior si existe
+        if (escrowFetchTimeoutRef.current) {
+            clearTimeout(escrowFetchTimeoutRef.current);
+        }
+
+        // Usar debouncing: esperar 500ms antes de hacer la petición
+        return new Promise((resolve) => {
+            escrowFetchTimeoutRef.current = setTimeout(async () => {
+                escrowFetchInProgress.current = true;
+                try {
+                    const escrowResult = await getEscrowByContractIds({ 
+                        contractIds: [task.escrow_id!],
+                        validateOnChain: true 
+                    });
+                    const escrows = Array.isArray(escrowResult) ? escrowResult : (escrowResult as any)?.escrows || [];
+                    
+                    if (escrows && escrows.length > 0) {
+                        setEscrowCache(escrows[0]);
+                        setLastEscrowFetch(Date.now());
+                        resolve(escrows[0]);
+                    } else {
+                        resolve(null);
+                    }
+                } catch (error: any) {
+                    // Si es error 429, usar cache si existe
+                    if (error.response?.status === 429 && escrowCache) {
+                        console.warn('⚠️ Rate limit alcanzado, usando cache');
+                        resolve(escrowCache);
+                    } else {
+                        console.error('Error al obtener escrow:', error);
+                        resolve(escrowCache); // Devolver cache en caso de error
+                    }
+                } finally {
+                    escrowFetchInProgress.current = false;
+                }
+            }, forceRefresh ? 0 : 500);
+        });
+    };
+
     // Verificar estado del escrow en Trustless Work (reemplaza verificación de transacciones pendientes del sistema antiguo)
     useEffect(() => {
         const checkEscrowStatus = async () => {
@@ -536,22 +615,32 @@ const SuperviseTask = () => {
                 return;
             }
 
-            // Verificar si el cliente ya aceptó (client_accepted_completion === 1)
-            if (task.client_accepted_completion !== 1) return;
-
             try {
-                // Verificar estado del escrow desde Trustless Work
-                const escrowResult = await getEscrowByContractIds({ 
-                    contractIds: [task.escrow_id],
-                    validateOnChain: true 
-                });
+                // Usar función optimizada con cache
+                const escrow = await getEscrowDataOptimized(false);
                 
-                const escrows = Array.isArray(escrowResult) ? escrowResult : (escrowResult as any)?.escrows || [];
-                
-                if (escrows && escrows.length > 0) {
-                    const escrow = escrows[0];
-                    const balance = parseFloat(escrow.balance || '0');
+                if (escrow) {
+                    const flags = escrow.flags || {};
+                    const balance = parseFloat(escrow.balance || escrow.currentBalance || '0');
+                    const isDisputed = flags.disputed === true || escrow.isDisputed === true || escrow.disputed === true;
+                    const escrowIsResolved = flags.resolved === true || escrow.isResolved === true || escrow.resolved === true || escrow.status === 'resolved';
                     const isReleased = balance === 0 || escrow.status === 'released' || escrow.status === 'completed';
+                    
+                    // ✅ CRÍTICO: Detectar si el escrow está resuelto (independientemente de si fue disputado)
+                    setIsResolved(escrowIsResolved);
+                    
+                    // ✅ MEJORA: Detectar si el escrow fue reembolsado (resuelto y balance = 0)
+                    const wasRefunded = escrowIsResolved && balance === 0 && isDisputed;
+                    setIsRefunded(wasRefunded);
+                    
+                    // Si está resuelto, no hay transacciones pendientes y los botones deben estar ocultos
+                    if (escrowIsResolved) {
+                        setPendingTransaction({ hasPending: false, escrowCompleted: false });
+                        return;
+                    }
+                    
+                    // Verificar si el cliente ya aceptó (client_accepted_completion === 1)
+                    if (task.client_accepted_completion !== 1) return;
                     
                     if (isReleased) {
                         // Escrow completado - fondos liberados
@@ -575,7 +664,7 @@ const SuperviseTask = () => {
                 // Si hay error, verificar si es porque el endpoint está deprecado (410)
                 if (error.response?.status === 410) {
                     // El endpoint está deprecado, usar Trustless Work directamente
-                    console.log('ℹ️ Sistema antiguo deprecado, usando Trustless Work para verificar estado');
+                    // Sistema antiguo deprecado, usando Trustless Work
                 }
                 // Si no hay escrow o hay error, asumir que no hay transacción pendiente
                 setPendingTransaction({ hasPending: false });
@@ -583,10 +672,10 @@ const SuperviseTask = () => {
         };
 
         checkEscrowStatus();
-        // Verificar cada 2 segundos el estado del escrow (los contratos están listos rápidamente)
-        const interval = setInterval(checkEscrowStatus, 2000);
+        // Verificar cada 5 segundos el estado del escrow (reducido para evitar rate limits)
+        const interval = setInterval(checkEscrowStatus, 5000);
         return () => clearInterval(interval);
-    }, [task, taskId, getEscrowByContractIds]);
+    }, [task, taskId]);
 
     // Verificar estado del escrow cuando ambos aceptaron (Trustless Work)
     useEffect(() => {
@@ -597,16 +686,10 @@ const SuperviseTask = () => {
             if (!task.escrow_id) return;
 
             try {
-                // Verificar estado del escrow desde Trustless Work
-                const escrowResult = await getEscrowByContractIds({ 
-                    contractIds: [task.escrow_id],
-                    validateOnChain: true 
-                });
+                // Usar función optimizada con cache
+                const escrow = await getEscrowDataOptimized(false);
                 
-                const escrows = Array.isArray(escrowResult) ? escrowResult : (escrowResult as any)?.escrows || [];
-                
-                if (escrows && escrows.length > 0) {
-                    const escrow = escrows[0];
+                if (escrow) {
                     const balance = parseFloat(escrow.balance || '0');
                     const isReleased = balance === 0 || escrow.status === 'released' || escrow.status === 'completed';
                     
@@ -632,7 +715,7 @@ const SuperviseTask = () => {
                 // Si hay error, verificar si es porque el endpoint está deprecado (410)
                 if (error.response?.status === 410) {
                     // El endpoint está deprecado, usar Trustless Work directamente
-                    console.log('ℹ️ Sistema antiguo deprecado, usando Trustless Work para verificar estado');
+                    // Sistema antiguo deprecado, usando Trustless Work
                 }
                 // Si no hay escrow o hay error, asumir que no hay transacción pendiente
                 setPendingTransaction({ hasPending: false });
@@ -640,29 +723,24 @@ const SuperviseTask = () => {
         };
 
         checkEscrowStatusWhenBothAccepted();
-        // Verificar cada 2 segundos el estado del escrow (los contratos están listos rápidamente)
-        const interval = setInterval(checkEscrowStatusWhenBothAccepted, 2000);
+        // Verificar cada 5 segundos el estado del escrow (reducido para evitar rate limits)
+        const interval = setInterval(checkEscrowStatusWhenBothAccepted, 5000);
         return () => clearInterval(interval);
-    }, [task, taskId, currentUser, isConnected, getEscrowByContractIds]);
+    }, [task, taskId, currentUser, isConnected]);
 
     // Verificar estado del escrow periódicamente para detectar disputas
     useEffect(() => {
         const checkEscrowDisputeStatus = async () => {
-            if (!task || !taskId || !task.escrow_id || !getEscrowByContractIds) return;
+            if (!task || !taskId || !task.escrow_id) return;
             
             // Solo verificar si la tarea no está completada
             if (task.status === 'completed' && task.escrow_status === 'completed') return;
 
             try {
-                const escrowResult = await getEscrowByContractIds({ 
-                    contractIds: [task.escrow_id],
-                    validateOnChain: true 
-                });
+                // Usar función optimizada con cache
+                const escrow = await getEscrowDataOptimized(false);
                 
-                const escrows = Array.isArray(escrowResult) ? escrowResult : (escrowResult as any)?.escrows || [];
-                
-                if (escrows && escrows.length > 0) {
-                    const escrow = escrows[0];
+                if (escrow) {
                     const flags = escrow.flags || {};
                     // Verificar disputa usando flags.disputed (método correcto según DisputeManagement)
                     const isDisputed = flags.disputed === true || 
@@ -670,18 +748,28 @@ const SuperviseTask = () => {
                                       escrow.disputed === true || 
                                       escrow.status === 'disputed';
                     
-                    // Si el escrow está en disputa pero el estado local no lo refleja, actualizar
-                    if (isDisputed && task.escrow_status !== 'disputed' && task.status !== 'disputed') {
-                        console.log('🔄 Detectado cambio de estado: Escrow ahora está en disputa');
-                        console.log('📊 Estado del escrow:', {
-                            flags: flags,
-                            isDisputed: escrow.isDisputed,
-                            disputed: escrow.disputed,
-                            status: escrow.status,
-                            balance: escrow.balance,
-                            resolved: flags.resolved,
-                            released: flags.released
+                    // ✅ CRÍTICO: Verificar si el escrow está resuelto
+                    const escrowIsResolved = flags.resolved === true || 
+                                             escrow.isResolved === true || 
+                                             escrow.resolved === true || 
+                                             escrow.status === 'resolved';
+                    
+                    // Si el escrow está resuelto pero el estado local no lo refleja, actualizar
+                    if (escrowIsResolved && task.escrow_status !== 'resolved' && task.status !== 'resolved') {
+                        setIsResolved(true);
+                        setTask(prevTask => {
+                            if (!prevTask) return null;
+                            return { 
+                                ...prevTask, 
+                                status: 'resolved',
+                                escrow_status: 'resolved'
+                            };
                         });
+                        return; // No verificar disputa si ya está resuelto
+                    }
+                    
+                    // Si el escrow está en disputa pero el estado local no lo refleja, actualizar
+                    if (isDisputed && task.escrow_status !== 'disputed' && task.status !== 'disputed' && !escrowIsResolved) {
                         setTask(prevTask => {
                             if (!prevTask) return null;
                             return { 
@@ -694,8 +782,10 @@ const SuperviseTask = () => {
                     }
                 }
             } catch (error: any) {
-                // Silenciar errores de verificación periódica
-                console.warn('⚠️ Error al verificar estado de disputa del escrow:', error.message);
+                // Silenciar errores de verificación periódica (solo log en desarrollo)
+                if (process.env.NODE_ENV === 'development') {
+                    console.warn('⚠️ Error al verificar estado de disputa del escrow:', error.message);
+                }
             }
         };
 
@@ -703,9 +793,10 @@ const SuperviseTask = () => {
         checkEscrowDisputeStatus();
         
         // Verificar cada 5 segundos para detectar cambios en el estado del escrow
-        const interval = setInterval(checkEscrowDisputeStatus, 5000);
+        // Verificar cada 8 segundos para detectar cambios en el estado del escrow (reducido para evitar rate limits)
+        const interval = setInterval(checkEscrowDisputeStatus, 8000);
         return () => clearInterval(interval);
-    }, [task, taskId, getEscrowByContractIds]);
+    }, [task, taskId]);
 
 
 
@@ -796,17 +887,8 @@ const SuperviseTask = () => {
             return;
         }
 
-        // Mostrar popup de confirmación en lugar de confirm()
-        setConfirmDialogConfig({
-            title: 'Confirmar Aceptación',
-            message: '¿Estás seguro de que quieres aceptar este trabajo? Deberás firmar la transacción para liberar los fondos.',
-            type: 'warning',
-            onConfirm: () => {
-                setShowConfirmDialog(false);
-                executeAcceptWork();
-            }
-        });
-        setShowConfirmDialog(true);
+        // Mostrar popup de completar tarea con dos pasos
+        setShowCompleteTaskPopup(true);
     };
 
     const executeAcceptWork = async () => {
@@ -837,8 +919,6 @@ const SuperviseTask = () => {
 
             // OPTIMIZACIÓN: Intentar liberar directamente primero (solo 1 firma si el milestone ya está aprobado)
             // Si falla porque el milestone no está aprobado, entonces aprobar y liberar (2 firmas)
-            console.log('🚀 Intentando liberar fondos directamente (optimización: solo 1 firma si el milestone ya está aprobado)...');
-            
             let releaseResult;
             let needsApproval = false;
             
@@ -852,9 +932,7 @@ const SuperviseTask = () => {
                     sendTransaction
                 );
                 
-                if (releaseResult.success) {
-                    console.log('✅ ¡Fondos liberados exitosamente con solo 1 firma! El milestone ya estaba aprobado.');
-                }
+                // Fondos liberados exitosamente
             } catch (releaseError: any) {
                 const errorMessage = releaseError.message || '';
                 
@@ -862,7 +940,6 @@ const SuperviseTask = () => {
                 if (errorMessage.includes('escrow funds have been released') || 
                     errorMessage.includes('funds have been released') ||
                     errorMessage.includes('already released')) {
-                    console.log('✅ Los fondos ya fueron liberados anteriormente. Continuando con el proceso...');
                     releaseResult = { 
                         success: true, 
                         alreadyReleased: true,
@@ -877,8 +954,6 @@ const SuperviseTask = () => {
                          errorMessage.includes('must be completed') ||
                          errorMessage.includes('escrow must be completed') ||
                          errorMessage.toLowerCase().includes('completed to release')) {
-                    console.log('⚠️ El milestone no está aprobado. Aprobando primero y luego liberando (2 firmas necesarias)...');
-                    console.log('📋 Error detectado:', errorMessage);
                     needsApproval = true;
                 } else {
                     // Otro error, lanzarlo
@@ -888,8 +963,6 @@ const SuperviseTask = () => {
             
             // Si necesitamos aprobar el milestone primero
             if (needsApproval || !releaseResult) {
-                console.log('📝 Aprobando milestone primero...');
-                
                 // Crear wrapper para compatibilidad con approveMilestoneTrustlessEscrow
                 const indexerWrapper = async (contractIds: string[]) => {
                     const result = await getEscrowByContractIds({ contractIds, validateOnChain: true });
@@ -911,12 +984,7 @@ const SuperviseTask = () => {
                     throw new Error(approveResult.error || 'Error al aprobar milestone');
                 }
 
-                // Si el milestone ya estaba aprobado (caso edge), mostrar mensaje informativo
-                if (approveResult.alreadyApproved) {
-                    console.log('ℹ️ El milestone ya estaba aprobado. Continuando con la liberación de fondos...');
-                } else {
-                    console.log('✅ Milestone aprobado. Ahora liberando fondos...');
-                }
+                // Milestone aprobado, continuar con liberación
 
                 // Ahora liberar fondos (2da firma)
                 releaseResult = await releaseFundsTrustlessEscrow(
@@ -934,7 +1002,7 @@ const SuperviseTask = () => {
 
             // Si los fondos ya fueron liberados, marcar como completado directamente
             if (releaseResult.alreadyReleased) {
-                console.log('ℹ️ Los fondos ya fueron liberados. Marcando tarea como completada en BD...');
+                // Fondos ya liberados, marcando tarea como completada
                 
                 // El price ya es el monto que recibirá el trabajador (workerAmount)
                 const workerAmount = parseFloat(task.price);
@@ -997,15 +1065,11 @@ const SuperviseTask = () => {
             
             while (!escrowCompleted && attempts < maxAttempts) {
                 try {
-                    await new Promise(resolve => setTimeout(resolve, 1000)); // Esperar 1 segundo (los contratos están listos rápidamente)
-                    const escrowResult = await getEscrowByContractIds({ 
-                        contractIds: [task.escrow_id],
-                        validateOnChain: true 
-                    });
-                    const escrows = Array.isArray(escrowResult) ? escrowResult : (escrowResult as any)?.escrows || [];
+                    await new Promise(resolve => setTimeout(resolve, 2000)); // Aumentar a 2 segundos para reducir peticiones
+                    // Usar función optimizada con cache
+                    const escrow = await getEscrowDataOptimized(true); // Force refresh para verificar estado actual
                     
-                    if (escrows && escrows.length > 0) {
-                        const escrow = escrows[0];
+                    if (escrow) {
                         const balance = parseFloat(escrow.balance || '0');
                         
                         if (balance === 0 || escrow.status === 'released' || escrow.status === 'completed') {
@@ -1078,6 +1142,157 @@ const SuperviseTask = () => {
         }
     };
 
+    // Funciones para el popup de completar tarea
+    const handleApproveMilestone = async (): Promise<{ success: boolean; txHash?: string; error?: string; alreadyApproved?: boolean }> => {
+        if (!task || !task.escrow_id || !address || !kit) {
+            throw new Error('Wallet no conectada o datos faltantes');
+        }
+
+        const indexerWrapper = async (contractIds: string[]) => {
+            // Usar función optimizada
+            const escrow = await getEscrowDataOptimized(true);
+            return escrow ? [escrow] : [];
+        };
+
+        const result = await approveMilestoneTrustlessEscrow(
+            task.escrow_id,
+            '0',
+            address,
+            kit,
+            approveMilestone,
+            sendTransaction,
+            indexerWrapper
+        );
+
+        // Si se aprobó exitosamente, actualizar cache inmediatamente con milestone aprobado
+        if (result.success && escrowCache) {
+            // Actualizar cache local para reflejar que el milestone está aprobado
+            const updatedEscrow = {
+                ...escrowCache,
+                milestones: escrowCache.milestones?.map((m: any, idx: number) => 
+                    idx === 0 ? { ...m, status: 'approved', approved: true } : m
+                ) || [{ status: 'approved', approved: true }]
+            };
+            setEscrowCache(updatedEscrow);
+            setLastEscrowFetch(Date.now());
+        } else if (result.success) {
+            // Si no hay cache, invalidar para forzar refresh
+            setEscrowCache(null);
+            setLastEscrowFetch(0);
+        }
+
+        return result;
+    };
+
+    const handleReleaseFunds = async (): Promise<{ success: boolean; txHash?: string; error?: string; alreadyReleased?: boolean }> => {
+        if (!task || !task.escrow_id || !address || !kit) {
+            throw new Error('Wallet no conectada o datos faltantes');
+        }
+
+        const result = await releaseFundsTrustlessEscrow(
+            task.escrow_id,
+            address,
+            kit,
+            releaseFunds,
+            sendTransaction
+        );
+
+        return result;
+    };
+
+    const handleVerifyMilestone = async (): Promise<boolean> => {
+        if (!task || !task.escrow_id) {
+            return false;
+        }
+
+        try {
+            // Usar función optimizada con cache
+            const escrow = await getEscrowDataOptimized(false);
+            
+            if (escrow) {
+                const milestones = escrow.milestones || [];
+                if (milestones.length > 0) {
+                    const milestone = milestones[0];
+                    return milestone.status === 'approved' || milestone.approved === true;
+                }
+            }
+        } catch (error) {
+            // Error silencioso en verificación de milestone
+            if (process.env.NODE_ENV === 'development') {
+                console.error('Error al verificar milestone:', error);
+            }
+        }
+        
+        return false;
+    };
+
+    const handleCompleteTaskPopupComplete = async () => {
+        // Actualizar BD después de completar el proceso
+        try {
+            const token = localStorage.getItem('token');
+            const workerAmount = parseFloat(task?.price || '0');
+            const escrowAmount = workerAmount / (1 - platformFee);
+
+            // Verificar que el escrow esté completado
+            let escrowCompleted = false;
+            let attempts = 0;
+            const maxAttempts = 12;
+            
+            while (!escrowCompleted && attempts < maxAttempts) {
+                try {
+                    await new Promise(resolve => setTimeout(resolve, 2000)); // Aumentar a 2 segundos para reducir peticiones
+                    // Usar función optimizada con cache
+                    const escrow = await getEscrowDataOptimized(true); // Force refresh para verificar estado actual
+                    
+                    if (escrow) {
+                        const balance = parseFloat(escrow.balance || '0');
+                        
+                        if (balance === 0 || escrow.status === 'released' || escrow.status === 'completed') {
+                            escrowCompleted = true;
+                        }
+                    }
+                } catch (err) {
+                    // Error al verificar escrow, continuar
+                }
+                attempts++;
+            }
+
+            const response = await axios.post(`${API_URL}/auth/complete_task.php`, {
+                task_id: parseInt(taskId!, 10),
+                action: 'accept',
+                escrow_completed: escrowCompleted,
+                tx_hash: null
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.data.success) {
+                throw new Error(response.data.message || 'Error al actualizar estado en BD');
+            }
+
+            // Actualizar estado local
+            setTask(prev => prev ? {
+                ...prev,
+                client_accepted_completion: 1,
+                status: response.data.status || prev.status
+            } : null);
+
+            // Recargar datos
+            setTimeout(() => {
+                fetchData();
+            }, 500);
+
+            // Verificar si se debe mostrar el modal de rating
+            setTimeout(() => {
+                checkAndShowRatingModal();
+            }, 3000);
+        } catch (err: any) {
+            setError('Error al actualizar tarea: ' + (err.response?.data?.message || err.message));
+        }
+    };
+
     // Función para rechazar trabajo - En Trustless Work se usa startDispute
     // Por ahora, solo actualizamos el estado en el backend
     // Nueva función para cancelar tarea con reembolso
@@ -1147,8 +1362,6 @@ const SuperviseTask = () => {
             // 1. Validar cancelación en backend
             const cancelResult = await cancelTaskService(parseInt(taskId!, 10));
             
-            console.log('📋 Resultado completo de cancelTask:', JSON.stringify(cancelResult, null, 2));
-            
             if (!cancelResult.allowed || cancelResult.requiresDispute) {
                 throw new Error(cancelResult.message || 'Cancelación no permitida');
             }
@@ -1157,18 +1370,7 @@ const SuperviseTask = () => {
             const requiresSignature = cancelResult.requiresSignature ?? (cancelResult as any).requires_signature ?? false;
             const refundAmount = cancelResult.refundAmount ?? (cancelResult as any).refund_amount ?? 0;
             
-            console.log('📊 Campos normalizados:', {
-                requiresSignature,
-                refundAmount,
-                originalRequiresSignature: cancelResult.requiresSignature,
-                originalRefundAmount: cancelResult.refundAmount
-            });
-            
             if (!requiresSignature || !refundAmount || refundAmount <= 0) {
-                console.error('❌ Error: Información incompleta para reembolso');
-                console.error('   requiresSignature:', requiresSignature);
-                console.error('   refundAmount:', refundAmount);
-                console.error('   cancelResult completo:', cancelResult);
                 throw new Error(`No se puede procesar el reembolso. Información incompleta. requiresSignature: ${requiresSignature}, refundAmount: ${refundAmount}`);
             }
 
@@ -1191,6 +1393,31 @@ const SuperviseTask = () => {
             if (refundResult.requiresAdminResolution) {
                 // El ADMIN debe procesar la resolución
                 setCancellingTask(false);
+                
+                // ✅ MEJORA: Crear registro en la tabla disputes para que aparezca en el dashboard de admin
+                try {
+                    const token = localStorage.getItem('token');
+                    if (token && refundResult.txHash) {
+                        await axios.post(
+                            `${API_URL}/auth/create_dispute.php`,
+                            {
+                                task_id: parseInt(taskId!, 10),
+                                reason: 'Cancelación de tarea - Reembolso solicitado',
+                                tx_hash: refundResult.txHash
+                            },
+                            {
+                                headers: {
+                                    'Authorization': `Bearer ${token}`,
+                                    'Content-Type': 'application/json'
+                                }
+                            }
+                        );
+                        // Registro de disputa creado en BD
+                    }
+                } catch (disputeError: any) {
+                    console.warn('⚠️ No se pudo crear registro de disputa en BD (puede que ya exista):', disputeError.response?.data?.message || disputeError.message);
+                    // Continuar de todas formas, la disputa ya está iniciada en Trustless Work
+                }
                 
                 // Actualizar estado local inmediatamente
                 setTask(prevTask => {
@@ -1603,6 +1830,26 @@ const SuperviseTask = () => {
             setError('Debes conectar tu wallet Freighter para iniciar una disputa.');
             return;
         }
+
+        // ✅ MEJORA: Validar permisos antes de iniciar disputa
+        if (!currentUser) {
+            setError('No se pudo verificar tu identidad. Por favor, recarga la página.');
+            return;
+        }
+
+        const isClient = currentUser.id === task.user_id;
+        const isWorker = task.accepted_applicant_id && currentUser.id === task.accepted_applicant_id;
+
+        if (!isClient && !isWorker) {
+            setError('No tienes permiso para crear una disputa para esta tarea. Solo el cliente o el trabajador asignado pueden crear disputas.');
+            return;
+        }
+
+        // ✅ MEJORA: Verificar si ya existe una disputa activa
+        if (hasExistingDispute || task.status === 'disputed' || task.escrow_status === 'disputed') {
+            setError('Ya existe una disputa activa para esta tarea. No se puede crear otra disputa.');
+            return;
+        }
         
         setCreatingDispute(true);
         setError(null);
@@ -1880,6 +2127,10 @@ const SuperviseTask = () => {
                                 </div>
                                 <div className="blockchain-info-value">
                                     <span className={`status-badge ${(() => {
+                                        // Si está resuelto, usar clase 'resolved'
+                                        if (isResolved || task.escrow_status === 'resolved' || task.status === 'resolved') {
+                                            return 'resolved';
+                                        }
                                         // Si está en disputa, usar clase 'disputed'
                                         if (task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute) {
                                             return 'disputed';
@@ -1887,7 +2138,11 @@ const SuperviseTask = () => {
                                         return task.escrow_status || 'active';
                                     })()}`}>
                                         {(() => {
-                                            // Si está en disputa, mostrar "DISPUTED" en lugar del estado del backend
+                                            // Si está resuelto, mostrar "RESOLVED"
+                                            if (isResolved || task.escrow_status === 'resolved' || task.status === 'resolved') {
+                                                return 'RESOLVED';
+                                            }
+                                            // Si está en disputa, mostrar "DISPUTED"
                                             if (task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute) {
                                                 return 'DISPUTED';
                                             }
@@ -2136,8 +2391,8 @@ const SuperviseTask = () => {
                         <div className="client-actions">
                             {task.client_accepted_completion === 0 && (
                                 <>
-                                    {/* Verificar si el escrow está en disputa - Ocultar botones si está en disputa */}
-                                    {!(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute) ? (
+                                    {/* Verificar si el escrow está en disputa o fue reembolsado - Ocultar botones si está en disputa o fue reembolsado */}
+                                    {!(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute || isRefunded) ? (
                                 <>
                                     <button 
                                         className="btn-success"
@@ -2155,17 +2410,57 @@ const SuperviseTask = () => {
                                     </button>
                                         </>
                                     ) : (
-                                        <DisputeStatusNotificationComponent 
-                                            task={task}
-                                            getEscrowByContractIds={getEscrowByContractIds}
-                                        />
+                                        <>
+                                            <DisputeStatusNotificationComponent 
+                                                task={task}
+                                                getEscrowByContractIds={getEscrowByContractIds}
+                                            />
+                                            {(isResolved || task.escrow_status === 'resolved' || task.status === 'resolved') && (
+                                                <div style={{
+                                                    padding: '20px',
+                                                    marginTop: '15px',
+                                                    backgroundColor: '#d1ecf1',
+                                                    border: '2px solid #0c5460',
+                                                    borderRadius: '8px',
+                                                    color: '#0c5460',
+                                                    textAlign: 'center'
+                                                }}>
+                                                    <strong style={{ fontSize: '18px', display: 'block', marginBottom: '10px' }}>
+                                                        ✅ Tu dinero ha sido transferido
+                                                    </strong>
+                                                    <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6' }}>
+                                                        El contrato ha sido resuelto y tu reembolso ha sido transferido a tu wallet Stellar.
+                                                        <br />
+                                                        <strong>Verifica tu wallet Freighter para confirmar la recepción.</strong>
+                                                    </p>
+                                                </div>
+                                            )}
+                                            {isRefunded && !isResolved && task.escrow_status !== 'resolved' && task.status !== 'resolved' && (
+                                                <div style={{
+                                                    padding: '15px',
+                                                    marginTop: '15px',
+                                                    backgroundColor: '#d4edda',
+                                                    border: '2px solid #28a745',
+                                                    borderRadius: '8px',
+                                                    color: '#155724',
+                                                    textAlign: 'center'
+                                                }}>
+                                                    <strong style={{ fontSize: '16px', display: 'block', marginBottom: '8px' }}>
+                                                        🔒 Tarea Bloqueada
+                                                    </strong>
+                                                    <p style={{ margin: 0, fontSize: '14px' }}>
+                                                        Esta tarea ha sido reembolsada completamente. Los botones de aceptar y cancelar han sido deshabilitados.
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </>
                                     )}
                                 </>
                             )}
                             {task.client_accepted_completion === 1 && task.worker_accepted_completion === 1 && (
                                 <>
-                                    {/* Verificar si el escrow está en disputa - Ocultar botones si está en disputa */}
-                                    {!(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute) ? (
+                                    {/* Verificar si el escrow está en disputa o fue reembolsado - Ocultar botones si está en disputa o fue reembolsado */}
+                                    {!(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute || isRefunded) ? (
                                         <>
                                             <p className="info-message" style={{ marginBottom: '10px' }}>✅ Ambos han aceptado la finalización.</p>
                                             {/* Si hay transacción pendiente firmada por el trabajador, el cliente puede completarla */}
@@ -2196,10 +2491,50 @@ const SuperviseTask = () => {
                                             )}
                                         </>
                                     ) : (
-                                        <DisputeStatusNotificationComponent 
-                                            task={task}
-                                            getEscrowByContractIds={getEscrowByContractIds}
-                                        />
+                                        <>
+                                            <DisputeStatusNotificationComponent 
+                                                task={task}
+                                                getEscrowByContractIds={getEscrowByContractIds}
+                                            />
+                                            {(isResolved || task.escrow_status === 'resolved' || task.status === 'resolved') && (
+                                                <div style={{
+                                                    padding: '20px',
+                                                    marginTop: '15px',
+                                                    backgroundColor: '#d1ecf1',
+                                                    border: '2px solid #0c5460',
+                                                    borderRadius: '8px',
+                                                    color: '#0c5460',
+                                                    textAlign: 'center'
+                                                }}>
+                                                    <strong style={{ fontSize: '18px', display: 'block', marginBottom: '10px' }}>
+                                                        ✅ Tu dinero ha sido transferido
+                                                    </strong>
+                                                    <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6' }}>
+                                                        El contrato ha sido resuelto y tu reembolso ha sido transferido a tu wallet Stellar.
+                                                        <br />
+                                                        <strong>Verifica tu wallet Freighter para confirmar la recepción.</strong>
+                                                    </p>
+                                                </div>
+                                            )}
+                                            {isRefunded && !isResolved && task.escrow_status !== 'resolved' && task.status !== 'resolved' && (
+                                                <div style={{
+                                                    padding: '15px',
+                                                    marginTop: '15px',
+                                                    backgroundColor: '#d4edda',
+                                                    border: '2px solid #28a745',
+                                                    borderRadius: '8px',
+                                                    color: '#155724',
+                                                    textAlign: 'center'
+                                                }}>
+                                                    <strong style={{ fontSize: '16px', display: 'block', marginBottom: '8px' }}>
+                                                        🔒 Tarea Bloqueada
+                                                    </strong>
+                                                    <p style={{ margin: 0, fontSize: '14px' }}>
+                                                        Esta tarea ha sido reembolsada completamente. Los botones de aceptar y cancelar han sido deshabilitados.
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </>
                                     )}
                                 </>
                             )}
@@ -2211,12 +2546,34 @@ const SuperviseTask = () => {
 
                     {isWorker && (
                         <div className="worker-actions">
+                            {/* Notificación para trabajador cuando el escrow está resuelto */}
+                            {isResolved && (
+                                <div style={{
+                                    padding: '20px',
+                                    marginBottom: '20px',
+                                    backgroundColor: '#f8d7da',
+                                    border: '2px solid #dc3545',
+                                    borderRadius: '8px',
+                                    color: '#721c24',
+                                    textAlign: 'center'
+                                }}>
+                                    <strong style={{ fontSize: '18px', display: 'block', marginBottom: '10px' }}>
+                                        ❌ Tarea Cancelada
+                                    </strong>
+                                    <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6' }}>
+                                        Esta tarea ha sido cancelada y el contrato ha sido resuelto.
+                                        <br />
+                                        El cliente ha recibido el reembolso de los fondos.
+                                    </p>
+                                </div>
+                            )}
+                            
                             {/* Botón "Retirar Dinero" - SOLO para trabajador cuando ambas partes aceptaron */}
                             {isWorker &&
                              Number(task.client_accepted_completion) === 1 && 
                              Number(task.worker_accepted_completion) === 1 && 
                              task.escrow_id && task.escrow_id.trim() !== '' && 
-                             !(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute) && (
+                             !(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute || isRefunded || isResolved) && (
                                 <div className="withdraw-funds-section" style={{
                                     marginBottom: '20px',
                                     padding: '15px',
@@ -2254,7 +2611,7 @@ const SuperviseTask = () => {
                             {isWorker && Number(task.client_accepted_completion) === 1 && 
                              Number(task.worker_accepted_completion) === 1 && 
                              task.escrow_id && task.escrow_id.trim() !== '' && 
-                             !(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute) && (
+                             !(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute || isRefunded || isResolved) && (
                                 <>
                                     {pendingTransaction?.hasPending && pendingTransaction.signedBy !== 'both' && (
                                         <div style={{
@@ -2292,9 +2649,31 @@ const SuperviseTask = () => {
                                 </>
                             )}
                             
+                            {/* Notificación para trabajador cuando el escrow está resuelto */}
+                            {(isResolved || task.escrow_status === 'resolved' || task.status === 'resolved') && (
+                                <div style={{
+                                    padding: '20px',
+                                    marginBottom: '20px',
+                                    backgroundColor: '#f8d7da',
+                                    border: '2px solid #dc3545',
+                                    borderRadius: '8px',
+                                    color: '#721c24',
+                                    textAlign: 'center'
+                                }}>
+                                    <strong style={{ fontSize: '18px', display: 'block', marginBottom: '10px' }}>
+                                        ❌ Tarea Cancelada
+                                    </strong>
+                                    <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6' }}>
+                                        Esta tarea ha sido cancelada y el contrato ha sido resuelto.
+                                        <br />
+                                        El cliente ha recibido el reembolso de los fondos.
+                                    </p>
+                                </div>
+                            )}
+                            
                             {/* Botón de completado - El trabajador puede marcar como completado en cualquier momento */}
                             {task.worker_accepted_completion === 0 && 
-                             !(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute) && (
+                             !(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute || isRefunded || isResolved || task.escrow_status === 'resolved' || task.status === 'resolved') && (
                                 <>
                                     {task.client_accepted_completion === 0 ? (
                                         <div style={{ textAlign: 'center' }}>
@@ -3471,139 +3850,21 @@ const SuperviseTask = () => {
                 />
             )}
 
-            {/* Modal de Tip */}
-            {task && task.worker_wallet_address && task.worker_username && (
-                <TipModal
-                    isOpen={showTipModal}
-                    onClose={() => setShowTipModal(false)}
-                    workerAddress={task.worker_wallet_address}
-                    workerUsername={task.worker_username}
+            {/* Popup de Completar Tarea */}
+            {task && task.escrow_id && (
+                <CompleteTaskPopup
+                    isOpen={showCompleteTaskPopup}
+                    onClose={() => setShowCompleteTaskPopup(false)}
+                    onComplete={handleCompleteTaskPopupComplete}
+                    taskPrice={task.price}
+                    escrowId={task.escrow_id}
                     clientAddress={address || ''}
-                    kit={kit}
-                    onSuccess={(txHash, amount) => {
-                        setTipSuccessData({ txHash, amount });
-                        setShowTipModal(false);
-                    }}
+                    onApproveMilestone={handleApproveMilestone}
+                    onReleaseFunds={handleReleaseFunds}
+                    onVerifyMilestone={handleVerifyMilestone}
                 />
             )}
 
-            {/* Popup de Éxito - Tip Enviado */}
-            {tipSuccessData && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(17, 128, 179, 0.3) 100%)',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    zIndex: 10000
-                }}>
-                    <div style={{
-                        background: 'linear-gradient(135deg, rgba(20, 30, 48, 0.95) 0%, rgba(36, 59, 85, 0.95) 100%)',
-                        borderRadius: '20px',
-                        padding: '40px',
-                        maxWidth: '550px',
-                        width: '90%',
-                        textAlign: 'center',
-                        boxShadow: '0 20px 60px rgba(40, 192, 240, 0.3), 0 0 0 1px rgba(40, 192, 240, 0.1)',
-                        animation: 'scaleIn 0.5s ease-out',
-                        border: '1px solid rgba(40, 192, 240, 0.2)'
-                    }}>
-                        <div style={{
-                            fontSize: '80px',
-                            marginBottom: '20px',
-                            filter: 'drop-shadow(0 0 10px rgba(40, 192, 240, 0.5))'
-                        }}>
-                            💝
-                        </div>
-                        <h3 style={{
-                            fontSize: '28px',
-                            fontWeight: 'bold',
-                            background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            backgroundClip: 'text',
-                            marginBottom: '20px',
-                            marginTop: 0
-                        }}>
-                            ¡Gratificación Enviada!
-                        </h3>
-                        <div style={{
-                            marginBottom: '30px',
-                            color: 'rgba(255, 255, 255, 0.9)',
-                            lineHeight: '1.6'
-                        }}>
-                            <p style={{ 
-                                fontSize: '18px', 
-                                marginBottom: '15px', 
-                                fontWeight: '500',
-                                color: 'rgba(255, 255, 255, 0.9)'
-                            }}>
-                                Has enviado <strong style={{ color: '#28c0f0' }}>{tipSuccessData.amount} XLM</strong> como gratificación
-                            </p>
-                            <div style={{
-                                background: 'linear-gradient(135deg, rgba(40, 192, 240, 0.1) 0%, rgba(17, 128, 179, 0.1) 100%)',
-                                padding: '20px',
-                                borderRadius: '12px',
-                                marginTop: '15px',
-                                textAlign: 'left',
-                                border: '1px solid rgba(40, 192, 240, 0.2)'
-                            }}>
-                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
-                                    <strong style={{ color: '#28c0f0' }}>🔗 Hash de transacción:</strong>
-                                </p>
-                                <code style={{
-                                    display: 'block',
-                                    fontSize: '12px',
-                                    color: '#28c0f0',
-                                    background: 'rgba(40, 192, 240, 0.1)',
-                                    padding: '10px',
-                                    borderRadius: '6px',
-                                    wordBreak: 'break-all',
-                                    marginTop: '8px'
-                                }}>
-                                    {tipSuccessData.txHash}
-                                </code>
-                            </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                            <button 
-                                onClick={() => {
-                                    setTipSuccessData(null);
-                                }}
-                                style={{
-                                    background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
-                                    color: '#fff',
-                                    border: 'none',
-                                    padding: '14px 32px',
-                                    borderRadius: '10px',
-                                    fontSize: '16px',
-                                    fontWeight: 'bold',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.3s ease',
-                                    minWidth: '200px',
-                                    boxShadow: '0 4px 12px rgba(40, 192, 240, 0.3)'
-                                }}
-                                onMouseOver={(e) => {
-                                    e.currentTarget.style.background = 'linear-gradient(90deg, #1180b3, #28c0f0)';
-                                    e.currentTarget.style.transform = 'translateY(-2px)';
-                                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(40, 192, 240, 0.4)';
-                                }}
-                                onMouseOut={(e) => {
-                                    e.currentTarget.style.background = 'linear-gradient(90deg, #28c0f0, #1180b3)';
-                                    e.currentTarget.style.transform = 'translateY(0)';
-                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(40, 192, 240, 0.3)';
-                                }}
-                            >
-                                Entendido
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

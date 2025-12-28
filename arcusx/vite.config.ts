@@ -43,14 +43,33 @@ export default defineConfig({
   plugins: [react(), copyHtaccess()],
   define: {
     global: 'globalThis',
+    'process.env': {},
   },
   optimizeDeps: {
-    include: ['@creit.tech/stellar-wallets-kit']
+    include: ['@creit.tech/stellar-wallets-kit'],
+    esbuildOptions: {
+      define: {
+        global: 'globalThis',
+      },
+    },
   },
   build: {
     commonjsOptions: {
       include: [/node_modules/]
-    }
+    },
+    rollupOptions: {
+      output: {
+        // Suprimir warnings de externalización de módulos
+        onwarn(warning, warn) {
+          // Suprimir warnings de buffer y otros módulos Node.js externalizados
+          if (warning.code === 'MODULE_LEVEL_DIRECTIVE' || 
+              warning.message?.includes('externalized for browser compatibility')) {
+            return;
+          }
+          warn(warning);
+        },
+      },
+    },
   },
   server: {
     fs: {

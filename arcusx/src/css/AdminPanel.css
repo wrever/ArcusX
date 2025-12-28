@@ -239,6 +239,10 @@
 
 .admin-section-header {
   margin-bottom: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
 }
 
 .admin-section-header h2 {

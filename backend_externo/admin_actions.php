@@ -1407,10 +1407,13 @@ function handleGetDisputes($conn, $user, $params) {
     $countStmt->close();
     
     // Obtener disputas con información relacionada
+    // ✅ MEJORA: Incluir escrow_id y escrow_status para consultar Trustless Work
     $sql = "SELECT d.*, 
                    t.title as task_title, 
                    t.price as task_price,
                    t.status as task_status,
+                   t.escrow_id,
+                   t.escrow_status,
                    u1.username as created_by_username,
                    u1.email as created_by_email,
                    u2.username as resolved_by_username
