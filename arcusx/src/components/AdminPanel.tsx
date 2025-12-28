@@ -9,7 +9,8 @@ import EscrowManagement from './EscrowManagement';
 import UserManagement from './UserManagement';
 import FeeManagement from './FeeManagement';
 import TokenManagement from './TokenManagement';
-import { getAdminStats, getAdminConfig, adminLogout } from '../services/adminService';
+import { getAdminStats, getAdminConfig, adminLogout, getAdminEscrows } from '../services/adminService';
+import { useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks';
 import '../css/AdminPanel.css';
 
 interface AdminStats {
@@ -39,6 +40,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Hook de Trustless Work para consultar estados reales
+  const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds();
 
   // Verificar permisos de admin
   useEffect(() => {
@@ -77,14 +81,55 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
         ? platformFeeValue * 100 
         : (typeof platformFeeValue === 'string' ? parseFloat(platformFeeValue) * 100 : 0.3);
       
-      // Obtener disputas activas
+      // ✅ MEJORA: Obtener disputas activas consultando Trustless Work para estados reales
       let activeDisputes = 0;
       try {
         const adminService = await import('../services/adminService');
-        const disputesData = await adminService.getAdminDisputes({ status: 'pending', limit: 1 });
-        activeDisputes = disputesData.pagination?.total || 0;
+        // Obtener todas las disputas de la BD (sin filtro)
+        const disputesData = await adminService.getAdminDisputes({ status: '', limit: 1000 });
+        const allDisputes = disputesData.disputes || [];
+        
+        // Obtener escrow_ids de las disputas
+        const escrowIds = allDisputes
+          .map((d: any) => d.escrow_id)
+          .filter((id: any): id is string => id && typeof id === 'string' && id.startsWith('C'));
+        
+        // Consultar Trustless Work para obtener estados reales
+        if (escrowIds.length > 0) {
+          try {
+            const result = await getEscrowByContractIds({ 
+              contractIds: escrowIds,
+              validateOnChain: true 
+            });
+            
+            const escrows = Array.isArray(result) ? result : (result as any)?.escrows || [];
+            
+            // Contar disputas que están realmente en disputa en Trustless Work
+            const disputedEscrowIds = new Set<string>();
+            escrows.forEach((escrow: any) => {
+              const contractId = escrow.contractId || escrow.id;
+              const flags = escrow.flags || {};
+              const isDisputed = flags.disputed === true || escrow.isDisputed === true || escrow.disputed === true;
+              
+              if (isDisputed && contractId) {
+                disputedEscrowIds.add(contractId);
+              }
+            });
+            
+            // Contar disputas que están en disputa en Trustless Work
+            activeDisputes = disputedEscrowIds.size;
+          } catch (twError) {
+            console.warn('Error al consultar Trustless Work para disputas:', twError);
+            // Fallback: contar disputas pendientes en BD
+            activeDisputes = allDisputes.filter((d: any) => d.status === 'pending').length;
+          }
+        } else {
+          // Si no hay escrow_ids, contar disputas pendientes en BD
+          activeDisputes = allDisputes.filter((d: any) => d.status === 'pending').length;
+        }
       } catch (disputeError) {
         // Si falla, dejar en 0
+        console.warn('Error al obtener disputas activas:', disputeError);
       }
       
       // Usar estadísticas por período del backend

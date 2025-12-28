@@ -34,7 +34,7 @@ function App() {
 
   return (
     <TrustlessWorkConfig baseURL={TRUSTLESS_WORK_BASE_URL} apiKey={TRUSTLESS_WORK_API_KEY}>
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         {isLoading ? (
           <Preloader />
         ) : (

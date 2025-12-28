@@ -191,12 +191,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     // Verificar que la tarea está en un estado válido para disputar
-    // Permitir disputas en estados: assigned, in_progress, y también completed si el escrow está completado (caso de error)
+    // Permitir disputas en estados: assigned, in_progress, rejected (si escrow activo), y también completed si el escrow está completado (caso de error)
     $validStatuses = ['assigned', 'in_progress'];
-    $invalidStatuses = ['cancelled', 'rejected', 'disputed'];
+    $invalidStatuses = ['cancelled', 'disputed'];
     
-    // Si el escrow está completado, también permitir disputas aunque el status sea 'completed' (caso de error al retirar fondos)
-    if ($task['escrow_status'] === 'completed' && $task['status'] === 'completed') {
+    // ✅ MEJORA: Permitir disputas para tareas 'rejected' si el escrow está activo
+    // Esto permite que las disputas iniciadas desde cancelación aparezcan en el dashboard de admin
+    if ($task['status'] === 'rejected' && $task['escrow_status'] === 'active') {
+        // Permitir disputa - puede ser una cancelación que inició disputa automáticamente
+    } elseif ($task['escrow_status'] === 'completed' && $task['status'] === 'completed') {
         // Permitir disputa - puede ser un caso de error al retirar fondos donde el escrow se marcó como completado pero hubo problemas
     } elseif (in_array($task['status'], $invalidStatuses)) {
         http_response_code(400);
@@ -206,11 +209,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
         $conn->close();
         exit;
-    } elseif (!in_array($task['status'], $validStatuses) && !($task['escrow_status'] === 'completed' && $task['status'] === 'completed')) {
+    } elseif (!in_array($task['status'], $validStatuses) && !($task['escrow_status'] === 'completed' && $task['status'] === 'completed') && !($task['status'] === 'rejected' && $task['escrow_status'] === 'active')) {
         http_response_code(400);
         echo json_encode([
             'success' => false,
-            'message' => 'No se puede crear una disputa para una tarea con estado: ' . $task['status'] . '. Solo se pueden disputar tareas en progreso, asignadas, o completadas con escrow completado (caso de error).'
+            'message' => 'No se puede crear una disputa para una tarea con estado: ' . $task['status'] . '. Solo se pueden disputar tareas en progreso, asignadas, rechazadas con escrow activo, o completadas con escrow completado (caso de error).'
         ]);
         $conn->close();
         exit;

@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import '../css/WalletConnectPopup.css';
 
 interface WalletConnectPopupProps {
@@ -14,7 +15,7 @@ const WalletConnectPopup: React.FC<WalletConnectPopupProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="wallet-popup-overlay">
       <div className="wallet-popup-content">
         <button className="wallet-popup-close" onClick={onClose}>
@@ -64,7 +65,8 @@ const WalletConnectPopup: React.FC<WalletConnectPopupProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
