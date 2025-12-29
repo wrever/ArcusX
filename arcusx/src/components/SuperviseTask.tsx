@@ -672,8 +672,9 @@ const SuperviseTask = () => {
         };
 
         checkEscrowStatus();
-        // Verificar cada 5 segundos el estado del escrow (reducido para evitar rate limits)
-        const interval = setInterval(checkEscrowStatus, 5000);
+        // ✅ MEJORA: Reducir frecuencia de verificación para evitar error 429 (Too Many Requests)
+        // Verificar cada 15 segundos en lugar de 5 segundos
+        const interval = setInterval(checkEscrowStatus, 15000);
         return () => clearInterval(interval);
     }, [task, taskId]);
 
@@ -792,9 +793,9 @@ const SuperviseTask = () => {
         // Verificar inmediatamente
         checkEscrowDisputeStatus();
         
-        // Verificar cada 5 segundos para detectar cambios en el estado del escrow
-        // Verificar cada 8 segundos para detectar cambios en el estado del escrow (reducido para evitar rate limits)
-        const interval = setInterval(checkEscrowDisputeStatus, 8000);
+        // ✅ MEJORA: Reducir frecuencia de verificación para evitar error 429 (Too Many Requests)
+        // Verificar cada 20 segundos en lugar de 8 segundos
+        const interval = setInterval(checkEscrowDisputeStatus, 20000);
         return () => clearInterval(interval);
     }, [task, taskId]);
 
@@ -955,7 +956,7 @@ const SuperviseTask = () => {
                          errorMessage.includes('escrow must be completed') ||
                          errorMessage.toLowerCase().includes('completed to release')) {
                     needsApproval = true;
-                } else {
+            } else {
                     // Otro error, lanzarlo
                     throw releaseError;
                 }
@@ -1155,9 +1156,9 @@ const SuperviseTask = () => {
         };
 
         const result = await approveMilestoneTrustlessEscrow(
-            task.escrow_id,
+                       task.escrow_id,
             '0',
-            address,
+                       address,
             kit,
             approveMilestone,
             sendTransaction,
@@ -1258,7 +1259,7 @@ const SuperviseTask = () => {
             }
 
             const response = await axios.post(`${API_URL}/auth/complete_task.php`, {
-                task_id: parseInt(taskId!, 10),
+                                    task_id: parseInt(taskId!, 10),
                 action: 'accept',
                 escrow_completed: escrowCompleted,
                 tx_hash: null
@@ -1327,8 +1328,8 @@ const SuperviseTask = () => {
                 } else {
                     setError(checkResult.reason || 'No puedes cancelar esta tarea');
                 }
-            return;
-        }
+                return;
+            }
 
             // 2. Si está permitida, mostrar popup de confirmación
             setConfirmDialogConfig({
@@ -2016,19 +2017,44 @@ const SuperviseTask = () => {
     let buttonText = 'Marcar como Completada';
     let isButtonDisabled: boolean = loading;
 
-    if (task.status === 'completed') {
+    // ✅ CRÍTICO: Si el escrow está resuelto, no mostrar ningún botón de completado
+    // El admin debe manejar la liberación en estados resueltos
+    // También verificar que el escrow_status sea 'active' para mostrar botones
+    if (isResolved || task.escrow_status === 'resolved' || task.status === 'resolved' || 
+        (task.escrow_id && task.escrow_status !== 'active' && task.escrow_status !== undefined)) {
+        buttonText = 'Tarea Resuelta';
+        isButtonDisabled = true;
+    } else if (task.status === 'completed') {
         buttonText = 'Tarea Completada';
         isButtonDisabled = true;
     } else if (isClient && task.client_accepted_completion === 1) {
-        buttonText = 'Esperando confirmación del trabajador';
-        isButtonDisabled = true;
+        // ✅ Solo mostrar este mensaje si el escrow está activo
+        if (task.escrow_id && task.escrow_status === 'active') {
+            buttonText = 'Esperando confirmación del trabajador';
+            isButtonDisabled = true;
+        } else {
+            buttonText = 'Tarea Resuelta';
+            isButtonDisabled = true;
+        }
     } else if (isWorker && task.worker_accepted_completion === 1) {
-        buttonText = 'Esperando confirmación del cliente';
-        isButtonDisabled = true;
+        // ✅ Solo mostrar este mensaje si el escrow está activo
+        if (task.escrow_id && task.escrow_status === 'active') {
+            buttonText = 'Esperando confirmación del cliente';
+            isButtonDisabled = true;
+        } else {
+            buttonText = 'Tarea Resuelta';
+            isButtonDisabled = true;
+        }
     } else if (isWorker && task.client_accepted_completion === 0) {
         // El trabajador puede marcar como completado para notificar al cliente
-        buttonText = 'Marcar como Completado';
-        isButtonDisabled = false; // Permitir que el trabajador marque como completado
+        // ✅ Solo si el escrow está activo
+        if (task.escrow_id && task.escrow_status === 'active') {
+            buttonText = 'Marcar como Completado';
+            isButtonDisabled = false; // Permitir que el trabajador marque como completado
+        } else {
+            buttonText = 'Tarea Resuelta';
+            isButtonDisabled = true;
+        }
     }
 
     return (
@@ -2391,8 +2417,13 @@ const SuperviseTask = () => {
                         <div className="client-actions">
                             {task.client_accepted_completion === 0 && (
                                 <>
-                                    {/* Verificar si el escrow está en disputa o fue reembolsado - Ocultar botones si está en disputa o fue reembolsado */}
-                                    {!(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute || isRefunded) ? (
+                                    {/* ✅ CRÍTICO: Ocultar botones si el estado del escrow NO es 'active' */}
+                                    {/* En estados 'cancelled', 'disputed', 'resolved', etc., el admin debe manejar la liberación */}
+                                    {task.escrow_status === 'active' && 
+                                     task.status !== 'resolved' &&
+                                     task.status !== 'cancelled' &&
+                                     task.status !== 'disputed' &&
+                                     !(hasExistingDispute || isRefunded || isResolved) ? (
                                 <>
                                     <button 
                                         className="btn-success"
@@ -2461,35 +2492,35 @@ const SuperviseTask = () => {
                                 <>
                                     {/* Verificar si el escrow está en disputa o fue reembolsado - Ocultar botones si está en disputa o fue reembolsado */}
                                     {!(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute || isRefunded) ? (
+                                <>
+                                    <p className="info-message" style={{ marginBottom: '10px' }}>✅ Ambos han aceptado la finalización.</p>
+                                    {/* Si hay transacción pendiente firmada por el trabajador, el cliente puede completarla */}
+                                    {pendingTransaction?.hasPending && pendingTransaction.signedBy === 'worker' && (
                                         <>
-                                            <p className="info-message" style={{ marginBottom: '10px' }}>✅ Ambos han aceptado la finalización.</p>
-                                            {/* Si hay transacción pendiente firmada por el trabajador, el cliente puede completarla */}
-                                            {pendingTransaction?.hasPending && pendingTransaction.signedBy === 'worker' && (
-                                                <>
-                                                    <p className="info-message" style={{ marginBottom: '10px', color: '#856404' }}>
-                                                        El trabajador ya firmó la transacción. Conecta tu wallet y completa la firma para liberar los fondos.
-                                                    </p>
-                                                    <button 
-                                                        className="btn-success"
-                                                        onClick={handleWithdrawFunds}
-                                                        disabled={withdrawingFunds || !isConnected || !address}
-                                                        style={{
-                                                            fontSize: '16px',
-                                                            padding: '12px 24px',
-                                                            fontWeight: 'bold'
-                                                        }}
-                                                    >
-                                                        {withdrawingFunds ? '⏳ Procesando...' : '✅ Completar Firma y Liberar Fondos'}
-                                                    </button>
-                                                </>
-                                            )}
-                                            {pendingTransaction?.hasPending && pendingTransaction.signedBy === 'client' && (
-                                                <p className="info-message">Ya firmaste la transacción. Esperando que el trabajador complete la firma para liberar los fondos.</p>
-                                            )}
-                                            {(!pendingTransaction?.hasPending) && (
-                                                <p className="info-message">Esperando que el trabajador inicie el retiro de fondos.</p>
-                                            )}
+                                            <p className="info-message" style={{ marginBottom: '10px', color: '#856404' }}>
+                                                El trabajador ya firmó la transacción. Conecta tu wallet y completa la firma para liberar los fondos.
+                                            </p>
+                                            <button 
+                                                className="btn-success"
+                                                onClick={handleWithdrawFunds}
+                                                disabled={withdrawingFunds || !isConnected || !address}
+                                                style={{
+                                                    fontSize: '16px',
+                                                    padding: '12px 24px',
+                                                    fontWeight: 'bold'
+                                                }}
+                                            >
+                                                {withdrawingFunds ? '⏳ Procesando...' : '✅ Completar Firma y Liberar Fondos'}
+                                            </button>
                                         </>
+                                    )}
+                                    {pendingTransaction?.hasPending && pendingTransaction.signedBy === 'client' && (
+                                        <p className="info-message">Ya firmaste la transacción. Esperando que el trabajador complete la firma para liberar los fondos.</p>
+                                    )}
+                                    {(!pendingTransaction?.hasPending) && (
+                                        <p className="info-message">Esperando que el trabajador inicie el retiro de fondos.</p>
+                                    )}
+                                </>
                                     ) : (
                                         <>
                                             <DisputeStatusNotificationComponent 
@@ -2538,7 +2569,12 @@ const SuperviseTask = () => {
                                     )}
                                 </>
                             )}
-                            {task.client_accepted_completion === 1 && task.worker_accepted_completion === 0 && (
+                            {/* ✅ CRÍTICO: Ocultar mensaje si el escrow está resuelto */}
+                            {task.client_accepted_completion === 1 && 
+                             task.worker_accepted_completion === 0 && 
+                             !isResolved &&
+                             task.escrow_status !== 'resolved' &&
+                             task.status !== 'resolved' && (
                                 <p className="info-message">✅ Has aceptado este trabajo. Esperando confirmación del trabajador.</p>
                             )}
                         </div>
@@ -2671,9 +2707,17 @@ const SuperviseTask = () => {
                                 </div>
                             )}
                             
-                            {/* Botón de completado - El trabajador puede marcar como completado en cualquier momento */}
-                            {task.worker_accepted_completion === 0 && 
-                             !(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute || isRefunded || isResolved || task.escrow_status === 'resolved' || task.status === 'resolved') && (
+                            {/* ✅ CRÍTICO: Botón de completado - Solo visible si el estado del escrow es 'active' */}
+                            {/* En estados 'cancelled', 'disputed', 'resolved', etc., el admin debe manejar la liberación */}
+                            {/* Verificar tanto task.escrow_status como task.status y el estado real del escrow desde Trustless Work */}
+                            {/* Si isResolved es true (desde Trustless Work), NO mostrar el botón aunque task.escrow_status sea 'active' */}
+                            {!isResolved &&
+                             task.escrow_status === 'active' && 
+                             task.status !== 'resolved' &&
+                             task.status !== 'cancelled' &&
+                             task.status !== 'disputed' &&
+                             task.worker_accepted_completion === 0 && 
+                             !(hasExistingDispute || isRefunded) && (
                                 <>
                                     {task.client_accepted_completion === 0 ? (
                                         <div style={{ textAlign: 'center' }}>
@@ -2735,7 +2779,12 @@ const SuperviseTask = () => {
                                     getEscrowByContractIds={getEscrowByContractIds}
                                 />
                             )}
-                            {task.worker_accepted_completion === 1 && task.client_accepted_completion === 0 && (
+                            {/* ✅ CRÍTICO: Ocultar mensaje si el escrow está resuelto */}
+                            {task.worker_accepted_completion === 1 && 
+                             task.client_accepted_completion === 0 && 
+                             !isResolved &&
+                             task.escrow_status !== 'resolved' &&
+                             task.status !== 'resolved' && (
                                 <p className="info-message">✅ Has marcado el trabajo como completado. Esperando confirmación del cliente.</p>
                             )}
                         </div>
@@ -2760,8 +2809,17 @@ const SuperviseTask = () => {
             )}
 
 
-            {/* Botón para marcar tarea como completada (visible para AMBOS roles si no está completada) */}
-            {(!task.escrow_id || task.status !== 'assigned') && (isWorker || isClient) && 
+            {/* ✅ CRÍTICO: Botón para marcar tarea como completada - Solo visible si el estado del escrow es 'active' */}
+            {/* En estados 'cancelled', 'disputed', 'resolved', etc., el admin debe manejar la liberación */}
+            {/* NO mostrar el botón si el escrow está resuelto, incluso si está deshabilitado */}
+            {!isResolved &&
+             task.escrow_status !== 'resolved' &&
+             task.status !== 'resolved' &&
+             (!task.escrow_id || task.status !== 'assigned') && 
+             (isWorker || isClient) && 
+             (!task.escrow_id || task.escrow_status === 'active') &&
+             task.status !== 'cancelled' &&
+             task.status !== 'disputed' &&
              !(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute) && (
                 <div className="completion-buttons" style={{ textAlign: 'center' }}>
                     <button 
@@ -3685,7 +3743,7 @@ const SuperviseTask = () => {
                                 fontWeight: '500',
                                 color: 'rgba(255, 255, 255, 0.8)'
                             }}>
-                                Tu disputa ha sido registrada en Trustless Work. Un administrador revisará tu caso.
+                                Tu disputa ha sido registrada en el contrato inteligente. Un administrador revisará tu caso.
                             </p>
                             {disputeTxHash && (
                                 <div style={{
