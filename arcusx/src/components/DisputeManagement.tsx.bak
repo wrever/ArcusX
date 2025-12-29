@@ -863,7 +863,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                     escrowResolved = true;
                     console.log('✅ Escrow confirmado como resuelto en la blockchain');
                     break;
-              } else {
+                  } else {
                     verificationAttempts++;
                     console.log(`⏳ Escrow aún no resuelto en blockchain. Intento ${verificationAttempts}/${maxVerificationAttempts}...`);
                   }
@@ -952,7 +952,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                 successMessage += `\n✅ CONFIRMADO: La transacción fue exitosa.\n`;
                 successMessage += `   El dinero está en la blockchain y puedes usarlo normalmente.\n`;
                 successMessage += `   Si Freighter no lo muestra, es solo un problema de visualización.\n`;
-                } else {
+              } else {
                 successMessage += `⚠️ No se pudo verificar la transferencia automáticamente.\n`;
                 successMessage += `   Por favor, verifica manualmente en Horizon o Stellar Expert.\n`;
               }
@@ -1035,7 +1035,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                     escrowResolved = true;
                     console.log('✅ Escrow confirmado como resuelto en la blockchain');
                     break;
-              } else {
+                  } else {
                     verificationAttempts++;
                     console.log(`⏳ Escrow aún no resuelto en blockchain. Intento ${verificationAttempts}/${maxVerificationAttempts}...`);
                   }
@@ -1101,8 +1101,8 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
           let successMessages: string[] = [];
           let errorMessages: string[] = [];
           let lastTxHash: string | undefined;
-              
-              // Reembolsar al cliente
+          
+          // Reembolsar al cliente
           if (clientAmount > 0) {
             try {
               setSuccess('Preparando transacción de reembolso al cliente. Por favor, firma la transacción en Freighter...');
@@ -1123,15 +1123,15 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
               if (refundResult.success) {
                 successMessages.push(`${clientAmount.toFixed(7)} USDC reembolsados al cliente`);
                 lastTxHash = refundResult.txHash;
-                  } else {
+              } else {
                 errorMessages.push(`Error al reembolsar al cliente: ${refundResult.error}`);
-                  }
+              }
             } catch (refundError: any) {
               errorMessages.push(`Error al reembolsar al cliente: ${refundError.message}`);
-                }
-              }
-              
-              // Pagar al trabajador
+            }
+          }
+          
+          // Pagar al trabajador
           if (workerAmount > 0 && workerWallet) {
             try {
               setSuccess('Preparando transacción de pago al trabajador. Por favor, firma la transacción en Freighter...');
@@ -1147,12 +1147,12 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                 resolveDispute,
                 sendTransaction,
                 getEscrowByContractIds
-                );
-                
-                if (paymentResult.success) {
+              );
+              
+              if (paymentResult.success) {
                 successMessages.push(`${workerAmount.toFixed(7)} USDC pagados al trabajador`);
                 lastTxHash = paymentResult.txHash;
-                } else {
+              } else {
                 errorMessages.push(`Error al pagar al trabajador: ${paymentResult.error}`);
               }
             } catch (paymentError: any) {
@@ -1239,7 +1239,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
               `Hash de transacción: ${lastTxHash || 'N/A'}`;
             setSuccess(successMessage);
             
-      fetchDisputes();
+            fetchDisputes();
           } else {
             setError(`Error al resolver disputa: ${errorMessages.join('. ')}`);
           }
@@ -1270,8 +1270,8 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
       // Esto significa que es una disputa del sistema antiguo (sin escrow en blockchain)
       // En este caso, solo actualizamos la BD (el sistema antiguo no usa blockchain)
       if (!selectedDispute.escrow_id || !selectedDispute.escrow_id.startsWith('C')) {
-        const resolveResponse = await resolveAdminDispute(selectedDispute.id, resolutionData);
-        setSuccess('Disputa resuelta correctamente');
+      const resolveResponse = await resolveAdminDispute(selectedDispute.id, resolutionData);
+      setSuccess('Disputa resuelta correctamente');
         fetchDisputes();
         setResolving(false);
         return;
@@ -1280,6 +1280,190 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
       // ✅ Si llegamos aquí y tiene escrow_id, debería haber sido procesado arriba
       // Si no, hay un error en la lógica - esto NO debería pasar
       throw new Error('Error: La disputa tiene escrow_id pero no fue procesada correctamente. Por favor, recarga la página e intenta nuevamente.');
+        try {
+          // Obtener información completa para liberar fondos
+          const releaseInfo = resolveResponse.funds_release_info;
+          
+          if (releaseInfo?.escrow_id) {
+            // Verificar si es un escrow de Trustless Work (contract_id empieza con 'C')
+            const isTrustlessWork = releaseInfo.escrow_id && releaseInfo.escrow_id.startsWith('C');
+            
+            if (isTrustlessWork && kit && isConnected && walletAddress) {
+              // Usar Trustless Work para resolver la disputa
+              // ✅ CRÍTICO: Obtener el disputeResolver del escrow, no usar la wallet conectada directamente
+              const contractId = releaseInfo.escrow_id;
+              
+              // Obtener información del escrow para obtener el disputeResolver correcto
+              let disputeResolver = walletAddress; // Fallback a la wallet conectada
+              try {
+                const escrowData = await getEscrowByContractIds({ 
+                  contractIds: [contractId],
+                  validateOnChain: true 
+                });
+                const escrow = Array.isArray(escrowData) ? escrowData[0] : (escrowData as any)?.escrows?.[0];
+                if (escrow?.roles?.disputeResolver) {
+                  disputeResolver = escrow.roles.disputeResolver;
+                  console.log('✅ Usando disputeResolver del escrow:', disputeResolver);
+                  
+                  // Verificar que la wallet conectada sea el disputeResolver
+                  if (walletAddress !== disputeResolver) {
+                    throw new Error(`La wallet conectada (${walletAddress}) no es el disputeResolver configurado en el escrow (${disputeResolver}). Debes conectar la wallet del disputeResolver para resolver esta disputa.`);
+                  }
+                }
+              } catch (escrowError) {
+                console.warn('⚠️ No se pudo obtener disputeResolver del escrow, usando wallet conectada:', escrowError);
+              }
+              
+              // Obtener la decisión de la resolución
+              const decision = resolutionData.decision;
+              
+              // Para single-release escrows, solo se puede distribuir a un receptor a la vez
+              // Para split, haremos múltiples llamadas
+              if (decision === 'client' && releaseInfo.refund_amount > 0) {
+                // Reembolso completo al cliente
+                setSuccess('Preparando transacción de reembolso. Por favor, firma la transacción en Freighter...');
+                
+                const resolveResult = await resolveDisputeTrustlessEscrow(
+                  contractId,
+                  disputeResolver,
+                  {
+                    address: releaseInfo.client_wallet,
+                    amount: releaseInfo.refund_amount
+                  },
+                  kit,
+                  resolveDispute,
+                  sendTransaction,
+                  getEscrowByContractIds
+                );
+                
+                if (resolveResult.success) {
+                  setSuccess(`✅ Disputa resuelta y ${releaseInfo.refund_amount} USDC reembolsados al cliente. Hash de transacción: ${resolveResult.txHash}`);
+              } else {
+                  setError(`Disputa resuelta pero error al reembolsar: ${resolveResult.error}`);
+                }
+              } else if (decision === 'worker' && releaseInfo.payment_amount > 0) {
+                // Pago completo al trabajador
+                setSuccess('Preparando transacción de pago. Por favor, firma la transacción en Freighter...');
+                
+                const resolveResult = await resolveDisputeTrustlessEscrow(
+                  contractId,
+                  disputeResolver,
+                  {
+                    address: releaseInfo.worker_wallet,
+                    amount: releaseInfo.payment_amount
+                  },
+                  kit,
+                  resolveDispute,
+                  sendTransaction,
+                  getEscrowByContractIds
+                );
+                
+                if (resolveResult.success) {
+                  setSuccess(`✅ Disputa resuelta y ${releaseInfo.payment_amount} USDC pagados al trabajador. Hash de transacción: ${resolveResult.txHash}`);
+              } else {
+                  setError(`Disputa resuelta pero error al pagar: ${resolveResult.error}`);
+                }
+              } else if (decision === 'split') {
+                // Split: hacer dos llamadas separadas (primero cliente, luego trabajador)
+                let successMessages: string[] = [];
+                let errorMessages: string[] = [];
+              
+              // Reembolsar al cliente
+              if (releaseInfo.refund_amount > 0) {
+                  try {
+                    setSuccess('Preparando transacción de reembolso al cliente. Por favor, firma la transacción en Freighter...');
+                    
+                    const refundResult = await resolveDisputeTrustlessEscrow(
+                      contractId,
+                      disputeResolver,
+                      {
+                        address: releaseInfo.client_wallet,
+                        amount: releaseInfo.refund_amount
+                      },
+                      kit,
+                      resolveDispute,
+                      sendTransaction,
+                      getEscrowByContractIds
+                    );
+                    
+                    if (refundResult.success) {
+                      successMessages.push(`${releaseInfo.refund_amount} USDC reembolsados al cliente (TX: ${refundResult.txHash})`);
+                  } else {
+                      errorMessages.push(`Error al reembolsar al cliente: ${refundResult.error}`);
+                  }
+                  } catch (refundError: any) {
+                    errorMessages.push(`Error al reembolsar al cliente: ${refundError.message}`);
+                }
+              }
+              
+              // Pagar al trabajador
+              if (releaseInfo.payment_amount > 0) {
+                  try {
+                    setSuccess('Preparando transacción de pago al trabajador. Por favor, firma la transacción en Freighter...');
+                    
+                    const paymentResult = await resolveDisputeTrustlessEscrow(
+                      contractId,
+                      disputeResolver,
+                      {
+                        address: releaseInfo.worker_wallet,
+                        amount: releaseInfo.payment_amount
+                      },
+                      kit,
+                      resolveDispute,
+                      sendTransaction,
+                      getEscrowByContractIds
+                );
+                
+                if (paymentResult.success) {
+                      successMessages.push(`${releaseInfo.payment_amount} USDC pagados al trabajador (TX: ${paymentResult.txHash})`);
+                } else {
+                      errorMessages.push(`Error al pagar al trabajador: ${paymentResult.error}`);
+                    }
+                  } catch (paymentError: any) {
+                    errorMessages.push(`Error al pagar al trabajador: ${paymentError.message}`);
+                  }
+                }
+                
+                if (successMessages.length > 0) {
+                  setSuccess(`Disputa resuelta. ${successMessages.join('. ')}`);
+                }
+                if (errorMessages.length > 0) {
+                  setError(`Errores al resolver disputa: ${errorMessages.join('. ')}`);
+                }
+              }
+            } else {
+              if (!isTrustlessWork) {
+                setError('No se pudo resolver la disputa: el escrow no es de Trustless Work.');
+              } else if (!kit || !isConnected || !walletAddress) {
+                setError('No se pudo resolver la disputa: wallet no conectada. Por favor, conecta tu wallet (Freighter) e intenta nuevamente.');
+              } else {
+                setError('No se pudo resolver la disputa: información del escrow incompleta.');
+              }
+            }
+          } else {
+            setError('No se pudo obtener información del escrow para liberar fondos.');
+          }
+        } catch (fundsError: any) {
+          console.error('Error al liberar fondos:', fundsError);
+          setError(`Disputa resuelta pero error al liberar fondos: ${fundsError.message}. Por favor, libera los fondos manualmente desde el panel de administración.`);
+        }
+      } else {
+        // Si no hay fondos que liberar, solo mostrar mensaje de éxito
+        setSuccess('Disputa resuelta correctamente. No se requieren fondos para liberar.');
+      }
+      
+      setShowResolveForm(false);
+      setResolution({ decision: 'client', reason: '', refund_percentage: 50 });
+      
+      // Refrescar lista y detalles
+      fetchDisputes();
+      if (selectedDispute) {
+        handleViewDetails(selectedDispute.id);
+      }
+
+      if (onUpdate) {
+        onUpdate();
+      }
     } catch (err: any) {
       console.error('❌ Error completo en handleResolve:', err);
       console.error('   Error message:', err.message);
@@ -2342,15 +2526,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
       {showSuccessPopup && createPortal(
         <Popup
           isOpen={showSuccessPopup}
-          onClose={() => {
-            setShowSuccessPopup(false);
-            fetchDisputes();
-            // Cerrar el modal de detalles si está abierto
-            setShowDetails(false);
-            setSelectedDispute(null);
-            // Cerrar el formulario de resolución si está abierto
-            setShowResolveForm(false);
-          }}
+          onClose={() => setShowSuccessPopup(false)}
           type="success"
           title={successPopupData?.alreadyResolved ? "✅ Disputa Ya Resuelta" : "¡Disputa Resuelta Exitosamente!"}
           message={
@@ -2360,23 +2536,17 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                   `El escrow ${successPopupData.contractId ? successPopupData.contractId.substring(0, 8) + '...' : 'N/A'} ya fue procesado y los fondos fueron distribuidos.\n` +
                   `Monto del escrow: ${successPopupData.amount?.toFixed(7) || '0'} USDC\n\n` +
                   `La disputa fue resuelta exitosamente en una transacción anterior.`
-                : `✅ La disputa ha sido resuelta correctamente en la blockchain.\n\n` +
-                  `💰 Monto reembolsado: ${successPopupData.amount?.toFixed(7) || '0'} USDC\n` +
-                  `🔗 Hash de transacción: ${successPopupData.txHash || 'N/A'}\n\n` +
-                  `✅ CONFIRMADO: El escrow está resuelto en la blockchain.\n` +
-                  `✅ CONFIRMADO: El estado ha sido actualizado en la base de datos.\n\n` +
-                  `Los fondos han sido transferidos exitosamente.`
+                : `La disputa ha sido resuelta correctamente. Se han reembolsado ${successPopupData.amount?.toFixed(7) || '0'} USDC.\n\nHash de transacción: ${successPopupData.txHash || 'N/A'}`
               : 'La disputa ha sido resuelta correctamente.'
           }
-          buttonText="Volver"
+          buttonText="Aceptar"
           onButtonClick={() => {
             setShowSuccessPopup(false);
             fetchDisputes();
-            // Cerrar el modal de detalles si está abierto
-            setShowDetails(false);
-            setSelectedDispute(null);
-            // Cerrar el formulario de resolución si está abierto
-            setShowResolveForm(false);
+            // Recargar detalles de la disputa actual
+            if (selectedDispute?.id) {
+              handleViewDetails(selectedDispute.id);
+            }
           }}
         />,
         document.body

@@ -1362,58 +1362,95 @@ export const resolveDisputeTrustlessEscrow = async (
     }
 
     console.log('✅ Transacción no firmada recibida. Procediendo a firmar y enviar...');
-    console.log('🔐 Llamando a createAndSendTransaction...');
-
-    const result = await createAndSendTransaction(
-      response.unsignedTransaction,
-      kit,
-      disputeResolver,
-      sendTransaction
-    );
+    console.log('🔐 Firmando transacción de resolución de disputa con Freighter...');
+    console.log('📋 Dispute Resolver (signer):', disputeResolver);
     
-    console.log('📥 Resultado de createAndSendTransaction:', result);
-
-    if (result.success && result.txHash) {
-      // ✅ MEJORA: Verificar que la transacción se completó exitosamente y el cliente recibió el dinero
-      try {
-        console.log('🔍 Verificando transacción y balance del cliente...');
-        console.log(`   Hash de transacción: ${result.txHash}`);
-        console.log(`   Dirección del receptor: ${distribution.address}`);
-        console.log(`   Monto esperado: ${normalizedAmount}`);
-        
-        const verificationResult = await verifyTransactionAndBalance(result.txHash, distribution.address, normalizedAmount);
-        
-        console.log('✅ Verificación completada: El cliente tiene trustline y puede recibir USDC');
-        
-        // Retornar información adicional sobre la verificación
-        return { 
-          success: true, 
-          txHash: result.txHash,
-          verificationResult: verificationResult,
-          message: `✅ Disputa resuelta exitosamente. ${normalizedAmount} USDC transferidos al cliente ${distribution.address}. Hash: ${result.txHash}`
-        };
-      } catch (verifyError: any) {
-        console.error('❌ Error al verificar transacción o balance:', verifyError.message);
-        console.error('   Esto puede significar que:');
-        console.error('   1. El cliente no tiene trustline configurado para USDC');
-        console.error('   2. La transacción no transfirió los fondos correctamente');
-        console.error('   3. Hay un problema con la verificación');
-        console.error(`   Cliente: ${distribution.address}`);
-        console.error(`   Issuer de USDC requerido: ${USDC_ISSUER}`);
-        
-        // No fallar la operación si la verificación falla, pero registrar la advertencia
-        // Retornar información adicional sobre el problema
-        return { 
-          success: true, 
-          txHash: result.txHash,
-          warning: verifyError.message,
-          requiresTrustline: verifyError.message?.includes('trustline') || false
-        };
-      }
+    // ✅ MEJORA CRÍTICA: Firmar UNA SOLA VEZ y enviar directamente (igual que signAndSendRefundTransaction)
+    // NO usar createAndSendTransaction porque puede intentar firmar múltiples veces
+    const signedXdr = await signWithFreighter(response.unsignedTransaction, kit, disputeResolver);
+    
+    console.log('✅ Transacción firmada. Enviando directamente a Trustless Work...');
+    
+    // Extraer txHash antes de enviar
+    let txHash: string | undefined;
+    try {
+      const { TransactionBuilder, Networks } = await import('@stellar/stellar-sdk');
+      const tx = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
+      txHash = tx.hash().toString('hex');
+      console.log('✅ TxHash extraído:', txHash);
+    } catch (hashError: any) {
+      console.warn('⚠️ No se pudo extraer txHash:', hashError.message);
+    }
+    
+    // Enviar transacción firmada DIRECTAMENTE a Trustless Work
+    try {
+      const response_send = await sendTransaction(signedXdr);
       
-      return { success: true, txHash: result.txHash };
-    } else {
-      throw new Error(result.error || 'Error al firmar o enviar la transacción');
+      console.log('📥 Respuesta completa de Trustless Work:', response_send);
+
+      if (response_send.status === 'SUCCESS') {
+        console.log('✅ Resolución de disputa procesada exitosamente');
+        console.log('💡 Los fondos han sido transferidos');
+        
+        // ✅ MEJORA: Verificar que la transacción se completó exitosamente y el cliente recibió el dinero
+        try {
+          console.log('🔍 Verificando transacción y balance del cliente...');
+          console.log(`   Hash de transacción: ${txHash}`);
+          console.log(`   Dirección del receptor: ${distribution.address}`);
+          console.log(`   Monto esperado: ${normalizedAmount}`);
+          
+          const verificationResult = await verifyTransactionAndBalance(txHash!, distribution.address, normalizedAmount);
+          
+          console.log('✅ Verificación completada: El cliente tiene trustline y puede recibir USDC');
+          
+          // Retornar información adicional sobre la verificación
+          return { 
+            success: true, 
+            txHash: txHash,
+            verificationResult: verificationResult,
+            message: `✅ Disputa resuelta exitosamente. ${normalizedAmount} USDC transferidos al cliente ${distribution.address}. Hash: ${txHash}`
+          };
+        } catch (verifyError: any) {
+          console.error('❌ Error al verificar transacción o balance:', verifyError.message);
+          console.error('   Esto puede significar que:');
+          console.error('   1. El cliente no tiene trustline configurado para USDC');
+          console.error('   2. La transacción no transfirió los fondos correctamente');
+          console.error('   3. Hay un problema con la verificación');
+          console.error(`   Cliente: ${distribution.address}`);
+          console.error(`   Issuer de USDC requerido: ${USDC_ISSUER}`);
+          
+          // No fallar la operación si la verificación falla, pero registrar la advertencia
+          // Retornar información adicional sobre el problema
+          return { 
+            success: true, 
+            txHash: txHash,
+            warning: verifyError.message,
+            requiresTrustline: verifyError.message?.includes('trustline') || false
+          };
+        }
+      } else {
+        const errorMsg = (response_send as any).message || 'Estado no exitoso';
+        console.error('❌ La transacción no fue exitosa:', errorMsg);
+        console.error('📋 Respuesta completa:', JSON.stringify(response_send, null, 2));
+        throw new Error(`La transacción falló: ${errorMsg}`);
+      }
+    } catch (sendError: any) {
+      // Capturar errores específicos del envío
+      console.error('❌ Error al enviar transacción a Trustless Work:');
+      console.error('   Tipo de error:', sendError.constructor.name);
+      console.error('   Mensaje:', sendError.message);
+      console.error('   Response data:', sendError.response?.data);
+      console.error('   Response status:', sendError.response?.status);
+      
+      // Intentar extraer mensaje de error más detallado
+      const errorDetails = sendError.response?.data || {};
+      const errorMessage = errorDetails.message || 
+                          errorDetails.error || 
+                          sendError.message || 
+                          'Error desconocido al enviar transacción';
+      
+      console.error('💬 Mensaje de error final:', errorMessage);
+      throw new Error(errorMessage);
     }
   } catch (error: any) {
     // ✅ MEJORA: Logging detallado del error
