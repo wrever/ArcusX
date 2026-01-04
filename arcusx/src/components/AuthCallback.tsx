@@ -26,7 +26,6 @@ const AuthCallback = () => {
               // Verificar que el token esté realmente guardado
               const token = localStorage.getItem('token');
               if (!token) {
-                console.error('❌ Token no encontrado en localStorage después de guardar');
                 setError('Error al guardar la sesión. Por favor, intenta iniciar sesión nuevamente.');
                 setLoading(false);
                 return;
@@ -35,12 +34,10 @@ const AuthCallback = () => {
               // Usar window.location para forzar recarga completa y asegurar que ProtectedRoute vea el token
               window.location.href = '/dashboard';
             } else {
-              console.error('❌ No se pudo sincronizar usuario:', result);
               setError('No se pudo completar la autenticación. Por favor, intenta iniciar sesión nuevamente.');
               setLoading(false);
             }
           } catch (err: any) {
-            console.error('❌ Error sincronizando usuario:', err);
             const errorMessage = err.response?.data?.message || err.message || 'Error al procesar la autenticación';
             setError(errorMessage);
             setLoading(false);
@@ -58,7 +55,6 @@ const AuthCallback = () => {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
-          console.error('❌ Error obteniendo sesión:', sessionError);
           // No lanzar error aquí, esperar a onAuthStateChange
           return;
         }
@@ -74,7 +70,6 @@ const AuthCallback = () => {
             // Verificar que el token esté realmente guardado
             const token = localStorage.getItem('token');
             if (!token) {
-              console.error('❌ Token no encontrado en localStorage después de guardar');
               setError('Error al guardar la sesión. Por favor, intenta iniciar sesión nuevamente.');
               setLoading(false);
               return;
@@ -83,7 +78,6 @@ const AuthCallback = () => {
             // Usar window.location para forzar recarga completa y asegurar que ProtectedRoute vea el token
             window.location.href = '/dashboard';
           } else {
-            console.error('❌ No se pudo sincronizar usuario:', result);
             setError('No se pudo completar la autenticación. Por favor, intenta iniciar sesión nuevamente.');
             setLoading(false);
           }
@@ -96,7 +90,6 @@ const AuthCallback = () => {
           }, 2000);
         }
       } catch (err: any) {
-        console.error('❌ Error verificando sesión:', err);
         // No establecer error aquí, esperar a onAuthStateChange
       }
     };

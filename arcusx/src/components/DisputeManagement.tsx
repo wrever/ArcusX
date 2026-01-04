@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { FaGavel, FaEye, FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaWallet, FaLink, FaComments, FaFile, FaClock } from 'react-icons/fa';
-import { getAdminDisputes, getAdminDisputeDetails, resolveAdminDispute, getDisputeFundsReleaseInfo } from '../services/adminService';
+import { getAdminDisputes, getAdminDisputeDetails, resolveAdminDispute } from '../services/adminService';
 import { useWallet } from '../hooks/useWallet';
 import { useResolveDispute, useSendTransaction, useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks';
 import { resolveDisputeTrustlessEscrow } from '../services/trustlessWorkEscrowService';
-import { ADMIN_WALLET } from '../config/trustlessWork';
 import { USDC_ISSUER } from '../config/usdc';
 import DisputeChatView from './DisputeChatView';
 import DisputeFilesView from './DisputeFilesView';
@@ -18,7 +17,7 @@ interface DisputeManagementProps {
   onUpdate?: () => void;
 }
 
-const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
+const DisputeManagement: React.FC<DisputeManagementProps> = () => {
   const [disputes, setDisputes] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +72,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
     fetchDisputes();
   }, [statusFilter, page]);
 
-  // ✅ MEJORA: Cargar disputeResolver requerido cuando se muestra el formulario de resolución
+  //  MEJORA: Cargar disputeResolver requerido cuando se muestra el formulario de resolución
   useEffect(() => {
     const loadRequiredDisputeResolver = async () => {
       if (showResolveForm && selectedDispute?.escrow_id && selectedDispute.escrow_id.startsWith('C')) {
@@ -89,7 +88,6 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
             setRequiredDisputeResolver(null);
           }
         } catch (err) {
-          console.warn('No se pudo obtener disputeResolver requerido:', err);
           setRequiredDisputeResolver(null);
         }
       } else {
@@ -110,10 +108,10 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
       }
       const data = await getAdminDisputes(params);
       
-      // ✅ MEJORA: Consultar Trustless Work para obtener estados reales de los contratos
+      //  MEJORA: Consultar Trustless Work para obtener estados reales de los contratos
       const enrichedDisputes = await enrichDisputesWithTrustlessWorkStatus(data.disputes);
       
-      // ✅ MEJORA CRÍTICA: Buscar escrows en disputa desde Trustless Work que NO tienen registro en disputes
+      //  MEJORA CRÍTICA: Buscar escrows en disputa desde Trustless Work que NO tienen registro en disputes
       const missingDisputes = await findDisputedEscrowsWithoutDisputeRecord();
       
       // Combinar disputas de BD con disputas encontradas en Trustless Work
@@ -136,10 +134,9 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
     }
   };
 
-  // ✅ MEJORA CRÍTICA: Encontrar escrows en disputa desde Trustless Work que no tienen registro en disputes
+  //  MEJORA CRÍTICA: Encontrar escrows en disputa desde Trustless Work que no tienen registro en disputes
   const findDisputedEscrowsWithoutDisputeRecord = async (): Promise<any[]> => {
     try {
-      console.log('🔍 Buscando escrows en disputa sin registro en BD...');
       
       // Importar servicios necesarios
       const { getAdminEscrows } = await import('../services/adminService');
@@ -147,22 +144,18 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
       // Obtener todos los escrows
       const escrowsData = await getAdminEscrows({ page: 1, limit: 1000 });
       const escrows = escrowsData.escrows || [];
-      console.log(`📊 Total de escrows en BD: ${escrows.length}`);
       
       // Filtrar solo escrows de Trustless Work
       const trustlessEscrows = escrows.filter((e: any) => 
         e.escrow_id && typeof e.escrow_id === 'string' && e.escrow_id.startsWith('C')
       );
-      console.log(`📊 Escrows de Trustless Work: ${trustlessEscrows.length}`);
       
       if (trustlessEscrows.length === 0) {
-        console.log('⚠️ No se encontraron escrows de Trustless Work');
         return [];
       }
       
       // Obtener escrow_ids únicos
       const escrowIds = trustlessEscrows.map((e: any) => e.escrow_id);
-      console.log(`📊 Consultando Trustless Work para ${escrowIds.length} escrows...`);
       
       // Consultar Trustless Work para verificar cuáles están en disputa
       const result = await getEscrowByContractIds({ 
@@ -171,24 +164,20 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
       });
       
       const trustlessEscrowsData = Array.isArray(result) ? result : (result as any)?.escrows || [];
-      console.log(`📊 Escrows obtenidos de Trustless Work: ${trustlessEscrowsData.length}`);
       
       // Obtener disputas existentes de BD para comparar
       const { getAdminDisputes } = await import('../services/adminService');
-      const existingDisputesData = await getAdminDisputes({ status: '', limit: 1000 });
+      const existingDisputesData = await getAdminDisputes({ status: undefined, limit: 1000 });
       const existingDisputes = existingDisputesData.disputes || [];
       const existingEscrowIds = new Set(
         existingDisputes
           .map((d: any) => d.escrow_id)
           .filter((id: any): id is string => id && typeof id === 'string')
       );
-      console.log(`📊 Disputas existentes en BD: ${existingDisputes.length}`);
-      console.log(`📊 Escrow IDs con disputa en BD: ${existingEscrowIds.size}`);
       
       // Crear disputas virtuales para escrows en disputa sin registro en BD
       const missingDisputes: any[] = [];
       let disputedCount = 0;
-      let resolvedCount = 0;
       let noBalanceCount = 0;
       let alreadyInDbCount = 0;
       
@@ -197,20 +186,18 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
         const flags = escrow.flags || {};
         const isDisputed = flags.disputed === true || escrow.isDisputed === true || escrow.disputed === true;
         const isResolved = flags.resolved === true || escrow.isResolved === true || escrow.resolved === true;
-        const isReleased = flags.released === true || escrow.isReleased === true || escrow.released === true;
         const balance = parseFloat(escrow.balance || escrow.currentBalance || '0');
         
         // Log para debug
         if (isDisputed) {
           disputedCount++;
-          console.log(`🔍 Escrow en disputa encontrado: ${contractId?.substring(0, 8)}... | Balance: ${balance} | Resuelto: ${isResolved} | En BD: ${existingEscrowIds.has(contractId)}`);
         }
         
-        // ✅ CRÍTICO: Crear disputa virtual si:
+        //  CRÍTICO: Crear disputa virtual si:
         // 1. Está en disputa (o fue disputado)
         // 2. No tiene registro en BD
         // 3. Tiene balance > 0 O está resuelto pero sin registro en BD (para poder ver el historial)
-        // ⚠️ IMPORTANTE: Mostrar TODOS los escrows en disputa, incluso si están resueltos, para gestión manual
+        //  IMPORTANTE: Mostrar TODOS los escrows en disputa, incluso si están resueltos, para gestión manual
         // Solo excluir si ya tiene registro en BD
         if (isDisputed && contractId && !existingEscrowIds.has(contractId)) {
           // Si está resuelto pero sin balance, aún así crear la disputa virtual para que aparezca en gestión
@@ -221,7 +208,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
             // Buscar el escrow en la lista de escrows para obtener información de la tarea
             const escrowInfo = trustlessEscrows.find((e: any) => e.escrow_id === contractId);
             
-            // ✅ MEJORA: Incluir también escrows sin información en BD (pueden ser escrows creados directamente)
+            //  MEJORA: Incluir también escrows sin información en BD (pueden ser escrows creados directamente)
             // Si no hay escrowInfo, crear disputa virtual con información mínima del escrow desde Trustless Work
             if (escrowInfo || contractId) {
               // Crear disputa virtual con información del escrow y la tarea
@@ -262,34 +249,24 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
               escrowAmount: escrow.amount,
               escrowDescription: escrow.description
               });
-              console.log(`✅ Disputa virtual creada: ${contractId?.substring(0, 8)}... | Balance: ${balance} USDC | Resuelto: ${isResolved}`);
             }
           } else {
             // Escrow en disputa pero sin balance y no resuelto (caso raro)
             noBalanceCount++;
-            console.log(`⚠️ Escrow en disputa sin balance y no resuelto: ${contractId?.substring(0, 8)}... | Balance: ${balance}`);
           }
         } else if (isDisputed && existingEscrowIds.has(contractId)) {
           alreadyInDbCount++;
-          console.log(`ℹ️ Escrow en disputa ya tiene registro en BD: ${contractId?.substring(0, 8)}...`);
         }
       });
       
-      console.log(`📊 Resumen de detección de disputas virtuales:`);
-      console.log(`   - Escrows en disputa encontrados: ${disputedCount}`);
-      console.log(`   - Disputas virtuales creadas: ${missingDisputes.length}`);
-      console.log(`   - Ya resueltos: ${resolvedCount}`);
-      console.log(`   - Sin balance: ${noBalanceCount}`);
-      console.log(`   - Ya en BD: ${alreadyInDbCount}`);
       
       return missingDisputes;
     } catch (err: any) {
-      console.warn('⚠️ Error al buscar escrows en disputa sin registro:', err.message);
       return [];
     }
   };
 
-  // ✅ MEJORA: Enriquecer disputas con estados reales desde Trustless Work
+  //  MEJORA: Enriquecer disputas con estados reales desde Trustless Work
   const enrichDisputesWithTrustlessWorkStatus = async (disputes: any[]): Promise<any[]> => {
     if (!disputes || disputes.length === 0) {
       return disputes;
@@ -313,7 +290,6 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
 
     if (escrowIds.length === 0) {
       // Si no hay escrow_ids, retornar disputas sin enriquecer
-      console.log('⚠️ No se encontraron escrow_ids en las disputas para consultar Trustless Work');
       return disputes;
     }
 
@@ -387,7 +363,6 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
         };
       });
     } catch (err: any) {
-      console.warn('⚠️ Error al consultar Trustless Work para estados reales:', err.message);
       // Si falla, retornar disputas sin enriquecer
       return disputes;
     }
@@ -435,7 +410,6 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
         setEscrowInfo(null);
       }
     } catch (err: any) {
-      console.error('Error al obtener información del escrow:', err);
       setEscrowInfo(null);
     } finally {
       setLoadingEscrowInfo(false);
@@ -512,7 +486,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
     setError(null);
     setEscrowInfo(null);
     try {
-      // ✅ MEJORA: Si es una disputa virtual (detectada desde Trustless Work), usar la disputa de la lista
+      //  MEJORA: Si es una disputa virtual (detectada desde Trustless Work), usar la disputa de la lista
       if (typeof disputeId === 'string' && disputeId.startsWith('virtual-')) {
         const dispute = disputes.find(d => d.id === disputeId);
         if (!dispute) {
@@ -538,7 +512,6 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
               setRequiredDisputeResolver(escrow.roles.disputeResolver);
             }
           } catch (err) {
-            console.warn('No se pudo obtener disputeResolver requerido:', err);
           }
         }
       } else {
@@ -563,16 +536,9 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
   const handleResolve = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDispute) {
-      console.error('❌ No hay disputa seleccionada');
       return;
     }
 
-    console.log('🔄 Iniciando resolución de disputa...');
-    console.log('   Disputa ID:', selectedDispute.id);
-    console.log('   Es disputa virtual:', selectedDispute.isVirtualDispute);
-    console.log('   Escrow ID:', selectedDispute.escrow_id);
-    console.log('   Wallet conectada:', walletAddress);
-    console.log('   Wallet conectada (isConnected):', isConnected);
 
     setResolving(true);
     setError(null);
@@ -593,7 +559,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
           throw new Error('El porcentaje de reembolso debe estar entre 0 y 100');
         }
         
-        // ✅ MEJORA: Validar que la suma de porcentajes sea 100%
+        //  MEJORA: Validar que la suma de porcentajes sea 100%
         // El porcentaje de pago se calcula como 100 - refund_percentage
         // Por lo tanto, refund_percentage debe estar entre 0 y 100, y la suma siempre será 100
         // Pero validamos que no sea exactamente 0 o 100 (esos casos deberían usar 'client' o 'worker')
@@ -609,14 +575,13 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
         throw new Error('Debes conectar tu wallet (Freighter) para resolver disputas y liberar fondos. Por favor, conecta tu wallet e intenta nuevamente.');
       }
       
-      // ✅ MEJORA: Verificar que kit esté disponible
+      //  MEJORA: Verificar que kit esté disponible
       if (!kit) {
         throw new Error('Kit de Stellar no está disponible. Por favor, recarga la página e intenta nuevamente.');
       }
       
-      console.log('✅ Validaciones pasadas. Procediendo con la resolución...');
 
-      // ✅ CRÍTICO: TODAS las disputas con escrow_id de Trustless Work deben usar el flujo nuevo
+      //  CRÍTICO: TODAS las disputas con escrow_id de Trustless Work deben usar el flujo nuevo
       // No solo las virtuales, sino también las que tienen registro en BD pero usan Trustless Work
       if (selectedDispute.escrow_id && selectedDispute.escrow_id.startsWith('C')) {
         // Resolver directamente desde Trustless Work sin crear registro en BD
@@ -633,13 +598,13 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
           throw new Error('No se pudo obtener información del escrow desde Trustless Work');
         }
         
-        // ✅ CRÍTICO: Verificar si el escrow ya está resuelto ANTES de intentar resolverlo
+        //  CRÍTICO: Verificar si el escrow ya está resuelto ANTES de intentar resolverlo
         const flags = escrow.flags || {};
         const isResolved = flags.resolved === true || escrow.isResolved === true || escrow.resolved === true;
         const isReleased = flags.released === true || escrow.isReleased === true || escrow.released === true;
         const isDisputed = flags.disputed === true || escrow.isDisputed === true || escrow.disputed === true;
         
-        // ✅ MEJORA: Si ya está resuelta, mostrar popup de éxito con la información
+        //  MEJORA: Si ya está resuelta, mostrar popup de éxito con la información
         if (isResolved || isReleased) {
           const balance = parseFloat(escrow.balance || escrow.currentBalance || '0');
           const originalAmount = parseFloat(escrow.amount || '0');
@@ -660,7 +625,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
           setShowSuccessPopup(true);
           
           setSuccess(
-            `✅ Esta disputa ya ha sido resuelta anteriormente.\n\n` +
+            ` Esta disputa ya ha sido resuelta anteriormente.\n\n` +
             `El escrow ${contractId} ya fue procesado y los fondos fueron distribuidos.\n` +
             `Estado: ${isResolved ? 'resuelto' : ''} ${isReleased ? 'liberado' : ''}\n` +
             `Monto original del escrow: ${resolvedAmount.toFixed(7)} USDC\n\n` +
@@ -672,26 +637,26 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
           return; // Salir sin intentar resolver nuevamente
         }
         
-        // ✅ CRÍTICO: Verificar que el escrow esté en disputa
+        //  CRÍTICO: Verificar que el escrow esté en disputa
         if (!isDisputed) {
           throw new Error(
-            `❌ El escrow no está en disputa.\n\n` +
+            ` El escrow no está en disputa.\n\n` +
             `El escrow ${contractId} no está en estado "disputed". ` +
             `Estado actual: ${escrow.status || 'unknown'}\n\n` +
             `Solo se pueden resolver escrows que están en disputa.`
           );
         }
         
-        // ✅ CRÍTICO: Usar el disputeResolver configurado en el escrow, NO la wallet conectada
+        //  CRÍTICO: Usar el disputeResolver configurado en el escrow, NO la wallet conectada
         const escrowDisputeResolver = escrow.roles?.disputeResolver;
         if (!escrowDisputeResolver || !escrowDisputeResolver.startsWith('G')) {
           throw new Error(`No se pudo obtener un disputeResolver válido del escrow. DisputeResolver del escrow: ${escrowDisputeResolver || 'N/A'}`);
         }
         
-        // ✅ CRÍTICO: Verificar que la wallet conectada sea el disputeResolver del escrow
+        //  CRÍTICO: Verificar que la wallet conectada sea el disputeResolver del escrow
         if (walletAddress !== escrowDisputeResolver) {
           throw new Error(
-            `❌ La wallet conectada (${walletAddress}) no es el disputeResolver configurado en el escrow (${escrowDisputeResolver}).\n\n` +
+            ` La wallet conectada (${walletAddress}) no es el disputeResolver configurado en el escrow (${escrowDisputeResolver}).\n\n` +
             `Para resolver esta disputa, debes conectar la wallet del disputeResolver: ${escrowDisputeResolver}\n\n` +
             `Por favor, desconecta la wallet actual y conecta la wallet del disputeResolver.`
           );
@@ -702,32 +667,22 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
         
         const balance = parseFloat(escrow.balance || escrow.currentBalance || '0');
         
-        // ✅ MEJORA: Validar que el escrow tenga balance antes de continuar
+        //  MEJORA: Validar que el escrow tenga balance antes de continuar
         if (balance <= 0) {
           const flags = escrow.flags || {};
           const isResolved = flags.resolved === true || escrow.isResolved === true || escrow.resolved === true;
           const isReleased = flags.released === true || escrow.isReleased === true || escrow.released === true;
           
-          console.error('❌ Escrow sin balance:', {
-            balance,
-            escrowBalance: escrow.balance,
-            escrowCurrentBalance: escrow.currentBalance,
-            isResolved,
-            isReleased,
-            flags,
-            escrow
-          });
-          
           if (isResolved || isReleased) {
             throw new Error(
-              `❌ El escrow ya ha sido resuelto o los fondos ya han sido liberados.\n\n` +
+              ` El escrow ya ha sido resuelto o los fondos ya han sido liberados.\n\n` +
               `No hay fondos disponibles para distribuir.\n` +
               `Estado del escrow: ${isResolved ? 'resuelto' : ''} ${isReleased ? 'liberado' : ''}\n` +
               `Balance actual: ${balance}`
             );
           } else {
             throw new Error(
-              `❌ El escrow no tiene balance disponible (${balance}).\n\n` +
+              ` El escrow no tiene balance disponible (${balance}).\n\n` +
               `No se pueden distribuir fondos.\n` +
               `Balance del escrow: ${escrow.balance || escrow.currentBalance || '0'}\n\n` +
               `Posibles causas:\n` +
@@ -739,14 +694,14 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
           }
         }
         
-        // ✅ MEJORA CRÍTICA: Obtener wallets del cliente y trabajador
-        // 📋 SEGÚN EL WORKFLOW:
+        //  MEJORA CRÍTICA: Obtener wallets del cliente y trabajador
+        //  SEGÚN EL WORKFLOW:
         // - Cliente: crea tarea, selecciona propuesta, fondea contrato, libera dinero → escrow.roles.approver
         // - Trabajador: aplica a tarea, hace trabajo, recibe dinero → escrow.roles.serviceProvider = escrow.roles.receiver
         let clientWallet: string | null = null;
         let workerWallet: string | null = null;
         
-        // ✅ PRIORIDAD 1: Obtener wallets desde BD (fuente de verdad más confiable)
+        //  PRIORIDAD 1: Obtener wallets desde BD (fuente de verdad más confiable)
         try {
           const adminService = await import('../services/adminService');
           
@@ -754,35 +709,29 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
           if (selectedDispute.client_id) {
             const clientDetails = await adminService.getAdminUserDetails(selectedDispute.client_id);
             clientWallet = clientDetails?.wallet_address;
-            console.log('📋 Wallet del cliente desde BD:', clientWallet);
           }
           
           // Obtener wallet del trabajador desde BD
           if (selectedDispute.worker_id) {
             const workerDetails = await adminService.getAdminUserDetails(selectedDispute.worker_id);
             workerWallet = workerDetails?.wallet_address;
-            console.log('📋 Wallet del trabajador desde BD:', workerWallet);
           }
         } catch (userError) {
-          console.warn('⚠️ No se pudo obtener wallets desde BD:', userError);
         }
         
-        // ✅ PRIORIDAD 2: Fallback a escrow.roles según el workflow correcto
+        //  PRIORIDAD 2: Fallback a escrow.roles según el workflow correcto
         // Cliente = approver (quien aprueba y libera)
         // Trabajador = serviceProvider (quien hace el trabajo) = receiver (quien recibe el pago)
         if (!clientWallet && escrow.roles?.approver) {
-          console.log('📋 Usando escrow.roles.approver como wallet del cliente:', escrow.roles.approver);
           clientWallet = escrow.roles.approver;
         }
         
         if (!workerWallet && escrow.roles?.serviceProvider) {
-          console.log('📋 Usando escrow.roles.serviceProvider como wallet del trabajador:', escrow.roles.serviceProvider);
           workerWallet = escrow.roles.serviceProvider;
         }
         
         // Verificación adicional: si receiver existe y es diferente de serviceProvider, puede ser el trabajador también
         if (!workerWallet && escrow.roles?.receiver && escrow.roles.receiver !== escrow.roles?.serviceProvider) {
-          console.log('📋 Usando escrow.roles.receiver como wallet del trabajador (fallback):', escrow.roles.receiver);
           workerWallet = escrow.roles.receiver;
         }
         
@@ -809,15 +758,6 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
           workerAmount = balance - clientAmount;
         }
         
-        console.log('📋 Información de resolución de disputa:');
-        console.log('   Contract ID:', contractId);
-        console.log('   Dispute Resolver:', disputeResolver);
-        console.log('   Cliente:', clientWallet);
-        console.log('   Trabajador:', workerWallet);
-        console.log('   Balance total:', balance);
-        console.log('   Monto cliente:', clientAmount);
-        console.log('   Monto trabajador:', workerAmount);
-        console.log('   Decisión:', resolution.decision);
         
         // Procesar según la decisión
         if (resolution.decision === 'client' && clientAmount > 0) {
@@ -837,7 +777,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
           );
           
           if (resolveResult.success) {
-            // ✅ CRÍTICO: Verificar que el escrow realmente esté resuelto en la blockchain antes de actualizar BD
+            //  CRÍTICO: Verificar que el escrow realmente esté resuelto en la blockchain antes de actualizar BD
             setSuccess('Verificando que el escrow esté resuelto en la blockchain...');
             
             let escrowResolved = false;
@@ -861,22 +801,19 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                   
                   if (isResolved) {
                     escrowResolved = true;
-                    console.log('✅ Escrow confirmado como resuelto en la blockchain');
                     break;
               } else {
                     verificationAttempts++;
-                    console.log(`⏳ Escrow aún no resuelto en blockchain. Intento ${verificationAttempts}/${maxVerificationAttempts}...`);
                   }
                 }
               } catch (verifyError: any) {
-                console.warn(`⚠️ Error al verificar escrow (intento ${verificationAttempts + 1}):`, verifyError.message);
                 verificationAttempts++;
               }
             }
             
             if (!escrowResolved) {
               throw new Error(
-                `❌ ERROR CRÍTICO: La transacción fue enviada pero el escrow NO está resuelto en la blockchain después de ${maxVerificationAttempts} intentos.\n\n` +
+                ` ERROR CRÍTICO: La transacción fue enviada pero el escrow NO está resuelto en la blockchain después de ${maxVerificationAttempts} intentos.\n\n` +
                 `Esto puede significar que:\n` +
                 `1. La transacción no se procesó correctamente\n` +
                 `2. Hay un problema con el indexer de Trustless Work\n` +
@@ -887,46 +824,44 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
               );
             }
             
-            // ✅ Solo actualizar BD si el escrow está confirmado como resuelto en blockchain
+            //  Solo actualizar BD si el escrow está confirmado como resuelto en blockchain
             if (selectedDispute && typeof selectedDispute.id === 'number') {
               try {
                 await resolveAdminDispute(selectedDispute.id, {
                   decision: resolution.decision,
                   reason: resolution.reason,
-                  refund_percentage: resolution.decision === 'split' ? resolution.refund_percentage : undefined
+                  refund_percentage: undefined
                 });
-                console.log('✅ Estado de disputa actualizado en BD');
               } catch (dbError: any) {
-                console.warn('⚠️ Error al actualizar estado en BD (pero el escrow está resuelto en blockchain):', dbError.message);
                 // No fallar si la BD no se actualiza, el escrow ya está resuelto en blockchain
               }
             }
             
-            // ✅ MEJORA CRÍTICA: Mostrar popup de éxito INMEDIATAMENTE cuando la transacción sea exitosa
+            //  MEJORA CRÍTICA: Mostrar popup de éxito INMEDIATAMENTE cuando la transacción sea exitosa
             setSuccessPopupData({
               txHash: resolveResult.txHash,
               amount: clientAmount
             });
             setShowSuccessPopup(true);
             
-            let successMessage = `✅ Disputa resuelta exitosamente!\n\n`;
-            successMessage += `💰 Monto reembolsado: ${clientAmount.toFixed(7)} USDC\n`;
+            let successMessage = ` Disputa resuelta exitosamente!\n\n`;
+            successMessage += ` Monto reembolsado: ${clientAmount.toFixed(7)} USDC\n`;
             successMessage += `👤 Cliente: ${clientWallet}\n`;
-            successMessage += `🔗 Hash de transacción: ${resolveResult.txHash}\n\n`;
-            successMessage += `✅ CONFIRMADO: El escrow está resuelto en la blockchain.\n`;
-            successMessage += `✅ CONFIRMADO: El estado ha sido actualizado en la base de datos.\n\n`;
+            successMessage += ` Hash de transacción: ${resolveResult.txHash}\n\n`;
+            successMessage += ` CONFIRMADO: El escrow está resuelto en la blockchain.\n`;
+            successMessage += ` CONFIRMADO: El estado ha sido actualizado en la base de datos.\n\n`;
             
-            // ✅ MEJORA: Mostrar información de verificación si está disponible
-            if (resolveResult.verificationResult) {
-              const verification = resolveResult.verificationResult;
+            //  MEJORA: Mostrar información de verificación si está disponible
+            if ((resolveResult as any).verificationResult) {
+              const verification = (resolveResult as any).verificationResult;
               if (verification.transferFound) {
-                successMessage += `✅ CONFIRMADO: Los fondos fueron transferidos exitosamente a la wallet del cliente.\n\n`;
+                successMessage += ` CONFIRMADO: Los fondos fueron transferidos exitosamente a la wallet del cliente.\n\n`;
                 
                 if (verification.currentBalance !== undefined) {
-                  successMessage += `💰 Balance actual del cliente: ${verification.currentBalance.toFixed(7)} USDC\n`;
+                  successMessage += ` Balance actual del cliente: ${verification.currentBalance.toFixed(7)} USDC\n`;
                 }
                 
-                successMessage += `📊 Verificar transacción:\n`;
+                successMessage += ` Verificar transacción:\n`;
                 if (verification.horizonUrl) {
                   successMessage += `   Horizon: ${verification.horizonUrl}\n`;
                 }
@@ -934,49 +869,49 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                   successMessage += `   Stellar Expert: ${verification.stellarExpertUrl}\n`;
                 }
                 
-                successMessage += `\n💡 INFORMACIÓN IMPORTANTE:\n`;
-                successMessage += `   1. ✅ El dinero YA está en tu wallet Stellar (confirmado en blockchain)\n`;
-                successMessage += `   2. ✅ Balance actual en blockchain: ${verification.currentBalance?.toFixed(7) || clientAmount.toFixed(7)} USDC\n`;
-                successMessage += `   3. ✅ Trustline correcto configurado: USDC:${USDC_ISSUER}\n`;
-                successMessage += `   4. ⚠️ Si Freighter muestra un balance diferente (${verification.currentBalance ? (verification.currentBalance - clientAmount).toFixed(7) : 'N/A'} USDC menos):\n`;
+                successMessage += `\n INFORMACIÓN IMPORTANTE:\n`;
+                successMessage += `   1.  El dinero YA está en tu wallet Stellar (confirmado en blockchain)\n`;
+                successMessage += `   2.  Balance actual en blockchain: ${verification.currentBalance?.toFixed(7) || clientAmount.toFixed(7)} USDC\n`;
+                successMessage += `   3.  Trustline correcto configurado: USDC:${USDC_ISSUER}\n`;
+                successMessage += `   4.  Si Freighter muestra un balance diferente (${verification.currentBalance ? (verification.currentBalance - clientAmount).toFixed(7) : 'N/A'} USDC menos):\n`;
                 successMessage += `      - Esto es un problema de sincronización de Freighter\n`;
                 successMessage += `      - El dinero ESTÁ en la blockchain, solo no se refleja en Freighter\n`;
                 successMessage += `      - Puedes verificar el balance real en Horizon o Stellar Expert\n`;
-                successMessage += `   5. 🔍 Para verificar el balance real:\n`;
+                successMessage += `   5.  Para verificar el balance real:\n`;
                 if (verification.horizonUrl) {
                   successMessage += `      - Horizon: ${verification.horizonUrl.replace('/transactions/', '/accounts/').replace(verification.txHash || '', clientWallet)}\n`;
                 }
                 if (verification.stellarExpertUrl) {
                   successMessage += `      - Stellar Expert: ${verification.stellarExpertUrl.replace('/tx/', '/account/').replace(verification.txHash || '', clientWallet)}\n`;
                 }
-                successMessage += `\n✅ CONFIRMADO: La transacción fue exitosa.\n`;
+                successMessage += `\n CONFIRMADO: La transacción fue exitosa.\n`;
                 successMessage += `   El dinero está en la blockchain y puedes usarlo normalmente.\n`;
                 successMessage += `   Si Freighter no lo muestra, es solo un problema de visualización.\n`;
                 } else {
-                successMessage += `⚠️ No se pudo verificar la transferencia automáticamente.\n`;
+                successMessage += ` No se pudo verificar la transferencia automáticamente.\n`;
                 successMessage += `   Por favor, verifica manualmente en Horizon o Stellar Expert.\n`;
               }
             }
             
-            // ✅ MEJORA: Agregar advertencia si el cliente necesita configurar trustline
-            if (resolveResult.warning || resolveResult.requiresTrustline) {
-              successMessage += `\n\n⚠️ ADVERTENCIA IMPORTANTE: ${resolveResult.warning || 'El cliente puede necesitar configurar un trustline para USDC'}`;
+            //  MEJORA: Agregar advertencia si el cliente necesita configurar trustline
+            if ((resolveResult as any).warning || (resolveResult as any).requiresTrustline) {
+              successMessage += `\n\n ADVERTENCIA IMPORTANTE: ${(resolveResult as any).warning || 'El cliente puede necesitar configurar un trustline para USDC'}`;
               successMessage += `\n\n🔴 PROBLEMA DETECTADO:`;
               successMessage += `\n   El cliente probablemente tiene un trustline de USDC de centre.io (Mainnet),`;
               successMessage += `\n   pero la transacción usa USDC de Testnet con un issuer diferente.`;
-              successMessage += `\n\n✅ SOLUCIÓN: El cliente debe configurar el trustline correcto para Testnet:`;
+              successMessage += `\n\n SOLUCIÓN: El cliente debe configurar el trustline correcto para Testnet:`;
               successMessage += `\n   1. Abre Freighter y conecta tu wallet: ${clientWallet}`;
               successMessage += `\n   2. Asegúrate de estar en la red TESTNET (no Mainnet)`;
               successMessage += `\n   3. Configura un trustline para USDC con este issuer:`;
               successMessage += `\n      ${USDC_ISSUER}`;
               successMessage += `\n   4. Puedes usar Freighter o Stellar Laboratory para configurar el trustline`;
               successMessage += `\n   5. Una vez configurado, el dinero aparecerá en tu wallet`;
-              successMessage += `\n\n📋 Información del trustline requerido:`;
+              successMessage += `\n\n Información del trustline requerido:`;
               successMessage += `\n   - Asset: USDC`;
               successMessage += `\n   - Issuer: ${USDC_ISSUER}`;
               successMessage += `\n   - Red: TESTNET (no Mainnet)`;
               successMessage += `\n   - Cliente: ${clientWallet}`;
-              successMessage += `\n\n💡 NOTA: Si tienes un trustline de USDC de centre.io (Mainnet),`;
+              successMessage += `\n\n NOTA: Si tienes un trustline de USDC de centre.io (Mainnet),`;
               successMessage += `\n   necesitas configurar UNO NUEVO para Testnet con el issuer correcto.`;
             }
             
@@ -986,7 +921,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
           } else {
             let errorMessage = `Error al resolver disputa: ${resolveResult.error}`;
             if (resolveResult.error?.includes('trustline')) {
-              errorMessage += `\n\n⚠️ El cliente debe configurar un trustline para USDC antes de recibir el dinero.`;
+              errorMessage += `\n\n El cliente debe configurar un trustline para USDC antes de recibir el dinero.`;
               errorMessage += `\n   Issuer de USDC: ${USDC_ISSUER}`;
               errorMessage += `\n   Cliente: ${clientWallet}`;
             }
@@ -1009,7 +944,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
           );
           
           if (resolveResult.success) {
-            // ✅ CRÍTICO: Verificar que el escrow realmente esté resuelto en la blockchain antes de actualizar BD
+            //  CRÍTICO: Verificar que el escrow realmente esté resuelto en la blockchain antes de actualizar BD
             setSuccess('Verificando que el escrow esté resuelto en la blockchain...');
             
             let escrowResolved = false;
@@ -1033,22 +968,19 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                   
                   if (isResolved) {
                     escrowResolved = true;
-                    console.log('✅ Escrow confirmado como resuelto en la blockchain');
                     break;
               } else {
                     verificationAttempts++;
-                    console.log(`⏳ Escrow aún no resuelto en blockchain. Intento ${verificationAttempts}/${maxVerificationAttempts}...`);
                   }
                 }
               } catch (verifyError: any) {
-                console.warn(`⚠️ Error al verificar escrow (intento ${verificationAttempts + 1}):`, verifyError.message);
                 verificationAttempts++;
               }
             }
             
             if (!escrowResolved) {
               throw new Error(
-                `❌ ERROR CRÍTICO: La transacción fue enviada pero el escrow NO está resuelto en la blockchain después de ${maxVerificationAttempts} intentos.\n\n` +
+                ` ERROR CRÍTICO: La transacción fue enviada pero el escrow NO está resuelto en la blockchain después de ${maxVerificationAttempts} intentos.\n\n` +
                 `Esto puede significar que:\n` +
                 `1. La transacción no se procesó correctamente\n` +
                 `2. Hay un problema con el indexer de Trustless Work\n` +
@@ -1059,31 +991,29 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
               );
             }
             
-            // ✅ Solo actualizar BD si el escrow está confirmado como resuelto en blockchain
+            //  Solo actualizar BD si el escrow está confirmado como resuelto en blockchain
             if (selectedDispute && typeof selectedDispute.id === 'number') {
               try {
                 await resolveAdminDispute(selectedDispute.id, {
                   decision: resolution.decision,
                   reason: resolution.reason,
-                  refund_percentage: resolution.decision === 'split' ? resolution.refund_percentage : undefined
+                  refund_percentage: undefined
                 });
-                console.log('✅ Estado de disputa actualizado en BD');
               } catch (dbError: any) {
-                console.warn('⚠️ Error al actualizar estado en BD (pero el escrow está resuelto en blockchain):', dbError.message);
                 // No fallar si la BD no se actualiza, el escrow ya está resuelto en blockchain
               }
             }
             
-            // ✅ MEJORA CRÍTICA: Mostrar popup de éxito INMEDIATAMENTE cuando la transacción sea exitosa
+            //  MEJORA CRÍTICA: Mostrar popup de éxito INMEDIATAMENTE cuando la transacción sea exitosa
             setSuccessPopupData({
               txHash: resolveResult.txHash,
               amount: workerAmount
             });
             setShowSuccessPopup(true);
             
-            const successMessage = `✅ Disputa resuelta y ${workerAmount.toFixed(7)} USDC pagados al trabajador.\n\n` +
-              `✅ CONFIRMADO: El escrow está resuelto en la blockchain.\n` +
-              `✅ CONFIRMADO: El estado ha sido actualizado en la base de datos.\n\n` +
+            const successMessage = ` Disputa resuelta y ${workerAmount.toFixed(7)} USDC pagados al trabajador.\n\n` +
+              ` CONFIRMADO: El escrow está resuelto en la blockchain.\n` +
+              ` CONFIRMADO: El estado ha sido actualizado en la base de datos.\n\n` +
               `Hash de transacción: ${resolveResult.txHash}`;
             setSuccess(successMessage);
             
@@ -1091,7 +1021,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
           } else {
             let errorMessage = `Error al resolver disputa: ${resolveResult.error}`;
             if (resolveResult.error?.includes('trustline')) {
-              errorMessage += `\n\n⚠️ El trabajador debe configurar un trustline para USDC antes de recibir el dinero.`;
+              errorMessage += `\n\n El trabajador debe configurar un trustline para USDC antes de recibir el dinero.`;
               errorMessage += `\n   Issuer de USDC: ${USDC_ISSUER}`;
             }
             setError(errorMessage);
@@ -1161,7 +1091,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
           }
           
           if (successMessages.length > 0) {
-            // ✅ CRÍTICO: Verificar que el escrow realmente esté resuelto en la blockchain antes de actualizar BD
+            //  CRÍTICO: Verificar que el escrow realmente esté resuelto en la blockchain antes de actualizar BD
             setSuccess('Verificando que el escrow esté resuelto en la blockchain...');
             
             let escrowResolved = false;
@@ -1185,22 +1115,19 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                   
                   if (isResolved) {
                     escrowResolved = true;
-                    console.log('✅ Escrow confirmado como resuelto en la blockchain');
                     break;
                   } else {
                     verificationAttempts++;
-                    console.log(`⏳ Escrow aún no resuelto en blockchain. Intento ${verificationAttempts}/${maxVerificationAttempts}...`);
                   }
                 }
               } catch (verifyError: any) {
-                console.warn(`⚠️ Error al verificar escrow (intento ${verificationAttempts + 1}):`, verifyError.message);
                 verificationAttempts++;
               }
             }
             
             if (!escrowResolved) {
               throw new Error(
-                `❌ ERROR CRÍTICO: La transacción fue enviada pero el escrow NO está resuelto en la blockchain después de ${maxVerificationAttempts} intentos.\n\n` +
+                ` ERROR CRÍTICO: La transacción fue enviada pero el escrow NO está resuelto en la blockchain después de ${maxVerificationAttempts} intentos.\n\n` +
                 `Esto puede significar que:\n` +
                 `1. La transacción no se procesó correctamente\n` +
                 `2. Hay un problema con el indexer de Trustless Work\n` +
@@ -1211,7 +1138,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
               );
             }
             
-            // ✅ Solo actualizar BD si el escrow está confirmado como resuelto en blockchain
+            //  Solo actualizar BD si el escrow está confirmado como resuelto en blockchain
             if (selectedDispute && typeof selectedDispute.id === 'number') {
               try {
                 await resolveAdminDispute(selectedDispute.id, {
@@ -1219,23 +1146,21 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                   reason: resolution.reason,
                   refund_percentage: resolution.decision === 'split' ? resolution.refund_percentage : undefined
                 });
-                console.log('✅ Estado de disputa actualizado en BD');
               } catch (dbError: any) {
-                console.warn('⚠️ Error al actualizar estado en BD (pero el escrow está resuelto en blockchain):', dbError.message);
                 // No fallar si la BD no se actualiza, el escrow ya está resuelto en blockchain
               }
             }
             
-            // ✅ MEJORA CRÍTICA: Mostrar popup de éxito INMEDIATAMENTE cuando la transacción sea exitosa
+            //  MEJORA CRÍTICA: Mostrar popup de éxito INMEDIATAMENTE cuando la transacción sea exitosa
             setSuccessPopupData({
               txHash: lastTxHash,
               amount: balance
             });
             setShowSuccessPopup(true);
             
-            const successMessage = `✅ Disputa resuelta. ${successMessages.join('. ')}\n\n` +
-              `✅ CONFIRMADO: El escrow está resuelto en la blockchain.\n` +
-              `✅ CONFIRMADO: El estado ha sido actualizado en la base de datos.\n\n` +
+            const successMessage = ` Disputa resuelta. ${successMessages.join('. ')}\n\n` +
+              ` CONFIRMADO: El escrow está resuelto en la blockchain.\n` +
+              ` CONFIRMADO: El estado ha sido actualizado en la base de datos.\n\n` +
               `Hash de transacción: ${lastTxHash || 'N/A'}`;
             setSuccess(successMessage);
             
@@ -1266,32 +1191,28 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
         return;
       }
 
-      // ✅ CRÍTICO: Si llegamos aquí, la disputa NO tiene escrow_id de Trustless Work
+      //  CRÍTICO: Si llegamos aquí, la disputa NO tiene escrow_id de Trustless Work
       // Esto significa que es una disputa del sistema antiguo (sin escrow en blockchain)
       // En este caso, solo actualizamos la BD (el sistema antiguo no usa blockchain)
       if (!selectedDispute.escrow_id || !selectedDispute.escrow_id.startsWith('C')) {
-        const resolveResponse = await resolveAdminDispute(selectedDispute.id, resolutionData);
+        await resolveAdminDispute(selectedDispute.id, resolutionData);
         setSuccess('Disputa resuelta correctamente');
         fetchDisputes();
         setResolving(false);
         return;
       }
 
-      // ✅ Si llegamos aquí y tiene escrow_id, debería haber sido procesado arriba
+      //  Si llegamos aquí y tiene escrow_id, debería haber sido procesado arriba
       // Si no, hay un error en la lógica - esto NO debería pasar
       throw new Error('Error: La disputa tiene escrow_id pero no fue procesada correctamente. Por favor, recarga la página e intenta nuevamente.');
     } catch (err: any) {
-      console.error('❌ Error completo en handleResolve:', err);
-      console.error('   Error message:', err.message);
-      console.error('   Error stack:', err.stack);
-      console.error('   Error name:', err.name);
       
       const errorMessage = err.message || 'Error al resolver disputa';
       setError(errorMessage);
       
       // Si el error es sobre wallet o firma, mostrar mensaje más específico
       if (errorMessage.includes('wallet') || errorMessage.includes('firmar') || errorMessage.includes('sign')) {
-        setError(`❌ ${errorMessage}\n\nPor favor, verifica que:\n- Tu wallet (Freighter) esté conectada\n- La wallet conectada sea el disputeResolver del escrow\n- Freighter esté abierto y funcionando`);
+        setError(` ${errorMessage}\n\nPor favor, verifica que:\n- Tu wallet (Freighter) esté conectada\n- La wallet conectada sea el disputeResolver del escrow\n- Freighter esté abierto y funcionando`);
       }
     } finally {
       setResolving(false);
@@ -1332,7 +1253,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
           Gestión de Disputas / Arbitraje
         </h2>
         <p>Revisa y resuelve disputas entre clientes y trabajadores</p>
-          {/* ✅ MEJORA: Mensaje informativo sobre disputas por cancelación */}
+          {/*  MEJORA: Mensaje informativo sobre disputas por cancelación */}
           <div style={{
             marginTop: '12px',
             padding: '10px 15px',
@@ -1422,10 +1343,10 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
               <tbody>
                 {disputes
                   .filter(dispute => {
-                    // ✅ MEJORA: Filtrar basándose en el estado real de Trustless Work
+                    //  MEJORA: Filtrar basándose en el estado real de Trustless Work
                     if (!statusFilter) return true;
                     
-                    // ✅ CRÍTICO: Las disputas virtuales siempre deben aparecer si están pendientes
+                    //  CRÍTICO: Las disputas virtuales siempre deben aparecer si están pendientes
                     if (dispute.isVirtualDispute && statusFilter === 'pending') {
                       return true; // Siempre mostrar disputas virtuales cuando se filtran pendientes
                     }
@@ -1467,7 +1388,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                             borderRadius: '4px',
                             color: '#ff9800'
                           }}>
-                            🔗 Desde Trustless Work
+                             Desde Trustless Work
                           </span>
                         )}
                         <div className="text-muted">{dispute.task_title || 'Sin título'}</div>
@@ -1479,7 +1400,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                             Escrow: {dispute.escrow_id.substring(0, 8)}...
                           </div>
                         )}
-                        {/* ✅ MEJORA: Mensaje especial para disputas por cancelación */}
+                        {/*  MEJORA: Mensaje especial para disputas por cancelación */}
                         {((dispute.reason && (
                           dispute.reason.toLowerCase().includes('cancelación') || 
                           dispute.reason.toLowerCase().includes('cancelacion') ||
@@ -1510,7 +1431,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                       {dispute.trustlessWorkStatus && (
                         <div className="text-muted" style={{ fontSize: '0.85em', marginTop: '4px' }}>
                           <small>
-                            🔗 TW: <strong>{dispute.trustlessWorkStatus}</strong>
+                             TW: <strong>{dispute.trustlessWorkStatus}</strong>
                             {dispute.trustlessWorkBalance !== undefined && (
                               <> | {dispute.trustlessWorkBalance.toFixed(7)} USDC</>
                             )}
@@ -2028,7 +1949,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                 {/* Razón de la disputa */}
                 <div className="dispute-details-section">
                   <h4>Razón de la Disputa</h4>
-                  {/* ✅ MEJORA: Mensaje especial para disputas por cancelación */}
+                  {/*  MEJORA: Mensaje especial para disputas por cancelación */}
                   {selectedDispute.reason && (
                     (selectedDispute.reason.toLowerCase().includes('cancelación') || 
                      selectedDispute.reason.toLowerCase().includes('cancelacion') ||
@@ -2211,11 +2132,11 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                                 }}>
                                   {isConnected && walletAddress 
                                     ? (requiredDisputeResolver && walletAddress === requiredDisputeResolver
-                                        ? '✅ Wallet correcta (disputeResolver)'
+                                        ? ' Wallet correcta (disputeResolver)'
                                         : requiredDisputeResolver
-                                          ? '⚠️ Wallet incorrecta'
-                                          : '✅ Wallet conectada')
-                                    : '⚠️ Wallet no conectada'}
+                                          ? ' Wallet incorrecta'
+                                          : ' Wallet conectada')
+                                    : ' Wallet no conectada'}
                                 </strong>
                                 {isConnected && walletAddress ? (
                                   <>
@@ -2237,12 +2158,12 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                                       }}>
                                         {walletAddress === requiredDisputeResolver ? (
                                           <div style={{ color: '#10b981' }}>
-                                            ✅ La wallet conectada es el disputeResolver correcto
+                                             La wallet conectada es el disputeResolver correcto
                                           </div>
                                         ) : (
                                           <>
                                             <strong style={{ color: '#ff9800', display: 'block', marginBottom: '4px' }}>
-                                              ⚠️ Wallet requerida (disputeResolver):
+                                               Wallet requerida (disputeResolver):
                                             </strong>
                                             <code style={{ 
                                               color: '#fff', 
@@ -2352,7 +2273,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
             setShowResolveForm(false);
           }}
           type="success"
-          title={successPopupData?.alreadyResolved ? "✅ Disputa Ya Resuelta" : "¡Disputa Resuelta Exitosamente!"}
+          title={successPopupData?.alreadyResolved ? " Disputa Ya Resuelta" : "¡Disputa Resuelta Exitosamente!"}
           message={
             successPopupData
               ? successPopupData.alreadyResolved
@@ -2360,11 +2281,11 @@ const DisputeManagement: React.FC<DisputeManagementProps> = ({ onUpdate }) => {
                   `El escrow ${successPopupData.contractId ? successPopupData.contractId.substring(0, 8) + '...' : 'N/A'} ya fue procesado y los fondos fueron distribuidos.\n` +
                   `Monto del escrow: ${successPopupData.amount?.toFixed(7) || '0'} USDC\n\n` +
                   `La disputa fue resuelta exitosamente en una transacción anterior.`
-                : `✅ La disputa ha sido resuelta correctamente en la blockchain.\n\n` +
-                  `💰 Monto reembolsado: ${successPopupData.amount?.toFixed(7) || '0'} USDC\n` +
-                  `🔗 Hash de transacción: ${successPopupData.txHash || 'N/A'}\n\n` +
-                  `✅ CONFIRMADO: El escrow está resuelto en la blockchain.\n` +
-                  `✅ CONFIRMADO: El estado ha sido actualizado en la base de datos.\n\n` +
+                : ` La disputa ha sido resuelta correctamente en la blockchain.\n\n` +
+                  ` Monto reembolsado: ${successPopupData.amount?.toFixed(7) || '0'} USDC\n` +
+                  ` Hash de transacción: ${successPopupData.txHash || 'N/A'}\n\n` +
+                  ` CONFIRMADO: El escrow está resuelto en la blockchain.\n` +
+                  ` CONFIRMADO: El estado ha sido actualizado en la base de datos.\n\n` +
                   `Los fondos han sido transferidos exitosamente.`
               : 'La disputa ha sido resuelta correctamente.'
           }

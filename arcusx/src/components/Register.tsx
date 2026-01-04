@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaArrowLeft, FaGoogle, FaGithub } from 'react-icons/fa';
+import { FaEye, FaEyeSlash, FaArrowLeft, FaGoogle, FaGithub } from 'react-icons/fa';
 import '../css/Register.css';
 import { authService } from '../services/authService';
+import { useAuth } from '../hooks/useAuth';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -17,6 +18,15 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+
+  // Verificar si el usuario ya está autenticado al cargar el componente
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Si ya está autenticado, redirigir al dashboard
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -100,7 +110,7 @@ const Register = () => {
             <p>Comienza tu viaje en el mundo Web3</p>
             <div className="register-benefits">
               <div className="benefit-item">
-                <span className="benefit-icon">🚀</span>
+                <span className="benefit-icon"></span>
                 <span>Accede a microtareas</span>
               </div>
               <div className="benefit-item">
@@ -159,9 +169,6 @@ const Register = () => {
               <span>O regístrate con email</span>
             </div>
             <div className="form-group">
-              <div className="input-icon">
-                <FaUser />
-              </div>
               <input
                 type="text"
                 name="username"
@@ -173,9 +180,6 @@ const Register = () => {
               />
             </div>
             <div className="form-group">
-              <div className="input-icon">
-                <FaEnvelope />
-              </div>
               <input
                 type="email"
                 name="email"
@@ -187,9 +191,6 @@ const Register = () => {
               />
             </div>
             <div className="form-group">
-              <div className="input-icon">
-                <FaLock />
-              </div>
               <input
                 type={showPassword ? "text" : "password"}
                 name="password"
@@ -209,9 +210,6 @@ const Register = () => {
               </button>
             </div>
             <div className="form-group">
-              <div className="input-icon">
-                <FaLock />
-              </div>
               <input
                 type={showConfirmPassword ? "text" : "password"}
                 name="confirmPassword"

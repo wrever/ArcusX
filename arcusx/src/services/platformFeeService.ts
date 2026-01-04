@@ -97,7 +97,6 @@ export async function getPlatformFee(useCache: boolean = true): Promise<number> 
     // Si todo falla, usar valor por defecto
     return 0.003; // 0.3% por defecto
   } catch (error) {
-    console.error('Error al obtener platform fee:', error);
     return 0.003; // 0.3% por defecto
   }
 }

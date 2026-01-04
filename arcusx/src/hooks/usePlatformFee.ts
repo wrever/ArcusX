@@ -22,7 +22,6 @@ export function usePlatformFee() {
         setPlatformFee(fee);
         setPlatformFeePercent((fee * 100).toFixed(2));
       } catch (error) {
-        console.error('Error al cargar platform fee:', error);
         // Mantener valores por defecto si falla
       } finally {
         setLoading(false);

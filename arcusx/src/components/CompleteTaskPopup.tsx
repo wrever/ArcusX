@@ -105,7 +105,6 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
         setCurrentStep(1);
       }
     } catch (error) {
-      console.error('Error al verificar estado del milestone:', error);
     }
   };
 
@@ -130,7 +129,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
           updateStepStatus(stepIndex, 'completed');
           setMilestoneApproved(true);
           
-          // ✅ HABILITAR INMEDIATAMENTE: Si la aprobación fue exitosa, habilitar el botón de liberar sin esperar
+          //  HABILITAR INMEDIATAMENTE: Si la aprobación fue exitosa, habilitar el botón de liberar sin esperar
           updateStepDisabled(1, false); // Habilitar botón de liberar fondos inmediatamente
           setCurrentStep(1);
           
@@ -143,7 +142,6 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                 setTimeout(async () => {
                   const retryApproved = await onVerifyMilestone();
                   if (!retryApproved && process.env.NODE_ENV === 'development') {
-                    console.warn('⚠️ El milestone no se verificó como aprobado, pero el botón ya está habilitado');
                   }
                 }, 2000);
               }
@@ -155,7 +153,6 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
           updateStepStatus(stepIndex, 'error');
         }
       } catch (error: any) {
-        console.error('Error al aprobar milestone:', error);
         updateStepStatus(stepIndex, 'error');
       }
     }
@@ -178,7 +175,6 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
           updateStepStatus(stepIndex, 'error');
         }
       } catch (error: any) {
-        console.error('Error al liberar fondos:', error);
         updateStepStatus(stepIndex, 'error');
       }
     }
@@ -229,7 +225,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
             <p><strong>Monto de la tarea:</strong> {taskPrice} USDC</p>
             <p><strong>Contract ID:</strong> {escrowId.slice(0, 8)}...{escrowId.slice(-8)}</p>
             <p style={{ color: '#ffa500', marginTop: '0.5rem' }}>
-              <strong>⚠️ Nota:</strong> Este proceso requiere 2 firmas:
+              <strong> Nota:</strong> Este proceso requiere 2 firmas:
             </p>
             <ul style={{ marginLeft: '20px', marginTop: '0.5rem' }}>
               <li>1. Aprobar el milestone (confirmar que el trabajo está completo)</li>
@@ -284,7 +280,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                   
                   {step.status === 'completed' && (
                     <div className="escrow-step-status">
-                      ✓ Completado
+                      Completado
                     </div>
                   )}
                   
@@ -333,7 +329,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
 
         {/* Info */}
         <div className="escrow-process-note">
-          <p>💡 <strong>Nota:</strong> Este proceso requiere 2 transacciones:</p>
+          <p> <strong>Nota:</strong> Este proceso requiere 2 transacciones:</p>
           <p>1. Aprobar el milestone (confirmar que el trabajo está completo)</p>
           <p>2. Liberar los fondos al trabajador</p>
           <div style={{ 
@@ -349,7 +345,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
               color: '#28c0f0',
               fontSize: '15px'
             }}>
-              💰 Desglose del pago:
+               Desglose del pago:
             </p>
             <div style={{ 
               display: 'flex', 
@@ -461,7 +457,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
               marginBottom: '24px',
               filter: 'drop-shadow(0 4px 8px rgba(40, 192, 240, 0.3))'
             }}>
-              ✅
+              
             </div>
             
             <h3 style={{
@@ -507,7 +503,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                   paddingBottom: '12px',
                   borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
                 }}>
-                  <span style={{ fontSize: '18px' }}>✅</span>
+                  <span style={{ fontSize: '18px' }}></span>
                   <strong style={{ fontSize: '15px', color: '#fff' }}>
                     Milestone aprobado
                   </strong>
@@ -518,7 +514,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                   gap: '10px',
                   marginBottom: '12px'
                 }}>
-                  <span style={{ fontSize: '18px' }}>✅</span>
+                  <span style={{ fontSize: '18px' }}></span>
                   <strong style={{ fontSize: '15px', color: '#fff' }}>
                     Fondos liberados: {formattedWorkerAmount} USDC
                   </strong>
@@ -577,7 +573,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                   e.currentTarget.style.boxShadow = '0 4px 12px rgba(40, 192, 240, 0.3)';
                 }}
               >
-                ✅ Aceptar
+                 Aceptar
               </button>
             </div>
           </div>

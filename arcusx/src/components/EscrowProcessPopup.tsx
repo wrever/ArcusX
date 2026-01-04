@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaWallet, FaFileContract, FaCoins, FaCheckCircle, FaSpinner, FaTimes } from 'react-icons/fa';
+import { FaWallet, FaFileContract, FaCoins, FaCheckCircle, FaSpinner, FaTimes, FaHome } from 'react-icons/fa';
 import { usePlatformFee } from '../hooks/usePlatformFee';
 
 interface ProcessStep {
@@ -267,7 +267,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
             <p><strong>Dirección:</strong> {contributorAddress.slice(0, 6)}...{contributorAddress.slice(-4)}</p>
             <p><strong>Monto de la tarea:</strong> {taskPrice} USDC</p>
             <p style={{ color: '#ffa500', marginTop: '0.5rem' }}>
-              <strong>⚠️ Nota:</strong> Se requiere una pequeña cantidad de XLM para fees de transacción de Stellar (~0.0001 XLM)
+              <strong> Nota:</strong> Se requiere una pequeña cantidad de XLM para fees de transacción de Stellar (~0.0001 XLM)
             </p>
           </div>
         </div>
@@ -308,7 +308,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
                   
                   {step.status === 'completed' && (
                     <div className="escrow-step-status">
-                      ✓ Completado
+                      Completado
                     </div>
                   )}
                   
@@ -360,7 +360,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
 
         {/* Info */}
         <div className="escrow-process-note">
-          <p>💡 <strong>Nota:</strong> Este proceso requiere 2 transacciones:</p>
+          <p> <strong>Nota:</strong> Este proceso requiere 2 transacciones:</p>
           <p>1. Crear el contrato escrow</p>
           <p>2. Enviar el dinero al contrato</p>
           <div style={{ 
@@ -376,7 +376,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
               color: '#28c0f0',
               fontSize: '15px'
             }}>
-              💰 Desglose del pago:
+               Desglose del pago:
             </p>
             <div style={{ 
               display: 'flex', 
@@ -497,7 +497,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
               marginBottom: '24px',
               filter: 'drop-shadow(0 4px 8px rgba(40, 192, 240, 0.3))'
             }}>
-              ✅
+              
             </div>
             
             <h3 style={{
@@ -543,7 +543,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
                   paddingBottom: '12px',
                   borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
                 }}>
-                  <span style={{ fontSize: '18px' }}>✅</span>
+                  <span style={{ fontSize: '18px' }}></span>
                   <strong style={{ fontSize: '15px', color: '#fff' }}>
                     Contrato escrow creado
                   </strong>
@@ -556,7 +556,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
                   paddingBottom: '12px',
                   borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
                 }}>
-                  <span style={{ fontSize: '18px' }}>✅</span>
+                  <span style={{ fontSize: '18px' }}></span>
                   <strong style={{ fontSize: '15px', color: '#fff' }}>
                     Fondos enviados al escrow
                   </strong>
@@ -567,7 +567,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
                   gap: '10px',
                   marginBottom: '12px'
                 }}>
-                  <span style={{ fontSize: '18px' }}>✅</span>
+                  <span style={{ fontSize: '18px' }}></span>
                   <strong style={{ fontSize: '15px', color: '#fff' }}>
                     Trabajador seleccionado
                   </strong>
@@ -626,7 +626,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
                   e.currentTarget.style.boxShadow = '0 4px 12px rgba(40, 192, 240, 0.3)';
                 }}
               >
-                👁️ Supervisar Tarea
+                Supervisar Tarea
               </button>
               <button 
                 onClick={handleSuccessPopupClose}
@@ -651,7 +651,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
-                🏠 Ir al Dashboard
+                <FaHome style={{ marginRight: '8px' }} /> Ir al Dashboard
               </button>
             </div>
           </div>

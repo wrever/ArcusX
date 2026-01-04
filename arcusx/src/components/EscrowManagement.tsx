@@ -92,7 +92,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
       
       const data = await getAdminEscrows(params);
       
-      // ✅ MEJORA: Consultar Trustless Work para obtener estados reales de los contratos
+      //  MEJORA: Consultar Trustless Work para obtener estados reales de los contratos
       const enrichedEscrows = await enrichEscrowsWithTrustlessWorkStatus(data.escrows);
       
       setEscrows(enrichedEscrows);
@@ -108,7 +108,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
     }
   };
 
-  // ✅ MEJORA: Enriquecer escrows con estados reales desde Trustless Work
+  //  MEJORA: Enriquecer escrows con estados reales desde Trustless Work
   const enrichEscrowsWithTrustlessWorkStatus = async (escrows: any[]): Promise<any[]> => {
     if (!escrows || escrows.length === 0) {
       return escrows;
@@ -181,7 +181,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
           const realStatus = escrowStatusMap.get(escrowId)!;
           return {
             ...escrow,
-            // ✅ Estado real desde Trustless Work (prioridad sobre BD)
+            //  Estado real desde Trustless Work (prioridad sobre BD)
             escrow_status: realStatus.realStatus,
             // Información adicional
             trustlessWorkStatus: realStatus.realStatus,
@@ -203,7 +203,6 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
         };
       });
     } catch (err: any) {
-      console.warn('⚠️ Error al consultar Trustless Work para estados reales:', err.message);
       // Si falla, retornar escrows sin enriquecer
       return escrows;
     }
@@ -251,7 +250,6 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
         setEscrowInfo(null);
       }
     } catch (err: any) {
-      console.error('Error al obtener información del escrow:', err);
       setEscrowInfo(null);
     } finally {
       setLoadingEscrowInfo(false);
@@ -279,7 +277,6 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
         });
       }
     } catch (err: any) {
-      console.error('Error al verificar escrow:', err);
     } finally {
       setVerifyingEscrows(prev => {
         const newSet = new Set(prev);
@@ -324,7 +321,6 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
           }
         });
       } catch (err: any) {
-        console.error('Error al verificar batch de escrows:', err);
       }
     }
     
@@ -672,7 +668,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
                         {getStatusBadge(escrow.escrow_status)}
                         {escrow.hasInconsistency && (
                           <div className="text-muted" style={{ fontSize: '0.75em', marginTop: '2px', color: '#ff9800' }}>
-                            ⚠️ BD: {escrow.db_escrow_status} → TW: {escrow.trustlessWorkStatus || escrow.escrow_status}
+                             BD: {escrow.db_escrow_status} → TW: {escrow.trustlessWorkStatus || escrow.escrow_status}
                           </div>
                         )}
                         {escrow.trustlessWorkBalance !== undefined && (
@@ -697,7 +693,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
                                 className={`badge ${verificationStatus.type === 'success' ? 'success' : 'error'}`}
                                 title={verificationStatus.message}
                               >
-                                {verificationStatus.type === 'success' ? '✓' : '⚠'}
+                                {verificationStatus.type === 'success' ? 'OK' : 'WARN'}
                               </span>
                             ) : (
                               <button

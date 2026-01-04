@@ -3,7 +3,7 @@ import { Asset } from '@stellar/stellar-sdk';
 /**
  * Configuración de USDC en Stellar
  * 
- * ⚠️ ACTUALIZACIÓN IMPORTANTE (Diciembre 2024):
+ *  ACTUALIZACIÓN IMPORTANTE (Diciembre 2024):
  * Trustless Work ha cambiado el sistema y ahora SOLO acepta issuer tradicional de Stellar
  * (direcciones que empiezan con "G"). NO usar Contract ID de Soroban (direcciones que empiezan con "C").
  * 
@@ -17,7 +17,7 @@ const isTestnet = import.meta.env.VITE_STELLAR_NETWORK === 'testnet' ||
                   window.location.hostname === 'localhost';
 
 // Issuer tradicional de USDC para Trustless Work
-// ⚠️ SOLO usar este issuer (direcciones que empiezan con "G")
+//  SOLO usar este issuer (direcciones que empiezan con "G")
 // NO usar Contract ID de Soroban (direcciones que empiezan con "C")
 export const USDC_ISSUER = isTestnet
   ? 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5' // Testnet

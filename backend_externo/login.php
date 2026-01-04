@@ -1,7 +1,57 @@
 <?php
-// Al inicio del archivo, agrega estas líneas para mostrar errores
+/**
+ * login.php
+ * Endpoint para autenticación de usuarios
+ */
+
+// Deshabilitar display_errors para evitar output antes de headers
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/php-error.log');
+
+// Iniciar output buffering para capturar cualquier output inesperado
+ob_start();
+
+// CORS headers - DEBEN IR PRIMERO, ANTES DE CUALQUIER OTRO OUTPUT
+$allowed_origins = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'https://arcusx.pro',
+    'http://arcusx.pro'
+];
+$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+
+// Manejar preflight OPTIONS request PRIMERO
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    // Limpiar cualquier output previo
+    while (ob_get_level() > 0) {
+        ob_end_clean();
+    }
+    if (in_array($origin, $allowed_origins)) {
+        header("Access-Control-Allow-Origin: $origin");
+        header("Access-Control-Allow-Credentials: true");
+    }
+    header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+    header("Access-Control-Max-Age: 3600");
+    http_response_code(200);
+    exit();
+}
+
+// Headers CORS para requests normales
+if (in_array($origin, $allowed_origins)) {
+    header("Access-Control-Allow-Origin: $origin");
+    header("Access-Control-Allow-Credentials: true");
+}
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+header("Access-Control-Max-Age: 3600");
+header("Content-Type: application/json; charset=UTF-8");
+
+// Limpiar buffer antes de require
+ob_end_clean();
 
 require_once 'config.php';
 

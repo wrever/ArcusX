@@ -9,7 +9,7 @@ import EscrowManagement from './EscrowManagement';
 import UserManagement from './UserManagement';
 import FeeManagement from './FeeManagement';
 import TokenManagement from './TokenManagement';
-import { getAdminStats, getAdminConfig, adminLogout, getAdminEscrows } from '../services/adminService';
+import { getAdminStats, getAdminConfig, adminLogout } from '../services/adminService';
 import { useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks';
 import '../css/AdminPanel.css';
 
@@ -81,12 +81,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
         ? platformFeeValue * 100 
         : (typeof platformFeeValue === 'string' ? parseFloat(platformFeeValue) * 100 : 0.3);
       
-      // ✅ MEJORA: Obtener disputas activas consultando Trustless Work para estados reales
+      //  MEJORA: Obtener disputas activas consultando Trustless Work para estados reales
       let activeDisputes = 0;
       try {
         const adminService = await import('../services/adminService');
         // Obtener todas las disputas de la BD (sin filtro)
-        const disputesData = await adminService.getAdminDisputes({ status: '', limit: 1000 });
+        const disputesData = await adminService.getAdminDisputes({ status: undefined, limit: 1000 });
         const allDisputes = disputesData.disputes || [];
         
         // Obtener escrow_ids de las disputas
@@ -119,7 +119,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
             // Contar disputas que están en disputa en Trustless Work
             activeDisputes = disputedEscrowIds.size;
           } catch (twError) {
-            console.warn('Error al consultar Trustless Work para disputas:', twError);
             // Fallback: contar disputas pendientes en BD
             activeDisputes = allDisputes.filter((d: any) => d.status === 'pending').length;
           }
@@ -129,7 +128,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
         }
       } catch (disputeError) {
         // Si falla, dejar en 0
-        console.warn('Error al obtener disputas activas:', disputeError);
       }
       
       // Usar estadísticas por período del backend
@@ -158,7 +156,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
         feesToday: feesToday
       });
     } catch (err: any) {
-      console.error('Error al cargar estadísticas:', err);
       setError(err.message || 'Error al cargar estadísticas. Verifica tu conexión.');
     } finally {
       setLoading(false);

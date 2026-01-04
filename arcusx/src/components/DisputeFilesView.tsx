@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaFile, FaFilePdf, FaFileImage, FaFileArchive, FaDownload, FaEye } from 'react-icons/fa';
+import { FaFile, FaFilePdf, FaFileImage, FaFileArchive, FaDownload, FaEye, FaUser, FaUserTie } from 'react-icons/fa';
 import { getDisputeFiles, DisputeFile, DisputeFiles } from '../services/disputeService';
 import { API_URL } from '../config/database';
 import '../css/AdminPanel.css';
@@ -32,7 +32,6 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
         setSummary(data.summary);
       } catch (err: any) {
         setError(err.message || 'Error al cargar los archivos');
-        console.error('Error al cargar archivos:', err);
       } finally {
         setLoading(false);
       }
@@ -279,7 +278,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
                 </div>
 
                 <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', marginBottom: '10px' }}>
-                  {file.uploaded_by === 'client' ? '👤 Cliente' : '👷 Trabajador'}
+                  {file.uploaded_by === 'client' ? <><FaUser style={{ marginRight: '4px' }} /> Cliente</> : <><FaUserTie style={{ marginRight: '4px' }} /> Trabajador</>}
                   {file.uploaded_at && (
                     <span style={{ marginLeft: '8px' }}>
                       • {new Date(file.uploaded_at).toLocaleDateString('es-ES')}

@@ -24,7 +24,6 @@ const DisputeTimelineView: React.FC<DisputeTimelineViewProps> = ({ disputeId }) 
         setTimeline(data.timeline);
       } catch (err: any) {
         setError(err.message || 'Error al cargar el timeline');
-        console.error('Error al cargar timeline:', err);
       } finally {
         setLoading(false);
       }
@@ -228,7 +227,7 @@ const DisputeTimelineView: React.FC<DisputeTimelineViewProps> = ({ disputeId }) 
                           fontWeight: 'bold',
                           marginTop: '4px'
                         }}>
-                          💰 {event.metadata.amount} USDC
+                           {event.metadata.amount} USDC
                         </div>
                       )}
                       {event.metadata.reason && (

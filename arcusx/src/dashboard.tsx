@@ -124,7 +124,6 @@ const Dashboard = () => {
             setTotalPaid(parseFloat(earningsData.total_paid));
           }
         } catch (error: any) {
-          console.error('Error al cargar ganancias:', error);
         }
       };
       
@@ -311,7 +310,6 @@ const Dashboard = () => {
           setUserProfile(profileData);
           setUserStats(statsData);
         } catch (error: any) {
-          console.error('Error cargando perfil:', error);
           // Si falla, usar datos básicos del localStorage
           const stored = localStorage.getItem('user');
           if (stored) {
@@ -392,7 +390,6 @@ const Dashboard = () => {
       const data = await getUserDisputes();
       setPendingDisputes(data.disputes);
     } catch (error: any) {
-      console.error('Error al cargar disputas pendientes:', error);
     }
   };
   
@@ -410,7 +407,6 @@ const Dashboard = () => {
       setNotifications(data.notifications);
       setUnreadCount(data.unread_count);
     } catch (error: any) {
-      console.error('Error al cargar notificaciones:', error);
       // Si falla, mantener notificaciones vacías
       setNotifications([]);
       setUnreadCount(0);
@@ -452,7 +448,6 @@ const Dashboard = () => {
       // Actualizar contador
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error: any) {
-      console.error('Error al marcar notificación como leída:', error);
       // Aún así actualizar el estado local para mejor UX
       setNotifications(prev => 
         prev.map(notification => 
@@ -471,8 +466,7 @@ const Dashboard = () => {
       const unreadNotifications = notifications.filter(n => !n.is_read);
       await Promise.all(
         unreadNotifications.map(notification => 
-          markNotificationAsReadService(notification.id).catch(err => {
-            console.error(`Error al marcar notificación ${notification.id} como leída:`, err);
+          markNotificationAsReadService(notification.id).catch(() => {
           })
         )
       );
@@ -483,7 +477,6 @@ const Dashboard = () => {
       );
       setUnreadCount(0);
     } catch (error: any) {
-      console.error('Error al marcar todas las notificaciones como leídas:', error);
       // Aún así actualizar el estado local para mejor UX
       setNotifications(prev => 
         prev.map(notification => ({ ...notification, is_read: true }))
@@ -506,13 +499,13 @@ const Dashboard = () => {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'success':
-        return '✅';
+        return '';
       case 'warning':
-        return '⚠️';
+        return '';
       case 'error':
-        return '❌';
+        return '';
       case 'info':
-        return 'ℹ️';
+        return '';
       default:
         return '🔔';
     }
@@ -1316,7 +1309,7 @@ const Dashboard = () => {
               <div className="notifications-list">
                 {loadingNotifications ? (
                   <div className="no-notifications">
-                    <div className="no-notifications-icon">⏳</div>
+                    <div className="no-notifications-icon"></div>
                     <h3>Cargando notificaciones...</h3>
                   </div>
                 ) : filteredNotifications.length === 0 ? (
@@ -1383,7 +1376,7 @@ const Dashboard = () => {
                             onClick={() => markNotificationAsRead(notification.id)}
                             className="mark-read-button"
                           >
-                            ✅ Marcar como leída
+                             Marcar como leída
                           </button>
                         )}
                         
@@ -1391,7 +1384,7 @@ const Dashboard = () => {
                           onClick={() => deleteNotification(notification.id)}
                           className="delete-button"
                         >
-                          🗑️
+                          Eliminar
                         </button>
                       </div>
                     </div>

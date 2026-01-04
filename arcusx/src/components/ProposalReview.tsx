@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaUser, FaCalendarAlt, FaWallet, FaExternalLinkAlt, FaCheck, FaTimes, FaSpinner } from 'react-icons/fa';
+import { FaArrowLeft, FaUser, FaCalendarAlt, FaWallet, FaExternalLinkAlt, FaCheck, FaTimes, FaSpinner, FaEye, FaHome, FaFileAlt, FaCheckCircle } from 'react-icons/fa';
 import axios from 'axios';
 import { API_URL } from '../config/database';
 import { useWallet } from '../hooks/useWallet';
@@ -658,15 +658,15 @@ const ProposalReview = () => {
     const feePercent = (platformFee * 100).toFixed(2);
     
     // Mostrar mensaje de éxito mejorado
-    setPopupMessage(`✅ CONTRATO ACTIVADO EXITOSAMENTE!
+    setPopupMessage(`CONTRATO ACTIVADO EXITOSAMENTE!
         
-💰 Trabajador recibirá: ${workerAmount.toFixed(2)} ${task?.currency || 'USDC'}
-📊 Comisión de plataforma (${feePercent}%): ${commission.toFixed(7)} ${task?.currency || 'USDC'}
-💳 Total pagado: ${totalAmount.toFixed(7)} ${task?.currency || 'USDC'}
-🌐 Red: Stellar Testnet
-👤 Trabajador: ${selectedProposal?.applicant_username}
+Trabajador recibirá: ${workerAmount.toFixed(2)} ${task?.currency || 'USDC'}
+Comisión de plataforma (${feePercent}%): ${commission.toFixed(7)} ${task?.currency || 'USDC'}
+Total pagado: ${totalAmount.toFixed(7)} ${task?.currency || 'USDC'}
+Red: Stellar Testnet
+Trabajador: ${selectedProposal?.applicant_username}
 
-🎉 El proyecto está activo y el trabajador puede comenzar.`);
+El proyecto está activo y el trabajador puede comenzar.`);
     
     // Cerrar el popup de proceso primero
     setShowEscrowProcessPopup(false);
@@ -847,15 +847,15 @@ const ProposalReview = () => {
               padding: '1rem',
               marginTop: '1rem'
             }}>
-              <p style={{ margin: 0, color: '#4ade80', fontSize: '0.9rem' }}>
-                ✅ <strong>Sistema Multisig 2-de-2:</strong> Se crea una cuenta escrow única para cada tarea. Los fondos en USDC están seguros y requieren ambas firmas (cliente + trabajador) para liberar.
+              <p style={{ margin: 0, color: '#4ade80', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FaCheckCircle style={{ fontSize: '14px' }} /> <strong>Sistema Multisig 2-de-2:</strong> Se crea una cuenta escrow única para cada tarea. Los fondos en USDC están seguros y requieren ambas firmas (cliente + trabajador) para liberar.
               </p>
             </div>
           </div>
 
             {proposals.length === 0 ? (
             <div className="no-proposals">
-              <div className="no-proposals-icon">📝</div>
+              <div className="no-proposals-icon"><FaFileAlt /></div>
               <h3>No hay propuestas aún</h3>
               <p>Los trabajadores aún no han enviado propuestas para esta tarea.</p>
             </div>
@@ -1043,9 +1043,13 @@ const ProposalReview = () => {
               fontSize: '72px',
               marginBottom: '24px',
               animation: 'scaleIn 0.5s ease-out',
-              filter: 'drop-shadow(0 4px 12px rgba(40, 192, 240, 0.4))'
+              filter: 'drop-shadow(0 4px 12px rgba(40, 192, 240, 0.4))',
+              color: '#4ade80',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center'
             }}>
-              ✅
+              <FaCheckCircle />
             </div>
 
             {/* Título */}
@@ -1078,7 +1082,7 @@ const ProposalReview = () => {
                     fontWeight: '600',
                     color: '#28c0f0'
                   }}>
-                    🎉 ¡Proceso Completado Exitosamente!
+                    ¡Proceso Completado Exitosamente!
                   </p>
                   <p style={{ 
                     fontSize: '16px', 
@@ -1103,7 +1107,7 @@ const ProposalReview = () => {
                       paddingBottom: '12px',
                       borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
                     }}>
-                      <span style={{ fontSize: '18px' }}>✅</span>
+                      <FaCheckCircle style={{ fontSize: '18px', color: '#4ade80' }} />
                       <strong style={{ fontSize: '15px', color: '#fff' }}>
                         Contrato escrow creado
                       </strong>
@@ -1116,7 +1120,7 @@ const ProposalReview = () => {
                       paddingBottom: '12px',
                       borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
                     }}>
-                      <span style={{ fontSize: '18px' }}>✅</span>
+                      <FaCheckCircle style={{ fontSize: '18px', color: '#4ade80' }} />
                       <strong style={{ fontSize: '15px', color: '#fff' }}>
                         Fondos enviados al escrow
                       </strong>
@@ -1129,7 +1133,7 @@ const ProposalReview = () => {
                       paddingBottom: '12px',
                       borderBottom: selectedProposal || task?.escrow_id ? '1px solid rgba(40, 192, 240, 0.2)' : 'none'
                     }}>
-                      <span style={{ fontSize: '18px' }}>✅</span>
+                      <FaCheckCircle style={{ fontSize: '18px', color: '#4ade80' }} />
                       <strong style={{ fontSize: '15px', color: '#fff' }}>
                         Trabajador seleccionado{selectedProposal ? `: ${selectedProposal.applicant_username}` : ''}
                       </strong>
@@ -1273,7 +1277,7 @@ const ProposalReview = () => {
                   e.currentTarget.style.boxShadow = '0 4px 16px rgba(40, 192, 240, 0.4)';
                 }}
               >
-                👁️ Supervisar Tarea
+                <FaEye style={{ marginRight: '8px' }} /> Supervisar Tarea
               </button>
               <button 
                 onClick={handleGoToDashboard} 
@@ -1303,7 +1307,7 @@ const ProposalReview = () => {
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
-                🏠 Ir al Dashboard
+                <FaHome style={{ marginRight: '8px' }} /> Ir al Dashboard
               </button>
             </div>
           </div>
@@ -1314,7 +1318,9 @@ const ProposalReview = () => {
       {showErrorPopup && (
         <div className="popup-overlay">
           <div className="popup error-popup">
-            <div className="popup-icon">❌</div>
+            <div className="popup-icon" style={{ color: '#ef4444', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '48px' }}>
+              <FaTimes />
+            </div>
             <h3>Error</h3>
             <p>{popupMessage}</p>
             <button onClick={handleErrorPopupClose} className="popup-button error-button">
