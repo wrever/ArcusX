@@ -19,7 +19,7 @@ const EditProfile: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [user, setUser] = useState<StoredUser | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   
   // Datos de cuenta
@@ -93,15 +93,12 @@ const EditProfile: React.FC = () => {
             const portfolioData = await getPortfolio(parsed.id);
             setPortfolio(portfolioData);
           } catch (e) {
-            console.error('Error cargando portfolio:', e);
             setPortfolio([]);
           }
         } catch (e) {
-          console.error('Error cargando perfil:', e);
           // Si falla, usar datos básicos del localStorage
         }
       } catch (e) {
-        console.error('Error parsing stored user', e);
         navigate('/login');
       } finally {
         setLoading(false);
@@ -233,6 +230,7 @@ const EditProfile: React.FC = () => {
       const newItem: PortfolioItem = {
         id,
         ...portfolioForm,
+        category: portfolioForm.category || '',
         created_at: new Date().toISOString()
       };
       

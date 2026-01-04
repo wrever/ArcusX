@@ -127,7 +127,6 @@ async function adminApiCall(action: string, method: string = 'GET', body?: any, 
   const token = getAdminToken();
   
   if (!token) {
-    console.error('No hay token de admin en localStorage');
     throw new Error('No hay sesión de administrador activa');
   }
 
@@ -146,7 +145,6 @@ async function adminApiCall(action: string, method: string = 'GET', body?: any, 
       }
     }
   } catch (e) {
-    console.error('Error checking token expiration:', e);
     // Continuar con la petición, el backend validará el token
   }
 
@@ -184,22 +182,16 @@ async function adminApiCall(action: string, method: string = 'GET', body?: any, 
     data = JSON.parse(text);
   } catch (parseError) {
     // Si no se puede parsear JSON, mostrar el error del servidor con el texto real
-    console.error('Error al parsear respuesta del servidor:', text);
-    console.error('Error de parseo:', parseError);
     throw new Error(`Error del servidor (${response.status}): ${text.substring(0, 500)}`);
   }
 
   if (!response.ok || !data.success) {
     if (response.status === 401 || response.status === 403) {
       // Sesión expirada o sin permisos
-      console.error('401/403 Error:', data);
       if (data.error) {
-        console.error('Error details:', data.error);
         if (data.error.token_info) {
-          console.error('Token info:', JSON.stringify(data.error.token_info, null, 2));
         }
         if (data.error.secret_info) {
-          console.error('Secret info:', data.error.secret_info);
         }
       }
       adminLogout();

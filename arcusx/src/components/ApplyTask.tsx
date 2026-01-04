@@ -298,7 +298,7 @@ const ApplyTask = () => {
             </div>
 
             <div className="form-info">
-              <h4>ℹ️ Información Importante</h4>
+              <h4> Información Importante</h4>
               <ul>
                 <li>Una vez que el cliente acepte tu propuesta, se creará un contrato inteligente</li>
                 <li>El pago se liberará automáticamente al completar la tarea</li>
@@ -318,7 +318,7 @@ const ApplyTask = () => {
       {showSuccessPopup && (
         <div className="popup-overlay">
           <div className="popup success-popup">
-            <div className="popup-icon">✅</div>
+            <div className="popup-icon"></div>
             <h3>¡Aplicación Enviada Exitosamente!</h3>
             <p>Tu propuesta ha sido enviada correctamente. El cliente revisará tu aplicación y te contactará si eres seleccionado.</p>
             <button onClick={handleSuccessPopupClose} className="popup-button success-button">
@@ -332,7 +332,7 @@ const ApplyTask = () => {
       {showErrorPopup && (
         <div className="popup-overlay">
           <div className="popup error-popup">
-            <div className="popup-icon">❌</div>
+            <div className="popup-icon"></div>
             <h3>Error al Enviar Aplicación</h3>
             <p>{submitError}</p>
             <button onClick={handleErrorPopupClose} className="popup-button error-button">

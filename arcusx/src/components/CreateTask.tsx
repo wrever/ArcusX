@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaClock, FaExclamationTriangle, FaCheckCircle } from 'react-icons/fa';
+import { FaArrowLeft, FaClock, FaExclamationTriangle, FaCheckCircle, FaFileAlt, FaCreditCard } from 'react-icons/fa';
 import '../css/CreateTask.css';
 import axios from 'axios';
 import Popup from './Popup';
 import { API_URL } from '../config/database';
-import { calculateCommissionFromWorkerAmount, calculateTotalWithCommission } from '../config/commission';
 import { getPlatformFee } from '../services/platformFeeService';
 
 interface UserLimits {
@@ -101,7 +100,6 @@ const CreateTask = () => {
       setPlatformFee(fee);
       setPlatformFeePercent((fee * 100).toFixed(2));
     } catch (error) {
-      console.error('Error al cargar platform fee:', error);
       // Mantener valores por defecto si falla
     }
   };
@@ -368,7 +366,9 @@ const CreateTask = () => {
         <form onSubmit={handleSubmit} className="create-task-form">
           {/* Información básica */}
           <div className="form-section">
-            <h3>📝 Información Básica</h3>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FaFileAlt /> Información Básica
+            </h3>
             
             <div className="form-group">
               <label htmlFor="title">Título de la Tarea *</label>
@@ -413,22 +413,22 @@ const CreateTask = () => {
 
           {/* Presupuesto y categorización */}
           <div className="form-section">
-            <h3>💰 Presupuesto y Categorización</h3>
+            <h3> Presupuesto y Categorización</h3>
             
             {/* Información del precio - Arriba del campo */}
             {formData.price && workerAmount && commissionAmount && totalAmount && (
               <div className="net-amount-display">
                 <p className="net-amount-text">
-                  💰 El trabajador recibirá: <strong>{workerAmount} USDC</strong>
+                   El trabajador recibirá: <strong>{workerAmount} USDC</strong>
                 </p>
                 <p className="commission-text">
-                  📊 Comisión de plataforma ({platformFeePercent}%): {commissionAmount} USDC
+                   Comisión de plataforma ({platformFeePercent}%): {commissionAmount} USDC
                 </p>
                 <p className="total-amount-text" style={{ fontWeight: 'bold', color: '#28c0f0', fontSize: '1.1em' }}>
-                  💳 Total a pagar: <strong>{totalAmount} USDC</strong>
+                  <FaCreditCard style={{ marginRight: '6px' }} /> Total a pagar: <strong>{totalAmount} USDC</strong>
                 </p>
                 <p className="contract-cost-text">
-                  ⚠️ Nota: Se requiere una pequeña cantidad de XLM para fees de transacción de Stellar (~0.0001 XLM)
+                   Nota: Se requiere una pequeña cantidad de XLM para fees de transacción de Stellar (~0.0001 XLM)
                 </p>
               </div>
             )}
@@ -503,7 +503,7 @@ const CreateTask = () => {
 
           {/* Información adicional */}
           <div className="form-section">
-            <h3>ℹ️ Información Adicional</h3>
+            <h3> Información Adicional</h3>
             <div className="info-box">
               <p><strong>¿Cómo funciona?</strong></p>
               <ul>
@@ -513,7 +513,7 @@ const CreateTask = () => {
                 <li>El trabajador recibirá el pago al completar y entregar la tarea satisfactoriamente</li>
                 <li>Ambas partes deben aceptar la finalización para liberar los fondos</li>
               </ul>
-              <p style={{ marginTop: '1rem' }}><strong>💰 Sobre los costos:</strong></p>
+              <p style={{ marginTop: '1rem' }}><strong> Sobre los costos:</strong></p>
               <ul>
                 <li><strong>Pago al trabajador:</strong> El monto que ingreses es exactamente lo que recibirá el trabajador al completar la tarea.</li>
                 <li><strong>Comisión ArcusX ({platformFeePercent}%):</strong> Se te cobrará adicionalmente sobre el monto del trabajador. Por ejemplo, si pagas $10 al trabajador, pagarás $10.05 en total (incluye $0.05 de comisión).</li>

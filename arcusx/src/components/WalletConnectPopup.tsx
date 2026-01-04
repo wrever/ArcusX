@@ -52,7 +52,7 @@ const WalletConnectPopup: React.FC<WalletConnectPopupProps> = ({
               className="download-button freighter-download"
               onClick={() => window.open('https://www.freighter.app/', '_blank')}
             >
-              <div className="download-icon">⬇️</div>
+              <div className="download-icon">Descargar</div>
               <span>Download Freighter</span>
             </button>
           </div>

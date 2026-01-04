@@ -197,6 +197,8 @@
                0 0 1px #28c0f0,
                0 0 1px rgba(44, 64, 68, 0.4);
   filter: drop-shadow(0 0 1px rgba(0, 212, 255, 0.7));
+  transform: translateX(45px);
+  position: relative;
 }
 
 .stat-label {
@@ -1206,6 +1208,7 @@
 
   .stat-value {
     font-size: 3.5rem;
+    transform: translateX(8px);
   }
 
   .stat-label {
@@ -1260,6 +1263,7 @@
 
   .stat-value {
     font-size: 4rem;
+    transform: translateX(8px);
   }
 
   .stat-label {
@@ -1547,6 +1551,7 @@
 
   .stat-value {
     font-size: 2rem;
+    transform: translateX(6px);
   }
 
   .stat-label {
@@ -1717,11 +1722,21 @@
 }
 
 .section-title {
-  text-align: center;
+  text-align: center !important;
   font-size: 3rem;
   color: #07233c;
   margin-bottom: 4rem;
   position: relative;
+  width: 100%;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Asegurar que todos los títulos de sección tengan el mismo tamaño */
+.team-section .section-title,
+.faq-section .section-title {
+  font-size: 3rem;
 }
 
 .section-title::after {
@@ -2475,7 +2490,7 @@
 }
 
 .guarantee-text::before {
-  content: '✓';
+  content: '';
   color: #28c0f0;
   font-weight: bold;
 }
@@ -2633,8 +2648,18 @@
   z-index: 3;
 }
 
+.faq-section .container {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  text-align: center;
+}
+
 .faq-section .section-title.light {
   color: #fff;
+  text-align: center !important;
+  width: 100%;
+  display: block;
 }
 
 .faq-grid {
@@ -2736,8 +2761,15 @@
   background: linear-gradient(135deg, #07233c 0%, #0a2d4a 100%);
 }
 
+.team-section .section-container {
+  text-align: center;
+}
+
 .team-section .section-title {
   color: #fff;
+  text-align: center !important;
+  width: 100%;
+  display: block;
 }
 
 .team-card {

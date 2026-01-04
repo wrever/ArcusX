@@ -112,7 +112,6 @@ export const authService = {
       });
       
       if (error) {
-        console.error('Error en Google OAuth:', error);
         throw error;
       }
       
@@ -160,7 +159,6 @@ export const authService = {
       });
       
       if (error) {
-        console.error('Error en GitHub OAuth:', error);
         throw error;
       }
       
@@ -199,12 +197,10 @@ export const authService = {
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error) {
-        console.error('❌ Error obteniendo sesión en handleSupabaseCallback:', error);
         throw error;
       }
       
       if (!session?.user) {
-        console.error('❌ No hay sesión en handleSupabaseCallback');
         return null;
       }
 
@@ -223,12 +219,9 @@ export const authService = {
         return syncResponse.data;
       }
       
-      console.error('❌ Respuesta del backend no exitosa:', syncResponse.data);
       throw new Error(syncResponse.data.message || 'Error al sincronizar usuario');
     } catch (error: any) {
-      console.error('❌ Error en handleSupabaseCallback:', error);
       if (error.response) {
-        console.error('Respuesta de error:', error.response.data);
       }
       throw error;
     }

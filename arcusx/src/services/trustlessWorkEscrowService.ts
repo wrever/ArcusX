@@ -28,10 +28,11 @@ import type {
   SingleReleaseStartDisputePayload,
   SingleReleaseResolveDisputePayload
 } from '@trustless-work/escrow';
-import { TransactionBuilder, Networks, Server, Asset } from '@stellar/stellar-sdk';
+import { TransactionBuilder, Networks } from '@stellar/stellar-sdk';
+import Server from '@stellar/stellar-sdk';
 import { PLATFORM_WALLET, ADMIN_WALLET } from '../config/trustlessWork';
 import { getPlatformFeeForTrustlessWork } from './platformFeeService';
-import { USDC_ISSUER, USDC_ASSET } from '../config/usdc';
+import { USDC_ISSUER } from '../config/usdc';
 
 // ============================================================================
 // CONSTANTS
@@ -51,7 +52,7 @@ const TRUSTLINE_CONFIG = {
 } as const;
 
 // Horizon Server para verificar transacciones y balances
-const getHorizonServer = (): Server => {
+const getHorizonServer = () => {
   const isTestnet = import.meta.env.VITE_STELLAR_NETWORK === 'testnet' || 
                     !import.meta.env.VITE_STELLAR_NETWORK || 
                     (typeof window !== 'undefined' && window.location.hostname === 'localhost');
@@ -329,6 +330,8 @@ export const createAndSendTransaction = async (
     console.log('✅ Transacción firmada exitosamente. XDR length:', signedXdr.length);
     
     // ✅ MEJORA: Validar el XDR firmado antes de enviarlo
+    // Nota: Las transacciones Soroban pueden causar "Bad union switch" al decodificar
+    // Intentamos validar, pero si falla con ese error específico, continuamos de todas formas
     try {
       const tx = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
       const txHash = tx.hash().toString('hex');
@@ -346,16 +349,36 @@ export const createAndSendTransaction = async (
       }
       console.log(`✅ Transacción tiene ${signatures.length} firma(s)`);
     } catch (xdrError: any) {
-      console.error('❌ Error al validar XDR firmado:', xdrError.message);
-      throw new Error(`XDR firmado inválido: ${xdrError.message}`);
+      // Si el error es "Bad union switch", puede ser una transacción Soroban
+      // que no se puede decodificar completamente, pero está bien formada
+      if (xdrError.message?.includes('Bad union switch')) {
+        console.warn('⚠️ Advertencia: No se pudo decodificar completamente el XDR (posible transacción Soroban). Continuando...');
+        console.warn('   Esto es normal para transacciones que contienen operaciones Soroban (invoke_host_function)');
+        // Continuar sin validar completamente - la transacción puede estar bien formada
+      } else {
+        console.error('❌ Error al validar XDR firmado:', xdrError.message);
+        throw new Error(`XDR firmado inválido: ${xdrError.message}`);
+      }
     }
     
     // ✅ MEJORA: Extraer hash de la transacción antes de enviar para verificar si ya fue enviada
     let txHash: string | undefined;
     try {
-      const tx = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
-      txHash = tx.hash().toString('hex');
-      console.log(`🔍 Hash de la transacción: ${txHash}`);
+      // Intentar extraer el hash, pero si falla con "Bad union switch", usar método alternativo
+      try {
+        const tx = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
+        txHash = tx.hash().toString('hex');
+        console.log(`🔍 Hash de la transacción: ${txHash}`);
+      } catch (hashError: any) {
+        if (hashError.message?.includes('Bad union switch')) {
+          // Para transacciones Soroban, intentar extraer el hash de otra manera
+          // El hash se puede calcular desde el XDR directamente
+          console.warn('⚠️ No se pudo extraer hash con método estándar (transacción Soroban). Continuando sin hash...');
+          // Continuar sin hash - se puede obtener después de enviar la transacción
+        } else {
+          throw hashError;
+        }
+      }
       
       // Verificar si la transacción ya fue enviada consultando Horizon
       try {
@@ -1260,7 +1283,7 @@ export const resolveDisputeTrustlessEscrow = async (
   resolveDispute: (payload: SingleReleaseResolveDisputePayload, type: 'single-release') => Promise<EscrowRequestResponse>,
   sendTransaction: (signedXdr: string) => Promise<SendTransactionResponse>,
   getEscrowFromIndexer?: (params: { contractIds: string[]; validateOnChain?: boolean }) => Promise<any>
-): Promise<{ success: boolean; txHash?: string; error?: string }> => {
+): Promise<{ success: boolean; txHash?: string; error?: string; verificationResult?: any; warning?: string; requiresTrustline?: boolean; message?: string }> => {
   try {
     // ✅ MEJORA CRÍTICA: Validar parámetros de entrada
     if (!contractId || typeof contractId !== 'string' || contractId.trim().length === 0) {
@@ -1353,8 +1376,7 @@ export const resolveDisputeTrustlessEscrow = async (
     
     console.log('📥 Respuesta de resolveDispute:', {
       hasUnsignedTransaction: !!response?.unsignedTransaction,
-      status: response?.status,
-      message: response?.message
+      status: response?.status
     });
     
     if (!response?.unsignedTransaction) {
@@ -1804,7 +1826,7 @@ export const cancelTaskTrustlessEscrow = async (
   refundAmount: number,
   kit: any,
   startDispute: (payload: SingleReleaseStartDisputePayload, type: 'single-release') => Promise<EscrowRequestResponse>,
-  resolveDispute: (payload: SingleReleaseResolveDisputePayload, type: 'single-release') => Promise<EscrowRequestResponse>,
+  _resolveDispute: (payload: SingleReleaseResolveDisputePayload, type: 'single-release') => Promise<EscrowRequestResponse>,
   sendTransaction: (signedXdr: string) => Promise<SendTransactionResponse>,
   getEscrowFromIndexer?: (params: { contractIds: string[]; validateOnChain?: boolean }) => Promise<any>
 ): Promise<{ success: boolean; txHash?: string; error?: string; unsignedTransaction?: string; requiresAdminResolution?: boolean; message?: string }> => {

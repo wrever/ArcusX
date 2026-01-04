@@ -100,7 +100,6 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
         setEscrowInfo(null);
       }
     } catch (err: any) {
-      console.error('Error al obtener información del escrow:', err);
       setEscrowInfo(null);
     } finally {
       setLoadingEscrowInfo(false);

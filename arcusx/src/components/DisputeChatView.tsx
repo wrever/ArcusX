@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { FaUser, FaUserTie, FaSearch, FaFilter, FaFile, FaDownload } from 'react-icons/fa';
+import { FaUser, FaUserTie, FaSearch, FaFile, FaDownload } from 'react-icons/fa';
 import { getDisputeChat, ChatMessage, ChatParticipants, ChatStats } from '../services/disputeService';
 import { API_URL } from '../config/database';
 import '../css/AdminPanel.css';
@@ -31,7 +31,6 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
         setStats(data.stats);
       } catch (err: any) {
         setError(err.message || 'Error al cargar el chat');
-        console.error('Error al cargar chat:', err);
       } finally {
         setLoading(false);
       }
@@ -259,7 +258,6 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
             {filteredMessages.map((message) => {
               const isClient = participants.client && message.sender_id === participants.client.id;
-              const isWorker = participants.worker && message.sender_id === participants.worker.id;
               
               return (
                 <div

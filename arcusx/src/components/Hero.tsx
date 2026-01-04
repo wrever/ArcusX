@@ -29,6 +29,7 @@ const Hero = () => {
           </h1>
           <p className="hero-description">
             Conectamos talento latinoamericano con oportunidades globales a través de microtareas. 
+            Sistema de escrow seguro en Stellar, pagos en USDC y transacciones transparentes. 
             Simple, rápido y seguro para empezar a ganar en cripto.
           </p>
           <div className="hero-stats">
@@ -248,18 +249,18 @@ const Hero = () => {
                 </div>
 
                 <div className="stat-box">
-                  <div className="stat-number">0%</div>
+                  <div className="stat-number">100%</div>
                   <div className="stat-label">Pagos Web3</div>
                   <div className="stat-description">
-                    Recibe pagos instantáneos en criptomonedas, eliminando barreras y comisiones tradicionales.
+                    Recibe pagos instantáneos en USDC (Stellar) directamente en tu wallet. Sin intermediarios bancarios, comisiones transparentes y bajas.
                   </div>
                 </div>
 
                 <div className="stat-box">
-                  <div className="stat-number">24/7</div>
-                  <div className="stat-label">Mentoría Continua</div>
+                  <div className="stat-number">100%</div>
+                  <div className="stat-label">Escrow Seguro</div>
                   <div className="stat-description">
-                    Accede a recursos educativos y mentores expertos que te guiarán en tu desarrollo profesional.
+                    Sistema de depósito en garantía (escrow) que protege tanto a trabajadores como a clientes, asegurando pagos justos y seguros.
                   </div>
                 </div>
               </div>
@@ -303,14 +304,14 @@ const Hero = () => {
                 <FaLaptopCode />
               </div>
               <h3>Desarrollo Profesional</h3>
-              <p>Mejora tus habilidades con tareas cada vez más desafiantes y construye un portafolio sólido.</p>
+              <p>Mejora tus habilidades con tareas cada vez más desafiantes y construye un portafolio sólido. Sistema de niveles que te permite acceder a trabajos más complejos.</p>
             </div>
             <div className="feature-card">
               <div className="feature-icon">
                 <FaMoneyBillWave />
               </div>
-              <h3>Pagos Seguros</h3>
-              <p>Recibe pagos puntuales en criptomonedas y sin comisiones ocultas, ya que, buscamos tener una transparencia total (cobramos comisiones bajas y con transparencia).</p>
+              <h3>Pagos Seguros con Escrow</h3>
+              <p>Recibe pagos puntuales en USDC (Stellar) a través de nuestro sistema de escrow. Los fondos están protegidos hasta que ambas partes aprueben el trabajo. Comisiones transparentes y bajas.</p>
             </div>
           </div>
         </div>
@@ -412,7 +413,7 @@ const Hero = () => {
             <div className="faq-card">
               <h3 className="faq-question">¿Cómo recibo mis pagos?</h3>
               <div className="faq-answer">
-                <p>Los pagos se realizan automáticamente una vez que ambas partes (freelancer y empleador) hayan aceptado un acuerdo mutuo. Podrás retirar y recibir tu dinero a través de wallets.</p>
+                <p>Los pagos se realizan en USDC (Stellar) a través de nuestro sistema de escrow. Una vez que ambas partes aprueben la finalización del trabajo, los fondos se liberan automáticamente a tu wallet Stellar (Freighter). Los pagos son instantáneos y seguros.</p>
               </div>
             </div>
             <div className="faq-card">
@@ -422,9 +423,9 @@ const Hero = () => {
               </div>
             </div>
             <div className="faq-card">
-              <h3 className="faq-question">¿Cómo funciona la mentoría?</h3>
+              <h3 className="faq-question">¿Cómo funciona el sistema de escrow?</h3>
               <div className="faq-answer">
-                <p>Nuestro sistema de mentoría te conecta con expertos que te guiarán en tu desarrollo profesional. Recibirás consejos personalizados y podrás resolver tus dudas en cualquier momento acerca de nuestra plataforma ArcusX.</p>
+                <p>Utilizamos contratos de depósito en garantía (escrow) en la blockchain de Stellar para proteger tus pagos. Los fondos se mantienen seguros hasta que ambas partes aprueben la finalización del trabajo, garantizando transacciones justas y transparentes.</p>
               </div>
             </div>
           </div>

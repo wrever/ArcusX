@@ -112,7 +112,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
               inconsistencies++;
             }
 
-            // ✅ MEJORA: Determinar estado real basándose en flags de Trustless Work
+            //  MEJORA: Determinar estado real basándose en flags de Trustless Work
             if (isDisputed) {
               disputedCount++;
             } else if (isResolved || isReleased || balance === 0) {
@@ -123,7 +123,6 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
             }
           });
         } catch (err) {
-          console.error('Error al obtener información de escrows:', err);
         }
       }
 
@@ -136,7 +135,6 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
         loading: false
       });
     } catch (err) {
-      console.error('Error al obtener estadísticas de escrows:', err);
       setEscrowsStats(prev => ({ ...prev, loading: false }));
     }
   };
@@ -210,7 +208,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
       color: '#ef4444',
       description: 'Escrows en disputa (desde Trustless Work)',
       trend: escrowsStats.inconsistencies > 0 
-        ? `⚠️ ${escrowsStats.inconsistencies} inconsistencias detectadas` 
+        ? ` ${escrowsStats.inconsistencies} inconsistencias detectadas` 
         : null
     }
   ];
