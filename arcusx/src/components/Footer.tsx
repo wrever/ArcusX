@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import { FaLinkedin, FaTwitter, FaInstagram } from 'react-icons/fa';
-import { SiFarcaster } from 'react-icons/si';
 import footerLogo from '../images/arcus-logo.png';
 import '../css/Hero.css';
 
@@ -21,9 +20,6 @@ const Footer = () => {
               </a>
               <a href="https://www.linkedin.com/in/arcus-x-000348342/" target="_blank" rel="noopener noreferrer">
                 <FaLinkedin />
-              </a>
-              <a href="https://warpcast.com/arcusx" target="_blank" rel="noopener noreferrer">
-                <SiFarcaster />
               </a>
             </div>
           </div>

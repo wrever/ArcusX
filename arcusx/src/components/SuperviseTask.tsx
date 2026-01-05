@@ -36,7 +36,7 @@ import WalletButton from './WalletButton';
 import ConfirmDialog from './ConfirmDialog';
 import RatingSystem from './RatingSystem';
 import CompleteTaskPopup from './CompleteTaskPopup';
-import { FaExclamationTriangle, FaTimes, FaFlag, FaLock, FaHome } from 'react-icons/fa';
+import { FaExclamationTriangle, FaTimes, FaFlag, FaLock, FaHome, FaDollarSign } from 'react-icons/fa';
 import '../css/ConfirmDialog.css';
 
 interface TaskDetails {
@@ -2942,7 +2942,7 @@ const SuperviseTask = () => {
                                     <strong style={{ color: '#28c0f0' }}> Total pagado:</strong> {paymentSuccessData.amount} USDC
                                 </p>
                                 <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
-                                    <strong style={{ color: '#28c0f0' }}>💵 Trabajador recibirá:</strong> {paymentSuccessData.netAmount} USDC
+                                    <strong style={{ color: '#28c0f0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><FaDollarSign /> Trabajador recibirá:</strong> {paymentSuccessData.netAmount} USDC
                                 </p>
                                 <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
                                     <strong style={{ color: '#28c0f0' }}> Comisión de plataforma:</strong> {(parseFloat(paymentSuccessData.amount) - parseFloat(paymentSuccessData.netAmount || '0')).toFixed(7)} USDC

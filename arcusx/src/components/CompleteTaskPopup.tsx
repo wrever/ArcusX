@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaCheckCircle, FaSpinner, FaTimes, FaHandshake, FaCoins } from 'react-icons/fa';
+import { FaCheckCircle, FaSpinner, FaTimes, FaHandshake, FaCoins, FaDollarSign } from 'react-icons/fa';
 import { usePlatformFee } from '../hooks/usePlatformFee';
 import '../css/ProposalReview.css';
 
@@ -397,9 +397,12 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                 <span style={{ 
                   fontWeight: 'bold', 
                   color: '#28c0f0', 
-                  fontSize: '16px' 
+                  fontSize: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
                 }}>
-                  💵 Total del escrow:
+                  <FaDollarSign /> Total del escrow:
                 </span>
                 <strong style={{ 
                   fontSize: '18px', 

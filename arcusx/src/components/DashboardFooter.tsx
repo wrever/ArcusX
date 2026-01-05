@@ -1,5 +1,4 @@
 import { FaLinkedin, FaTwitter, FaInstagram } from 'react-icons/fa';
-import { SiFarcaster } from 'react-icons/si';
 import '../css/DashboardFooter.css';
 
 const DashboardFooter = () => {
@@ -15,9 +14,6 @@ const DashboardFooter = () => {
           </a>
           <a href="https://www.linkedin.com/in/arcus-x-000348342/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
             <FaLinkedin />
-          </a>
-          <a href="https://warpcast.com/arcusx" target="_blank" rel="noopener noreferrer" aria-label="Farcaster">
-            <SiFarcaster />
           </a>
         </div>
       </div>
