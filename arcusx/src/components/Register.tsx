@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaEye, FaEyeSlash, FaArrowLeft, FaGoogle, FaGithub } from 'react-icons/fa';
+import { FaEye, FaEyeSlash, FaArrowLeft, FaGoogle, FaGithub, FaGem, FaGlobe } from 'react-icons/fa';
 import '../css/Register.css';
 import { authService } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
@@ -114,11 +114,11 @@ const Register = () => {
                 <span>Accede a microtareas</span>
               </div>
               <div className="benefit-item">
-                <span className="benefit-icon">💎</span>
+                <span className="benefit-icon"><FaGem /></span>
                 <span>Gana en crypto</span>
               </div>
               <div className="benefit-item">
-                <span className="benefit-icon">🌎</span>
+                <span className="benefit-icon"><FaGlobe /></span>
                 <span>Conecta globalmente</span>
               </div>
             </div>

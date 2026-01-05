@@ -1,5 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
+import { FaBolt } from 'react-icons/fa';
 import '../css/WalletConnectPopup.css';
 
 interface WalletConnectPopupProps {
@@ -35,7 +36,7 @@ const WalletConnectPopup: React.FC<WalletConnectPopupProps> = ({
             onClick={onConnectFreighter}
           >
             <div className="wallet-icon freighter-icon">
-              ⚡
+              <FaBolt />
             </div>
             <span className="wallet-name">Freighter (Stellar)</span>
           </button>

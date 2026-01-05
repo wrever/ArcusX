@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FaTasks, FaCheckCircle, FaWallet, FaCoins, FaFlagCheckered, 
-  FaGavel, FaComment, FaFile, FaClock 
+  FaGavel, FaComment, FaFile, FaClock, FaUser
 } from 'react-icons/fa';
 import { getDisputeTimeline, TimelineEvent } from '../services/disputeService';
 import '../css/AdminPanel.css';
@@ -204,7 +204,7 @@ const DisputeTimelineView: React.FC<DisputeTimelineViewProps> = ({ disputeId }) 
                       fontSize: '12px',
                       color: 'rgba(255, 255, 255, 0.7)'
                     }}>
-                      👤 {event.user.username}
+                      <FaUser /> {event.user.username}
                     </div>
                   )}
 

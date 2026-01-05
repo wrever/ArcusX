@@ -169,9 +169,15 @@
   border-radius: 16px;
   border: 1px solid rgba(40, 192, 240, 0.2);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  justify-items: center;
+  align-items: center;
 }
 
 .stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   position: relative;
   z-index: 1;
@@ -181,6 +187,8 @@
   padding: 0 !important;
   margin: 0 !important;
   box-shadow: none !important;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .stat-item:hover {
@@ -192,13 +200,18 @@
   font-size: 4rem;
   font-weight: 600;
   color: #28c0f0;
-  margin-bottom: 0.5rem;
+  margin: 0 0 0.5rem 0;
+  padding: 0;
   text-shadow: 0 0 10px #05465a,
                0 0 1px #28c0f0,
                0 0 1px rgba(44, 64, 68, 0.4);
   filter: drop-shadow(0 0 1px rgba(0, 212, 255, 0.7));
-  transform: translateX(45px);
-  position: relative;
+  text-align: center;
+
+  box-sizing: border-box;
+  line-height: 1;
+  margin-left: 0;
+  margin-right: 0;
 }
 
 .stat-label {
@@ -206,6 +219,12 @@
   font-size: 0.6rem;
   font-weight: 500;
   line-height: 1.2;
+  text-align: center;
+  width: 100%;
+  display: block;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 .hero-buttons {
@@ -1208,7 +1227,6 @@
 
   .stat-value {
     font-size: 3.5rem;
-    transform: translateX(8px);
   }
 
   .stat-label {
@@ -1263,7 +1281,6 @@
 
   .stat-value {
     font-size: 4rem;
-    transform: translateX(8px);
   }
 
   .stat-label {
@@ -1551,7 +1568,6 @@
 
   .stat-value {
     font-size: 2rem;
-    transform: translateX(6px);
   }
 
   .stat-label {

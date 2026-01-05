@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaWallet, FaFileContract, FaCoins, FaCheckCircle, FaSpinner, FaTimes, FaHome } from 'react-icons/fa';
+import { FaWallet, FaFileContract, FaCoins, FaCheckCircle, FaSpinner, FaTimes, FaHome, FaDollarSign } from 'react-icons/fa';
 import { usePlatformFee } from '../hooks/usePlatformFee';
 
 interface ProcessStep {
@@ -428,9 +428,12 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
                 <span style={{ 
                   fontWeight: 'bold', 
                   color: '#28c0f0', 
-                  fontSize: '16px' 
+                  fontSize: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
                 }}>
-                  💵 Total a enviar:
+                  <FaDollarSign /> Total a enviar:
                 </span>
                 <strong style={{ 
                   fontSize: '18px', 

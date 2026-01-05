@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { FaGavel, FaEye, FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaWallet, FaLink, FaComments, FaFile, FaClock } from 'react-icons/fa';
+import { FaGavel, FaEye, FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaWallet, FaLink, FaComments, FaFile, FaClock, FaBolt } from 'react-icons/fa';
 import { getAdminDisputes, getAdminDisputeDetails, resolveAdminDispute } from '../services/adminService';
 import { useWallet } from '../hooks/useWallet';
 import { useResolveDispute, useSendTransaction, useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks';
@@ -846,7 +846,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
             
             let successMessage = ` Disputa resuelta exitosamente!\n\n`;
             successMessage += ` Monto reembolsado: ${clientAmount.toFixed(7)} USDC\n`;
-            successMessage += `👤 Cliente: ${clientWallet}\n`;
+            successMessage += ` Cliente: ${clientWallet}\n`;
             successMessage += ` Hash de transacción: ${resolveResult.txHash}\n\n`;
             successMessage += ` CONFIRMADO: El escrow está resuelto en la blockchain.\n`;
             successMessage += ` CONFIRMADO: El estado ha sido actualizado en la base de datos.\n\n`;
@@ -1369,8 +1369,8 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                   <tr key={dispute.id}>
                     <td>
                       {dispute.isVirtualDispute ? (
-                        <span style={{ fontSize: '0.85em', color: '#ff9800' }} title="Disputa detectada desde Trustless Work">
-                          ⚡ {dispute.id.replace('virtual-', '').substring(0, 8)}...
+                        <span style={{ fontSize: '0.85em', color: '#ff9800', display: 'flex', alignItems: 'center', gap: '0.25rem' }} title="Disputa detectada desde Trustless Work">
+                          <FaBolt /> {dispute.id.replace('virtual-', '').substring(0, 8)}...
                         </span>
                       ) : (
                         dispute.id
