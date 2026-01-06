@@ -36,7 +36,7 @@ import WalletButton from './WalletButton';
 import ConfirmDialog from './ConfirmDialog';
 import RatingSystem from './RatingSystem';
 import CompleteTaskPopup from './CompleteTaskPopup';
-import { FaExclamationTriangle, FaTimes, FaFlag, FaLock, FaHome, FaDollarSign } from 'react-icons/fa';
+import { FaExclamationTriangle, FaTimes, FaFlag, FaLock, FaHome, FaDollarSign, FaComments, FaMapMarkerAlt } from 'react-icons/fa';
 import '../css/ConfirmDialog.css';
 
 interface TaskDetails {
@@ -1962,7 +1962,7 @@ const SuperviseTask = () => {
                     alignItems: 'center',
                     marginBottom: '20px'
                 }}>
-                    <h2 style={{ margin: 0 }}>Chat con {chatPartnerName}</h2>
+                    <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem' }}><FaComments aria-hidden="true" /> Chat con {chatPartnerName}</h2>
                     {/* Botón Denuncia - Solo visible si se puede disputar */}
                     {canShowDisputeButton && (
                         <button
@@ -3261,7 +3261,7 @@ const SuperviseTask = () => {
                                     <strong style={{ color: '#28c0f0' }}> Monto a reembolsar:</strong> {refundTransaction.refundAmount.toFixed(7)} USDC
                                 </p>
                                 <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
-                                    <strong style={{ color: '#28c0f0' }}>📍 Tu dirección:</strong> {address?.slice(0, 6)}...{address?.slice(-4)}
+                                    <strong style={{ color: '#28c0f0', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><FaMapMarkerAlt aria-hidden="true" /> Tu dirección:</strong> {address?.slice(0, 6)}...{address?.slice(-4)}
                                 </p>
                                 <p style={{ margin: '8px 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic' }}>
                                      Sin firmar esta transacción, NO recibirás el reembolso

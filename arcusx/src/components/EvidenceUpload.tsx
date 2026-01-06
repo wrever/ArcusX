@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { FaUpload, FaFile, FaImage, FaVideo, FaFilePdf, FaTrash, FaSpinner, FaLink } from 'react-icons/fa';
+import { FaUpload, FaFile, FaImage, FaVideo, FaFilePdf, FaTrash, FaSpinner, FaLink, FaPaperclip } from 'react-icons/fa';
 import '../css/EvidenceUpload.css';
+import { useI18n } from '../i18n/I18nProvider';
 
 export interface EvidenceFile {
   id: string;
@@ -26,6 +27,7 @@ const EvidenceUpload: React.FC<EvidenceUploadProps> = ({
   existingEvidence = '',
   existingFiles = []
 }) => {
+  const { t } = useI18n();
   const [evidence, setEvidence] = useState(existingEvidence);
   const [files, setFiles] = useState<EvidenceFile[]>(existingFiles);
   const [uploading, setUploading] = useState(false);
@@ -68,7 +70,7 @@ const EvidenceUpload: React.FC<EvidenceUploadProps> = ({
 
       const token = localStorage.getItem('token');
       if (!token) {
-        throw new Error('No se encontró el token de autenticación');
+        throw new Error(t('evidence.error.auth'));
       }
 
       const response = await fetch('/api/auth/upload_milestone_evidence.php', {
@@ -84,10 +86,10 @@ const EvidenceUpload: React.FC<EvidenceUploadProps> = ({
       if (result.success) {
         setFiles(prev => [...prev, ...result.files]);
       } else {
-        setError(result.message || 'Error al subir archivos');
+        setError(result.message || t('evidence.error.upload'));
       }
     } catch (err: any) {
-      setError('Error al subir archivos: ' + (err.message || 'Error desconocido'));
+      setError(t('evidence.error.upload') + ': ' + (err.message || 'Error desconocido'));
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
@@ -109,7 +111,7 @@ const EvidenceUpload: React.FC<EvidenceUploadProps> = ({
   return (
     <div className="evidence-upload">
       <div className="evidence-header">
-        <h4>Evidencia del Milestone</h4>
+        <h4 className="evidence-title"><FaPaperclip aria-hidden="true" /> {t('evidence.title')}</h4>
         <div className="evidence-actions">
           <input
             ref={fileInputRef}
@@ -125,7 +127,7 @@ const EvidenceUpload: React.FC<EvidenceUploadProps> = ({
             className="upload-btn"
           >
             {uploading ? <FaSpinner className="spinner" /> : <FaUpload />}
-            {uploading ? 'Subiendo...' : 'Subir Archivos'}
+            {uploading ? t('evidence.uploading') : t('evidence.upload')}
           </button>
         </div>
       </div>
@@ -138,12 +140,12 @@ const EvidenceUpload: React.FC<EvidenceUploadProps> = ({
 
       {/* Evidence Description */}
       <div className="evidence-description">
-        <label htmlFor="evidence-text">Descripción de la evidencia:</label>
+        <label htmlFor="evidence-text">{t('evidence.description.label')}</label>
         <textarea
           id="evidence-text"
           value={evidence}
           onChange={(e) => setEvidence(e.target.value)}
-          placeholder="Describe el trabajo completado, incluye enlaces relevantes, o explica qué archivos has subido..."
+          placeholder={t('evidence.description.placeholder')}
           rows={4}
         />
       </div>
@@ -151,7 +153,7 @@ const EvidenceUpload: React.FC<EvidenceUploadProps> = ({
       {/* Files List */}
       {files.length > 0 && (
         <div className="evidence-files">
-          <h5>Archivos adjuntos:</h5>
+          <h5>{t('evidence.files.attached')}</h5>
           <div className="files-list">
             {files.map((file) => (
               <div key={file.id} className="file-item">
@@ -166,14 +168,14 @@ const EvidenceUpload: React.FC<EvidenceUploadProps> = ({
                   <button
                     onClick={() => window.open(file.url, '_blank')}
                     className="view-btn"
-                    title="Ver archivo"
+                    title={t('evidence.view.file')}
                   >
                     <FaLink />
                   </button>
                   <button
                     onClick={() => removeFile(file.id)}
                     className="remove-btn"
-                    title="Eliminar archivo"
+                    title={t('evidence.remove.file')}
                   >
                     <FaTrash />
                   </button>
@@ -191,7 +193,7 @@ const EvidenceUpload: React.FC<EvidenceUploadProps> = ({
           disabled={(!evidence.trim() && files.length === 0) || loading}
           className="btn-primary"
         >
-          {loading ? 'Enviando...' : 'Enviar Evidencia'}
+          {loading ? t('evidence.submitting') : t('evidence.submit')}
         </button>
       </div>
     </div>

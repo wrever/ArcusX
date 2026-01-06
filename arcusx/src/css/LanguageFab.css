@@ -1,0 +1,56 @@
+.lang-fab{
+  position: fixed;
+  left: 18px;
+  bottom: 18px;
+  z-index: 9999;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 12px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(20, 20, 25, .88);
+  backdrop-filter: blur(10px);
+
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgba(0,0,0,.35);
+  transition: transform .15s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease;
+}
+
+.lang-fab:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px rgba(0,0,0,.42);
+  background: rgba(25, 25, 32, .92);
+  border-color: rgba(255,255,255,.28);
+}
+
+.lang-fab:active{
+  transform: translateY(0px) scale(.99);
+}
+
+.lang-fab-icon{
+  display: inline-flex;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.lang-fab-label{
+  font-weight: 700;
+  letter-spacing: .02em;
+  font-size: 12px;
+  opacity: .95;
+}
+
+/* Mobile: keep it compact */
+@media (max-width: 480px){
+  .lang-fab{
+    padding: 12px;
+    gap: 8px;
+  }
+  .lang-fab-label{
+    font-size: 11px;
+  }
+}

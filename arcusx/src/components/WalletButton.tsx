@@ -2,8 +2,10 @@ import React, { Suspense, useState } from 'react';
 import { FaWallet, FaSpinner } from 'react-icons/fa';
 import { useWallet } from '../hooks/useWallet';
 import WalletConnectPopup from './WalletConnectPopup';
+import { useI18n } from '../i18n/I18nProvider';
 
 const WalletButtonInner: React.FC = () => {
+  const { t } = useI18n();
   const { 
     isConnected, 
     address, 
@@ -45,13 +47,13 @@ const WalletButtonInner: React.FC = () => {
           {loading ? (
             <>
               <FaSpinner className="spinner" />
-              Conectando...
+              {t('wallet.button.connecting')}
             </>
           ) : isConnected ? (
             <>
               <FaWallet />
               <span className="wallet-address">
-                {address ? formatAddress(address) : 'Conectado'}
+                {address ? formatAddress(address) : t('wallet.button.connected')}
               </span>
               <span className="wallet-type-badge">
                 USDC
@@ -60,7 +62,7 @@ const WalletButtonInner: React.FC = () => {
           ) : (
             <>
               <FaWallet />
-              Conectar Wallet
+              {t('wallet.button.connect')}
             </>
           )}
         </button>
@@ -76,12 +78,13 @@ const WalletButtonInner: React.FC = () => {
 };
 
 const WalletButton: React.FC = () => {
+  const { t } = useI18n();
   return (
     <Suspense fallback={
       <div className="wallet-button-container">
         <button className="wallet-button" disabled>
           <FaSpinner className="spinner" />
-          Cargando...
+          {t('wallet.button.loading')}
         </button>
       </div>
     }>

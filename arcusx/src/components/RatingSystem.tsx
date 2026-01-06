@@ -8,6 +8,7 @@ import RatingDisplay from './RatingDisplay';
 import ReviewForm from './ReviewForm';
 import { getRatings, getUserRatingSummary, Rating } from '../services/ratingService';
 import '../css/RatingSystem.css';
+import { FaStar } from 'react-icons/fa';
 
 interface RatingSystemProps {
   userId: number;
@@ -164,7 +165,7 @@ const RatingSystem = ({
                       key={i}
                       className={`star ${i < rating.rating ? 'filled' : 'empty'}`}
                     >
-                      ★
+                      <FaStar aria-hidden="true" />
                     </span>
                   ))}
                 </div>
