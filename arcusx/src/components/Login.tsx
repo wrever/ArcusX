@@ -4,8 +4,10 @@ import { FaArrowLeft, FaGoogle, FaGithub } from 'react-icons/fa';
 import '../css/Login.css';
 import { useAuth } from '../hooks/useAuth';
 import { authService } from '../services/authService';
+import { useI18n } from '../i18n/I18nProvider';
 
 const Login = () => {
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -29,7 +31,7 @@ const Login = () => {
     
     try {
       if (!email || !password) {
-        setError('Por favor, completa todos los campos');
+        setError(t('login.error.empty'));
         return;
       }
 
@@ -38,7 +40,7 @@ const Login = () => {
       // Redirigir directamente al dashboard (sin verificación Human ID)
       navigate('/dashboard', { replace: true });
     } catch (error: any) {
-      setError(error.response?.data?.message || 'Error al iniciar sesión');
+      setError(error.response?.data?.message || t('login.error'));
     } finally {
       setLoading(false);
     }
@@ -51,7 +53,7 @@ const Login = () => {
       await authService.signInWithGoogle();
       // La redirección se manejará automáticamente
     } catch (error: any) {
-      setError('Error al iniciar sesión con Google: ' + (error.message || 'Error desconocido'));
+      setError(t('login.error.google') + ' ' + (error.message || t('login.error.unknown')));
       setOauthLoading(null);
     }
   };
@@ -63,7 +65,7 @@ const Login = () => {
       await authService.signInWithGitHub();
       // La redirección se manejará automáticamente
     } catch (error: any) {
-      setError('Error al iniciar sesión con GitHub: ' + (error.message || 'Error desconocido'));
+      setError(t('login.error.github') + ' ' + (error.message || t('login.error.unknown')));
       setOauthLoading(null);
     }
   };
@@ -75,7 +77,7 @@ const Login = () => {
         <div className="login-card">
           <div className="login-header">
             <div className="login-logo">ArcusX</div>
-            <h2>Verificando sesión...</h2>
+            <h2>{t('login.verifying')}</h2>
           </div>
         </div>
       </div>
@@ -86,7 +88,7 @@ const Login = () => {
     <div className="login-container">
       <Link to="/" className="back-button">
         <FaArrowLeft />
-        <span>Volver</span>
+        <span>{t('login.back')}</span>
       </Link>
       
       <div className="login-card">
@@ -94,8 +96,8 @@ const Login = () => {
           <Link to="/" className="login-logo">
             ArcusX
           </Link>
-          <h2>Iniciar Sesión</h2>
-          <p>Accede a tu cuenta para comenzar a ganar</p>
+          <h2>{t('login.title')}</h2>
+          <p>{t('login.desc')}</p>
         </div>
         
         {error && <div className="login-error">{error}</div>}
@@ -109,11 +111,11 @@ const Login = () => {
             disabled={oauthLoading !== null}
           >
             {oauthLoading === 'google' ? (
-              <span>Cargando...</span>
+              <span>{t('login.loading')}</span>
             ) : (
               <>
                 <FaGoogle />
-                <span>Continuar con Google</span>
+                <span>{t('login.oauth.google')}</span>
               </>
             )}
           </button>
@@ -125,11 +127,11 @@ const Login = () => {
             disabled={oauthLoading !== null}
           >
             {oauthLoading === 'github' ? (
-              <span>Cargando...</span>
+              <span>{t('login.loading')}</span>
             ) : (
               <>
                 <FaGithub />
-                <span>Continuar con GitHub</span>
+                <span>{t('login.oauth.github')}</span>
               </>
             )}
           </button>
@@ -137,31 +139,31 @@ const Login = () => {
 
         {/* Separador */}
         <div className="oauth-divider">
-          <span>O inicia sesión con email</span>
+          <span>{t('login.oauth.divider')}</span>
         </div>
         
         <form className="login-form" onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="email"> <h4> Correo Electrónico </h4> </label>
+            <label htmlFor="email"> <h4> {t('login.email')} </h4> </label>
             <input
               type="email"
               id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="tu@email.com"
+              placeholder={t('login.email.placeholder')}
               required
               disabled={loading}
             />
           </div>
           
           <div className="form-group">
-            <label htmlFor="password"> <h4> Contraseña </h4> </label>
+            <label htmlFor="password"> <h4> {t('login.password')} </h4> </label>
             <input
               type="password"
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder={t('login.password.placeholder')}
               required
               disabled={loading}
             />
@@ -170,23 +172,23 @@ const Login = () => {
           <div className="form-options">
             <div className="remember-me">
               <input type="checkbox" id="remember" />
-              <label htmlFor="remember">Recordarme</label>
+              <label htmlFor="remember">{t('login.remember')}</label>
             </div>
             <Link to="/forgot-password" className="forgot-password">
-              ¿Olvidaste tu contraseña?
+              {t('login.forgot')}
             </Link>
           </div>
           
           <button type="submit" className="login-button" disabled={loading}>
-            {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+            {loading ? t('login.submitting') : t('login.submit')}
           </button>
         </form>
         
         <div className="login-footer">
           <p>
-            ¿No tienes una cuenta?{' '}
+            {t('login.no.account')}{' '}
             <Link to="/register" className="register-link">
-              Regístrate
+              {t('login.register.link')}
             </Link>
           </p>
         </div>

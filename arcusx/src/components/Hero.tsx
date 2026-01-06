@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { FaRocket, FaUsers, FaLaptopCode, FaMoneyBillWave, FaArrowRight, FaLinkedin, FaTwitter, FaGithub } from 'react-icons/fa';
 import '../css/Hero.css';
+import { useI18n } from '../i18n/I18nProvider';
 import Footer from './Footer';
 import brunoImg from '../images/bruno.jpg';
 import roqueImg from '../images/roque.jpg';
@@ -9,6 +10,7 @@ import desempleoImg from '../images/desempleo.webp';
 import gananciaImg from '../images/ganancia.webp';
 
 const Hero = () => {
+  const { t } = useI18n();
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
     if (element) {
@@ -21,37 +23,35 @@ const Hero = () => {
       <div className="hero-container">
         <div className="hero-content">
           <h1 className="hero-title">
-            La Plataforma{' '}
-            <span className="hero-title-highlight">Web3</span>{' '}
-            para el{' '}
-            <span className="hero-title-highlight">Talento</span>{' '}
-            Latinoamericano
+            {t('hero.title.line1')}{' '}
+            <span className="hero-title-highlight">{t('hero.title.web3')}</span>{' '}
+            {t('hero.title.for')}{' '}
+            <span className="hero-title-highlight">{t('hero.title.talent')}</span>{' '}
+            {t('hero.title.latam')}
           </h1>
           <p className="hero-description">
-            Conectamos talento latinoamericano con oportunidades globales a través de microtareas. 
-            Sistema de escrow seguro en Stellar, pagos en USDC y transacciones transparentes. 
-            Simple, rápido y seguro para empezar a ganar en cripto.
+            {t('hero.desc')}
           </p>
           <div className="hero-stats">
             <div className="stat-item">
               <span className="stat-value">10+</span>
-              <span className="stat-label">Tareas Disponibles</span>
+              <span className="stat-label">{t('hero.stats.tasks')}</span>
             </div>
             <div className="stat-item">
               <span className="stat-value">50+</span>
-              <span className="stat-label">Usuarios Activos</span>
+              <span className="stat-label">{t('hero.stats.users')}</span>
             </div>
             <div className="stat-item">
               <span className="stat-value">$1K+</span>
-              <span className="stat-label">Pagos Procesados</span>
+              <span className="stat-label">{t('hero.stats.payments.processed')}</span>
             </div>
           </div>
           <div className="hero-buttons">
             <Link to="/register" className="hero-button primary">
-              Comenzar Ahora <FaArrowRight />
+              {t('hero.button.start')} <FaArrowRight />
             </Link>
             <Link to="/login" className="hero-button secondary">
-              Ver Demo
+              {t('hero.button.demo')}
             </Link>
           </div>
         </div>
@@ -155,48 +155,46 @@ const Hero = () => {
             </div>
             <div className="problem-info">
               <div className="problem-header">
-                <span className="subtitle">LA PROBLEMÁTICA EN LATINOAMÉRICA</span>
+                <span className="subtitle">{t('problem.title')}</span>
                 <h2 className="problem-title">
-                  Barreras en el Mercado
-                  <span className="highlight-text">Freelance Global</span>
+                  {t('problem.subtitle')}{' '}
+                  <span className="highlight-text">{t('problem.subtitle.highlight')}</span>
                 </h2>
                 <p className="problem-description">
-                  En Latinoamérica, millones de profesionales enfrentan obstáculos significativos 
-                  para acceder al mercado freelance global. ArcusX identifica y aborda estas 
-                  barreras para crear oportunidades reales de crecimiento.
+                  {t('problem.desc')}
                 </p>
               </div>
 
               <div className="stats-container">
                 <div className="stat-box">
-                  <div className="stat-number">70%</div>
-                  <div className="stat-label">Barreras de Entrada</div>
+                  <div className="stat-number">{t('problem.stat1.number')}</div>
+                  <div className="stat-label">{t('problem.stat1.label')}</div>
                   <div className="stat-description">
-                    De los freelancers latinos enfrentan dificultades con el idioma y la falta de experiencia inicial.
+                    {t('problem.stat1.desc')}
                   </div>
                 </div>
 
                 <div className="stat-box">
-                  <div className="stat-number">85%</div>
-                  <div className="stat-label">Pagos Complejos</div>
+                  <div className="stat-number">{t('problem.stat2.number')}</div>
+                  <div className="stat-label">{t('problem.stat2.label')}</div>
                   <div className="stat-description">
-                    Sufren altas comisiones y largos tiempos de espera en transferencias internacionales.
+                    {t('problem.stat2.desc')}
                   </div>
                 </div>
 
                 <div className="stat-box">
-                  <div className="stat-number">60%</div>
-                  <div className="stat-label">Competencia</div>
+                  <div className="stat-number">{t('problem.stat3.number')}</div>
+                  <div className="stat-label">{t('problem.stat3.label')}</div>
                   <div className="stat-description">
-                    De los trabajos requieren portafolio previo, limitando oportunidades para nuevos freelancers.
+                    {t('problem.stat3.desc')}
                   </div>
                 </div>
 
                 <div className="stat-box">
-                  <div className="stat-number">40%</div>
-                  <div className="stat-label">Ingresos Perdidos</div>
+                  <div className="stat-number">{t('problem.stat4.number')}</div>
+                  <div className="stat-label">{t('problem.stat4.label')}</div>
                   <div className="stat-description">
-                    De potenciales ingresos se pierden debido a barreras tecnológicas y falta de acceso.
+                    {t('problem.stat4.desc')}
                   </div>
                 </div>
               </div>
@@ -206,9 +204,9 @@ const Hero = () => {
                   onClick={() => scrollToSection('solucion')} 
                   className="action-button primary"
                 >
-                  Conoce la Solución
+                  {t('problem.button.solution')}
                 </button>
-                <button className="action-button secondary">Leer Más</button>
+                <button className="action-button secondary">{t('problem.button.read')}</button>
               </div>
             </div>
           </div>
@@ -220,54 +218,53 @@ const Hero = () => {
           <div className="solution-content">
             <div className="solution-info">
               <div className="solution-header">
-                <span className="subtitle">NUESTRA SOLUCIÓN</span>
+                <span className="subtitle">{t('solution.title')}</span>
                 <h2 className="problem-title">
-                  Revolucionando el
-                  <span className="highlight-text">Trabajo Freelance</span>
+                  {t('solution.subtitle')}{' '}
+                  <span className="highlight-text">{t('solution.subtitle.highlight')}</span>
                 </h2>
                 <p className="problem-description">
-                  ArcusX transforma la manera en que los freelancers latinoamericanos acceden al mercado global,
-                  proporcionando un ecosistema completo de herramientas y oportunidades.
+                  {t('solution.desc')}
                 </p>
               </div>
 
               <div className="stats-container">
                 <div className="stat-box">
-                  <div className="stat-number">100%</div>
-                  <div className="stat-label">Microtareas Accesibles</div>
+                  <div className="stat-number">{t('solution.stat1.number')}</div>
+                  <div className="stat-label">{t('solution.stat1.label')}</div>
                   <div className="stat-description">
-                    Comienza con tareas simples y bien remuneradas mientras construyes tu reputación y portafolio profesional.
+                    {t('solution.stat1.desc')}
                   </div>
                 </div>
 
                 <div className="stat-box">
-                  <div className="stat-number">24/7</div>
-                  <div className="stat-label">Sistema de Niveles</div>
+                  <div className="stat-number">{t('solution.stat2.number')}</div>
+                  <div className="stat-label">{t('solution.stat2.label')}</div>
                   <div className="stat-description">
-                    Progresa naturalmente accediendo a tareas más complejas y mejor pagadas a medida que ganas experiencia.
+                    {t('solution.stat2.desc')}
                   </div>
                 </div>
 
                 <div className="stat-box">
-                  <div className="stat-number">100%</div>
-                  <div className="stat-label">Pagos Web3</div>
+                  <div className="stat-number">{t('solution.stat3.number')}</div>
+                  <div className="stat-label">{t('solution.stat3.label')}</div>
                   <div className="stat-description">
-                    Recibe pagos instantáneos en USDC (Stellar) directamente en tu wallet. Sin intermediarios bancarios, comisiones transparentes y bajas.
+                    {t('solution.stat3.desc')}
                   </div>
                 </div>
 
                 <div className="stat-box">
-                  <div className="stat-number">100%</div>
-                  <div className="stat-label">Escrow Seguro</div>
+                  <div className="stat-number">{t('solution.stat4.number')}</div>
+                  <div className="stat-label">{t('solution.stat4.label')}</div>
                   <div className="stat-description">
-                    Sistema de depósito en garantía (escrow) que protege tanto a trabajadores como a clientes, asegurando pagos justos y seguros.
+                    {t('solution.stat4.desc')}
                   </div>
                 </div>
               </div>
 
               <div className="action-buttons">
                 <Link to="/register" className="action-button primary">
-                  Comienza Ahora
+                  {t('solution.button.start')}
                 </Link>
               </div>
             </div>
@@ -283,35 +280,35 @@ const Hero = () => {
 
       <section id="caracteristicas" className="features-section">
         <div className="features-container">
-          <h2 className="features-title">¿Por qué elegir ArcusX?</h2>
+          <h2 className="features-title">{t('features.title')}</h2>
           <div className="features-grid">
             <div className="feature-card">
               <div className="feature-icon">
                 <FaRocket />
               </div>
-              <h3>Comienza Rápido</h3>
-              <p>Sin experiencia previa requerida. Aprende mientras ganas con tareas simples y bien pagadas.</p>
+              <h3>{t('features.card1.title')}</h3>
+              <p>{t('features.card1.desc')}</p>
             </div>
             <div className="feature-card">
               <div className="feature-icon">
                 <FaUsers />
               </div>
-              <h3>Comunidad Activa</h3>
-              <p>Únete a una comunidad vibrante de freelancers latinoamericanos que comparten conocimientos y oportunidades.</p>
+              <h3>{t('features.card2.title')}</h3>
+              <p>{t('features.card2.desc')}</p>
             </div>
             <div className="feature-card">
               <div className="feature-icon">
                 <FaLaptopCode />
               </div>
-              <h3>Desarrollo Profesional</h3>
-              <p>Mejora tus habilidades con tareas cada vez más desafiantes y construye un portafolio sólido. Sistema de niveles que te permite acceder a trabajos más complejos.</p>
+              <h3>{t('features.card3.title')}</h3>
+              <p>{t('features.card3.desc')}</p>
             </div>
             <div className="feature-card">
               <div className="feature-icon">
                 <FaMoneyBillWave />
               </div>
-              <h3>Pagos Seguros con Escrow</h3>
-              <p>Recibe pagos puntuales en USDC (Stellar) a través de nuestro sistema de escrow. Los fondos están protegidos hasta que ambas partes aprueben el trabajo. Comisiones transparentes y bajas.</p>
+              <h3>{t('features.card4.title')}</h3>
+              <p>{t('features.card4.desc')}</p>
             </div>
           </div>
         </div>
@@ -321,10 +318,10 @@ const Hero = () => {
         
         <div className="section-container">
           
-          <h2 className="section-title">Nuestro Equipo</h2>
+          <h2 className="section-title">{t('team.title')}</h2>
           <div className="team-content">
             <div className="team-intro">
-              <p>Un equipo apasionado por revolucionar el futuro del trabajo en Latinoamérica</p>
+              <p>{t('team.desc')}</p>
             </div>
             <div className="team-grid">
               <div className="team-card">
@@ -402,30 +399,30 @@ const Hero = () => {
 
       <section id="faq" className="faq-section">
         <div className="container">
-          <h2 className="section-title light">Preguntas Frecuentes</h2>
+          <h2 className="section-title light">{t('faq.title')}</h2>
           <div className="faq-grid">
             <div className="faq-card">
-              <h3 className="faq-question">¿Cómo funciona el sistema de microtareas?</h3>
+              <h3 className="faq-question">{t('faq.q1')}</h3>
               <div className="faq-answer">
-                <p>Las microtareas son pequeñas actividades que puedes realizar desde cualquier dispositivo (siempre y cuando sea posible). Cada tarea tiene una recompensa específica y puedes completar tantas como desees.</p>
+                <p>{t('faq.a1')}</p>
               </div>
             </div>
             <div className="faq-card">
-              <h3 className="faq-question">¿Cómo recibo mis pagos?</h3>
+              <h3 className="faq-question">{t('faq.q2')}</h3>
               <div className="faq-answer">
-                <p>Los pagos se realizan en USDC (Stellar) a través de nuestro sistema de escrow. Una vez que ambas partes aprueben la finalización del trabajo, los fondos se liberan automáticamente a tu wallet Stellar (Freighter). Los pagos son instantáneos y seguros.</p>
+                <p>{t('faq.a2')}</p>
               </div>
             </div>
             <div className="faq-card">
-              <h3 className="faq-question">¿Qué requisitos necesito para empezar?</h3>
+              <h3 className="faq-question">{t('faq.q3')}</h3>
               <div className="faq-answer">
-                <p>Solo necesitas una conexión a internet y un dispositivo (computadora, tablet o smartphone). No se requieren conocimientos técnicos especiales a menos que sea requerido.</p>
+                <p>{t('faq.a3')}</p>
               </div>
             </div>
             <div className="faq-card">
-              <h3 className="faq-question">¿Cómo funciona el sistema de escrow?</h3>
+              <h3 className="faq-question">{t('faq.q4')}</h3>
               <div className="faq-answer">
-                <p>Utilizamos contratos de depósito en garantía (escrow) en la blockchain de Stellar para proteger tus pagos. Los fondos se mantienen seguros hasta que ambas partes aprueben la finalización del trabajo, garantizando transacciones justas y transparentes.</p>
+                <p>{t('faq.a4')}</p>
               </div>
             </div>
           </div>
@@ -435,10 +432,10 @@ const Hero = () => {
       <div className="cta-section">
         <div className="cta-container">
           <div className="cta-content">
-            <h2>¿Listo para comenzar tu viaje freelance?</h2>
-            <p>Únete a miles de personas que ya están ganando dinero y desarrollando sus habilidades en ArcusX</p>
+            <h2>{t('hero.cta.title')}</h2>
+            <p>{t('hero.cta.desc')}</p>
             <Link to="/register" className="cta-button">
-              Crear Cuenta Gratis <FaArrowRight />
+              {t('hero.cta.button')} <FaArrowRight />
             </Link>
           </div>
         </div>

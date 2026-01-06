@@ -117,7 +117,7 @@ const ProposalReview = () => {
 
         // Verificar si ya hay un escrow creado y un trabajador aceptado
         if (taskData.escrow_id && taskData.accepted_applicant_id) {
-          console.log('✅ Tarea ya tiene escrow completado. Cargando propuesta aceptada...');
+          console.log('Tarea ya tiene escrow completado. Cargando propuesta aceptada...');
           // Cargar la propuesta aceptada para mostrar en el popup de éxito
       const proposalsResponse = await axios.get(`${API_URL}/auth/get_task_proposals.php?task_id=${taskId}`);
       if (Array.isArray(proposalsResponse.data)) {
@@ -126,14 +126,14 @@ const ProposalReview = () => {
               (p: ProposalData) => p.applicant_id === taskData.accepted_applicant_id || p.status === 'accepted'
             );
             if (acceptedProposal) {
-              console.log('✅ Propuesta aceptada encontrada:', acceptedProposal.applicant_username);
+              console.log('Propuesta aceptada encontrada:', acceptedProposal.applicant_username);
               setSelectedProposal(acceptedProposal);
               // Mostrar popup de éxito automáticamente después de un pequeño delay para asegurar que el estado se actualice
               setTimeout(() => {
                 setShowSuccessPopup(true);
               }, 100);
             } else {
-              console.warn('⚠️ No se encontró la propuesta aceptada, pero hay escrow_id y accepted_applicant_id');
+              console.warn('No se encontró la propuesta aceptada, pero hay escrow_id y accepted_applicant_id');
               // Aún así mostrar el popup si hay escrow_id
               setTimeout(() => {
                 setShowSuccessPopup(true);
@@ -270,7 +270,7 @@ const ProposalReview = () => {
       
       const commission = escrowAmount - workerAmount; // Comisión que se deducirá
       
-      console.log('💰 Cálculo del escrow:');
+      console.log('Cálculo del escrow:');
       console.log('  - Worker amount (lo que recibirá):', workerAmount);
       console.log('  - Platform fee:', platformFee, `(${(platformFee * 100).toFixed(2)}%)`);
       console.log('  - Escrow amount (calculado):', amount);
@@ -295,7 +295,7 @@ const ProposalReview = () => {
       );
 
       if (!result.success) {
-        console.error('❌ Error al crear escrow:', result.error);
+        console.error('Error al crear escrow:', result.error);
         return {
           success: false,
           error: result.error || 'Error al crear el escrow'
@@ -303,7 +303,7 @@ const ProposalReview = () => {
       }
 
       if (!result.contractId) {
-        console.error('❌ No se recibió contractId:', result);
+        console.error('No se recibió contractId:', result);
         return {
           success: false,
           error: 'No se pudo obtener el contractId del escrow creado'
@@ -342,7 +342,7 @@ const ProposalReview = () => {
           }
         }
       } catch (error: any) {
-        console.warn('⚠️ No se pudieron obtener datos completos del escrow:', error.message);
+        console.warn('No se pudieron obtener datos completos del escrow:', error.message);
         // Continuar de todas formas - usaremos los valores por defecto
       }
 
@@ -375,7 +375,7 @@ const ProposalReview = () => {
           });
         }
       } catch (error: any) {
-        console.error('❌ Error al guardar escrow en backend:', error);
+        console.error('Error al guardar escrow en backend:', error);
         // Continuar de todas formas - el escrow ya se creó en Trustless Work
       }
       
@@ -425,16 +425,16 @@ const ProposalReview = () => {
       // Por lo tanto, debemos fondear exactamente el mismo monto para que coincida
       const workerAmount = parseFloat(task.price);
       
-      // ⚠️ CRÍTICO: Usar el mismo platformFee que al crear el escrow
+      // CRÍTICO: Usar el mismo platformFee que al crear el escrow
       // Si el escrow tiene un platformFee guardado, usarlo; si no, usar el actual
       let feeToUse = platformFee;
       if (task.escrow_platform_fee !== undefined && task.escrow_platform_fee !== null) {
         feeToUse = typeof task.escrow_platform_fee === 'number' 
           ? task.escrow_platform_fee 
           : parseFloat(task.escrow_platform_fee);
-        console.log('💡 Usando platformFee del escrow guardado:', feeToUse);
+        console.log('Usando platformFee del escrow guardado:', feeToUse);
       } else {
-        console.log('💡 Usando platformFee actual:', feeToUse);
+        console.log('Usando platformFee actual:', feeToUse);
       }
       
       // Usar la misma fórmula que al crear el escrow
@@ -447,7 +447,7 @@ const ProposalReview = () => {
       const amountString = roundedAmount.toFixed(7);
       const amount = parseFloat(amountString); // Monto a fondear (debe coincidir con el amount del escrow)
       
-      console.log('💰 Cálculo del fondeo (DEBE SER IDÉNTICO AL CREAR):');
+      console.log('Cálculo del fondeo (DEBE SER IDÉNTICO AL CREAR):');
       console.log('  - Worker amount (lo que recibirá):', workerAmount);
       console.log('  - Platform fee usado:', feeToUse, `(${(feeToUse * 100).toFixed(2)}%)`);
       console.log('  - Escrow amount calculado:', escrowAmount);
@@ -505,22 +505,22 @@ const ProposalReview = () => {
                   // Caso donde se recibe un objeto con la propiedad contractIds
                   contractIdsArray = contractIds.contractIds;
                 } else {
-                  console.warn('⚠️ contractIds inválido en ProposalReview (tipo desconocido):', contractIds);
+                  console.warn('contractIds inválido en ProposalReview (tipo desconocido):', contractIds);
                   return [];
                 }
                 
-                console.log('🔍 ProposalReview wrapper recibió contractIds:', contractIdsArray);
+                console.log('ProposalReview wrapper recibió contractIds:', contractIdsArray);
                 
                 // Validar que contractIds sea un array válido y no esté vacío
                 if (!contractIdsArray || !Array.isArray(contractIdsArray) || contractIdsArray.length === 0) {
-                  console.warn('⚠️ contractIds inválido o vacío en ProposalReview:', contractIdsArray);
+                  console.warn('contractIds inválido o vacío en ProposalReview:', contractIdsArray);
                   return [];
                 }
                 
                 // Filtrar contractIds vacíos o inválidos
                 const validContractIds = contractIdsArray.filter(id => id && typeof id === 'string' && id.trim() !== '');
                 if (validContractIds.length === 0) {
-                  console.warn('⚠️ No hay contractIds válidos después de filtrar:', contractIdsArray);
+                  console.warn('No hay contractIds válidos después de filtrar:', contractIdsArray);
                   return [];
                 }
                 
@@ -532,7 +532,7 @@ const ProposalReview = () => {
                 // El resultado puede tener diferentes estructuras, devolvemos el resultado completo
                 return Array.isArray(result) ? result : (result as any)?.escrows || result || [];
               } catch (error: any) {
-                console.error('❌ Error en wrapper de getEscrowByContractIds:', error.message);
+                console.error('Error en wrapper de getEscrowByContractIds:', error.message);
                 return [];
               }
             }
@@ -629,16 +629,16 @@ const ProposalReview = () => {
         if (selectResponse.status < 200 || selectResponse.status >= 300) {
           const errorMessage = selectResponse.data?.message || 
                              `Error al seleccionar trabajador. Status: ${selectResponse.status}`;
-          console.error('❌ Error al seleccionar propuesta:', errorMessage);
+          console.error('Error al seleccionar propuesta:', errorMessage);
           // Continuar de todas formas - la transacción de Stellar ya se completó
         } else if (!selectResponse.data || selectResponse.data.success !== true) {
           const errorMessage = selectResponse.data?.message || 
                              'Error al seleccionar trabajador. La respuesta no indica éxito.';
-          console.error('❌ Error al seleccionar propuesta:', errorMessage);
+          console.error('Error al seleccionar propuesta:', errorMessage);
           // Continuar de todas formas
         }
       } catch (error: any) {
-        console.error('❌ Error al seleccionar propuesta en backend:', error);
+        console.error('Error al seleccionar propuesta en backend:', error);
         // Continuar de todas formas - la transacción de Stellar ya se completó
       }
 

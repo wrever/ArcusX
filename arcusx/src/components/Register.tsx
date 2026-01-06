@@ -4,8 +4,10 @@ import { FaEye, FaEyeSlash, FaArrowLeft, FaGoogle, FaGithub, FaGem, FaGlobe } fr
 import '../css/Register.css';
 import { authService } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
+import { useI18n } from '../i18n/I18nProvider';
 
 const Register = () => {
+  const { t } = useI18n();
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -44,12 +46,12 @@ const Register = () => {
     try {
       // Validaciones
       if (formData.password !== formData.confirmPassword) {
-        setError('Las contraseñas no coinciden');
+        setError(t('register.error.password.match'));
         return;
       }
 
       if (formData.password.length < 6) {
-        setError('La contraseña debe tener al menos 6 caracteres');
+        setError(t('register.error.password.length'));
         return;
       }
 
@@ -64,7 +66,7 @@ const Register = () => {
       // El usuario deberá hacer login primero, pero guardamos la intención
       navigate('/login?from=register');
     } catch (error: any) {
-      setError(error.response?.data?.message || 'Error al registrar usuario');
+      setError(error.response?.data?.message || t('register.error'));
     } finally {
       setLoading(false);
     }
@@ -77,7 +79,7 @@ const Register = () => {
       await authService.signInWithGoogle();
       // La redirección se manejará automáticamente
     } catch (error: any) {
-      setError('Error al iniciar sesión con Google: ' + (error.message || 'Error desconocido'));
+      setError(t('register.error.google') + ' ' + (error.message || t('register.error.unknown')));
       setOauthLoading(null);
     }
   };
@@ -89,7 +91,7 @@ const Register = () => {
       await authService.signInWithGitHub();
       // La redirección se manejará automáticamente
     } catch (error: any) {
-      setError('Error al iniciar sesión con GitHub: ' + (error.message || 'Error desconocido'));
+      setError(t('register.error.github') + ' ' + (error.message || t('register.error.unknown')));
       setOauthLoading(null);
     }
   };
@@ -98,35 +100,35 @@ const Register = () => {
     <div className="register-container">
       <Link to="/" className="back-button">
         <FaArrowLeft />
-        <span>Volver</span>
+        <span>{t('register.back')}</span>
       </Link>
 
       <div className="register-content">
         <div className="register-left">
           <div className="register-info">
             <h1>
-              Únete a <span className="highlight-text">ArcusX</span>
+              {t('register.join')} <span className="highlight-text">{t('register.join.highlight')}</span>
             </h1>
-            <p>Comienza tu viaje en el mundo Web3</p>
+            <p>{t('register.subtitle')}</p>
             <div className="register-benefits">
               <div className="benefit-item">
                 <span className="benefit-icon"></span>
-                <span>Accede a microtareas</span>
+                <span>{t('register.benefit.microtasks')}</span>
               </div>
               <div className="benefit-item">
                 <span className="benefit-icon"><FaGem /></span>
-                <span>Gana en crypto</span>
+                <span>{t('register.benefit.crypto')}</span>
               </div>
               <div className="benefit-item">
                 <span className="benefit-icon"><FaGlobe /></span>
-                <span>Conecta globalmente</span>
+                <span>{t('register.benefit.global')}</span>
               </div>
             </div>
           </div>
         </div>
         <div className="register-right">
           <form onSubmit={handleSubmit} className="register-form">
-            <h2>Crear Cuenta</h2>
+            <h2>{t('register.title')}</h2>
             {error && <div className="register-error">{error}</div>}
             
             {/* Botones OAuth - Movidos arriba */}
@@ -138,11 +140,11 @@ const Register = () => {
                 disabled={oauthLoading !== null || loading}
               >
                 {oauthLoading === 'google' ? (
-                  <span>Cargando...</span>
+                  <span>{t('register.loading')}</span>
                 ) : (
                   <>
                     <FaGoogle />
-                    <span>Continuar con Google</span>
+                    <span>{t('register.oauth.google')}</span>
                   </>
                 )}
               </button>
@@ -154,11 +156,11 @@ const Register = () => {
                 disabled={oauthLoading !== null || loading}
               >
                 {oauthLoading === 'github' ? (
-                  <span>Cargando...</span>
+                  <span>{t('register.loading')}</span>
                 ) : (
                   <>
                     <FaGithub />
-                    <span>Continuar con GitHub</span>
+                    <span>{t('register.oauth.github')}</span>
                   </>
                 )}
               </button>
@@ -166,13 +168,13 @@ const Register = () => {
 
             {/* Separador */}
             <div className="oauth-divider">
-              <span>O regístrate con email</span>
+              <span>{t('register.oauth.divider')}</span>
             </div>
             <div className="form-group">
               <input
                 type="text"
                 name="username"
-                placeholder="Nombre de usuario"
+                placeholder={t('register.username.placeholder')}
                 value={formData.username}
                 onChange={handleChange}
                 required
@@ -183,7 +185,7 @@ const Register = () => {
               <input
                 type="email"
                 name="email"
-                placeholder="Correo electrónico"
+                placeholder={t('register.email.placeholder')}
                 value={formData.email}
                 onChange={handleChange}
                 required
@@ -194,7 +196,7 @@ const Register = () => {
               <input
                 type={showPassword ? "text" : "password"}
                 name="password"
-                placeholder="Contraseña"
+                placeholder={t('register.password.placeholder')}
                 value={formData.password}
                 onChange={handleChange}
                 required
@@ -213,7 +215,7 @@ const Register = () => {
               <input
                 type={showConfirmPassword ? "text" : "password"}
                 name="confirmPassword"
-                placeholder="Confirmar contraseña"
+                placeholder={t('register.password.confirm.placeholder')}
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 required
@@ -230,10 +232,10 @@ const Register = () => {
             </div>
             
             <button type="submit" className="register-button" disabled={loading}>
-              {loading ? 'Registrando...' : 'Registrarse'}
+              {loading ? t('register.submitting') : t('register.submit')}
             </button>
             <p className="login-link">
-              ¿Ya tienes una cuenta? <Link to="/login">Iniciar Sesión</Link>
+              {t('register.has.account')} <Link to="/login">{t('register.login.link')}</Link>
             </p>
           </form>
         </div>

@@ -1,16 +1,16 @@
 /**
  * Servicio para operaciones de escrow con Trustless Work
  * 
- * ⚠️ ACTUALIZACIÓN IMPORTANTE (Diciembre 2024):
+ * ACTUALIZACIÓN IMPORTANTE (Diciembre 2024):
  * Trustless Work ha cambiado el sistema y ahora SOLO acepta issuer tradicional de Stellar
  * (direcciones que empiezan con "G"). NO usar Contract ID de Soroban (direcciones que empiezan con "C").
  * 
- * ⚠️ INCONSISTENCIAS CON DOCUMENTACIÓN MCP (documentadas y manejadas):
+ * INCONSISTENCIAS CON DOCUMENTACIÓN MCP (documentadas y manejadas):
  * - receiverMemo: La documentación MCP lo marca como requerido, pero el servidor lo RECHAZA → NO incluirlo
  * - milestone.amount: La documentación solo requiere "description", pero es CRÍTICO incluir "amount" para single-release
  * - milestoneIndex: NO debe incluirse en fund-escrow para single-release (el servidor lo rechaza)
  * 
- * ⚠️ CRÍTICO PARA SINGLE-RELEASE:
+ * CRÍTICO PARA SINGLE-RELEASE:
  * - El milestone DEBE tener amount igual al amount del escrow
  * - Al fondear, se usa el amount EXACTO del milestone del indexer (o del escrow como fallback)
  * - La normalización de amounts debe ser consistente (usar normalizeAmount siempre)
@@ -148,7 +148,7 @@ const validateEscrowPayload = (payload: InitializeSingleReleaseEscrowPayload): v
   const escrowAmount = typeof payload.amount === 'number' ? payload.amount : parseFloat(String(payload.amount));
   const difference = Math.abs(milestoneAmount - escrowAmount);
   if (difference > 0.0000001) {
-    console.warn('⚠️ ADVERTENCIA: El amount del milestone no coincide exactamente con el amount del escrow');
+    console.warn('ADVERTENCIA: El amount del milestone no coincide exactamente con el amount del escrow');
     console.warn(`   Amount del escrow: ${escrowAmount}`);
     console.warn(`   Amount del milestone: ${milestoneAmount}`);
     console.warn(`   Diferencia: ${difference}`);
@@ -215,7 +215,7 @@ const waitForEscrowIndexing = async (
       const result = await getEscrowFromIndexer([contractId]);
       const escrows = Array.isArray(result) ? result : (result as any)?.escrows || [];
       if (escrows && escrows.length > 0 && escrows[0]) {
-        console.log('✅ Escrow encontrado en el indexer');
+        console.log('Escrow encontrado en el indexer');
         return true;
       }
     } catch (error: any) {
@@ -226,7 +226,7 @@ const waitForEscrowIndexing = async (
     }
     await new Promise(resolve => setTimeout(resolve, checkInterval));
   }
-  console.warn('⚠️ Timeout esperando indexación del escrow (máximo 10 segundos)');
+  console.warn('Timeout esperando indexación del escrow (máximo 10 segundos)');
   return false;
 };
 
@@ -254,7 +254,7 @@ export const signWithFreighter = async (
   kit: any,
   address: string
 ): Promise<string> => {
-  console.log('🔐 signWithFreighter: Iniciando firma...');
+  console.log('signWithFreighter: Iniciando firma...');
   console.log('   Kit disponible:', !!kit);
   console.log('   Address:', address);
   console.log('   XDR length:', unsignedXdr.length);
@@ -264,10 +264,10 @@ export const signWithFreighter = async (
   }
   
   try {
-    console.log('🔄 Configurando wallet a Freighter...');
+    console.log('Configurando wallet a Freighter...');
     kit.setWallet('freighter');
     
-    console.log('🔄 Llamando a kit.signTransaction...');
+    console.log('Llamando a kit.signTransaction...');
     console.log('   Esto debería abrir el popup de Freighter para firmar');
     
     const { signedTxXdr } = await kit.signTransaction(unsignedXdr, {
@@ -275,10 +275,10 @@ export const signWithFreighter = async (
       networkPassphrase: 'Test SDF Network ; September 2015'
     });
     
-    console.log('✅ Transacción firmada. XDR recibido, length:', signedTxXdr?.length || 0);
+    console.log('Transacción firmada. XDR recibido, length:', signedTxXdr?.length || 0);
     return signedTxXdr;
   } catch (error: any) {
-    console.error('❌ Error en signWithFreighter:', error);
+    console.error('Error en signWithFreighter:', error);
     console.error('   Error message:', error.message);
     console.error('   Error code:', error.code);
     console.error('   Error name:', error.name);
@@ -305,37 +305,37 @@ export const createAndSendTransaction = async (
         const fee = typeof tx.fee === 'string' ? parseInt(tx.fee, 10) : tx.fee;
         const operations = tx.operations;
         const feeInXLM = fee / 10000000;
-        console.log('📊 Análisis de la transacción:');
-        console.log(`   💰 Fee total: ${fee} stroops (${feeInXLM.toFixed(7)} XLM)`);
-        console.log(`   📋 Número de operaciones: ${operations.length}`);
+        console.log('Análisis de la transacción:');
+        console.log(`   Fee total: ${fee} stroops (${feeInXLM.toFixed(7)} XLM)`);
+        console.log(`   Número de operaciones: ${operations.length}`);
         if (feeInXLM > 1) {
-          console.warn('⚠️ ADVERTENCIA: El fee de esta transacción es muy alto (>1 XLM)');
+          console.warn('ADVERTENCIA: El fee de esta transacción es muy alto (>1 XLM)');
         }
         operations.forEach((op: any, index: number) => {
-          console.log(`   🔹 Operación ${index + 1}: ${op.type || 'Unknown'}`);
+          console.log(`   Operación ${index + 1}: ${op.type || 'Unknown'}`);
         });
       } else {
-        console.log('📊 Transacción FeeBump detectada (transacción anidada)');
+        console.log('Transacción FeeBump detectada (transacción anidada)');
       }
     } catch (inspectError: any) {
-      console.warn('⚠️ No se pudo inspeccionar la transacción:', inspectError.message);
+      console.warn('No se pudo inspeccionar la transacción:', inspectError.message);
     }
     
-    console.log('🔐 Firmando transacción con Freighter...');
+    console.log('Firmando transacción con Freighter...');
     console.log('   Address (signer):', address);
     console.log('   Kit disponible:', !!kit);
     console.log('   XDR length:', unsignedXdr.length);
     
     const signedXdr = await signWithFreighter(unsignedXdr, kit, address);
-    console.log('✅ Transacción firmada exitosamente. XDR length:', signedXdr.length);
+    console.log('Transacción firmada exitosamente. XDR length:', signedXdr.length);
     
-    // ✅ MEJORA: Validar el XDR firmado antes de enviarlo
+    // MEJORA: Validar el XDR firmado antes de enviarlo
     // Nota: Las transacciones Soroban pueden causar "Bad union switch" al decodificar
     // Intentamos validar, pero si falla con ese error específico, continuamos de todas formas
     try {
       const tx = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
       const txHash = tx.hash().toString('hex');
-      console.log('✅ XDR validado correctamente. Hash:', txHash);
+      console.log('XDR validado correctamente. Hash:', txHash);
       
       // Verificar que la transacción tenga operaciones
       if ('operations' in tx && tx.operations.length === 0) {
@@ -347,33 +347,33 @@ export const createAndSendTransaction = async (
       if (signatures.length === 0) {
         throw new Error('La transacción no está firmada');
       }
-      console.log(`✅ Transacción tiene ${signatures.length} firma(s)`);
+      console.log(`Transacción tiene ${signatures.length} firma(s)`);
     } catch (xdrError: any) {
       // Si el error es "Bad union switch", puede ser una transacción Soroban
       // que no se puede decodificar completamente, pero está bien formada
       if (xdrError.message?.includes('Bad union switch')) {
-        console.warn('⚠️ Advertencia: No se pudo decodificar completamente el XDR (posible transacción Soroban). Continuando...');
+        console.warn('Advertencia: No se pudo decodificar completamente el XDR (posible transacción Soroban). Continuando...');
         console.warn('   Esto es normal para transacciones que contienen operaciones Soroban (invoke_host_function)');
         // Continuar sin validar completamente - la transacción puede estar bien formada
       } else {
-        console.error('❌ Error al validar XDR firmado:', xdrError.message);
+        console.error('Error al validar XDR firmado:', xdrError.message);
         throw new Error(`XDR firmado inválido: ${xdrError.message}`);
       }
     }
     
-    // ✅ MEJORA: Extraer hash de la transacción antes de enviar para verificar si ya fue enviada
+    // MEJORA: Extraer hash de la transacción antes de enviar para verificar si ya fue enviada
     let txHash: string | undefined;
     try {
       // Intentar extraer el hash, pero si falla con "Bad union switch", usar método alternativo
       try {
         const tx = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
         txHash = tx.hash().toString('hex');
-        console.log(`🔍 Hash de la transacción: ${txHash}`);
+        console.log(`Hash de la transacción: ${txHash}`);
       } catch (hashError: any) {
         if (hashError.message?.includes('Bad union switch')) {
           // Para transacciones Soroban, intentar extraer el hash de otra manera
           // El hash se puede calcular desde el XDR directamente
-          console.warn('⚠️ No se pudo extraer hash con método estándar (transacción Soroban). Continuando sin hash...');
+          console.warn('No se pudo extraer hash con método estándar (transacción Soroban). Continuando sin hash...');
           // Continuar sin hash - se puede obtener después de enviar la transacción
         } else {
           throw hashError;
@@ -385,24 +385,24 @@ export const createAndSendTransaction = async (
         const horizon = getHorizonServer();
         const existingTx = await horizon.transactions().transaction(txHash).call();
         if (existingTx && existingTx.successful) {
-          console.log('✅ La transacción ya fue enviada exitosamente anteriormente');
+          console.log('La transacción ya fue enviada exitosamente anteriormente');
           return { success: true, txHash: txHash };
         } else if (existingTx && !existingTx.successful) {
-          console.warn('⚠️ La transacción existe pero falló:', existingTx.result_code);
+          console.warn('La transacción existe pero falló:', existingTx.result_code);
         }
       } catch (horizonError: any) {
         // Si no se encuentra la transacción, es normal (no ha sido enviada aún)
         if (horizonError?.response?.status === 404) {
           console.log('ℹ️ La transacción no ha sido enviada aún (normal)');
         } else {
-          console.warn('⚠️ No se pudo verificar en Horizon:', horizonError?.message);
+          console.warn('No se pudo verificar en Horizon:', horizonError?.message);
         }
       }
     } catch (hashError: any) {
-      console.warn('⚠️ No se pudo extraer hash de la transacción:', hashError?.message);
+      console.warn('No se pudo extraer hash de la transacción:', hashError?.message);
     }
     
-    console.log('📤 Enviando transacción firmada a Trustless Work...');
+    console.log('Enviando transacción firmada a Trustless Work...');
     console.log(`   XDR length: ${signedXdr.length}`);
     console.log(`   XDR preview: ${signedXdr.substring(0, 100)}...`);
     if (txHash) {
@@ -413,13 +413,13 @@ export const createAndSendTransaction = async (
     try {
       response = await sendTransaction(signedXdr);
       
-      console.log('📥 Respuesta de Trustless Work:', {
+      console.log('Respuesta de Trustless Work:', {
         status: response?.status,
         hasContractId: 'contractId' in (response || {}),
         fullResponse: response
       });
     } catch (sendError: any) {
-      console.error('❌ Error al enviar transacción a Trustless Work:');
+      console.error('Error al enviar transacción a Trustless Work:');
       console.error('   Error completo:', sendError);
       console.error('   Error message:', sendError?.message);
       console.error('   Error code:', sendError?.code);
@@ -429,10 +429,10 @@ export const createAndSendTransaction = async (
       console.error('   Error response statusText:', sendError?.response?.statusText);
       console.error('   Error response headers:', sendError?.response?.headers);
       
-      // ✅ MEJORA CRÍTICA: Si recibimos un 400, verificar si la transacción ya fue exitosa en Horizon
+      // MEJORA CRÍTICA: Si recibimos un 400, verificar si la transacción ya fue exitosa en Horizon
       // Esto maneja el caso donde Trustless Work rechaza la transacción porque ya fue enviada
       if (sendError?.response?.status === 400 && txHash) {
-        console.log('🔍 Error 400 recibido. Verificando si la transacción ya fue exitosa en Horizon...');
+        console.log('Error 400 recibido. Verificando si la transacción ya fue exitosa en Horizon...');
         try {
           const isTestnet = import.meta.env.VITE_STELLAR_NETWORK === 'testnet' ||
                             !import.meta.env.VITE_STELLAR_NETWORK ||
@@ -445,16 +445,16 @@ export const createAndSendTransaction = async (
           if (txResponse.ok) {
             const txData = await txResponse.json();
             if (txData.successful === true) {
-              console.log('✅ La transacción ya fue exitosa en Horizon. Retornando éxito.');
+              console.log('La transacción ya fue exitosa en Horizon. Retornando éxito.');
               return { success: true, txHash: txHash };
             } else {
-              console.warn('⚠️ La transacción existe en Horizon pero falló:', txData.result_code);
+              console.warn('La transacción existe en Horizon pero falló:', txData.result_code);
             }
           } else if (txResponse.status === 404) {
             console.log('ℹ️ La transacción no existe en Horizon (no fue enviada)');
           }
         } catch (horizonCheckError: any) {
-          console.warn('⚠️ Error al verificar transacción en Horizon:', horizonCheckError?.message);
+          console.warn('Error al verificar transacción en Horizon:', horizonCheckError?.message);
         }
       }
       
@@ -505,9 +505,9 @@ export const createAndSendTransaction = async (
         fullErrorMessage += `\n\nDetalles del error del servidor:\n${JSON.stringify(errorDetails, null, 2)}`;
       }
       
-      // ✅ MEJORA: Intentar enviar directamente a Horizon como fallback
+      // MEJORA: Intentar enviar directamente a Horizon como fallback
       if (txHash) {
-        console.log('🔄 Intentando enviar directamente a Horizon como fallback...');
+        console.log('Intentando enviar directamente a Horizon como fallback...');
         try {
           const horizon = getHorizonServer();
           const horizonResponse = await horizon.submitTransaction(
@@ -515,38 +515,38 @@ export const createAndSendTransaction = async (
           );
           
           if (horizonResponse.successful) {
-            console.log('✅ Transacción enviada exitosamente directamente a Horizon');
+            console.log('Transacción enviada exitosamente directamente a Horizon');
             return { success: true, txHash: txHash };
           } else {
-            console.error('❌ La transacción fue rechazada por Horizon:', horizonResponse.result_codes);
+            console.error('La transacción fue rechazada por Horizon:', horizonResponse.result_codes);
           }
         } catch (horizonError: any) {
-          console.error('❌ Error al enviar a Horizon:', horizonError?.message);
+          console.error('Error al enviar a Horizon:', horizonError?.message);
           
           // Si el error es que la transacción ya existe, considerarlo éxito
           if (horizonError?.response?.data?.extras?.result_codes?.transaction === 'tx_already_exists' ||
               horizonError?.message?.includes('already exists') ||
               horizonError?.response?.status === 400 && horizonError?.response?.data?.extras?.result_codes?.transaction === 'tx_already_exists') {
-            console.log('✅ La transacción ya existe en Horizon (fue enviada anteriormente)');
+            console.log('La transacción ya existe en Horizon (fue enviada anteriormente)');
             return { success: true, txHash: txHash };
           }
         }
       }
       
       // Agregar información sobre posibles causas
-      fullErrorMessage += `\n\n⚠️ Posibles causas del error 400:\n`;
+      fullErrorMessage += `\n\nPosibles causas del error 400:\n`;
       fullErrorMessage += `   1. La transacción ya fue enviada previamente (más probable)\n`;
       fullErrorMessage += `   2. La transacción expiró (timeout - las transacciones Stellar expiran después de ~5 minutos)\n`;
       fullErrorMessage += `   3. El servidor rechazó la transacción por validación interna\n`;
       fullErrorMessage += `   4. El formato del XDR no es el esperado por el servidor\n`;
       fullErrorMessage += `   5. La transacción no está correctamente firmada\n`;
-      fullErrorMessage += `\n💡 Soluciones:\n`;
+      fullErrorMessage += `\nSoluciones:\n`;
       fullErrorMessage += `   - Si la transacción ya fue enviada, verifica en Horizon si la transacción fue exitosa\n`;
       fullErrorMessage += `   - Si la transacción expiró, intenta resolver la disputa nuevamente\n`;
       fullErrorMessage += `   - Verifica que el disputeResolver sea el correcto y esté conectado\n`;
       
       if (txHash) {
-        fullErrorMessage += `\n🔍 Hash de la transacción: ${txHash}`;
+        fullErrorMessage += `\nHash de la transacción: ${txHash}`;
         fullErrorMessage += `\n   Puedes verificar el estado en: https://stellar.expert/explorer/testnet/tx/${txHash}`;
         fullErrorMessage += `\n   O en Horizon: https://horizon-testnet.stellar.org/transactions/${txHash}`;
       }
@@ -566,25 +566,25 @@ export const createAndSendTransaction = async (
       try {
         const tx = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
         txHash = tx.hash().toString('hex');
-        console.log('✅ TxHash extraído:', txHash);
+        console.log('TxHash extraído:', txHash);
       } catch (hashError: any) {
-        console.warn('⚠️ No se pudo extraer txHash:', hashError.message);
+        console.warn('No se pudo extraer txHash:', hashError.message);
       }
 
       if ('contractId' in response && response.contractId) {
         const contractId = (response as InitializeSingleReleaseEscrowResponse).contractId;
-        console.log('✅ ContractId obtenido:', contractId);
+        console.log('ContractId obtenido:', contractId);
         return { success: true, contractId: contractId, txHash: txHash };
       }
       return { success: true, txHash: txHash };
     } else {
       const errorMsg = (response as any)?.message || 'Estado no exitoso';
-      console.error('❌ La transacción no fue exitosa:', errorMsg);
+      console.error('La transacción no fue exitosa:', errorMsg);
       console.error('   Respuesta completa:', response);
       return { success: false, error: `La transacción falló: ${errorMsg}` };
     }
   } catch (error: any) {
-    console.error('❌ Error al procesar transacción:', error);
+    console.error('Error al procesar transacción:', error);
     console.error('   Error message:', error?.message);
     console.error('   Error stack:', error?.stack);
     
@@ -618,7 +618,7 @@ const getErrorRecommendations = (error: any, context: any): string => {
   if (isNormalizeError(error)) {
     const timeSinceCreation = context.timeSinceCreation || 'N/A';
     return `
-⚠️ BUG CONOCIDO DEL SERVIDOR DE TRUSTLESS WORK
+BUG CONOCIDO DEL SERVIDOR DE TRUSTLESS WORK
 
 Este error ocurre cuando el servidor intenta normalizar el trustline pero algo está undefined.
 
@@ -640,12 +640,12 @@ const handleCreateError = (error: any): EscrowResult => {
   const errorMessage = errorData?.message || errorData?.error || error.message || 'Error desconocido';
   const errorDetails = errorData?.details || errorData;
   
-  console.error('❌ Error al crear escrow:', errorMessage);
+  console.error('Error al crear escrow:', errorMessage);
   if (errorDetails) {
-    console.error('❌ Detalles:', JSON.stringify(errorDetails, null, 2));
+    console.error('Detalles:', JSON.stringify(errorDetails, null, 2));
   }
   if (errorData) {
-    console.error('❌ Error data completo:', JSON.stringify(errorData, null, 2));
+    console.error('Error data completo:', JSON.stringify(errorData, null, 2));
   }
   
     return {
@@ -669,18 +669,18 @@ export const createTrustlessEscrow = async (
   sendTransaction: (signedXdr: string) => Promise<SendTransactionResponse | InitializeSingleReleaseEscrowResponse>
 ): Promise<EscrowResult> => {
   try {
-    console.log('🔍 Validando configuración...');
+    console.log('Validando configuración...');
     validateConfiguration();
-    console.log('✅ Wallets de plataforma configuradas');
+    console.log('Wallets de plataforma configuradas');
     
     const platformFee = await getPlatformFeeForTrustlessWork();
-    console.log('💰 Platform fee:', platformFee, `(${(platformFee * 100).toFixed(2)}%)`);
+    console.log('Platform fee:', platformFee, `(${(platformFee * 100).toFixed(2)}%)`);
     
     const normalizedAmount = normalizeAmount(payload.amount);
-    console.log('📋 Amount normalizado:', normalizedAmount);
+    console.log('Amount normalizado:', normalizedAmount);
     
     const trustlineConfig = getTrustlineConfig();
-    console.log('📋 Trustline config:', trustlineConfig);
+    console.log('Trustline config:', trustlineConfig);
     
     // Payload según documentación MCP (deploy_single_release_escrow.json)
     // REQUERIDOS: signer, engagementId, title, roles, description, amount, platformFee, milestones, trustline
@@ -702,15 +702,15 @@ export const createTrustlessEscrow = async (
       platformFee: platformFee,
       milestones: [{
         description: payload.milestoneDescription,
-        amount: normalizedAmount // ⚠️ CRÍTICO: Aunque la doc solo requiere "description", necesitamos "amount" para single-release
+        amount: normalizedAmount // CRÍTICO: Aunque la doc solo requiere "description", necesitamos "amount" para single-release
       } as any], // El tipo TypeScript no incluye 'amount' pero es necesario
       trustline: trustlineConfig as any
-      // ⚠️ receiverMemo NO se incluye - el servidor lo rechaza aunque la documentación lo marque como requerido
+      // receiverMemo NO se incluye - el servidor lo rechaza aunque la documentación lo marque como requerido
     };
     
     validateEscrowPayload(escrowPayload);
     
-    console.log('🔄 Creando escrow con issuer tradicional de USDC...');
+    console.log('Creando escrow con issuer tradicional de USDC...');
     const initResponse = await deployEscrow(escrowPayload, 'single-release');
     
     const unsignedTransaction = validateInitResponse(initResponse);
@@ -756,27 +756,27 @@ export const fundTrustlessEscrow = async (
 ): Promise<{ success: boolean; txHash?: string; error?: string }> => {
   try {
     validateFundingParams(contractId, amount, signer, kit);
-    console.log('💰 Amount recibido para fondear:', amount);
+    console.log('Amount recibido para fondear:', amount);
     
     // Obtener escrow del indexer para usar el amount exacto
     let escrowFromIndexer: any = null;
     if (getEscrowFromIndexer) {
-      console.log('🔍 Verificando que el escrow esté indexado...');
+      console.log('Verificando que el escrow esté indexado...');
       console.log('   Contract ID:', contractId);
       
       const indexerWrapper = async (contractIds: string[]): Promise<any> => {
         if (!contractIds || !Array.isArray(contractIds) || contractIds.length === 0) {
-          console.warn('⚠️ contractIds inválido o vacío:', contractIds);
+          console.warn('contractIds inválido o vacío:', contractIds);
           return [];
         }
         try {
-          console.log('   📡 Llamando a getEscrowFromIndexer con contractIds:', contractIds);
+          console.log('   Llamando a getEscrowFromIndexer con contractIds:', contractIds);
           const result = await getEscrowFromIndexer({ contractIds, validateOnChain: true });
-          console.log('   📥 Resultado del indexer (raw):', result);
+          console.log('   Resultado del indexer (raw):', result);
           return result;
         } catch (error: any) {
-          console.error('   ❌ Error al obtener escrow del indexer en wrapper:', error.message);
-          console.error('   ❌ Stack:', error.stack);
+          console.error('   Error al obtener escrow del indexer en wrapper:', error.message);
+          console.error('   Stack:', error.stack);
           return [];
         }
       };
@@ -790,33 +790,33 @@ export const fundTrustlessEscrow = async (
         if (!contractId || contractId.trim() === '') {
           throw new Error('Contract ID está vacío o inválido');
         }
-        console.log('   📡 Obteniendo escrow del indexer (segunda llamada para datos completos)...');
+        console.log('   Obteniendo escrow del indexer (segunda llamada para datos completos)...');
         const result = await getEscrowFromIndexer({ contractIds: [contractId], validateOnChain: true });
-        console.log('   📥 Resultado completo del indexer:', JSON.stringify(result, null, 2));
+        console.log('   Resultado completo del indexer:', JSON.stringify(result, null, 2));
         
         const escrows = Array.isArray(result) ? result : (result as any)?.escrows || [];
-        console.log('   📊 Escrows extraídos:', escrows.length, 'escrow(s) encontrado(s)');
+        console.log('   Escrows extraídos:', escrows.length, 'escrow(s) encontrado(s)');
         
         if (escrows && escrows.length > 0) {
           escrowFromIndexer = escrows[0];
-          console.log('   ✅ Escrow obtenido del indexer exitosamente');
-          console.log('   📋 Estructura del escrow:', {
+          console.log('   Escrow obtenido del indexer exitosamente');
+          console.log('   Estructura del escrow:', {
             hasAmount: escrowFromIndexer.amount !== undefined,
             hasMilestones: escrowFromIndexer.milestones !== undefined,
             milestonesCount: escrowFromIndexer.milestones?.length || 0,
             firstMilestoneHasAmount: escrowFromIndexer.milestones?.[0]?.amount !== undefined
           });
         } else {
-          console.error('   ❌ No se encontraron escrows en el resultado del indexer');
-          console.error('   ❌ Resultado completo:', JSON.stringify(result, null, 2));
+          console.error('   No se encontraron escrows en el resultado del indexer');
+          console.error('   Resultado completo:', JSON.stringify(result, null, 2));
         }
       } catch (indexerError: any) {
-        console.error('   ❌ Error crítico al obtener escrow del indexer:', indexerError.message);
-        console.error('   ❌ Stack:', indexerError.stack);
+        console.error('   Error crítico al obtener escrow del indexer:', indexerError.message);
+        console.error('   Stack:', indexerError.stack);
         // No lanzar error aquí, continuar con el proceso de funding (usará amount del frontend)
       }
     } else {
-      console.warn('⚠️ getEscrowFromIndexer no está disponible. No se puede verificar el amount del milestone.');
+      console.warn('getEscrowFromIndexer no está disponible. No se puede verificar el amount del milestone.');
     }
     
     // Verificar estado y obtener amount exacto del milestone
@@ -825,7 +825,7 @@ export const fundTrustlessEscrow = async (
       
       // Log COMPLETO del escrow y milestone
       const firstMilestone = escrowFromIndexer.milestones[0];
-      console.log('🔍 Estado COMPLETO del escrow antes de fondear:', {
+      console.log('Estado COMPLETO del escrow antes de fondear:', {
         contractId,
         balance: escrowFromIndexer.balance,
         escrowAmount: escrowFromIndexer.amount,
@@ -845,7 +845,7 @@ export const fundTrustlessEscrow = async (
         ? (typeof escrowFromIndexer.amount === 'string' ? parseFloat(String(escrowFromIndexer.amount)) : escrowFromIndexer.amount)
               : escrowFromIndexer.amount;
             
-      console.log('📊 Análisis de amounts:', {
+      console.log('Análisis de amounts:', {
         amountRecibidoFrontend: amount,
         milestoneAmount: milestoneAmount,
         milestoneAmountParsed: milestoneAmount !== null ? normalizeAmount(milestoneAmount) : null,
@@ -853,7 +853,7 @@ export const fundTrustlessEscrow = async (
         escrowTotalAmountParsed: escrowTotalAmount !== null ? normalizeAmount(escrowTotalAmount) : null
       });
       
-      // ⚠️ CRÍTICO: SIEMPRE usar el amount del indexer, no el calculado en frontend
+      // CRÍTICO: SIEMPRE usar el amount del indexer, no el calculado en frontend
       // El error "Invalid milestone index" ocurre cuando el amount no coincide EXACTAMENTE
       // Por lo tanto, SIEMPRE priorizamos el amount del milestone o escrow del indexer
       
@@ -863,17 +863,17 @@ export const fundTrustlessEscrow = async (
         const normalizedFrontendAmount = normalizeAmount(amount);
         const difference = Math.abs(normalizedMilestoneAmount - normalizedFrontendAmount);
         
-        console.log('🔍 Comparación normalizada:', {
+        console.log('Comparación normalizada:', {
           frontendNormalized: normalizedFrontendAmount,
           milestoneNormalized: normalizedMilestoneAmount,
           difference: difference
         });
         
         // SIEMPRE usar el amount del milestone, incluso si coincide
-        console.log('💡 Usando SIEMPRE el amount del milestone del indexer (más confiable)');
+        console.log('Usando SIEMPRE el amount del milestone del indexer (más confiable)');
         console.log(`   Amount del milestone (indexer): ${milestoneAmount} → normalizado: ${normalizedMilestoneAmount}`);
         if (difference > 0.0000001) {
-          console.warn(`   ⚠️ Diferencia detectada: ${difference} - esto podría causar el error`);
+          console.warn(`   Diferencia detectada: ${difference} - esto podría causar el error`);
         }
         amount = normalizedMilestoneAmount; // SIEMPRE usar el del milestone
       } 
@@ -883,30 +883,30 @@ export const fundTrustlessEscrow = async (
         const normalizedFrontendAmount = normalizeAmount(amount);
         const difference = Math.abs(normalizedEscrowAmount - normalizedFrontendAmount);
         
-        console.log('🔍 Comparación normalizada (fallback escrow):', {
+        console.log('Comparación normalizada (fallback escrow):', {
           frontendNormalized: normalizedFrontendAmount,
           escrowNormalized: normalizedEscrowAmount,
           difference: difference
         });
         
         // SIEMPRE usar el amount del escrow como fallback
-        console.warn('   ⚠️ NOTA: El milestone no tiene amount (escrow antiguo o creado sin amount)');
-        console.log('💡 Usando SIEMPRE el amount del escrow del indexer como fallback');
+        console.warn('   NOTA: El milestone no tiene amount (escrow antiguo o creado sin amount)');
+        console.log('Usando SIEMPRE el amount del escrow del indexer como fallback');
         console.log(`   Amount del escrow (indexer): ${escrowTotalAmount} → normalizado: ${normalizedEscrowAmount}`);
         if (difference > 0.0000001) {
-          console.warn(`   ⚠️ Diferencia detectada: ${difference} - esto podría causar el error`);
+          console.warn(`   Diferencia detectada: ${difference} - esto podría causar el error`);
         }
         amount = normalizedEscrowAmount; // SIEMPRE usar el del escrow
         } else {
-        console.error('❌ ERROR CRÍTICO: No se pudo obtener amount del milestone ni del escrow del indexer');
+        console.error('ERROR CRÍTICO: No se pudo obtener amount del milestone ni del escrow del indexer');
         console.error('   Milestone amount:', milestoneAmount);
         console.error('   Escrow amount:', escrowTotalAmount);
         console.error('   Esto causará el error "Invalid milestone index"');
-        console.error('   ⚠️ SOLUCIÓN: Crear un nuevo escrow con amount en el milestone');
+        console.error('   SOLUCIÓN: Crear un nuevo escrow con amount en el milestone');
         throw new Error('No se pudo obtener el amount del escrow del indexer. El escrow puede estar corrupto o no indexado correctamente.');
       }
       
-      console.log('📋 Amount final a fondear (ANTES de normalización final):', {
+      console.log('Amount final a fondear (ANTES de normalización final):', {
         milestoneAmountRaw: milestoneAmount,
         escrowTotalAmountRaw: escrowTotalAmount,
         amountActual: amount,
@@ -914,7 +914,7 @@ export const fundTrustlessEscrow = async (
         source: milestoneAmount !== null ? 'milestone (normalizado)' : (escrowTotalAmount !== null ? 'escrow (fallback, normalizado)' : 'frontend (sin normalizar)')
       });
     } else {
-      console.warn('⚠️ No se pudo obtener el escrow del indexer. Usando amount calculado...');
+      console.warn('No se pudo obtener el escrow del indexer. Usando amount calculado...');
       console.warn('   Esto puede causar el error "Invalid milestone index" si el amount no coincide');
     }
     
@@ -926,7 +926,7 @@ export const fundTrustlessEscrow = async (
       throw new Error(`Amount inválido: ${finalAmount}`);
     }
     
-    console.log('💰 Amount FINAL normalizado:', finalAmount);
+    console.log('Amount FINAL normalizado:', finalAmount);
     
     // Payload según documentación MCP (fund_escrow.json)
     // REQUERIDOS: escrowType, contractId, amount, signer
@@ -937,7 +937,7 @@ export const fundTrustlessEscrow = async (
       signer
     };
     
-    console.log('📦 Payload de funding FINAL (exactamente como se envía al servidor):', {
+    console.log('Payload de funding FINAL (exactamente como se envía al servidor):', {
       contractId: fundingPayload.contractId,
       amount: fundingPayload.amount,
       amountType: typeof fundingPayload.amount,
@@ -948,7 +948,7 @@ export const fundTrustlessEscrow = async (
     });
     
     // Log adicional para debugging
-    console.log('🔍 Verificación final del amount:', {
+    console.log('Verificación final del amount:', {
       originalAmount: amount,
       normalizedAmount: finalAmount,
       isNumber: typeof finalAmount === 'number',
@@ -985,7 +985,7 @@ const fundWithRetries = async (
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`🔄 Intentando fondear escrow... (intento ${attempt}/${maxRetries})`);
+      console.log(`Intentando fondear escrow... (intento ${attempt}/${maxRetries})`);
       
       const fundResponse = await fundEscrow(payload, 'single-release');
       
@@ -1001,7 +1001,7 @@ const fundWithRetries = async (
       );
       
       if (result.success) {
-        console.log('✅ Escrow fondeado exitosamente');
+        console.log('Escrow fondeado exitosamente');
         return { success: true, txHash: result.txHash };
       }
       
@@ -1010,20 +1010,20 @@ const fundWithRetries = async (
     } catch (error: any) {
       lastError = error;
       
-      console.error(`❌ Error en intento ${attempt}/${maxRetries}:`, error.message);
+      console.error(`Error en intento ${attempt}/${maxRetries}:`, error.message);
       
       if (error.response?.data) {
-        console.error('📋 Respuesta del servidor:', JSON.stringify(error.response.data, null, 2));
+        console.error('Respuesta del servidor:', JSON.stringify(error.response.data, null, 2));
         
         if (error.response.data.message) {
-          console.error('💬 Mensaje:', error.response.data.message);
+          console.error('Mensaje:', error.response.data.message);
         }
         if (error.response.data.details) {
-          console.error('📝 Detalles:', JSON.stringify(error.response.data.details, null, 2));
+          console.error('Detalles:', JSON.stringify(error.response.data.details, null, 2));
         }
         
         if (error.response.data.message === 'Invalid milestone index') {
-          console.error('💡 SUGERENCIA: El error "Invalid milestone index" ocurre cuando:');
+          console.error('SUGERENCIA: El error "Invalid milestone index" ocurre cuando:');
           console.error('   1. El amount no coincide exactamente con el amount del milestone');
           console.error('   2. El milestone no tiene amount definido');
           console.error('   SOLUCIÓN: Crear un nuevo escrow con amount en el milestone');
@@ -1110,7 +1110,7 @@ const isMilestoneAlreadyApproved = (escrow: any, milestoneIndex: string): boolea
     }
     return false;
   } catch (error) {
-    console.warn('⚠️ Error al verificar estado del milestone:', error);
+    console.warn('Error al verificar estado del milestone:', error);
     return false;
   }
 };
@@ -1125,7 +1125,7 @@ export const approveMilestoneTrustlessEscrow = async (
   getEscrowFromIndexer?: (contractIds: string[]) => Promise<any>
 ): Promise<{ success: boolean; txHash?: string; error?: string; alreadyApproved?: boolean }> => {
   try {
-    console.log('🔄 Iniciando aprobación de milestone...');
+    console.log('Iniciando aprobación de milestone...');
     
     if (getEscrowFromIndexer) {
       try {
@@ -1135,12 +1135,12 @@ export const approveMilestoneTrustlessEscrow = async (
           const escrow = escrows[0];
           const alreadyApproved = isMilestoneAlreadyApproved(escrow, milestoneIndex);
           if (alreadyApproved) {
-            console.log('✅ El milestone ya está aprobado. Saltando aprobación...');
+            console.log('El milestone ya está aprobado. Saltando aprobación...');
             return { success: true, alreadyApproved: true, txHash: undefined };
           }
         }
       } catch (indexerError: any) {
-        console.warn('⚠️ No se pudo verificar el estado del milestone:', indexerError.message);
+        console.warn('No se pudo verificar el estado del milestone:', indexerError.message);
       }
     }
     
@@ -1155,7 +1155,7 @@ export const approveMilestoneTrustlessEscrow = async (
     if (!response?.unsignedTransaction) {
       const errorMessage = (response as any)?.message || '';
       if (errorMessage.includes('already been approved') || errorMessage.includes('already approved')) {
-        console.log('✅ El milestone ya está aprobado (detectado desde API)');
+        console.log('El milestone ya está aprobado (detectado desde API)');
         return { success: true, alreadyApproved: true, txHash: undefined };
       }
       throw new Error('Unsigned transaction is missing from approveMilestone response.');
@@ -1169,7 +1169,7 @@ export const approveMilestoneTrustlessEscrow = async (
     );
 
     if (result.success) {
-      console.log('✅ Milestone aprobado exitosamente');
+      console.log('Milestone aprobado exitosamente');
       return { success: true, txHash: result.txHash };
     } else {
       throw new Error(result.error || 'Error al firmar o enviar la transacción');
@@ -1180,11 +1180,11 @@ export const approveMilestoneTrustlessEscrow = async (
     if (errorMessage.includes('already been approved') || 
         errorMessage.includes('already approved') ||
         errorMessage.includes('cannot approve a milestone that has already been approved')) {
-      console.log('✅ El milestone ya está aprobado (detectado desde error)');
+      console.log('El milestone ya está aprobado (detectado desde error)');
       return { success: true, alreadyApproved: true, txHash: undefined };
     }
     
-    console.error('❌ Error al aprobar milestone:', errorMessage);
+    console.error('Error al aprobar milestone:', errorMessage);
     throw new Error(errorMessage);
   }
 };
@@ -1197,7 +1197,7 @@ export const releaseFundsTrustlessEscrow = async (
   sendTransaction: (signedXdr: string) => Promise<SendTransactionResponse>
 ): Promise<{ success: boolean; txHash?: string; error?: string; alreadyReleased?: boolean }> => {
   try {
-    console.log('🔄 Iniciando liberación de fondos...');
+    console.log('Iniciando liberación de fondos...');
     
     const payload: SingleReleaseReleaseFundsPayload = {
       contractId,
@@ -1218,7 +1218,7 @@ export const releaseFundsTrustlessEscrow = async (
     );
 
     if (result.success) {
-      console.log('✅ Fondos liberados exitosamente');
+      console.log('Fondos liberados exitosamente');
       return { success: true, txHash: result.txHash };
     } else {
       throw new Error(result.error || 'Error al firmar o enviar la transacción');
@@ -1229,11 +1229,11 @@ export const releaseFundsTrustlessEscrow = async (
     if (errorMessage.includes('escrow funds have been released') || 
         errorMessage.includes('funds have been released') ||
         errorMessage.includes('already released')) {
-      console.log('✅ Los fondos ya fueron liberados anteriormente');
+      console.log('Los fondos ya fueron liberados anteriormente');
       return { success: true, alreadyReleased: true, txHash: undefined };
     }
     
-    console.error('❌ Error al liberar fondos:', errorMessage);
+    console.error('Error al liberar fondos:', errorMessage);
     throw new Error(errorMessage);
   }
 };
@@ -1285,7 +1285,7 @@ export const resolveDisputeTrustlessEscrow = async (
   getEscrowFromIndexer?: (params: { contractIds: string[]; validateOnChain?: boolean }) => Promise<any>
 ): Promise<{ success: boolean; txHash?: string; error?: string; verificationResult?: any; warning?: string; requiresTrustline?: boolean; message?: string }> => {
   try {
-    // ✅ MEJORA CRÍTICA: Validar parámetros de entrada
+    // MEJORA CRÍTICA: Validar parámetros de entrada
     if (!contractId || typeof contractId !== 'string' || contractId.trim().length === 0) {
       throw new Error('Contract ID es requerido y debe ser válido');
     }
@@ -1294,7 +1294,7 @@ export const resolveDisputeTrustlessEscrow = async (
       throw new Error(`Dispute Resolver debe ser una dirección Stellar válida (empieza con "G"): ${disputeResolver}`);
     }
     
-    // ✅ MEJORA: Validar balance y estado del escrow antes de distribuir
+    // MEJORA: Validar balance y estado del escrow antes de distribuir
     if (getEscrowFromIndexer) {
       try {
         const result = await getEscrowFromIndexer({ contractIds: [contractId], validateOnChain: true });
@@ -1306,12 +1306,12 @@ export const resolveDisputeTrustlessEscrow = async (
           const flags = escrow.flags || {};
           const isDisputed = flags.disputed === true || escrow.isDisputed === true || escrow.disputed === true;
           
-          // ✅ MEJORA CRÍTICA: Verificar que el escrow esté en disputa
+          // MEJORA CRÍTICA: Verificar que el escrow esté en disputa
           if (!isDisputed) {
             throw new Error(`El escrow ${contractId} no está en disputa. Solo se pueden resolver escrows que están en estado "disputed". Estado actual: ${escrow.status || 'unknown'}`);
           }
           
-          // ✅ MEJORA CRÍTICA: Verificar que el disputeResolver sea el correcto
+          // MEJORA CRÍTICA: Verificar que el disputeResolver sea el correcto
           const escrowDisputeResolver = escrow.roles?.disputeResolver;
           if (escrowDisputeResolver && escrowDisputeResolver !== disputeResolver) {
             throw new Error(`El disputeResolver proporcionado (${disputeResolver}) no coincide con el configurado en el escrow (${escrowDisputeResolver}). Solo el disputeResolver configurado en el escrow puede resolver la disputa.`);
@@ -1319,7 +1319,7 @@ export const resolveDisputeTrustlessEscrow = async (
           
           // Si no hay disputeResolver en el escrow, usar el proporcionado pero advertir
           if (!escrowDisputeResolver) {
-            console.warn(`⚠️ No se encontró disputeResolver en el escrow. Usando el proporcionado: ${disputeResolver}`);
+            console.warn(`No se encontró disputeResolver en el escrow. Usando el proporcionado: ${disputeResolver}`);
           }
           
           if (balance <= 0) {
@@ -1328,19 +1328,19 @@ export const resolveDisputeTrustlessEscrow = async (
           
           // Verificar que el amount a distribuir no exceda el balance
           if (distribution.amount > balance) {
-            console.warn(`⚠️ El amount a distribuir (${distribution.amount}) excede el balance del escrow (${balance}). Ajustando al balance disponible.`);
+            console.warn(`El amount a distribuir (${distribution.amount}) excede el balance del escrow (${balance}). Ajustando al balance disponible.`);
             distribution.amount = balance;
           }
         } else {
-          console.warn('⚠️ No se pudo obtener información del escrow desde el indexer. Continuando de todas formas...');
+          console.warn('No se pudo obtener información del escrow desde el indexer. Continuando de todas formas...');
         }
       } catch (balanceError: any) {
-        console.warn('⚠️ No se pudo verificar el balance del escrow:', balanceError.message);
+        console.warn('No se pudo verificar el balance del escrow:', balanceError.message);
         // Continuar de todas formas, pero registrar la advertencia
       }
     }
 
-    // ✅ MEJORA CRÍTICA: Normalizar amount y validar address
+    // MEJORA CRÍTICA: Normalizar amount y validar address
     const normalizedAmount = normalizeAmount(distribution.amount);
     
     // Validar que el address sea válido
@@ -1353,7 +1353,7 @@ export const resolveDisputeTrustlessEscrow = async (
       throw new Error(`La dirección del receptor no es una dirección Stellar válida: ${distribution.address}`);
     }
     
-    console.log('📋 Payload de resolución de disputa:');
+    console.log('Payload de resolución de disputa:');
     console.log('   Contract ID:', contractId);
     console.log('   Dispute Resolver:', disputeResolver);
     console.log('   Distribution Address:', distribution.address);
@@ -1369,12 +1369,12 @@ export const resolveDisputeTrustlessEscrow = async (
       }] as [{ address: string; amount: number }]
     };
 
-    console.log('📤 Enviando payload a resolveDispute:', JSON.stringify(payload, null, 2));
-    console.log('🔄 Llamando a resolveDispute API de Trustless Work...');
+    console.log('Enviando payload a resolveDispute:', JSON.stringify(payload, null, 2));
+    console.log('Llamando a resolveDispute API de Trustless Work...');
     
     const response = await resolveDispute(payload, 'single-release');
     
-    console.log('📥 Respuesta de resolveDispute:', {
+    console.log('Respuesta de resolveDispute:', {
       hasUnsignedTransaction: !!response?.unsignedTransaction,
       status: response?.status
     });
@@ -1383,15 +1383,15 @@ export const resolveDisputeTrustlessEscrow = async (
       throw new Error('Unsigned transaction is missing from resolveDispute response.');
     }
 
-    console.log('✅ Transacción no firmada recibida. Procediendo a firmar y enviar...');
-    console.log('🔐 Firmando transacción de resolución de disputa con Freighter...');
-    console.log('📋 Dispute Resolver (signer):', disputeResolver);
+    console.log('Transacción no firmada recibida. Procediendo a firmar y enviar...');
+    console.log('Firmando transacción de resolución de disputa con Freighter...');
+    console.log('Dispute Resolver (signer):', disputeResolver);
     
-    // ✅ MEJORA CRÍTICA: Firmar UNA SOLA VEZ y enviar directamente (igual que signAndSendRefundTransaction)
+    // MEJORA CRÍTICA: Firmar UNA SOLA VEZ y enviar directamente (igual que signAndSendRefundTransaction)
     // NO usar createAndSendTransaction porque puede intentar firmar múltiples veces
     const signedXdr = await signWithFreighter(response.unsignedTransaction, kit, disputeResolver);
     
-    console.log('✅ Transacción firmada. Enviando directamente a Trustless Work...');
+    console.log('Transacción firmada. Enviando directamente a Trustless Work...');
     
     // Extraer txHash antes de enviar
     let txHash: string | undefined;
@@ -1399,41 +1399,41 @@ export const resolveDisputeTrustlessEscrow = async (
       const { TransactionBuilder, Networks } = await import('@stellar/stellar-sdk');
       const tx = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
       txHash = tx.hash().toString('hex');
-      console.log('✅ TxHash extraído:', txHash);
+      console.log('TxHash extraído:', txHash);
     } catch (hashError: any) {
-      console.warn('⚠️ No se pudo extraer txHash:', hashError.message);
+      console.warn('No se pudo extraer txHash:', hashError.message);
     }
     
     // Enviar transacción firmada DIRECTAMENTE a Trustless Work
     try {
       const response_send = await sendTransaction(signedXdr);
       
-      console.log('📥 Respuesta completa de Trustless Work:', response_send);
+      console.log('Respuesta completa de Trustless Work:', response_send);
 
       if (response_send.status === 'SUCCESS') {
-        console.log('✅ Resolución de disputa procesada exitosamente');
-        console.log('💡 Los fondos han sido transferidos');
+        console.log('Resolución de disputa procesada exitosamente');
+        console.log('Los fondos han sido transferidos');
         
-        // ✅ MEJORA: Verificar que la transacción se completó exitosamente y el cliente recibió el dinero
+        // MEJORA: Verificar que la transacción se completó exitosamente y el cliente recibió el dinero
         try {
-          console.log('🔍 Verificando transacción y balance del cliente...');
+          console.log('Verificando transacción y balance del cliente...');
           console.log(`   Hash de transacción: ${txHash}`);
           console.log(`   Dirección del receptor: ${distribution.address}`);
           console.log(`   Monto esperado: ${normalizedAmount}`);
           
           const verificationResult = await verifyTransactionAndBalance(txHash!, distribution.address, normalizedAmount);
           
-          console.log('✅ Verificación completada: El cliente tiene trustline y puede recibir USDC');
+          console.log('Verificación completada: El cliente tiene trustline y puede recibir USDC');
           
           // Retornar información adicional sobre la verificación
           return { 
             success: true, 
             txHash: txHash,
             verificationResult: verificationResult,
-            message: `✅ Disputa resuelta exitosamente. ${normalizedAmount} USDC transferidos al cliente ${distribution.address}. Hash: ${txHash}`
+            message: `Disputa resuelta exitosamente. ${normalizedAmount} USDC transferidos al cliente ${distribution.address}. Hash: ${txHash}`
           };
         } catch (verifyError: any) {
-          console.error('❌ Error al verificar transacción o balance:', verifyError.message);
+          console.error('Error al verificar transacción o balance:', verifyError.message);
           console.error('   Esto puede significar que:');
           console.error('   1. El cliente no tiene trustline configurado para USDC');
           console.error('   2. La transacción no transfirió los fondos correctamente');
@@ -1452,13 +1452,13 @@ export const resolveDisputeTrustlessEscrow = async (
         }
       } else {
         const errorMsg = (response_send as any).message || 'Estado no exitoso';
-        console.error('❌ La transacción no fue exitosa:', errorMsg);
-        console.error('📋 Respuesta completa:', JSON.stringify(response_send, null, 2));
+        console.error('La transacción no fue exitosa:', errorMsg);
+        console.error('Respuesta completa:', JSON.stringify(response_send, null, 2));
         throw new Error(`La transacción falló: ${errorMsg}`);
       }
     } catch (sendError: any) {
       // Capturar errores específicos del envío
-      console.error('❌ Error al enviar transacción a Trustless Work:');
+      console.error('Error al enviar transacción a Trustless Work:');
       console.error('   Tipo de error:', sendError.constructor.name);
       console.error('   Mensaje:', sendError.message);
       console.error('   Response data:', sendError.response?.data);
@@ -1471,12 +1471,12 @@ export const resolveDisputeTrustlessEscrow = async (
                           sendError.message || 
                           'Error desconocido al enviar transacción';
       
-      console.error('💬 Mensaje de error final:', errorMessage);
+      console.error('Mensaje de error final:', errorMessage);
       throw new Error(errorMessage);
     }
   } catch (error: any) {
-    // ✅ MEJORA: Logging detallado del error
-    console.error('❌ Error al resolver disputa:', error);
+    // MEJORA: Logging detallado del error
+    console.error('Error al resolver disputa:', error);
     console.error('   Error type:', typeof error);
     console.error('   Error constructor:', error?.constructor?.name);
     console.error('   Error response:', error?.response);
@@ -1527,7 +1527,7 @@ export const resolveDisputeTrustlessEscrow = async (
     
     // Si es un error 400, agregar información adicional
     if (error?.response?.status === 400) {
-      fullErrorMessage += `\n\n⚠️ Error 400 (Bad Request): El servidor rechazó la solicitud.\n`;
+      fullErrorMessage += `\n\nError 400 (Bad Request): El servidor rechazó la solicitud.\n`;
       fullErrorMessage += `\nPosibles causas:\n`;
       fullErrorMessage += `   1. El XDR firmado es inválido o está corrupto\n`;
       fullErrorMessage += `   2. La transacción ya fue enviada previamente\n`;
@@ -1566,25 +1566,25 @@ const verifyTransactionAndBalance = async (
     const horizon = getHorizonServer();
     
     // 1. Verificar que la transacción existe y fue exitosa
-    console.log(`🔍 Verificando transacción ${txHash}...`);
+    console.log(`Verificando transacción ${txHash}...`);
     const transaction = await horizon.transactions().transaction(txHash).call();
     
     if (transaction.successful !== true) {
       throw new Error(`La transacción ${txHash} no fue exitosa. Resultado: ${transaction.result_code || 'unknown'}`);
     }
     
-    console.log('✅ Transacción verificada como exitosa');
+    console.log('Transacción verificada como exitosa');
     
     // 2. Verificar las operaciones de la transacción para ver si realmente transfirió fondos
-    console.log(`🔍 Analizando operaciones de la transacción...`);
+    console.log(`Analizando operaciones de la transacción...`);
     const operations = await horizon.transactions().transaction(txHash).operations().call();
     
-    console.log(`📊 Operaciones en la transacción: ${operations.records.length}`);
+    console.log(`Operaciones en la transacción: ${operations.records.length}`);
     let paymentFound = false;
     let paymentAmount = 0;
     let paymentTo = '';
     
-    // ✅ CRÍTICO: Para transacciones Soroban (invoke_host_function), los fondos aparecen en asset_balance_changes
+    // CRÍTICO: Para transacciones Soroban (invoke_host_function), los fondos aparecen en asset_balance_changes
     // no en operaciones de tipo "payment"
     operations.records.forEach((op: any, index: number) => {
       console.log(`   Operación ${index + 1}: ${op.type}`);
@@ -1606,7 +1606,7 @@ const verifyTransactionAndBalance = async (
               paymentFound = true;
               paymentAmount = parseFloat(change.amount || '0');
               paymentTo = change.to;
-              console.log(`✅ Transferencia de USDC encontrada: ${paymentAmount} USDC a ${paymentTo}`);
+              console.log(`Transferencia de USDC encontrada: ${paymentAmount} USDC a ${paymentTo}`);
             }
           }
         });
@@ -1626,14 +1626,14 @@ const verifyTransactionAndBalance = async (
             paymentFound = true;
             paymentAmount = parseFloat(op.amount || '0');
             paymentTo = op.to || op.destination;
-            console.log(`✅ Pago de USDC encontrado: ${paymentAmount} USDC a ${paymentTo}`);
+            console.log(`Pago de USDC encontrado: ${paymentAmount} USDC a ${paymentTo}`);
           }
         }
       }
     });
     
     if (!paymentFound) {
-      console.warn('⚠️ No se encontró una transferencia de USDC al cliente en la transacción');
+      console.warn('No se encontró una transferencia de USDC al cliente en la transacción');
       console.warn('   Esto puede significar que:');
       console.warn('   1. La transacción no transfirió fondos al cliente');
       console.warn('   2. Los fondos se transfirieron a otra dirección');
@@ -1642,7 +1642,7 @@ const verifyTransactionAndBalance = async (
     }
     
     // 3. Verificar el balance del cliente
-    console.log(`🔍 Verificando balance de ${receiverAddress}...`);
+    console.log(`Verificando balance de ${receiverAddress}...`);
     const account = await horizon.loadAccount(receiverAddress);
     
     // Buscar balance de USDC
@@ -1652,7 +1652,7 @@ const verifyTransactionAndBalance = async (
     });
     
     if (!usdcBalance) {
-      console.error('❌ El cliente no tiene un trustline configurado para USDC');
+      console.error('El cliente no tiene un trustline configurado para USDC');
       console.error(`   Cliente: ${receiverAddress}`);
       console.error(`   Issuer de USDC requerido: ${USDC_ISSUER}`);
       console.error(`   Para configurar el trustline, el cliente puede usar Freighter o Stellar Laboratory`);
@@ -1664,22 +1664,22 @@ const verifyTransactionAndBalance = async (
     }
     
     const currentBalance = parseFloat(usdcBalance.balance);
-    console.log(`💰 Balance actual de USDC del cliente: ${currentBalance}`);
-    console.log(`💰 Monto esperado recibido: ${expectedAmount}`);
+    console.log(`Balance actual de USDC del cliente: ${currentBalance}`);
+    console.log(`Monto esperado recibido: ${expectedAmount}`);
     
     if (paymentFound) {
-      console.log(`✅ Pago confirmado: ${paymentAmount} USDC fueron transferidos a ${paymentTo}`);
+      console.log(`Pago confirmado: ${paymentAmount} USDC fueron transferidos a ${paymentTo}`);
       if (Math.abs(paymentAmount - expectedAmount) > 0.0000001) {
-        console.warn(`⚠️ El monto transferido (${paymentAmount}) no coincide exactamente con el esperado (${expectedAmount})`);
+        console.warn(`El monto transferido (${paymentAmount}) no coincide exactamente con el esperado (${expectedAmount})`);
       }
     } else {
-      console.warn(`⚠️ No se encontró un pago de USDC al cliente en la transacción`);
+      console.warn(`No se encontró un pago de USDC al cliente en la transacción`);
       console.warn(`   Esto puede indicar que los fondos no se transfirieron correctamente`);
     }
     
     // Nota: No podemos verificar exactamente cuánto recibió porque puede haber tenido balance previo
     // Pero podemos confirmar que tiene trustline y puede recibir USDC
-    console.log('✅ El cliente tiene trustline configurado y puede recibir USDC');
+    console.log('El cliente tiene trustline configurado y puede recibir USDC');
     
     // Retornar información de verificación
     return {
@@ -1691,14 +1691,14 @@ const verifyTransactionAndBalance = async (
       horizonUrl: `https://horizon-testnet.stellar.org/transactions/${txHash}`,
       stellarExpertUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
       message: paymentFound 
-        ? `✅ Transferencia confirmada: ${paymentAmount} USDC transferidos. Balance actual: ${currentBalance} USDC`
-        : '⚠️ No se encontró transferencia en las operaciones, pero el cliente tiene trustline configurado'
+        ? `Transferencia confirmada: ${paymentAmount} USDC transferidos. Balance actual: ${currentBalance} USDC`
+        : 'No se encontró transferencia en las operaciones, pero el cliente tiene trustline configurado'
     };
     
   } catch (error: any) {
-    // ✅ MEJORA: Manejar el error "Server is not a constructor" específicamente
+    // MEJORA: Manejar el error "Server is not a constructor" específicamente
     if (error.message?.includes('Server is not a constructor')) {
-      console.error('❌ Error al crear instancia de Horizon Server');
+      console.error('Error al crear instancia de Horizon Server');
       console.error('   Esto puede ser un problema de importación. Intentando verificación alternativa...');
       
       // Intentar verificación alternativa usando fetch directo a Horizon
@@ -1715,7 +1715,7 @@ const verifyTransactionAndBalance = async (
         const txData = await txResponse.json();
         
         if (txData.successful === true) {
-          console.log('✅ Transacción verificada como exitosa (método alternativo)');
+          console.log('Transacción verificada como exitosa (método alternativo)');
           
           // Verificar operaciones
           const opsResponse = await fetch(`${horizonUrl}/transactions/${txHash}/operations`);
@@ -1729,14 +1729,14 @@ const verifyTransactionAndBalance = async (
                 if (change.type === 'transfer' && change.to === receiverAddress && 
                     change.asset_code === 'USDC' && change.asset_issuer === USDC_ISSUER) {
                   foundTransfer = true;
-                  console.log(`✅ Transferencia encontrada: ${change.amount} USDC a ${change.to}`);
+                  console.log(`Transferencia encontrada: ${change.amount} USDC a ${change.to}`);
                 }
               });
             }
           });
           
           if (foundTransfer) {
-            console.log('✅ Los fondos fueron transferidos correctamente al cliente');
+            console.log('Los fondos fueron transferidos correctamente al cliente');
             
             // Intentar obtener el balance actual del cliente
             try {
@@ -1749,9 +1749,9 @@ const verifyTransactionAndBalance = async (
               
               if (usdcBalance) {
                 const currentBalance = parseFloat(usdcBalance.balance);
-                console.log(`💰 Balance actual de USDC del cliente: ${currentBalance}`);
-                console.log(`💰 Monto transferido: ${expectedAmount}`);
-                console.log(`✅ El cliente ahora tiene ${currentBalance} USDC en su wallet`);
+                console.log(`Balance actual de USDC del cliente: ${currentBalance}`);
+                console.log(`Monto transferido: ${expectedAmount}`);
+                console.log(`El cliente ahora tiene ${currentBalance} USDC en su wallet`);
                 
                 return {
                   transferFound: true,
@@ -1764,7 +1764,7 @@ const verifyTransactionAndBalance = async (
                 };
               }
             } catch (balanceError: any) {
-              console.warn('⚠️ No se pudo obtener el balance del cliente:', balanceError.message);
+              console.warn('No se pudo obtener el balance del cliente:', balanceError.message);
             }
             
             return {
@@ -1774,7 +1774,7 @@ const verifyTransactionAndBalance = async (
               txHash: txHash
             };
           } else {
-            console.warn('⚠️ No se encontró transferencia de USDC al cliente en la transacción');
+            console.warn('No se encontró transferencia de USDC al cliente en la transacción');
             return {
               transferFound: false,
               message: 'No se encontró transferencia de USDC al cliente en la transacción'
@@ -1782,7 +1782,7 @@ const verifyTransactionAndBalance = async (
           }
         }
       } catch (altError: any) {
-        console.warn('⚠️ Error en verificación alternativa:', altError.message);
+        console.warn('Error en verificación alternativa:', altError.message);
         return {
           transferFound: false,
           error: altError.message
@@ -1799,7 +1799,7 @@ const verifyTransactionAndBalance = async (
     if (error.message?.includes('trustline')) {
       throw error; // Re-lanzar errores de trustline
     }
-    console.warn('⚠️ Error al verificar transacción o balance:', error.message);
+    console.warn('Error al verificar transacción o balance:', error.message);
     
     // Retornar información de error en lugar de lanzar
     return {
@@ -1809,14 +1809,14 @@ const verifyTransactionAndBalance = async (
       txHash: txHash,
       horizonUrl: `https://horizon-testnet.stellar.org/transactions/${txHash}`,
       stellarExpertUrl: `https://stellar.expert/explorer/testnet/tx/${txHash}`,
-      message: `⚠️ No se pudo verificar completamente: ${error.message}`
+      message: `No se pudo verificar completamente: ${error.message}`
     };
   }
 };
 
 /**
  * Cancelar escrow y procesar reembolso completo al cliente
- * ⚠️ IMPORTANTE: El cliente DEBE firmar la transacción para recibir el reembolso
+ * IMPORTANTE: El cliente DEBE firmar la transacción para recibir el reembolso
  * 
  * Esta función usa resolveDispute con 100% de reembolso al cliente
  */
@@ -1831,10 +1831,10 @@ export const cancelTaskTrustlessEscrow = async (
   getEscrowFromIndexer?: (params: { contractIds: string[]; validateOnChain?: boolean }) => Promise<any>
 ): Promise<{ success: boolean; txHash?: string; error?: string; unsignedTransaction?: string; requiresAdminResolution?: boolean; message?: string }> => {
   try {
-    console.log('🔄 Iniciando cancelación de escrow y reembolso...');
-    console.log('📋 Contract ID:', contractId);
-    console.log('📋 Cliente (receiver):', clientAddress);
-    console.log('💰 Monto a reembolsar:', refundAmount);
+    console.log('Iniciando cancelación de escrow y reembolso...');
+    console.log('Contract ID:', contractId);
+    console.log('Cliente (receiver):', clientAddress);
+    console.log('Monto a reembolsar:', refundAmount);
     
     // 1. Verificar que el escrow existe y tiene balance
     let isInDispute = false;
@@ -1850,7 +1850,7 @@ export const cancelTaskTrustlessEscrow = async (
           // Verificar si el escrow está en disputa
           isInDispute = escrow.isDisputed === true || escrow.disputed === true || escrow.status === 'disputed';
           
-          console.log('📊 Estado del escrow:', {
+          console.log('Estado del escrow:', {
             contractId,
             balance,
             isActive: escrow.isActive,
@@ -1864,26 +1864,26 @@ export const cancelTaskTrustlessEscrow = async (
           
           // Usar el balance real del escrow si es diferente al calculado
           if (Math.abs(balance - refundAmount) > 0.0000001) {
-            console.warn('⚠️ El balance del escrow no coincide con el monto calculado');
+            console.warn('El balance del escrow no coincide con el monto calculado');
             console.warn(`   Balance del escrow: ${balance}`);
             console.warn(`   Monto calculado: ${refundAmount}`);
-            console.log('💡 Usando el balance real del escrow para el reembolso');
+            console.log('Usando el balance real del escrow para el reembolso');
             refundAmount = balance;
           }
         }
       } catch (indexerError: any) {
-        console.warn('⚠️ No se pudo verificar el escrow del indexer:', indexerError.message);
-        console.log('💡 Continuando con el proceso de reembolso...');
+        console.warn('No se pudo verificar el escrow del indexer:', indexerError.message);
+        console.log('Continuando con el proceso de reembolso...');
       }
     }
     
     // 2. Normalizar amount
     const normalizedAmount = normalizeAmount(refundAmount);
-    console.log('💰 Monto normalizado para reembolso:', normalizedAmount);
+    console.log('Monto normalizado para reembolso:', normalizedAmount);
     
     // 3. Si el escrow NO está en disputa, iniciar disputa primero
     if (!isInDispute) {
-      console.log('📢 El escrow no está en disputa. Iniciando disputa primero...');
+      console.log('El escrow no está en disputa. Iniciando disputa primero...');
       
       try {
         const startDisputePayload: SingleReleaseStartDisputePayload = {
@@ -1891,14 +1891,14 @@ export const cancelTaskTrustlessEscrow = async (
           signer: clientAddress // El cliente inicia la disputa para cancelar
         };
         
-        console.log('📤 Llamando a startDispute API...');
+        console.log('Llamando a startDispute API...');
         const startDisputeResponse = await startDispute(startDisputePayload, 'single-release');
         
         if (!startDisputeResponse?.unsignedTransaction) {
           throw new Error('Unsigned transaction is missing from startDispute response.');
         }
         
-        console.log('✅ Transacción de inicio de disputa recibida. Firmando y enviando...');
+        console.log('Transacción de inicio de disputa recibida. Firmando y enviando...');
         
         // Firmar y enviar la transacción de inicio de disputa
         const startDisputeResult = await createAndSendTransaction(
@@ -1912,7 +1912,7 @@ export const cancelTaskTrustlessEscrow = async (
           throw new Error(startDisputeResult.error || 'Error al firmar o enviar la transacción de inicio de disputa');
         }
         
-        console.log('✅ Disputa iniciada exitosamente. TxHash:', startDisputeResult.txHash);
+        console.log('Disputa iniciada exitosamente. TxHash:', startDisputeResult.txHash);
         console.log('⏳ Esperando 3 segundos para que la disputa se procese en la blockchain...');
         
         // Esperar un poco para que la disputa se procese en la blockchain
@@ -1926,7 +1926,7 @@ export const cancelTaskTrustlessEscrow = async (
           console.log('ℹ️ El escrow ya está en disputa (detectado desde error). Continuando...');
           isInDispute = true;
         } else {
-          console.error('❌ Error al iniciar disputa:', errorMsg);
+          console.error('Error al iniciar disputa:', errorMsg);
           throw new Error(`Error al iniciar disputa: ${errorMsg}`);
         }
       }
@@ -1943,10 +1943,10 @@ export const cancelTaskTrustlessEscrow = async (
     // TODO: Implementar procesamiento automático de resolución desde el backend con la wallet del ADMIN
     // o cambiar el flujo para usar una función diferente que permita al cliente recibir el reembolso directamente
     
-    console.log('✅ Disputa iniciada exitosamente');
-    console.log('⚠️ IMPORTANTE: La resolución de la disputa debe ser procesada por el ADMIN');
-    console.log('⚠️ El cliente NO puede firmar la resolución porque resolveDispute requiere que el disputeResolver la firme');
-    console.log('💡 El sistema procesará el reembolso automáticamente. El cliente recibirá una notificación cuando esté completo.');
+    console.log('Disputa iniciada exitosamente');
+    console.log('IMPORTANTE: La resolución de la disputa debe ser procesada por el ADMIN');
+    console.log('El cliente NO puede firmar la resolución porque resolveDispute requiere que el disputeResolver la firme');
+    console.log('El sistema procesará el reembolso automáticamente. El cliente recibirá una notificación cuando esté completo.');
     
     // Retornar éxito pero indicar que la resolución será procesada por el ADMIN
     return {
@@ -1958,7 +1958,7 @@ export const cancelTaskTrustlessEscrow = async (
     
   } catch (error: any) {
     const errorMessage = error.response?.data?.message || error.message || 'Error desconocido';
-    console.error('❌ Error al cancelar escrow:', errorMessage);
+    console.error('Error al cancelar escrow:', errorMessage);
     throw new Error(errorMessage);
   }
 };
@@ -1977,20 +1977,20 @@ export const signAndSendRefundTransaction = async (
   sendTransaction: (signedXdr: string) => Promise<SendTransactionResponse>
 ): Promise<{ success: boolean; txHash?: string; error?: string }> => {
   try {
-    console.log('🔐 Firmando transacción de reembolso con Freighter...');
-    console.log('📋 Cliente (signer):', clientAddress);
+    console.log('Firmando transacción de reembolso con Freighter...');
+    console.log('Cliente (signer):', clientAddress);
     
     // Firmar transacción UNA SOLA VEZ
     const signedXdr = await signWithFreighter(unsignedXdr, kit, clientAddress);
     
-    console.log('✅ Transacción firmada. Enviando directamente a Trustless Work...');
+    console.log('Transacción firmada. Enviando directamente a Trustless Work...');
     
     // Enviar transacción firmada DIRECTAMENTE a Trustless Work
     // NO usar createAndSendTransaction porque intentaría firmar nuevamente
     try {
       const response = await sendTransaction(signedXdr);
       
-      console.log('📥 Respuesta completa de Trustless Work:', response);
+      console.log('Respuesta completa de Trustless Work:', response);
 
       if (response.status === 'SUCCESS') {
         // Extraer txHash de la transacción firmada
@@ -1999,23 +1999,23 @@ export const signAndSendRefundTransaction = async (
           const { TransactionBuilder, Networks } = await import('@stellar/stellar-sdk');
           const tx = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
           txHash = tx.hash().toString('hex');
-          console.log('✅ TxHash extraído:', txHash);
+          console.log('TxHash extraído:', txHash);
         } catch (hashError: any) {
-          console.warn('⚠️ No se pudo extraer txHash:', hashError.message);
+          console.warn('No se pudo extraer txHash:', hashError.message);
         }
 
-        console.log('✅ Reembolso procesado exitosamente');
-        console.log('💡 Los fondos han sido transferidos al cliente');
+        console.log('Reembolso procesado exitosamente');
+        console.log('Los fondos han sido transferidos al cliente');
         return { success: true, txHash: txHash };
       } else {
         const errorMsg = (response as any).message || 'Estado no exitoso';
-        console.error('❌ La transacción no fue exitosa:', errorMsg);
-        console.error('📋 Respuesta completa:', JSON.stringify(response, null, 2));
+        console.error('La transacción no fue exitosa:', errorMsg);
+        console.error('Respuesta completa:', JSON.stringify(response, null, 2));
         throw new Error(`La transacción falló: ${errorMsg}`);
       }
     } catch (sendError: any) {
       // Capturar errores específicos del envío
-      console.error('❌ Error al enviar transacción a Trustless Work:');
+      console.error('Error al enviar transacción a Trustless Work:');
       console.error('   Tipo de error:', sendError.constructor.name);
       console.error('   Mensaje:', sendError.message);
       console.error('   Response data:', sendError.response?.data);
@@ -2029,12 +2029,12 @@ export const signAndSendRefundTransaction = async (
                           sendError.message || 
                           'Error desconocido al enviar transacción';
       
-      console.error('💬 Mensaje de error final:', errorMessage);
+      console.error('Mensaje de error final:', errorMessage);
       throw new Error(errorMessage);
     }
   } catch (error: any) {
     const errorMessage = error.response?.data?.message || error.message || 'Error desconocido';
-    console.error('❌ Error al firmar o enviar transacción de reembolso:', errorMessage);
+    console.error('Error al firmar o enviar transacción de reembolso:', errorMessage);
     throw new Error(errorMessage);
   }
 };

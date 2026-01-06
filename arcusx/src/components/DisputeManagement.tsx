@@ -896,7 +896,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
             //  MEJORA: Agregar advertencia si el cliente necesita configurar trustline
             if ((resolveResult as any).warning || (resolveResult as any).requiresTrustline) {
               successMessage += `\n\n ADVERTENCIA IMPORTANTE: ${(resolveResult as any).warning || 'El cliente puede necesitar configurar un trustline para USDC'}`;
-              successMessage += `\n\n🔴 PROBLEMA DETECTADO:`;
+              successMessage += `\n\nPROBLEMA DETECTADO:`;
               successMessage += `\n   El cliente probablemente tiene un trustline de USDC de centre.io (Mainnet),`;
               successMessage += `\n   pero la transacción usa USDC de Testnet con un issuer diferente.`;
               successMessage += `\n\n SOLUCIÓN: El cliente debe configurar el trustline correcto para Testnet:`;
@@ -1415,7 +1415,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                             borderRadius: '4px',
                             display: 'inline-block'
                           }}>
-                            🚫 Disputa por Cancelación
+                            <FaTimesCircle aria-hidden="true" /> Disputa por Cancelación
                           </div>
                         )}
                       </div>

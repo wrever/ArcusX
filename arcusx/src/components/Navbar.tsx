@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom';
 import '../css/Navbar.css';
 import logo from '../images/arcus-logo.png';
 import { useAuth } from '../hooks/useAuth';
+import { useI18n } from '../i18n/I18nProvider';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { isAuthenticated, logout } = useAuth();
+  const { t } = useI18n();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -65,19 +67,19 @@ const Navbar = () => {
         
         <div className={`navbar-links ${isMenuOpen ? 'open' : ''}`}>
           <a onClick={() => scrollToSection('problematica')} className="nav-link">
-            Problemática
+            {t('nav.problem')}
           </a>
           <a onClick={() => scrollToSection('solucion')} className="nav-link">
-            Solución
+            {t('nav.solution')}
           </a>
           <a onClick={() => scrollToSection('caracteristicas')} className="nav-link">
-            Características
+            {t('nav.features')}
           </a>
           <a onClick={() => scrollToSection('equipo')} className="nav-link">
-            Equipo
+            {t('nav.team')}
           </a>
           <a onClick={() => scrollToSection('faq')} className="nav-link">
-            FAQ
+            {t('nav.faq')}
           </a>
           
           {isAuthenticated ? (
@@ -92,10 +94,10 @@ const Navbar = () => {
           ) : (
             <>
           <Link to="/login" className="nav-button login" onClick={closeMenu}>
-            Iniciar Sesión
+            {t('nav.login')}
           </Link>
           <Link to="/register" className="nav-button register" onClick={closeMenu}>
-            Registrarse
+            {t('nav.register')}
           </Link>
             </>
           )}

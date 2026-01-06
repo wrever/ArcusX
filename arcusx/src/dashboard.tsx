@@ -17,6 +17,7 @@ import { getUserTransactions, getUserEarningsSummary, Transaction } from './serv
 import { getUserProfile, getUserPublicStats } from './services/profileService';
 import type { UserProfile as UserProfileType, UserStatistics } from './types/profile';
 import RatingDisplay from './components/RatingDisplay';
+import { useI18n } from './i18n/I18nProvider';
 
 interface UserData {
   id: number;
@@ -46,6 +47,7 @@ interface TaskData {
 }
 
 const Dashboard = () => {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState('tasks');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [difficultyFilter, setDifficultyFilter] = useState('all');
@@ -499,15 +501,15 @@ const Dashboard = () => {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'success':
-        return '';
+        return <FaCheckCircle aria-hidden="true" />;
       case 'warning':
-        return '';
+        return <FaExclamationTriangle aria-hidden="true" />;
       case 'error':
-        return '';
+        return <FaTimes aria-hidden="true" />;
       case 'info':
-        return '';
+        return <FaBell aria-hidden="true" />;
       default:
-        return '🔔';
+        return <FaBell aria-hidden="true" />;
     }
   };
   
@@ -577,10 +579,10 @@ const Dashboard = () => {
   
   // Estadísticas de ejemplo
   const stats = [
-    { id: 1, title: 'Tareas Completadas', value: userData.tasksCompleted, icon: <FaTasks /> },
-    { id: 2, title: 'Tareas Disponibles', value: filteredTasks.length, icon: <FaTasks /> },
-    { id: 3, title: 'Ganancias Totales', value: `$${totalEarnings.toFixed(2)}`, icon: <FaWallet /> },
-    { id: 4, title: 'Nivel', value: userData.level, icon: <FaChartLine /> }
+    { id: 1, title: t('dashboard.stats.completed'), value: userData.tasksCompleted, icon: <FaTasks /> },
+    { id: 2, title: t('dashboard.stats.available'), value: filteredTasks.length, icon: <FaTasks /> },
+    { id: 3, title: t('dashboard.stats.earnings'), value: `$${totalEarnings.toFixed(2)}`, icon: <FaWallet /> },
+    { id: 4, title: t('dashboard.stats.level'), value: userData.level, icon: <FaChartLine /> }
   ];
   
   return (
@@ -605,7 +607,7 @@ const Dashboard = () => {
               </h3>
             </Link>
             <div className="user-level">
-              <span>Nivel {userData.level}</span>
+              <span>{t('dashboard.level')} {userData.level}</span>
               <div className="level-progress">
                 <div 
                   className="level-progress-bar" 
@@ -619,26 +621,26 @@ const Dashboard = () => {
         <nav className="sidebar-nav">
           <ul>
             <li className={activeTab === 'tasks' ? 'active' : ''} onClick={() => setActiveTab('tasks')}>
-              <FaTasks /> <span>Tareas</span>
+              <FaTasks /> <span>{t('dashboard.tabs.tasks')}</span>
             </li>
             <li className={activeTab === 'in-progress' ? 'active' : ''} onClick={() => setActiveTab('in-progress')}>
-              <FaTasks /> <span>En Progreso</span>
+              <FaTasks /> <span>{t('dashboard.tabs.in.progress')}</span>
             </li>
              <li className={activeTab === 'manage-tasks' ? 'active' : ''} onClick={() => setActiveTab('manage-tasks')}>
               <FaTasks />
-              <span>Administrar Tareas</span>
+              <span>{t('dashboard.tabs.manage.tasks')}</span>
             </li>
             <li className={activeTab === 'wallet' ? 'active' : ''} onClick={() => setActiveTab('wallet')}>
-              <FaWallet /> <span>Billetera</span>
+              <FaWallet /> <span>{t('dashboard.tabs.wallet')}</span>
             </li>
             <li className={activeTab === 'notifications' ? 'active' : ''} onClick={() => setActiveTab('notifications')}>
-              <FaBell /> <span>Notificaciones</span>
+              <FaBell /> <span>{t('dashboard.tabs.notifications')}</span>
               {unreadCount > 0 && (
                 <span className="notification-badge">{unreadCount}</span>
               )}
             </li>
             <li className={activeTab === 'settings' ? 'active' : ''} onClick={() => setActiveTab('settings')}>
-              <FaCog /> <span>Configuración</span>
+              <FaCog /> <span>{t('dashboard.tabs.settings')}</span>
             </li>
            
           </ul>
@@ -646,7 +648,7 @@ const Dashboard = () => {
         
         <div className="sidebar-footer">
           <button className="logout-button" onClick={handleLogout}>
-            <FaSignOutAlt /> <span>Cerrar Sesión</span>
+            <FaSignOutAlt /> <span>{t('dashboard.logout')}</span>
           </button>
         </div>
       </div>
@@ -655,12 +657,12 @@ const Dashboard = () => {
       <div className="dashboard-main">
         <header className="dashboard-header">
           <h1>
-            {activeTab === 'tasks' && 'Tareas Disponibles'}
-            {activeTab === 'wallet' && 'Mi Billetera'}
-            {activeTab === 'notifications' && 'Notificaciones'}
-            {activeTab === 'settings' && 'Configuración'}
-            {activeTab === 'in-progress' && 'Tareas en Progreso'}
-             {activeTab === 'manage-tasks' && 'Administrar Tareas'} {/* Añadir título para esta pestaña */}
+            {activeTab === 'tasks' && t('dashboard.title.tasks')}
+            {activeTab === 'wallet' && t('dashboard.title.wallet')}
+            {activeTab === 'notifications' && t('dashboard.title.notifications')}
+            {activeTab === 'settings' && t('dashboard.title.settings')}
+            {activeTab === 'in-progress' && t('dashboard.title.in.progress')}
+             {activeTab === 'manage-tasks' && t('dashboard.title.manage.tasks')}
           </h1>
           <div className="header-actions">
             <WalletButton />
@@ -678,7 +680,7 @@ const Dashboard = () => {
               {showNotificationDropdown && (
                 <div className="notification-dropdown">
                   <div className="notification-dropdown-header">
-                    <h3>Notificaciones</h3>
+                    <h3>{t('dashboard.notifications.title')}</h3>
                     <button 
                       className="close-dropdown-btn"
                       onClick={() => setShowNotificationDropdown(false)}
@@ -690,7 +692,7 @@ const Dashboard = () => {
                   <div className="notification-dropdown-list">
                     {recentNotifications.length === 0 ? (
                       <div className="notification-dropdown-empty">
-                        <p>No hay notificaciones</p>
+                        <p>{t('dashboard.notifications.no')}</p>
                       </div>
                     ) : (
                       recentNotifications.map((notification) => (
@@ -723,7 +725,7 @@ const Dashboard = () => {
                                   gap: '4px'
                                 }}>
                                   <FaUsers style={{ fontSize: '10px' }} />
-                                  Global
+                                  {t('dashboard.notifications.global')}
                                 </span>
                               )}
                             </div>
@@ -747,7 +749,7 @@ const Dashboard = () => {
                           setActiveTab('notifications');
                         }}
                       >
-                        Ver todas las notificaciones
+                        {t('dashboard.notifications.view.all')}
                       </button>
                     </div>
                   )}
@@ -791,7 +793,7 @@ const Dashboard = () => {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
                 <FaExclamationTriangle style={{ color: '#ef4444', fontSize: '24px' }} />
-                <h2 style={{ margin: 0, color: '#ef4444' }}>Disputas Pendientes de Firma ({pendingDisputes.length})</h2>
+                <h2 style={{ margin: 0, color: '#ef4444' }}>{t('dashboard.disputes.pending')} ({pendingDisputes.length})</h2>
               </div>
               <p style={{ color: 'rgba(255, 255, 255, 0.8)', marginBottom: '1rem' }}>
                 Tienes disputas resueltas que requieren tu firma para liberar los fondos. Por favor, firma las transacciones desde tu wallet Freighter.
@@ -806,16 +808,16 @@ const Dashboard = () => {
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                     <div>
-                      <h3 style={{ margin: 0, color: '#fff', fontSize: '16px' }}>Tarea: {dispute.task_title}</h3>
+                      <h3 style={{ margin: 0, color: '#fff', fontSize: '16px' }}>{t('dashboard.disputes.task')} {dispute.task_title}</h3>
                       <p style={{ margin: '0.5rem 0', color: 'rgba(255, 255, 255, 0.7)', fontSize: '14px' }}>
                         {dispute.user_role === 'client' 
-                          ? `Reembolso: ${dispute.refund_amount.toFixed(2)} USDC`
-                          : `Pago: ${dispute.payment_amount.toFixed(2)} USDC`
+                          ? `${t('dashboard.disputes.refund')} ${dispute.refund_amount.toFixed(2)} USDC`
+                          : `${t('dashboard.disputes.payment')} ${dispute.payment_amount.toFixed(2)} USDC`
                         }
                       </p>
                       {dispute.resolution_reason && (
                         <p style={{ margin: '0.5rem 0', color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px', fontStyle: 'italic' }}>
-                          Razón: {dispute.resolution_reason}
+                          {t('dashboard.disputes.reason')} {dispute.resolution_reason}
                         </p>
                       )}
                     </div>
@@ -831,7 +833,7 @@ const Dashboard = () => {
           {activeTab === 'tasks' && (
             <div className="tasks-container">
               <div className="tasks-header">
-                <h2>Tareas Disponibles</h2>
+                <h2>{t('dashboard.tasks.title')}</h2>
                 <button 
                   className="filters-toggle"
                   onClick={() => setShowFilters(!showFilters)}
@@ -850,7 +852,7 @@ const Dashboard = () => {
               }}>
                 <input
                   type="text"
-                  placeholder="Buscar tareas..."
+                  placeholder={t('dashboard.tasks.search.placeholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   style={{
@@ -875,7 +877,7 @@ const Dashboard = () => {
                       cursor: 'pointer'
                     }}
                   >
-                    Limpiar
+                    {t('dashboard.tasks.search.clear')}
                   </button>
                 )}
               </div>
@@ -892,12 +894,12 @@ const Dashboard = () => {
                     value={categoryFilter}
                     onChange={(e) => setCategoryFilter(e.target.value)}
                   >
-                    <option value="all">Todas las categorías</option>
-                    <option value="desarrollo">Desarrollo</option>
-                    <option value="diseño">Diseño</option>
-                    <option value="marketing">Marketing</option>
-                    <option value="blockchain">Blockchain</option>
-                    <option value="contenido">Contenido</option>
+                    <option value="all">{t('dashboard.tasks.filter.categories.all')}</option>
+                    <option value="desarrollo">{t('dashboard.tasks.category.development')}</option>
+                    <option value="diseño">{t('dashboard.tasks.category.design')}</option>
+                    <option value="marketing">{t('dashboard.tasks.category.marketing')}</option>
+                    <option value="blockchain">{t('dashboard.tasks.category.blockchain')}</option>
+                    <option value="contenido">{t('dashboard.tasks.category.content')}</option>
                   </select>
 
                   <select
@@ -905,15 +907,15 @@ const Dashboard = () => {
                     value={difficultyFilter}
                     onChange={(e) => setDifficultyFilter(e.target.value)}
                   >
-                    <option value="all">Todas las dificultades</option>
-                    <option value="fácil">Fácil</option>
-                    <option value="intermedio">Intermedio</option>
-                    <option value="difícil">Difícil</option>
+                    <option value="all">{t('dashboard.tasks.filter.difficulty.all')}</option>
+                    <option value="fácil">{t('dashboard.tasks.difficulty.easy')}</option>
+                    <option value="intermedio">{t('dashboard.tasks.difficulty.medium')}</option>
+                    <option value="difícil">{t('dashboard.tasks.difficulty.hard')}</option>
                   </select>
 
                   <input
                     type="number"
-                    placeholder="Precio mínimo (USDC)"
+                    placeholder={t('dashboard.tasks.filter.price.min')}
                     value={minPrice}
                     onChange={(e) => setMinPrice(e.target.value)}
                     min="0"
@@ -930,7 +932,7 @@ const Dashboard = () => {
 
                   <input
                     type="number"
-                    placeholder="Precio máximo (USDC)"
+                    placeholder={t('dashboard.tasks.filter.price.max')}
                     value={maxPrice}
                     onChange={(e) => setMaxPrice(e.target.value)}
                     min="0"
@@ -950,11 +952,11 @@ const Dashboard = () => {
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
                   >
-                    <option value="date_desc">Más recientes</option>
-                    <option value="date_asc">Más antiguos</option>
-                    <option value="price_asc">Precio: menor a mayor</option>
-                    <option value="price_desc">Precio: mayor a menor</option>
-                    <option value="popularity">Más populares</option>
+                    <option value="date_desc">{t('dashboard.tasks.filter.sort.recent')}</option>
+                    <option value="date_asc">{t('dashboard.tasks.filter.sort.oldest')}</option>
+                    <option value="price_asc">{t('dashboard.tasks.filter.sort.price.asc')}</option>
+                    <option value="price_desc">{t('dashboard.tasks.filter.sort.price.desc')}</option>
+                    <option value="popularity">{t('dashboard.tasks.filter.sort.popular')}</option>
                   </select>
                 </div>
                 
@@ -967,7 +969,7 @@ const Dashboard = () => {
                     gap: '0.5rem',
                     alignItems: 'center'
                   }}>
-                    <span style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.9rem' }}>Filtros activos:</span>
+                    <span style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.9rem' }}>{t('dashboard.tasks.filter.active')}</span>
                     {searchQuery && (
                       <span style={{
                         padding: '0.25rem 0.75rem',
@@ -1046,9 +1048,9 @@ const Dashboard = () => {
                         color: '#ef4444',
                         cursor: 'pointer'
                       }}
-                    >
-                      Limpiar todos
-                    </button>
+                      >
+                        {t('dashboard.tasks.filter.clear.all')}
+                      </button>
                   </div>
                 )}
                 
@@ -1058,15 +1060,15 @@ const Dashboard = () => {
                   color: 'rgba(255, 255, 255, 0.7)',
                   fontSize: '0.9rem'
                 }}>
-                  {filteredTasks.length} {filteredTasks.length === 1 ? 'tarea encontrada' : 'tareas encontradas'}
+                  {filteredTasks.length} {filteredTasks.length === 1 ? t('dashboard.tasks.results.single') : t('dashboard.tasks.results.multiple')}
                 </div>
               </div>
               
               <div className="tasks-grid">
-                {loadingTasks && <p>Cargando tareas...</p>}
+                {loadingTasks && <p>{t('dashboard.tasks.loading')}</p>}
                 {tasksError && <p className="error-message">{tasksError}</p>}
                 {!loadingTasks && !tasksError && filteredTasks.length === 0 && (
-                  <p>No hay tareas disponibles en este momento o con los filtros aplicados.</p>
+                  <p>{t('dashboard.tasks.empty')}</p>
                 )}
                 {!loadingTasks && !tasksError && filteredTasks.map(task => (
                   <div key={task.id} className="task-card">
@@ -1079,13 +1081,13 @@ const Dashboard = () => {
                     <p className="task-description">{task.subtitle}</p>
                     <div className="task-details">
                       <div className="task-detail">
-                        <span className="task-detail-label">Recompensa</span>
+                        <span className="task-detail-label">{t('dashboard.tasks.reward')}</span>
                         <span className="task-detail-value">
                           {parseFloat(task.price).toFixed(2)} {task.currency}
                         </span>
                       </div>
                       <div className="task-detail">
-                        <span className="task-detail-label">Creador</span>
+                        <span className="task-detail-label">{t('dashboard.tasks.creator')}</span>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                           <Link 
                             to={`/profile/${task.creator_id || task.id}`}
@@ -1117,7 +1119,7 @@ const Dashboard = () => {
                       </div>
                     </div>
                     <button className="task-button" onClick={() => handleApplyTaskClick(task.id)}>
-                      Aplicar
+                      {t('dashboard.tasks.apply')}
                     </button>
                   </div>
                 ))}
@@ -1129,24 +1131,23 @@ const Dashboard = () => {
           {activeTab === 'wallet' && (
             <div className="wallet-container">
               <div className="wallet-balance">
-                <h2>Ganancias Totales</h2>
+                <h2>{t('dashboard.wallet.total.earnings')}</h2>
                 <div className="balance-amount">${totalEarnings.toFixed(2)}</div>
                 {totalPaid > 0 && (
                   <div style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: 'rgba(255, 255, 255, 0.7)' }}>
-                    Total pagado: ${totalPaid.toFixed(2)}
+                    {t('dashboard.wallet.total.paid')} ${totalPaid.toFixed(2)}
                   </div>
                 )}
                 <p className="wallet-description">
-                  Tus ganancias son transferidas directamente a tu wallet cuando se completan las tareas 
-                  a través de nuestro sistema de escrow.
+                  {t('dashboard.wallet.description')}
                 </p>
               </div>
               
               <div className="transactions-container">
-                <h2>Historial de Transacciones</h2>
+                <h2>{t('dashboard.wallet.transactions')}</h2>
                 {loadingTransactions && (
                   <div style={{ textAlign: 'center', padding: '2rem', color: 'rgba(255, 255, 255, 0.7)' }}>
-                    Cargando transacciones...
+                    {t('dashboard.wallet.transactions.loading')}
                   </div>
                 )}
                 {transactionsError && (
@@ -1156,18 +1157,18 @@ const Dashboard = () => {
                 )}
                 {!loadingTransactions && !transactionsError && transactions.length === 0 && (
                   <div style={{ textAlign: 'center', padding: '2rem', color: 'rgba(255, 255, 255, 0.7)' }}>
-                    No hay transacciones aún. Las transacciones aparecerán aquí cuando completes tareas.
+                    {t('dashboard.wallet.transactions.empty')}
                   </div>
                 )}
                 {!loadingTransactions && transactions.length > 0 && (
                   <>
                 <div className="transactions-table">
                   <div className="transactions-header">
-                    <div className="transaction-cell">Fecha</div>
-                    <div className="transaction-cell">Tarea</div>
-                        <div className="transaction-cell">Tipo</div>
-                    <div className="transaction-cell">Cantidad</div>
-                    <div className="transaction-cell">Estado</div>
+                    <div className="transaction-cell">{t('dashboard.wallet.transactions.date')}</div>
+                    <div className="transaction-cell">{t('dashboard.wallet.transactions.task')}</div>
+                        <div className="transaction-cell">{t('dashboard.wallet.transactions.type')}</div>
+                    <div className="transaction-cell">{t('dashboard.wallet.transactions.amount')}</div>
+                    <div className="transaction-cell">{t('dashboard.wallet.transactions.status')}</div>
                   </div>
                   {transactions.map(transaction => (
                     <div key={transaction.id} className="transaction-row">
@@ -1190,7 +1191,7 @@ const Dashboard = () => {
                           </div>
                           <div className="transaction-cell">
                             <span className={`transaction-type ${transaction.type}`}>
-                              {transaction.type === 'received' ? 'Recibido' : 'Pagado'}
+                              {transaction.type === 'received' ? t('dashboard.wallet.transactions.received') : t('dashboard.wallet.transactions.paid')}
                             </span>
                           </div>
                           <div className="transaction-cell" style={{
@@ -1221,10 +1222,10 @@ const Dashboard = () => {
                             cursor: transactionsPage === 1 ? 'not-allowed' : 'pointer'
                           }}
                         >
-                          Anterior
+                          {t('dashboard.wallet.transactions.previous')}
                         </button>
                         <span style={{ padding: '0.5rem 1rem', color: 'rgba(255, 255, 255, 0.7)' }}>
-                          Página {transactionsPage} de {transactionsTotalPages}
+                          {t('dashboard.wallet.transactions.page')} {transactionsPage} {t('dashboard.wallet.transactions.of')} {transactionsTotalPages}
                         </span>
                         <button
                           onClick={() => setTransactionsPage(p => Math.min(transactionsTotalPages, p + 1))}
@@ -1238,7 +1239,7 @@ const Dashboard = () => {
                             cursor: transactionsPage >= transactionsTotalPages ? 'not-allowed' : 'pointer'
                           }}
                         >
-                          Siguiente
+                          {t('dashboard.wallet.transactions.next')}
                         </button>
                       </div>
                     )}
@@ -1254,7 +1255,7 @@ const Dashboard = () => {
             <div className="notifications-container">
               <div className="notifications-header">
                 <h2>
-                  🔔 Notificaciones
+                  {t('dashboard.notifications.title')}
                   {unreadCount > 0 && (
                     <span className="unread-badge">{unreadCount}</span>
                   )}
@@ -1265,7 +1266,7 @@ const Dashboard = () => {
                       className="mark-all-read"
                       onClick={markAllNotificationsAsRead}
                     >
-                      Marcar todo como leído
+                      {t('dashboard.notifications.mark.all.read')}
                     </button>
                   )}
                 </div>
@@ -1277,31 +1278,31 @@ const Dashboard = () => {
                   className={`filter-tab ${notificationFilter === 'all' ? 'active' : ''}`}
                   onClick={() => setNotificationFilter('all')}
                 >
-                  Todas ({notifications.length})
+                  {t('dashboard.notifications.filter.all')} ({notifications.length})
                 </button>
                 <button 
                   className={`filter-tab ${notificationFilter === 'unread' ? 'active' : ''}`}
                   onClick={() => setNotificationFilter('unread')}
                 >
-                  No leídas ({unreadCount})
+                  {t('dashboard.notifications.filter.unread')} ({unreadCount})
                 </button>
                 <button 
                   className={`filter-tab ${notificationFilter === 'success' ? 'active' : ''}`}
                   onClick={() => setNotificationFilter('success')}
                 >
-                  Éxito
+                  {t('dashboard.notifications.filter.success')}
                 </button>
                 <button 
                   className={`filter-tab ${notificationFilter === 'warning' ? 'active' : ''}`}
                   onClick={() => setNotificationFilter('warning')}
                 >
-                  Advertencias
+                  {t('dashboard.notifications.filter.warning')}
                 </button>
                 <button 
                   className={`filter-tab ${notificationFilter === 'error' ? 'active' : ''}`}
                   onClick={() => setNotificationFilter('error')}
                 >
-                  Errores
+                  {t('dashboard.notifications.filter.error')}
                 </button>
               </div>
               
@@ -1310,16 +1311,16 @@ const Dashboard = () => {
                 {loadingNotifications ? (
                   <div className="no-notifications">
                     <div className="no-notifications-icon"></div>
-                    <h3>Cargando notificaciones...</h3>
+                    <h3>{t('common.loading.notifications')}</h3>
                   </div>
                 ) : filteredNotifications.length === 0 ? (
                   <div className="no-notifications">
-                    <div className="no-notifications-icon">🔔</div>
-                    <h3>No hay notificaciones</h3>
+                    <div className="no-notifications-icon"><FaBell aria-hidden="true" /></div>
+                    <h3>{t('dashboard.notifications.no')}</h3>
                     <p>
                       {notificationFilter === 'unread' 
-                        ? 'No tienes notificaciones sin leer'
-                        : 'No hay notificaciones que coincidan con el filtro seleccionado'
+                        ? t('dashboard.notifications.no.unread')
+                        : t('dashboard.notifications.no.filter')
                       }
                     </p>
                   </div>
@@ -1354,7 +1355,7 @@ const Dashboard = () => {
                                 fontWeight: '600'
                               }}>
                                 <FaUsers style={{ fontSize: '10px' }} />
-                                Global
+                                {t('dashboard.notifications.global')}
                               </span>
                             )}
                           </div>
@@ -1376,7 +1377,7 @@ const Dashboard = () => {
                             onClick={() => markNotificationAsRead(notification.id)}
                             className="mark-read-button"
                           >
-                             Marcar como leída
+                             {t('dashboard.notifications.mark.read')}
                           </button>
                         )}
                         
@@ -1384,7 +1385,7 @@ const Dashboard = () => {
                           onClick={() => deleteNotification(notification.id)}
                           className="delete-button"
                         >
-                          Eliminar
+                          {t('dashboard.notifications.delete')}
                         </button>
                       </div>
                     </div>
@@ -1398,20 +1399,20 @@ const Dashboard = () => {
           {activeTab === 'settings' && (
             <div className="settings-container">
               <div className="settings-header">
-              <h2>Configuración de la Cuenta</h2>
+              <h2>{t('dashboard.settings.title')}</h2>
                 <Link 
                   to="/dashboard/settings/profile" 
                   className="edit-profile-button"
                 >
                   <FaUser />
-                  <span>Editar Perfil Completo</span>
+                  <span>{t('dashboard.settings.edit.profile')}</span>
                 </Link>
                   </div>
 
               {loadingProfile ? (
                 <div className="settings-loading">
                   <div className="spinner"></div>
-                  <p>Cargando información del perfil...</p>
+                  <p>{t('dashboard.settings.loading')}</p>
                 </div>
               ) : (
                 <>
@@ -1431,7 +1432,7 @@ const Dashboard = () => {
                           </div>
                         )}
                         {userProfile?.verified && (
-                          <div className="verified-badge-display" title="Usuario verificado">
+                          <div className="verified-badge-display" title={t('dashboard.settings.verified')}>
                             <FaCheckCircle />
                           </div>
                         )}
@@ -1450,7 +1451,7 @@ const Dashboard = () => {
                             className="portfolio-link-display"
                           >
                             <FaGlobe />
-                            <span>Ver Portfolio</span>
+                            <span>{t('dashboard.settings.view.portfolio')}</span>
                           </a>
                         )}
                   </div>
@@ -1460,20 +1461,20 @@ const Dashboard = () => {
                     {userStats && (
                       <div className="profile-stats-display">
                         <div className="stat-item-display">
-                          <span className="stat-label-display">Tareas Completadas</span>
+                          <span className="stat-label-display">{t('dashboard.settings.stats.completed')}</span>
                           <span className="stat-value-display">{userStats.tasks_completed}</span>
                   </div>
                         <div className="stat-item-display">
-                          <span className="stat-label-display">Tareas Creadas</span>
+                          <span className="stat-label-display">{t('dashboard.settings.stats.created')}</span>
                           <span className="stat-value-display">{userStats.tasks_created}</span>
                   </div>
                         <div className="stat-item-display">
-                          <span className="stat-label-display">Total Ganado</span>
+                          <span className="stat-label-display">{t('dashboard.settings.stats.total.earned')}</span>
                           <span className="stat-value-display">${userStats.total_earned.toFixed(2)}</span>
                 </div>
                         {userStats.average_rating > 0 && (
                           <div className="stat-item-display">
-                            <span className="stat-label-display">Rating Promedio</span>
+                            <span className="stat-label-display">{t('dashboard.settings.stats.rating')}</span>
                             <span className="stat-value-display">
                               {userStats.average_rating.toFixed(1)} ⭐
                             </span>
@@ -1487,8 +1488,8 @@ const Dashboard = () => {
                       <div className="privacy-info">
                         <FaLock />
                         <div>
-                          <strong>Perfil {userProfile?.public_profile ? 'Público' : 'Privado'}</strong>
-                          <p>{userProfile?.public_profile ? 'Tu perfil es visible para otros usuarios' : 'Tu perfil es privado y solo tú puedes verlo'}</p>
+                          <strong>{userProfile?.public_profile ? t('dashboard.settings.privacy.public') : t('dashboard.settings.privacy.private')}</strong>
+                          <p>{userProfile?.public_profile ? t('dashboard.settings.privacy.public.desc') : t('dashboard.settings.privacy.private.desc')}</p>
                   </div>
                   </div>
                   </div>
@@ -1496,18 +1497,18 @@ const Dashboard = () => {
                 
                   {/* Información de cuenta básica */}
                   <div className="settings-info-card">
-                    <h3>Información de Cuenta</h3>
+                    <h3>{t('dashboard.settings.account.info')}</h3>
                     <div className="info-row">
-                      <span className="info-label">Nombre de Usuario</span>
+                      <span className="info-label">{t('dashboard.settings.account.username')}</span>
                       <span className="info-value">{userProfile?.username || name}</span>
                     </div>
                     <div className="info-row">
-                      <span className="info-label">Correo Electrónico</span>
+                      <span className="info-label">{t('dashboard.settings.account.email')}</span>
                       <span className="info-value">{userProfile?.email || email}</span>
                     </div>
                     {userProfile?.member_since && (
                       <div className="info-row">
-                        <span className="info-label">Miembro desde</span>
+                        <span className="info-label">{t('dashboard.settings.account.member.since')}</span>
                         <span className="info-value">
                           {new Date(userProfile.member_since).toLocaleDateString('es-ES', {
                             year: 'numeric',
@@ -1522,10 +1523,10 @@ const Dashboard = () => {
                   {/* Skills y Portfolio Preview */}
                   {userProfile && (userProfile.skills?.length > 0 || userProfile.portfolio?.length > 0) && (
                     <div className="settings-preview-card">
-                      <h3>Habilidades y Portfolio</h3>
+                      <h3>{t('dashboard.settings.skills.portfolio')}</h3>
                       {userProfile.skills && userProfile.skills.length > 0 && (
                         <div className="skills-preview">
-                          <span className="preview-label">Habilidades:</span>
+                          <span className="preview-label">{t('dashboard.settings.skills')}</span>
                           <div className="skills-tags">
                             {userProfile.skills.slice(0, 5).map((skill, idx) => (
                               <span key={idx} className="skill-tag-preview">
@@ -1542,8 +1543,8 @@ const Dashboard = () => {
                       )}
                       {userProfile.portfolio && userProfile.portfolio.length > 0 && (
                         <div className="portfolio-preview">
-                          <span className="preview-label">Proyectos en Portfolio:</span>
-                          <span className="portfolio-count">{userProfile.portfolio.length} proyecto(s)</span>
+                          <span className="preview-label">{t('dashboard.settings.portfolio.projects')}</span>
+                          <span className="portfolio-count">{userProfile.portfolio.length} {t('dashboard.settings.portfolio.count')}</span>
                         </div>
                       )}
                     </div>
@@ -1556,9 +1557,9 @@ const Dashboard = () => {
                       className="edit-full-profile-button"
                     >
                       <FaUser />
-                      <span>Editar Perfil Completo</span>
+                      <span>{t('dashboard.settings.edit.profile')}</span>
                     </Link>
-                    <p className="edit-hint">Haz clic aquí para editar tu avatar, biografía, portfolio, habilidades y más</p>
+                    <p className="edit-hint">{t('dashboard.settings.edit.hint')}</p>
                   </div>
                 </>
               )}
@@ -1569,13 +1570,13 @@ const Dashboard = () => {
           {activeTab === 'in-progress' && (
             <div className="tasks-in-progress-container">
               <div className="section-header">
-                <h2>Tareas en Progreso</h2>
+                <h2>{t('dashboard.in.progress.title')}</h2>
                 <select 
                   className="filter-dropdown"
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
                 >
-                  <option value="all">Todas las categorías</option>
+                  <option value="all">{t('dashboard.tasks.filter.categories.all')}</option>
                   <option value="Blockchain">Blockchain</option>
                   <option value="Diseño">Diseño</option>
                   <option value="Desarrollo">Desarrollo</option>
@@ -1584,10 +1585,10 @@ const Dashboard = () => {
               </div>
               
               <div className="tasks-grid">
-                {loadingAcceptedTasks && <p>Cargando tareas aceptadas...</p>}
+                {loadingAcceptedTasks && <p>{t('dashboard.in.progress.loading')}</p>}
                 {acceptedTasksError && <p className="error-message">{acceptedTasksError}</p>}
                 {!loadingAcceptedTasks && !acceptedTasksError && acceptedTasks.length === 0 && (
-                  <p>No tienes tareas en progreso en este momento.</p>
+                  <p>{t('dashboard.in.progress.empty')}</p>
                 )}
                 {!loadingAcceptedTasks && !acceptedTasksError && acceptedTasks.length > 0 && acceptedTasks
                   .filter(task => categoryFilter === 'all' || task.category.toLowerCase() === categoryFilter.toLowerCase())
@@ -1665,17 +1666,17 @@ const Dashboard = () => {
           {activeTab === 'manage-tasks' && (
             <div className="manage-tasks-container">
               <div className="section-header">
-                <h2>Administrar Tareas Creadas</h2>
+                <h2>{t('dashboard.manage.tasks.title')}</h2>
                 <button className="create-task-button" onClick={handleCreateTaskClick}>
                   <FaPlus />
-                  <h3>Crear Nueva Tarea</h3>
+                  <h3>{t('dashboard.manage.tasks.create.new')}</h3>
                 </button>
               </div>
 
               {/* Aquí se listarán las tareas creadas por el usuario */}
-              {loadingUserTasks && <p>Cargando tus tareas...</p>}
+              {loadingUserTasks && <p>{t('dashboard.manage.tasks.loading')}</p>}
               {userTasksError && <p className="error-message">{userTasksError}</p>}
-              {!loadingUserTasks && userTasks.length === 0 && !userTasksError && <p>No has creado ninguna tarea todavía.</p>}
+              {!loadingUserTasks && userTasks.length === 0 && !userTasksError && <p>{t('dashboard.manage.tasks.empty')}</p>}
 
               {!loadingUserTasks && userTasks.length > 0 && (
                 <div className="user-tasks-list">
@@ -1685,7 +1686,7 @@ const Dashboard = () => {
                       <p>{task.subtitle}</p>
                       {/* Mostrar el número de propuestas */}
                       <div className="proposal-count">
-                        Propuestas: {task.proposal_count !== undefined ? task.proposal_count : 'Cargando...'}
+                        {t('dashboard.manage.tasks.proposals')} {task.proposal_count !== undefined ? task.proposal_count : t('common.loading')}
                       </div>
                       {/* Botones de acción (Editar, Ver Propuestas, etc.) - **Corregido** */}
                       <div className="task-actions">
@@ -1696,7 +1697,7 @@ const Dashboard = () => {
                                  className="btn-primary" // O la clase que prefieras para este botón
                                  onClick={() => handleSuperviseTaskClick(task.id, task.accepted_applicant_id)}
                              >
-                                 Supervisar
+                                 {t('dashboard.manage.tasks.supervise')}
                              </button>
                          ) : (
                              // Mostrar botón Ver Propuestas si no hay propuestas aceptadas
@@ -1704,7 +1705,7 @@ const Dashboard = () => {
                                  className="btn-secondary"
                                  onClick={() => navigate(`/proposals/${task.id}`)}
                              >
-                                 Ver Propuestas ({task.proposal_count !== undefined ? task.proposal_count : 0})
+                                 {t('dashboard.manage.tasks.view.proposals')} ({task.proposal_count !== undefined ? task.proposal_count : 0})
                              </button>
                          )}
                          {/* Botón de Editar Tarea (opcional, para más tarde) */}
@@ -1723,7 +1724,7 @@ const Dashboard = () => {
         {activeTab === 'tasks' && (
           <button className="create-task-button" onClick={handleCreateTaskClick}>
             <FaPlus className="create-task-icon" />
-            <span className="create-task-text">Crear Tarea</span>
+            <span className="create-task-text">{t('dashboard.create.task')}</span>
           </button>
         )}
       </div>

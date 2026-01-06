@@ -58,7 +58,7 @@ const RatingDisplay = ({
             const percentage = totalRatings > 0 ? (count / totalRatings) * 100 : 0;
             return (
               <div key={rating} className="distribution-row">
-                <span className="distribution-rating">{rating}★</span>
+                <span className="distribution-rating">{rating}<FaStar aria-hidden="true" className="rating-star" /></span>
                 <div className="distribution-bar">
                   <div
                     className="distribution-fill"
