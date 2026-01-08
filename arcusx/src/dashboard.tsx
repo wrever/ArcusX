@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaUser, FaTasks, FaWallet, FaChartLine, FaBell, FaCog, FaSignOutAlt, FaPlus, FaTimes, FaExclamationTriangle, FaUsers, FaCheckCircle, FaGlobe, FaLock } from 'react-icons/fa';
+import { FaUser, FaTasks, FaWallet, FaChartLine, FaBell, FaCog, FaSignOutAlt, FaPlus, FaTimes, FaExclamationTriangle, FaUsers, FaCheckCircle, FaGlobe, FaLock, FaStar } from 'react-icons/fa';
+import { MdTranslate } from 'react-icons/md';
 import { FiMenu } from 'react-icons/fi';
 import './css/dashboard.css';
 import arcusLogo from './images/arcus-logo.png';
@@ -18,6 +19,7 @@ import { getUserProfile, getUserPublicStats } from './services/profileService';
 import type { UserProfile as UserProfileType, UserStatistics } from './types/profile';
 import RatingDisplay from './components/RatingDisplay';
 import { useI18n } from './i18n/I18nProvider';
+import FreelancersList from './components/FreelancersList';
 
 interface UserData {
   id: number;
@@ -47,7 +49,7 @@ interface TaskData {
 }
 
 const Dashboard = () => {
-  const { t } = useI18n();
+  const { t, toggle, lang } = useI18n();
   const [activeTab, setActiveTab] = useState('tasks');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [difficultyFilter, setDifficultyFilter] = useState('all');
@@ -630,6 +632,9 @@ const Dashboard = () => {
               <FaTasks />
               <span>{t('dashboard.tabs.manage.tasks')}</span>
             </li>
+            <li className={activeTab === 'freelancers' ? 'active' : ''} onClick={() => setActiveTab('freelancers')}>
+              <FaUsers /> <span>{t('dashboard.tabs.freelancers')}</span>
+            </li>
             <li className={activeTab === 'wallet' ? 'active' : ''} onClick={() => setActiveTab('wallet')}>
               <FaWallet /> <span>{t('dashboard.tabs.wallet')}</span>
             </li>
@@ -662,9 +667,20 @@ const Dashboard = () => {
             {activeTab === 'notifications' && t('dashboard.title.notifications')}
             {activeTab === 'settings' && t('dashboard.title.settings')}
             {activeTab === 'in-progress' && t('dashboard.title.in.progress')}
-             {activeTab === 'manage-tasks' && t('dashboard.title.manage.tasks')}
+            {activeTab === 'manage-tasks' && t('dashboard.title.manage.tasks')}
+            {activeTab === 'freelancers' && t('dashboard.title.freelancers')}
           </h1>
           <div className="header-actions">
+            <button
+              type="button"
+              className="language-toggle-button"
+              onClick={toggle}
+              aria-label={t('lang.toggle')}
+              title={t('lang.toggle')}
+            >
+              <MdTranslate />
+              <span>{lang === 'es' ? 'EN' : 'ES'}</span>
+            </button>
             <WalletButton />
             <div className="notification-dropdown-container" ref={notificationDropdownRef}>
               <button 
@@ -1394,6 +1410,11 @@ const Dashboard = () => {
               </div>
             </div>
           )}
+
+          {/* Freelancers Tab */}
+          {activeTab === 'freelancers' && (
+            <FreelancersList />
+          )}
           
           {/* Settings Tab */}
           {activeTab === 'settings' && (
@@ -1476,7 +1497,7 @@ const Dashboard = () => {
                           <div className="stat-item-display">
                             <span className="stat-label-display">{t('dashboard.settings.stats.rating')}</span>
                             <span className="stat-value-display">
-                              {userStats.average_rating.toFixed(1)} ⭐
+                              {userStats.average_rating.toFixed(1)} <FaStar style={{ marginLeft: '4px', verticalAlign: 'middle' }} />
                             </span>
                           </div>
                         )}

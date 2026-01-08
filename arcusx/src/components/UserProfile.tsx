@@ -77,15 +77,16 @@ const UserProfile = () => {
   }
 
   if (error || !profile) {
+    const isPrivateError = error?.includes('privado') || error?.includes('private');
     return (
       <div className="user-profile-container">
         <div className="error-message">
-          <h3>Error</h3>
+          <h3>{isPrivateError ? 'Perfil Privado' : 'Error'}</h3>
           <p>{error || 'Perfil no encontrado'}</p>
-          <Link to="/dashboard" className="back-button">
+          <button onClick={() => navigate(-1)} className="back-button">
             <FaArrowLeft />
-            <span>Volver al Dashboard</span>
-          </Link>
+            <span>Volver</span>
+          </button>
         </div>
       </div>
     );
@@ -117,7 +118,7 @@ const UserProfile = () => {
             />
           ) : (
             <div className="profile-avatar-placeholder">
-              <FaUser />
+              {profile.username?.charAt(0).toUpperCase() || <FaUser />}
             </div>
           )}
           {profile.verified && (
@@ -133,12 +134,15 @@ const UserProfile = () => {
             {!profile.public_profile && (
               <span className="private-badge" title="Perfil privado">
                 <FaLock />
+                Privado
               </span>
             )}
           </div>
           
-          {profile.bio && (
+          {profile.bio ? (
             <p className="profile-bio">{profile.bio}</p>
+          ) : (
+            <p className="profile-bio-empty">Este usuario aún no ha agregado una biografía.</p>
           )}
           
           <div className="profile-meta">
@@ -154,7 +158,7 @@ const UserProfile = () => {
                 className="meta-item portfolio-link"
               >
                 <FaGlobe />
-                Portfolio
+                Portfolio Externo
               </a>
             )}
           </div>
@@ -222,31 +226,40 @@ const UserProfile = () => {
       )}
 
       {/* Skills */}
-      {profile.skills && profile.skills.length > 0 && (
+      {profile.skills && profile.skills.length > 0 ? (
         <div className="profile-section">
           <h2 className="section-title">Habilidades</h2>
           <div className="skills-grid">
             {profile.skills.map((skill, index) => (
               <div 
-                key={index} 
+                key={skill.id || index} 
                 className="skill-badge"
                 style={{ 
-                  borderColor: getSkillLevelColor(skill.level),
-                  background: `linear-gradient(135deg, ${getSkillLevelColor(skill.level)}20 0%, ${getSkillLevelColor(skill.level)}10 100%)`
+                  borderColor: getSkillLevelColor(skill.level || 'beginner'),
+                  background: `linear-gradient(135deg, ${getSkillLevelColor(skill.level || 'beginner')}20 0%, ${getSkillLevelColor(skill.level || 'beginner')}10 100%)`
                 }}
               >
                 <span className="skill-name">{skill.name}</span>
-                <span className="skill-level">{skill.level}</span>
+                {skill.level && (
+                  <span className="skill-level">{skill.level}</span>
+                )}
               </div>
             ))}
+          </div>
+        </div>
+      ) : (
+        <div className="profile-section">
+          <h2 className="section-title">Habilidades</h2>
+          <div className="empty-state">
+            <p>Este usuario aún no ha agregado habilidades.</p>
           </div>
         </div>
       )}
 
       {/* Portfolio */}
-      {profile.portfolio && profile.portfolio.length > 0 && (
-        <div className="profile-section">
-          <h2 className="section-title">Portfolio</h2>
+      <div className="profile-section">
+        <h2 className="section-title">Portfolio</h2>
+        {profile.portfolio && profile.portfolio.length > 0 ? (
           <div className="portfolio-grid">
             {profile.portfolio.map((item) => (
               <div key={item.id} className="portfolio-item">
@@ -256,7 +269,12 @@ const UserProfile = () => {
                       src={item.image_url} 
                       alt={item.title}
                       onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent) {
+                          parent.innerHTML = '<div class="portfolio-image-placeholder"><FaBriefcase /></div>';
+                        }
                       }}
                     />
                   </div>
@@ -270,35 +288,33 @@ const UserProfile = () => {
                   {item.description && (
                     <p>{item.description}</p>
                   )}
-                  {item.project_url && (
-                    <a 
-                      href={item.project_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="portfolio-link"
-                    >
-                      Ver Proyecto <FaGlobe />
-                    </a>
-                  )}
-                  {item.category && (
-                    <span className="portfolio-category">{item.category}</span>
-                  )}
+                  <div className="portfolio-actions">
+                    {item.project_url && (
+                      <a 
+                        href={item.project_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="portfolio-link"
+                      >
+                        <FaGlobe />
+                        Ver Proyecto
+                      </a>
+                    )}
+                    {item.category && (
+                      <span className="portfolio-category">{item.category}</span>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Mensaje si no hay portfolio */}
-      {(!profile.portfolio || profile.portfolio.length === 0) && (
-        <div className="profile-section">
+        ) : (
           <div className="empty-state">
             <FaBriefcase />
             <p>Este usuario aún no ha agregado proyectos a su portfolio</p>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

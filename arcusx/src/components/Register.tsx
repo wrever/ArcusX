@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaEye, FaEyeSlash, FaArrowLeft, FaGoogle, FaGithub, FaGem, FaGlobe } from 'react-icons/fa';
+import { FaEye, FaEyeSlash, FaArrowLeft, FaGoogle, FaGithub, FaGem, FaGlobe, FaUser, FaEnvelope, FaLock } from 'react-icons/fa';
 import '../css/Register.css';
 import { authService } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
@@ -171,8 +171,13 @@ const Register = () => {
               <span>{t('register.oauth.divider')}</span>
             </div>
             <div className="form-group">
+              <label htmlFor="username" style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                <FaUser style={{ marginRight: '6px', fontSize: '14px' }} />
+                {t('register.username')}
+              </label>
               <input
                 type="text"
+                id="username"
                 name="username"
                 placeholder={t('register.username.placeholder')}
                 value={formData.username}
@@ -182,8 +187,13 @@ const Register = () => {
               />
             </div>
             <div className="form-group">
+              <label htmlFor="email" style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                <FaEnvelope style={{ marginRight: '6px', fontSize: '14px' }} />
+                {t('register.email')}
+              </label>
               <input
                 type="email"
+                id="email"
                 name="email"
                 placeholder={t('register.email.placeholder')}
                 value={formData.email}
@@ -193,42 +203,56 @@ const Register = () => {
               />
             </div>
             <div className="form-group">
-              <input
-                type={showPassword ? "text" : "password"}
-                name="password"
-                placeholder={t('register.password.placeholder')}
-                value={formData.password}
-                onChange={handleChange}
-                required
-                disabled={loading}
-              />
-              <button
-                type="button"
-                className="toggle-password"
-                onClick={() => setShowPassword(!showPassword)}
-                disabled={loading}
-              >
-                {showPassword ? <FaEyeSlash /> : <FaEye />}
-              </button>
+              <label htmlFor="password" style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                <FaLock style={{ marginRight: '6px', fontSize: '14px' }} />
+                {t('register.password')}
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  id="password"
+                  name="password"
+                  placeholder={t('register.password.placeholder')}
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  className="toggle-password"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={loading}
+                >
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
             </div>
             <div className="form-group">
-              <input
-                type={showConfirmPassword ? "text" : "password"}
-                name="confirmPassword"
-                placeholder={t('register.password.confirm.placeholder')}
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                required
-                disabled={loading}
-              />
-              <button
-                type="button"
-                className="toggle-password"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                disabled={loading}
-              >
-                {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-              </button>
+              <label htmlFor="confirmPassword" style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                <FaLock style={{ marginRight: '6px', fontSize: '14px' }} />
+                {t('register.password.confirm')}
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  placeholder={t('register.password.confirm.placeholder')}
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  required
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  className="toggle-password"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  disabled={loading}
+                >
+                  {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
             </div>
             
             <button type="submit" className="register-button" disabled={loading}>

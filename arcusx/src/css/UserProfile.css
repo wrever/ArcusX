@@ -147,6 +147,16 @@
   line-height: 1.6;
   color: rgba(255, 255, 255, 0.8);
   margin-bottom: 1.5rem;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.profile-bio-empty {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.5);
+  font-style: italic;
+  margin-bottom: 1.5rem;
 }
 
 .profile-meta {
@@ -359,11 +369,30 @@
   margin-bottom: 1rem;
 }
 
+.portfolio-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
 .portfolio-content .portfolio-link {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(40, 192, 240, 0.1);
+  border: 1px solid rgba(40, 192, 240, 0.3);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.portfolio-content .portfolio-link:hover {
+  background: rgba(40, 192, 240, 0.2);
+  border-color: var(--primary-blue);
+  transform: translateY(-2px);
 }
 
 .portfolio-category {

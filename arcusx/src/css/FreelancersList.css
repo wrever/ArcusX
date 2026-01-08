@@ -1,0 +1,472 @@
+/* FreelancersList.css - Estilos para lista de freelancers */
+
+.freelancers-list-container {
+  width: 100%;
+  padding: 0;
+  color: var(--text-light);
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Header */
+.freelancers-list-header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.freelancers-title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-light);
+}
+
+/* Filters */
+.freelancers-filters {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 0 auto 2rem auto;
+  max-width: 1200px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  align-items: flex-end;
+  justify-content: center;
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: visible;
+  margin: 0 auto;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  flex: 0 1 auto;
+  width: 150px;
+  max-width: 180px;
+  box-sizing: border-box;
+  position: static;
+}
+
+.filter-group label {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.search-group {
+  position: relative;
+  flex: 0 1 auto;
+  width: 300px;
+  min-width: 250px;
+  max-width: 350px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filter-group.search-group {
+  width: 300px;
+  min-width: 250px;
+  max-width: 350px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+}
+
+.search-input,
+.filter-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  padding-left: 2.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: var(--text-light);
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+}
+
+.search-input:focus,
+.filter-input:focus {
+  outline: none;
+  border-color: var(--primary-blue);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 3px rgba(40, 192, 240, 0.1);
+}
+
+.search-input::placeholder,
+.filter-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.sort-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.sort-select {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: var(--text-light);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.sort-select:focus {
+  outline: none;
+  border-color: var(--primary-blue);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sort-order-btn {
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: var(--text-light);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-width: 44px;
+  box-sizing: border-box;
+}
+
+.sort-order-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--primary-blue);
+  color: var(--primary-blue);
+}
+
+
+/* Grid de freelancers - Lista vertical para tarjetas horizontales */
+.freelancers-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  width: 100%;
+}
+
+/* Loading y Error */
+.loading-container,
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.spinner-icon {
+  font-size: 2.5rem;
+  color: var(--primary-blue);
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-overlay {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.loading-container p,
+.error-message {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1.1rem;
+  margin: 0.5rem 0;
+}
+
+.retry-button {
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--primary-blue);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.retry-button:hover {
+  background: var(--secondary-blue);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(40, 192, 240, 0.3);
+}
+
+.no-freelancers {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.no-freelancers p {
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Paginación */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+}
+
+.pagination-btn {
+  padding: 0.6rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: var(--text-light);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.pagination-btn:hover:not(:disabled):not(.active) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--primary-blue);
+  color: var(--primary-blue);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-btn.active {
+  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+  border-color: var(--primary-blue);
+  color: white;
+}
+
+.pagination-nav {
+  padding: 0.6rem 1.25rem;
+}
+
+.pagination-ellipsis {
+  padding: 0.6rem 0.5rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .freelancers-grid {
+    gap: 1.25rem;
+  }
+
+  .filter-row {
+    justify-content: center;
+    align-items: center;
+  }
+
+  .filter-group {
+    flex: 0 1 auto;
+    width: 140px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .freelancers-filters {
+    max-width: 100%;
+    padding: 1.25rem;
+  }
+
+  .filter-row {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .filter-group {
+    flex: 0 1 auto;
+    width: 140px;
+    max-width: 160px;
+  }
+
+  .search-group {
+    flex: 0 1 auto;
+    width: 280px;
+    min-width: 220px;
+    max-width: 320px;
+  }
+}
+
+@media (max-width: 768px) {
+  .freelancers-list-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .freelancers-title {
+    font-size: 1.75rem;
+  }
+
+
+  .freelancers-filters {
+    padding: 1.25rem;
+  }
+
+  .filter-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .filter-group {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .search-group {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: auto;
+  }
+
+  .search-input,
+  .filter-input {
+    padding: 0.7rem 1rem;
+    padding-left: 2.5rem;
+    font-size: 0.9rem;
+  }
+
+  .sort-select {
+    padding: 0.7rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .sort-order-btn {
+    padding: 0.7rem;
+    min-width: 44px;
+  }
+
+  .freelancers-grid {
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .freelancers-list-header {
+    margin-bottom: 1rem;
+  }
+
+  .freelancers-title {
+    font-size: 1.5rem;
+  }
+
+  .freelancers-filters {
+    padding: 1rem;
+  }
+
+  .filter-row {
+    gap: 0.75rem;
+  }
+
+  .filter-group label {
+    font-size: 0.8rem;
+  }
+
+  .search-input,
+  .filter-input {
+    padding: 0.65rem 0.9rem;
+    padding-left: 2.25rem;
+    font-size: 0.85rem;
+  }
+
+  .search-icon {
+    left: 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .sort-select {
+    padding: 0.65rem 0.9rem;
+    font-size: 0.85rem;
+  }
+
+  .sort-order-btn {
+    padding: 0.65rem;
+    min-width: 40px;
+  }
+
+  .freelancers-grid {
+    gap: 1rem;
+  }
+
+  .pagination {
+    gap: 0.25rem;
+  }
+
+  .pagination-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    min-width: 36px;
+  }
+
+  .pagination-nav {
+    padding: 0.5rem 1rem;
+  }
+
+  .pagination-nav span {
+    display: none;
+  }
+}
+

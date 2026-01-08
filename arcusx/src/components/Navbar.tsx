@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { FaExclamationTriangle, FaLightbulb, FaStar, FaUsers, FaQuestionCircle, FaTachometerAlt, FaSignOutAlt, FaSignInAlt, FaUserPlus } from 'react-icons/fa';
 import '../css/Navbar.css';
 import logo from '../images/arcus-logo.png';
 import { useAuth } from '../hooks/useAuth';
@@ -94,6 +95,7 @@ const Navbar = () => {
           ) : (
             <>
           <Link to="/login" className="nav-button login" onClick={closeMenu}>
+            <FaSignInAlt style={{ marginRight: '6px' }} />
             {t('nav.login')}
           </Link>
           <Link to="/register" className="nav-button register" onClick={closeMenu}>

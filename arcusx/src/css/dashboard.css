@@ -3376,6 +3376,46 @@
 }
 
 /* Wallet Button Styles */
+.language-toggle-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, rgba(40, 192, 240, 0.2) 0%, rgba(17, 128, 179, 0.2) 100%);
+  color: var(--white);
+  box-shadow: 0 2px 8px rgba(40, 192, 240, 0.2);
+  min-width: 100px;
+  justify-content: center;
+  border: 1px solid rgba(40, 192, 240, 0.3);
+}
+
+.language-toggle-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(40, 192, 240, 0.3);
+  background: linear-gradient(135deg, rgba(40, 192, 240, 0.3) 0%, rgba(17, 128, 179, 0.3) 100%);
+  border-color: rgba(40, 192, 240, 0.5);
+}
+
+.language-toggle-button:active {
+  transform: translateY(0);
+}
+
+.language-toggle-button svg {
+  font-size: 1rem;
+  color: var(--white);
+}
+
+.language-toggle-button span {
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
 .wallet-button-container {
   position: relative;
   display: flex;
