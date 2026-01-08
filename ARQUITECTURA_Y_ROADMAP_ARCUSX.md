@@ -596,6 +596,17 @@ La arquitectura futura de ArcusX está diseñada para **escalar horizontalmente*
   - ⏳ Recompensas básicas (badges o beneficios simples)
   - ⏳ Página de invitación amigable
 
+- ⏳ **Sistema de Suscripciones** (Feature Visible - Revenue)
+  - ⏳ Planes de suscripción (Free, Basic, Pro, Enterprise)
+  - ⏳ Tabla de planes y suscripciones en DB
+  - ⏳ Página de planes y precios
+  - ⏳ Dashboard de suscripción para usuarios
+  - ⏳ Sistema de límites por plan (tareas/mes, features premium)
+  - ⏳ Renovación manual con recordatorios
+  - ⏳ Middleware de verificación de suscripción activa
+  - ⏳ UI para upgrade/downgrade de plan
+  - ⏳ Notificaciones de vencimiento y renovación
+
 - ⏳ **Mejoras de Responsividad Mobile**
   - ⏳ Optimización completa para Android (CSS/React)
   - ⏳ Optimización completa para iOS (CSS/React)
@@ -705,6 +716,103 @@ La arquitectura futura de ArcusX está diseñada para **escalar horizontalmente*
   - ⏳ Mejoras de UX basadas en feedback
   - ⏳ Optimización de costos de infraestructura
   - ⏳ Documentación técnica completa
+
+---
+
+### 📅 Q1 2027 (Enero - Marzo) - Expansión y Mejoras Avanzadas
+
+**Objetivo:** Mejoras avanzadas, expansión de funcionalidades y optimización basada en feedback de usuarios.  
+**Nota:** Quarter relajado enfocado en iteración y mejoras incrementales después de tener la plataforma funcional en Mainnet. Trabajo distribuido para evitar sobrecarga.  
+**Presupuesto:** A definir según ingresos generados y necesidades
+
+- ⏳ **Soporte Multi-Asset en Stellar** (Feature Avanzada)
+  - ⏳ Soporte para múltiples assets Stellar (XLM, USDT, EURT, etc.)
+  - ⏳ Selector de asset al crear tarea
+  - ⏳ Conversión automática de precios entre assets
+  - ⏳ UI para gestión de múltiples assets en wallet
+
+- ⏳ **Mejoras Avanzadas de Suscripciones**
+  - ⏳ Renovación automática mediante escrows programados (si es viable)
+  - ⏳ Planes anuales con descuentos
+  - ⏳ Trial periods para planes premium
+  - ⏳ Analytics de suscripciones para admins
+
+- ⏳ **Mejoras Basadas en Feedback**
+  - ⏳ Implementación de features solicitadas por usuarios
+  - ⏳ Optimizaciones de UX basadas en analytics
+  - ⏳ Mejoras de performance según métricas reales
+  - ⏳ A/B testing de nuevas features
+
+- ⏳ **Expansión de Contenido Educativo**
+  - ⏳ Blog técnico con artículos SEO
+  - ⏳ Webinars mensuales
+  - ⏳ Casos de estudio de usuarios exitosos
+  - ⏳ Comunidad de desarrolladores
+
+- ⏳ **Optimizaciones y Refinamientos**
+  - ⏳ Mejoras de performance basadas en datos reales
+  - ⏳ Optimización de costos de infraestructura
+  - ⏳ Refinamiento de features existentes
+  - ⏳ Code cleanup y refactoring
+
+---
+
+### 📅 Q2 2027 (Abril - Junio) - Expansión Continua y Features Avanzadas
+
+**Objetivo:** Continuar con expansión de funcionalidades avanzadas y features que requieren más tiempo de desarrollo.  
+**Nota:** Quarter relajado enfocado en features más complejas que requieren más iteración y testing. Trabajo distribuido para mantener ritmo sostenible.  
+**Presupuesto:** A definir según ingresos generados y necesidades
+
+- ⏳ **API Pública para Desarrolladores**
+  - ⏳ Documentación completa de API
+  - ⏳ Sistema de API keys
+  - ⏳ Rate limiting por desarrollador
+  - ⏳ Endpoints para integraciones externas
+  - ⏳ SDK básico (JavaScript/TypeScript)
+
+- ⏳ **Sistema de Certificaciones y Verificaciones**
+  - ⏳ Certificaciones verificables en blockchain
+  - ⏳ Badges de certificación en perfiles
+  - ⏳ Sistema de verificación de habilidades
+  - ⏳ Integración con plataformas educativas (opcional)
+
+- ⏳ **Features de Colaboración en Equipo**
+  - ⏳ Equipos de freelancers
+  - ⏳ Proyectos colaborativos
+  - ⏳ División de pagos entre miembros del equipo
+  - ⏳ Dashboard de equipo
+  - ⏳ Sistema de roles y permisos en equipos
+
+- ⏳ **Gamificación Avanzada**
+  - ⏳ Sistema de niveles y experiencia
+  - ⏳ Misiones y desafíos
+  - ⏳ Recompensas por logros
+  - ⏳ Leaderboards avanzados con categorías
+  - ⏳ Sistema de puntos y recompensas canjeables
+
+- ⏳ **Integraciones Externas**
+  - ⏳ Integración con calendarios (Google Calendar, etc.)
+  - ⏳ Integración con herramientas de productividad (Trello, Asana, etc.)
+  - ⏳ Webhooks para eventos de la plataforma
+  - ⏳ Integración con servicios de comunicación (Slack, Discord)
+
+- ⏳ **Sistema de Marketplace de Servicios** (Opcional)
+  - ⏳ Marketplace para servicios adicionales
+  - ⏳ Plugins y extensiones de terceros
+  - ⏳ Sistema de reviews para servicios
+  - ⏳ Comisiones para marketplace
+
+- ⏳ **Features de Comunidad Avanzadas**
+  - ⏳ Foros de discusión por categorías
+  - ⏳ Grupos de interés
+  - ⏳ Eventos y meetups virtuales
+  - ⏳ Sistema de mentores y aprendices
+
+- ⏳ **Mejoras Continuas**
+  - ⏳ Iteración basada en feedback de Q1
+  - ⏳ Optimizaciones adicionales
+  - ⏳ Nuevas features solicitadas por usuarios
+  - ⏳ Mejoras de escalabilidad
 
 ---
 
@@ -891,6 +999,25 @@ La arquitectura futura de ArcusX está diseñada para **escalar horizontalmente*
 - **Retención**: Mejora continua
 - **Crecimiento mensual**: Crecimiento sostenido
 - **Revenue**: Modelo de ingresos operativo
+
+### Métricas Q1 2027
+- **Usuarios registrados**: 500-1000 usuarios (crecimiento sostenido)
+- **Tareas creadas**: 300-600 tareas (producción estable)
+- **Transacciones completadas**: 150-300 transacciones (producción)
+- **Retención**: 40%+ a 3 meses
+- **Suscripciones activas**: Crecimiento constante
+- **Revenue**: Modelo de ingresos consolidado
+- **Satisfacción del usuario**: 4+ estrellas
+
+### Métricas Q2 2027
+- **Usuarios registrados**: 1000-2000 usuarios (crecimiento acelerado)
+- **Tareas creadas**: 600-1200 tareas (producción estable)
+- **Transacciones completadas**: 300-600 transacciones (producción)
+- **Retención**: 45%+ a 3 meses
+- **Suscripciones activas**: Crecimiento sostenido
+- **Revenue**: Modelo de ingresos escalado
+- **Satisfacción del usuario**: 4.2+ estrellas
+- **Features avanzadas**: Multi-asset, API pública, certificaciones implementadas
 
 ---
 
