@@ -18,7 +18,14 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved === 'es' || saved === 'en') setLangState(saved);
+    // Si no hay idioma guardado o es inválido, usar español por defecto
+    if (saved === 'es' || saved === 'en') {
+      setLangState(saved);
+    } else {
+      // Forzar español como idioma nativo si no hay preferencia guardada
+      setLangState('es');
+      localStorage.setItem(STORAGE_KEY, 'es');
+    }
   }, []);
 
   const setLang = (next: Lang) => {

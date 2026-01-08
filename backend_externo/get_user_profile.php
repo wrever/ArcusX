@@ -94,8 +94,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             error_log("Error asegurando columnas de perfil: " . $e->getMessage());
         }
 
+        // Verificar si existe columna skills
+        $checkSkillsColumn = $conn->query("SHOW COLUMNS FROM users LIKE 'skills'");
+        $hasSkillsColumn = $checkSkillsColumn && $checkSkillsColumn->num_rows > 0;
+        
         // Obtener datos básicos del usuario
-        $stmt = $conn->prepare("
+        $sqlSelect = "
             SELECT 
                 id,
                 username,
@@ -106,11 +110,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 public_profile,
                 created_at,
                 average_rating,
-                total_ratings
+                total_ratings"
+                . ($hasSkillsColumn ? ", skills" : "") . "
             FROM users
             WHERE id = ?
             LIMIT 1
-        ");
+        ";
+        $stmt = $conn->prepare($sqlSelect);
         if (!$stmt) {
             throw new Exception('Error al preparar consulta de usuario: ' . $conn->error);
         }
@@ -159,6 +165,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             }
         }
 
+        // Skills (si existe la columna)
+        $skills = [];
+        $checkSkills = $conn->query("SHOW COLUMNS FROM users LIKE 'skills'");
+        if ($checkSkills && $checkSkills->num_rows > 0) {
+            if (!empty($user['skills'])) {
+                $skillsData = json_decode($user['skills'], true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($skillsData)) {
+                    $skills = $skillsData;
+                } else {
+                    // Si no es JSON válido, asumir string separado por comas
+                    $skillsArray = array_filter(array_map('trim', explode(',', $user['skills'])));
+                    foreach ($skillsArray as $skillName) {
+                        $skills[] = ['name' => $skillName, 'level' => 'intermediate'];
+                    }
+                }
+            }
+        }
+
         // Construir respuesta
         $profile = [
             'id' => (int)$user['id'],
@@ -170,7 +194,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             'member_since' => $user['created_at'],
             'average_rating' => $user['average_rating'] !== null ? (float)$user['average_rating'] : 0.0,
             'total_ratings' => $user['total_ratings'] !== null ? (int)$user['total_ratings'] : 0,
-            'portfolio' => $portfolio
+            'portfolio' => $portfolio,
+            'skills' => $skills,
+            'verified' => false // Por ahora, se puede implementar después
         ];
 
         // Solo el dueño ve su email

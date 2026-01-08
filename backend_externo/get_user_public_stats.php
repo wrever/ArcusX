@@ -80,10 +80,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $platformFeeEscaped = (float)$platformFee;
 
         // Tareas completadas como trabajador
+        // IMPORTANTE: Solo contar tareas donde el usuario fue aceptado como trabajador
+        // y la tarea está completada (status = 'completed' y escrow_status = 'completed')
         $sqlCompleted = "
             SELECT COUNT(*) as total_completed
             FROM tasks
             WHERE accepted_applicant_id = ?
+              AND accepted_applicant_id IS NOT NULL
               AND status = 'completed'
               AND escrow_status = 'completed'
         ";
@@ -94,6 +97,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $stmtCompleted->bind_param("i", $userId);
         $stmtCompleted->execute();
         $resCompleted = $stmtCompleted->get_result();
+        if ($resCompleted === false) {
+            throw new Exception('Error al ejecutar consulta de tareas completadas: ' . $stmtCompleted->error);
+        }
         $completedRow = $resCompleted->fetch_assoc();
         $tasksCompleted = (int)$completedRow['total_completed'];
         $stmtCompleted->close();
@@ -115,31 +121,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $tasksCreated = (int)$createdRow['total_created'];
         $stmtCreated->close();
 
-        // Total ganado como trabajador (price es lo que recibe el worker)
-        $sqlEarned = "
-            SELECT COALESCE(SUM(price), 0) as total_earned
-            FROM tasks
-            WHERE accepted_applicant_id = ?
-              AND status = 'completed'
-              AND escrow_status = 'completed'
-        ";
+        // Total ganado como trabajador
+        // IMPORTANTE: price es lo que recibe el trabajador después de la comisión
+        // Verificar si existe escrow_amount o escrow_platform_fee para cálculo más preciso
+        $checkEscrowAmount = $conn->query("SHOW COLUMNS FROM tasks LIKE 'escrow_amount'");
+        $hasEscrowAmount = $checkEscrowAmount && $checkEscrowAmount->num_rows > 0;
+        $checkEscrowPlatformFee = $conn->query("SHOW COLUMNS FROM tasks LIKE 'escrow_platform_fee'");
+        $hasEscrowPlatformFee = $checkEscrowPlatformFee && $checkEscrowPlatformFee->num_rows > 0;
+        
+        // Si existe escrow_amount y escrow_platform_fee, calcular: escrow_amount - (escrow_amount * escrow_platform_fee)
+        // Si no, usar price directamente (ya es el monto después de comisión)
+        if ($hasEscrowAmount && $hasEscrowPlatformFee) {
+            $sqlEarned = "
+                SELECT COALESCE(
+                    SUM(
+                        COALESCE(
+                            price,
+                            escrow_amount * (1 - COALESCE(escrow_platform_fee, ?))
+                        )
+                    ),
+                    0
+                ) as total_earned
+                FROM tasks
+                WHERE accepted_applicant_id = ?
+                  AND accepted_applicant_id IS NOT NULL
+                  AND status = 'completed'
+                  AND escrow_status = 'completed'
+            ";
+        } else {
+            // Usar price directamente (ya incluye el descuento de comisión)
+            $sqlEarned = "
+                SELECT COALESCE(SUM(price), 0) as total_earned
+                FROM tasks
+                WHERE accepted_applicant_id = ?
+                  AND accepted_applicant_id IS NOT NULL
+                  AND status = 'completed'
+                  AND escrow_status = 'completed'
+            ";
+        }
+        
         $stmtEarned = $conn->prepare($sqlEarned);
         if ($stmtEarned === false) {
             throw new Exception('Error al preparar consulta de total_earned: ' . $conn->error);
         }
-        $stmtEarned->bind_param("i", $userId);
+        
+        // Bind parameters según la consulta
+        if ($hasEscrowAmount && $hasEscrowPlatformFee) {
+            $stmtEarned->bind_param("di", $platformFeeEscaped, $userId);
+        } else {
+            $stmtEarned->bind_param("i", $userId);
+        }
+        
         $stmtEarned->execute();
         $resEarned = $stmtEarned->get_result();
+        if ($resEarned === false) {
+            throw new Exception('Error al ejecutar consulta de total_earned: ' . $stmtEarned->error);
+        }
         $earnedRow = $resEarned->fetch_assoc();
         $totalEarned = (float)$earnedRow['total_earned'];
         $stmtEarned->close();
 
         // Total gastado como cliente (lo que pagó el cliente)
-        // Verificar si las columnas existen antes de usarlas
-        $checkEscrowAmount = $conn->query("SHOW COLUMNS FROM tasks LIKE 'escrow_amount'");
-        $hasEscrowAmount = $checkEscrowAmount && $checkEscrowAmount->num_rows > 0;
-        $checkEscrowPlatformFee = $conn->query("SHOW COLUMNS FROM tasks LIKE 'escrow_platform_fee'");
-        $hasEscrowPlatformFee = $checkEscrowPlatformFee && $checkEscrowPlatformFee->num_rows > 0;
+        // Reusar variables ya obtenidas arriba
         
         if ($hasEscrowAmount) {
             if ($hasEscrowPlatformFee) {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { FaArrowLeft } from 'react-icons/fa';
+import { FaArrowLeft, FaCommentAlt, FaLink, FaWallet, FaInfoCircle } from 'react-icons/fa';
 import axios from 'axios';
 import { API_URL } from '../config/database';
 import '../css/ApplyTask.css'; // Necesitas crear este archivo CSS
@@ -260,6 +260,7 @@ const ApplyTask = () => {
           <form onSubmit={handleApplicationSubmit} className="application-form">
             <div className="form-group">
               <label htmlFor="applicationMessage">
+                <FaCommentAlt style={{ marginRight: '6px', fontSize: '14px' }} />
                 {t('apply.message.label')}
               </label>
               <textarea
@@ -274,6 +275,7 @@ const ApplyTask = () => {
             
             <div className="form-group">
               <label htmlFor="portfolioUrl">
+                <FaLink style={{ marginRight: '6px', fontSize: '14px' }} />
                 {t('apply.portfolio.label')}
               </label>
               <input
@@ -287,6 +289,7 @@ const ApplyTask = () => {
 
             <div className="form-group">
               <label htmlFor="walletAddress">
+                <FaWallet style={{ marginRight: '6px', fontSize: '14px' }} />
                 {t('apply.wallet.label')}
               </label>
               <input
@@ -300,7 +303,10 @@ const ApplyTask = () => {
             </div>
 
             <div className="form-info">
-              <h4> {t('apply.info.title')}</h4>
+              <h4>
+                <FaInfoCircle style={{ marginRight: '6px', fontSize: '14px' }} />
+                {t('apply.info.title')}
+              </h4>
               <ul>
                 <li>{t('apply.info.contract')}</li>
                 <li>{t('apply.info.payment')}</li>

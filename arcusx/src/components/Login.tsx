@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaGoogle, FaGithub } from 'react-icons/fa';
+import { FaArrowLeft, FaGoogle, FaGithub, FaEnvelope, FaLock } from 'react-icons/fa';
 import '../css/Login.css';
 import { useAuth } from '../hooks/useAuth';
 import { authService } from '../services/authService';
@@ -144,7 +144,12 @@ const Login = () => {
         
         <form className="login-form" onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="email"> <h4> {t('login.email')} </h4> </label>
+            <label htmlFor="email">
+              <h4>
+                <FaEnvelope style={{ marginRight: '6px', fontSize: '14px' }} />
+                {t('login.email')}
+              </h4>
+            </label>
             <input
               type="email"
               id="email"
@@ -157,7 +162,12 @@ const Login = () => {
           </div>
           
           <div className="form-group">
-            <label htmlFor="password"> <h4> {t('login.password')} </h4> </label>
+            <label htmlFor="password">
+              <h4>
+                <FaLock style={{ marginRight: '6px', fontSize: '14px' }} />
+                {t('login.password')}
+              </h4>
+            </label>
             <input
               type="password"
               id="password"

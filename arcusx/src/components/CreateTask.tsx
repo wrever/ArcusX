@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaClock, FaExclamationTriangle, FaCheckCircle, FaFileAlt, FaCreditCard } from 'react-icons/fa';
+import { FaArrowLeft, FaClock, FaExclamationTriangle, FaCheckCircle, FaFileAlt, FaCreditCard, FaHeading, FaAlignLeft, FaDollarSign, FaTag, FaLayerGroup, FaInfoCircle } from 'react-icons/fa';
 import '../css/CreateTask.css';
 import axios from 'axios';
 import Popup from './Popup';
@@ -371,7 +371,10 @@ const CreateTask = () => {
             </h3>
             
             <div className="form-group">
-              <label htmlFor="title">Título de la Tarea *</label>
+              <label htmlFor="title">
+                <FaHeading style={{ marginRight: '6px', fontSize: '14px' }} />
+                Título de la Tarea *
+              </label>
               <input
                 type="text"
                 id="title"
@@ -384,7 +387,10 @@ const CreateTask = () => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="subtitle">Subtítulo (opcional)</label>
+              <label htmlFor="subtitle">
+                <FaHeading style={{ marginRight: '6px', fontSize: '14px' }} />
+                Subtítulo (opcional)
+              </label>
               <input
                 type="text"
                 id="subtitle"
@@ -397,7 +403,10 @@ const CreateTask = () => {
             </div>
 
             <div className="form-group">
-              <label htmlFor="description">Descripción Detallada *</label>
+              <label htmlFor="description">
+                <FaAlignLeft style={{ marginRight: '6px', fontSize: '14px' }} />
+                Descripción Detallada *
+              </label>
               <textarea
                 id="description"
                 name="description"
@@ -435,8 +444,12 @@ const CreateTask = () => {
             
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="price">Pago al Trabajador *</label>
+                <label htmlFor="price">
+                  <FaDollarSign style={{ marginRight: '6px', fontSize: '14px' }} />
+                  Pago al Trabajador *
+                </label>
                 <p className="helper-text" style={{ fontSize: '0.85em', color: 'rgba(255, 255, 255, 0.7)', marginTop: '0.25rem', marginBottom: '0.5rem' }}>
+                  <FaInfoCircle style={{ marginRight: '4px', fontSize: '12px' }} />
                   Ingresa el monto exacto que recibirá el trabajador. Se te cobrará este monto más una comisión del {platformFeePercent}%.
                 </p>
                 <input
@@ -453,7 +466,10 @@ const CreateTask = () => {
               </div>
 
               <div className="form-group">
-                <label htmlFor="currency">Moneda *</label>
+                <label htmlFor="currency">
+                  <FaCreditCard style={{ marginRight: '6px', fontSize: '14px' }} />
+                  Moneda *
+                </label>
                 <input
                   type="text"
                   id="currency"
@@ -468,7 +484,10 @@ const CreateTask = () => {
 
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="category">Categoría *</label>
+                <label htmlFor="category">
+                  <FaTag style={{ marginRight: '6px', fontSize: '14px' }} />
+                  Categoría *
+                </label>
                 <select
                   id="category"
                   name="category"
@@ -485,7 +504,10 @@ const CreateTask = () => {
               </div>
 
               <div className="form-group">
-                <label htmlFor="difficulty">Dificultad *</label>
+                <label htmlFor="difficulty">
+                  <FaLayerGroup style={{ marginRight: '6px', fontSize: '14px' }} />
+                  Dificultad *
+                </label>
                 <select
                   id="difficulty"
                   name="difficulty"
