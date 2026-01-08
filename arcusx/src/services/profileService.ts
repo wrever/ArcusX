@@ -57,6 +57,47 @@ export async function getUserProfile(userId: number): Promise<UserProfile> {
 }
 
 /**
+ * Actualizar datos básicos del usuario (username, email, password)
+ */
+export async function updateUserBasicData(data: {
+  id: number;
+  name: string;
+  email: string;
+  currentPassword?: string;
+  newPassword?: string;
+}): Promise<void> {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
+  }
+  
+  const response = await fetch(`${API_URL}/auth/update_user.php`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      currentPassword: data.currentPassword || '',
+      newPassword: data.newPassword || ''
+    }),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Error al actualizar datos del usuario');
+  }
+  
+  const result = await response.json();
+  if (!result.message || result.message.includes('Error')) {
+    throw new Error(result.message || 'Error al actualizar datos del usuario');
+  }
+}
+
+/**
  * Actualizar perfil del usuario
  */
 export async function updateUserProfile(data: UpdateProfileData): Promise<void> {

@@ -269,8 +269,29 @@
 }
 
 /* Solo los inputs de contraseña necesitan padding extra para el botón */
-.form-group:has(.toggle-password) input {
+.form-group:has(.toggle-password) input,
+.form-group.password-field input {
   padding-right: 2.75rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Asegurar que el contenedor de password tenga el mismo width */
+.form-group.password-field {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group.password-field > div {
+  width: 100%;
+  position: relative;
+  display: flex;
+}
+
+.form-group.password-field > div > input {
+  flex: 1;
+  width: 100%;
 }
 
 /* Ocultar iconos de correo y candado */
