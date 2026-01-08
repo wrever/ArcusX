@@ -131,6 +131,7 @@
   margin: 0;
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -230,6 +231,7 @@
 
   .freelancer-bio {
     -webkit-line-clamp: 3;
+    line-clamp: 3;
     font-size: 0.9rem;
     line-height: 1.65;
   }
@@ -265,6 +267,7 @@
   .freelancer-bio {
     font-size: 0.85rem;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
   }
 
   .freelancer-view-profile-btn {

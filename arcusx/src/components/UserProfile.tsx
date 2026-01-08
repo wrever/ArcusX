@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaUser, FaCheckCircle, FaBriefcase, FaStar, FaDollarSign, FaTasks, FaCalendarAlt, FaGlobe, FaLock } from 'react-icons/fa';
+import { FaArrowLeft, FaUser, FaCheckCircle, FaBriefcase, FaStar, FaDollarSign, FaTasks, FaGlobe, FaLock } from 'react-icons/fa';
 import { getUserProfile, getUserPublicStats } from '../services/profileService';
 import type { UserProfile as UserProfileType, UserStatistics } from '../types/profile';
 import RatingDisplay from './RatingDisplay';
 import SEO from './SEO';
 import '../css/UserProfile.css';
+import '../css/Preloader.css';
+import logo from '../images/arcus-logo.png';
 
 const UserProfile = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -68,10 +70,14 @@ const UserProfile = () => {
 
   if (loading) {
     return (
-      <div className="user-profile-container">
-        <div className="loading-spinner">
-          <div className="spinner"></div>
-          <p>Cargando perfil...</p>
+      <div className="preloader">
+        <div className="preloader-content">
+          <div className="logo">
+            <img src={logo} alt="ArcusX Logo" className="logo-image" />
+          </div>
+          <div className="loading-circle">
+            <div className="circle"></div>
+          </div>
         </div>
       </div>
     );
@@ -165,16 +171,9 @@ const UserProfile = () => {
             )}
           </div>
           
-          {profile.bio ? (
-            <p className="profile-bio">{profile.bio}</p>
-          ) : (
-            <p className="profile-bio-empty">Este usuario aún no ha agregado una biografía.</p>
-          )}
-          
           <div className="profile-meta">
             <span className="meta-item">
-              <FaCalendarAlt />
-              Miembro desde {formatDate(profile.member_since)}
+              <span className="meta-text">Miembro desde {formatDate(profile.member_since)}</span>
             </span>
             {profile.portfolio_url && (
               <a 
@@ -184,7 +183,7 @@ const UserProfile = () => {
                 className="meta-item portfolio-link"
               >
                 <FaGlobe />
-                Portfolio Externo
+                <span className="meta-text">Portfolio Externo</span>
               </a>
             )}
           </div>
@@ -251,6 +250,20 @@ const UserProfile = () => {
         </div>
       )}
 
+      {/* Biografía */}
+      <div className="profile-section">
+        <h2 className="section-title">Biografía</h2>
+        {profile.bio ? (
+          <div className="bio-content">
+            <p className="profile-bio-full">{profile.bio}</p>
+          </div>
+        ) : (
+          <div className="empty-state">
+            <p>Este usuario aún no ha agregado una biografía.</p>
+          </div>
+        )}
+      </div>
+
       {/* Skills */}
       {profile.skills && profile.skills.length > 0 ? (
         <div className="profile-section">
@@ -281,66 +294,6 @@ const UserProfile = () => {
           </div>
         </div>
       )}
-
-      {/* Portfolio */}
-      <div className="profile-section">
-        <h2 className="section-title">Portfolio</h2>
-        {profile.portfolio && profile.portfolio.length > 0 ? (
-          <div className="portfolio-grid">
-            {profile.portfolio.map((item) => (
-              <div key={item.id} className="portfolio-item">
-                {item.image_url ? (
-                  <div className="portfolio-image">
-                    <img 
-                      src={item.image_url} 
-                      alt={`${item.title} - Proyecto de ${profile.username} en ArcusX`}
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        const parent = target.parentElement;
-                        if (parent) {
-                          parent.innerHTML = '<div class="portfolio-image-placeholder"><FaBriefcase /></div>';
-                        }
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div className="portfolio-image-placeholder">
-                    <FaBriefcase />
-                  </div>
-                )}
-                <div className="portfolio-content">
-                  <h3>{item.title}</h3>
-                  {item.description && (
-                    <p>{item.description}</p>
-                  )}
-                  <div className="portfolio-actions">
-                    {item.project_url && (
-                      <a 
-                        href={item.project_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="portfolio-link"
-                      >
-                        <FaGlobe />
-                        Ver Proyecto
-                      </a>
-                    )}
-                    {item.category && (
-                      <span className="portfolio-category">{item.category}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="empty-state">
-            <FaBriefcase />
-            <p>Este usuario aún no ha agregado proyectos a su portfolio</p>
-          </div>
-        )}
-      </div>
       </div>
     </>
   );

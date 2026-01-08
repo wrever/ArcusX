@@ -144,6 +144,12 @@ export const translations: Record<Lang, Record<string, string>> = {
     // Team section
     'team.title': 'Nuestro Equipo',
     'team.desc': 'Un equipo apasionado por revolucionar el futuro del trabajo en Latinoamérica',
+    'team.bruno.role': 'CEO & Fundador',
+    'team.bruno.bio': 'Desarrollador full-stack con amplia experiencia en Web3, liderazgo de equipos tecnológicos y visión estratégica para el crecimiento de ArcusX.',
+    'team.cris.role': 'Head of Development',
+    'team.cris.bio': 'Líder técnico principal del equipo de desarrollo, especializado en arquitectura de software, sistemas bancarios y tecnologías de alto rendimiento.',
+    'team.pau.role': 'Head of Marketing',
+    'team.pau.bio': 'Líder del área de marketing, desarrollando estrategias completas de marketing digital, creación de contenido y gestión de presencia en redes sociales.',
 
     // FAQ section
     'faq.title': 'Preguntas Frecuentes',
@@ -553,6 +559,12 @@ export const translations: Record<Lang, Record<string, string>> = {
     // Team section
     'team.title': 'Our Team',
     'team.desc': 'A team passionate about revolutionizing the future of work in Latin America',
+    'team.bruno.role': 'CEO & Founder',
+    'team.bruno.bio': 'Full-stack developer with extensive experience in Web3, technology team leadership, and strategic vision for ArcusX growth.',
+    'team.cris.role': 'Head of Development',
+    'team.cris.bio': 'Principal technical leader of the development team, specialized in software architecture, banking systems, and high-performance technologies.',
+    'team.pau.role': 'Head of Marketing',
+    'team.pau.bio': 'Marketing leader developing comprehensive digital marketing strategies, content creation, and social media presence management.',
 
     // FAQ section
     'faq.title': 'Frequently Asked Questions',

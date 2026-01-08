@@ -5,8 +5,8 @@ import { useI18n } from '../i18n/I18nProvider';
 import Footer from './Footer';
 import SEO from './SEO';
 import brunoImg from '../images/bruno.jpg';
-import roqueImg from '../images/roque.jpg';
-import jereImg from '../images/jere.jpeg';
+import pauImg from '../images/paukoh.jpg';
+import crisImg from '../images/cris.png';
 import desempleoImg from '../images/desempleo.webp';
 import gananciaImg from '../images/ganancia.webp';
 
@@ -407,8 +407,8 @@ const Hero = () => {
                 
                 <div className="member-info">
                   <h3>Bruno Miranda E.</h3>
-                  <p className="member-role">CEO & Fundador</p>
-                  <p className="member-bio">Desarrollador full-stack con amplia experiencia en Web3 y liderazgo de equipos tecnológicos.</p>
+                  <p className="member-role">{t('team.bruno.role')}</p>
+                  <p className="member-bio">{t('team.bruno.bio')}</p>
                   
                   <div className="hero-buttons">
                     <Link to="https://www.linkedin.com/in/bruno-miranda-31602b260/" className="hero-button primary">
@@ -428,20 +428,20 @@ const Hero = () => {
               </div>
               <div className="team-card">
                 <div className="team-member-image">
-                  <img src={roqueImg} alt="Vicente Vera" className="member-img" />
+                  <img src={crisImg} alt="Cristopher Escobar" className="member-img" />
                 </div>
                 <div className="member-info">
-                  <h3>Roque Cea</h3>
-                  <p className="member-role">COO</p>
-                  <p className="member-bio">Experto en operaciones y coordinación, asegurando el funcionamiento eficiente de ArcusX.</p>
+                  <h3>Cristopher Escobar</h3>
+                  <p className="member-role">{t('team.cris.role')}</p>
+                  <p className="member-bio">{t('team.cris.bio')}</p>
                   <div className="hero-buttons">
-                    <Link to="https://www.linkedin.com/in/roque-cea/" className="hero-button primary">
+                    <Link to="https://www.linkedin.com/in/cristopher-escobar-espinoza/" className="hero-button primary">
                       <FaLinkedin />
                     </Link>
-                    <Link to="https://x.com/Cea0407" className="hero-button primary">
+                    <Link to="https://x.com/Ckryzxs" className="hero-button primary">
                       <FaTwitter />
                     </Link>
-                    <Link to="https://github.com/R11000" className="hero-button primary">
+                    <Link to="https://github.com/Ckryzx" className="hero-button primary">
                       <FaGithub />
                     </Link>
                   </div>
@@ -449,20 +449,20 @@ const Hero = () => {
               </div>
               <div className="team-card">
                 <div className="team-member-image">
-                  <img src={jereImg} alt="Jeremías Meneses" className="member-img" />
+                  <img src={pauImg} alt="Pau Koh" className="member-img" />
                 </div>
                 <div className="member-info">
-                  <h3>Jeremías Meneses</h3>
-                  <p className="member-role">CMO</p>
-                  <p className="member-bio">Estratega de marketing digital con enfoque en crecimiento y expansión global.</p>
+                  <h3>Pau Koh</h3>
+                  <p className="member-role">{t('team.pau.role')}</p>
+                  <p className="member-bio">{t('team.pau.bio')}</p>
                   <div className="hero-buttons">
-                    <Link to="https://www.linkedin.com/in/jerem%C3%ADas-israel-meneses-gatica-525975311/" className="hero-button primary">
+                    <Link to="https://www.linkedin.com/in/kloren/" className="hero-button primary">
                       <FaLinkedin />
                     </Link>
-                    <Link to="https://x.com/jeremias_meneses" className="hero-button primary">
+                    <Link to="https://x.com/kl0ren" className="hero-button primary">
                       <FaTwitter />
                     </Link>
-                    <Link to="https://github.com/El-Jere-Original" className="hero-button primary">
+                    <Link to="https://github.com/Klorenn" className="hero-button primary">
                       <FaGithub />
                     </Link>
                   </div>

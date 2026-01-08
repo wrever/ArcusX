@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaUser, FaEnvelope, FaLock, FaSave, FaTimes, FaUpload, FaGlobe, FaUnlock, FaLock as FaLockIcon, FaPlus, FaTrash, FaEdit } from 'react-icons/fa';
-import axios from 'axios';
+import { FaArrowLeft, FaUser, FaEnvelope, FaLock, FaSave, FaTimes, FaUpload, FaGlobe, FaUnlock, FaLock as FaLockIcon } from 'react-icons/fa';
 import { API_URL } from '../config/database';
-import { getUserProfile, updateUserProfile, uploadAvatar, getPortfolio, addPortfolioItem, updatePortfolioItem, deletePortfolioItem } from '../services/profileService';
-import type { UserProfile, PortfolioItem, CreatePortfolioItemData } from '../types/profile';
+import { getUserProfile, updateUserProfile, updateUserBasicData, uploadAvatar } from '../services/profileService';
+import type { UserProfile, Skill } from '../types/profile';
 import '../css/EditProfile.css';
 
 interface StoredUser {
@@ -35,17 +34,19 @@ const EditProfile: React.FC = () => {
   const [publicProfile, setPublicProfile] = useState(true);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   
-  // Portfolio
-  const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
-  const [showPortfolioForm, setShowPortfolioForm] = useState(false);
-  const [editingPortfolioItem, setEditingPortfolioItem] = useState<PortfolioItem | null>(null);
-  const [portfolioForm, setPortfolioForm] = useState<CreatePortfolioItemData>({
-    title: '',
-    description: '',
-    image_url: '',
-    project_url: '',
-    category: 'Otros'
-  });
+  // Habilidades
+  const [selectedSkills, setSelectedSkills] = useState<Skill[]>([]);
+  
+  // Lista de habilidades disponibles
+  const availableSkills = [
+    'JavaScript', 'TypeScript', 'Python', 'PHP', 'Java', 'C++', 'C#', 'Go', 'Rust',
+    'Ruby', 'Swift', 'Kotlin', 'Dart', 'HTML', 'CSS', 'SCSS', 'SASS', 'React',
+    'Vue.js', 'Angular', 'Next.js', 'Node.js', 'Express', 'Django', 'Flask',
+    'Laravel', 'Spring', 'MongoDB', 'PostgreSQL', 'MySQL', 'Redis', 'GraphQL',
+    'REST API', 'Docker', 'Kubernetes', 'AWS', 'Azure', 'GCP', 'Git', 'Linux',
+    'UI/UX Design', 'Figma', 'Adobe XD', 'Photoshop', 'Illustrator', 'Blockchain',
+    'Solidity', 'Web3', 'Smart Contracts', 'Stellar', 'Ethereum', 'Bitcoin'
+  ];
 
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -88,13 +89,8 @@ const EditProfile: React.FC = () => {
           setPublicProfile(profileData.public_profile);
           setAvatarUrl(profileData.avatar_url || null);
           
-          // Cargar portfolio
-          try {
-            const portfolioData = await getPortfolio(parsed.id);
-            setPortfolio(portfolioData);
-          } catch (e) {
-            setPortfolio([]);
-          }
+          // Cargar habilidades
+          setSelectedSkills(profileData.skills || []);
         } catch (e) {
           // Si falla, usar datos básicos del localStorage
         }
@@ -170,19 +166,20 @@ const EditProfile: React.FC = () => {
       setSaving(true);
       
       // 1. Actualizar datos de cuenta (username, email, password)
-      await axios.post(`${API_URL}/auth/update_user.php`, {
+      await updateUserBasicData({
         id: user.id,
         name,
         email,
-        currentPassword,
-        newPassword
+        currentPassword: currentPassword || undefined,
+        newPassword: newPassword || undefined
       });
 
-      // 2. Actualizar perfil público (bio, portfolio_url, public_profile)
+      // 2. Actualizar perfil público (bio, portfolio_url, public_profile, skills)
       await updateUserProfile({
         bio: bio.trim() || undefined,
         portfolio_url: portfolioUrl.trim() || undefined,
-        public_profile: publicProfile
+        public_profile: publicProfile,
+        skills: selectedSkills.length > 0 ? selectedSkills : undefined
       });
 
       // Actualizar localStorage
@@ -215,112 +212,35 @@ const EditProfile: React.FC = () => {
     }
   };
 
-  // Portfolio handlers
-  const handleAddPortfolioItem = async () => {
-    if (!portfolioForm.title.trim()) {
-      setError('El título es requerido');
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setError(null);
-      
-      const id = await addPortfolioItem(portfolioForm);
-      const newItem: PortfolioItem = {
-        id,
-        ...portfolioForm,
-        category: portfolioForm.category || '',
-        created_at: new Date().toISOString()
-      };
-      
-      setPortfolio(prev => [...prev, newItem]);
-      setPortfolioForm({
-        title: '',
-        description: '',
-        image_url: '',
-        project_url: '',
-        category: 'Otros'
-      });
-      setShowPortfolioForm(false);
-      setSuccess('Item agregado al portfolio');
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err: any) {
-      setError(err.message || 'Error al agregar item');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleUpdatePortfolioItem = async () => {
-    if (!editingPortfolioItem || !portfolioForm.title.trim()) {
-      setError('El título es requerido');
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setError(null);
-      
-      await updatePortfolioItem({
-        id: editingPortfolioItem.id,
-        ...portfolioForm
-      });
-      
-      setPortfolio(prev => prev.map(item => 
-        item.id === editingPortfolioItem.id 
-          ? { ...item, ...portfolioForm }
-          : item
-      ));
-      
-      setEditingPortfolioItem(null);
-      setPortfolioForm({
-        title: '',
-        description: '',
-        image_url: '',
-        project_url: '',
-        category: 'Otros'
-      });
-      setShowPortfolioForm(false);
-      setSuccess('Item actualizado correctamente');
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err: any) {
-      setError(err.message || 'Error al actualizar item');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDeletePortfolioItem = async (itemId: number) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este item del portfolio?')) {
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setError(null);
-      
-      await deletePortfolioItem(itemId);
-      setPortfolio(prev => prev.filter(item => item.id !== itemId));
-      setSuccess('Item eliminado correctamente');
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err: any) {
-      setError(err.message || 'Error al eliminar item');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const startEditPortfolioItem = (item: PortfolioItem) => {
-    setEditingPortfolioItem(item);
-    setPortfolioForm({
-      title: item.title,
-      description: item.description || '',
-      image_url: item.image_url || '',
-      project_url: item.project_url || '',
-      category: item.category
+  // Handlers de habilidades
+  const handleToggleSkill = (skillName: string) => {
+    setSelectedSkills(prev => {
+      const existing = prev.find(s => s.name === skillName);
+      if (existing) {
+        // Si ya existe, eliminarlo
+        return prev.filter(s => s.name !== skillName);
+      } else {
+        // Si no existe, agregarlo con nivel beginner por defecto
+        return [...prev, { name: skillName, level: 'beginner' }];
+      }
     });
-    setShowPortfolioForm(true);
+  };
+
+  const handleSkillLevelChange = (skillName: string, level: Skill['level']) => {
+    setSelectedSkills(prev =>
+      prev.map(skill =>
+        skill.name === skillName ? { ...skill, level } : skill
+      )
+    );
+  };
+
+  const isSkillSelected = (skillName: string) => {
+    return selectedSkills.some(s => s.name === skillName);
+  };
+
+  const getSkillLevel = (skillName: string): Skill['level'] => {
+    const skill = selectedSkills.find(s => s.name === skillName);
+    return skill?.level || 'beginner';
   };
 
   if (loading || !user) {
@@ -380,7 +300,7 @@ const EditProfile: React.FC = () => {
           </div>
           <div className="title-block">
             <h1>Editar perfil</h1>
-            <p>Actualiza tu información básica, perfil público y portfolio.</p>
+            <p>Actualiza tu información básica, perfil público y habilidades.</p>
           </div>
         </div>
 
@@ -472,138 +392,69 @@ const EditProfile: React.FC = () => {
             </div>
           </div>
 
-          {/* Sección 3: Portfolio */}
+          {/* Sección 3: Habilidades */}
           <div className="form-section">
-            <h2>Portfolio</h2>
-            
-            {portfolio.length > 0 && (
-              <div className="portfolio-list">
-                {portfolio.map((item) => (
-                  <div key={item.id} className="portfolio-item-card">
-                    {item.image_url && (
-                      <img src={item.image_url} alt={item.title} className="portfolio-item-image" />
-                    )}
-                    <div className="portfolio-item-content">
-                      <h3>{item.title}</h3>
-                      {item.description && <p>{item.description}</p>}
-                      {item.project_url && (
-                        <a href={item.project_url} target="_blank" rel="noopener noreferrer">
-                          <FaGlobe /> Ver Proyecto
-                        </a>
-                      )}
-                      <span className="portfolio-category">{item.category}</span>
-                    </div>
-                    <div className="portfolio-item-actions">
-                      <button
-                        type="button"
-                        onClick={() => startEditPortfolioItem(item)}
-                        className="edit-button"
-                      >
-                        <FaEdit />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeletePortfolioItem(item.id)}
-                        className="delete-button"
-                      >
-                        <FaTrash />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <h2>Habilidades</h2>
+            <p className="section-help">
+              Selecciona las habilidades que dominas. Puedes ajustar el nivel de cada una.
+            </p>
 
-            {showPortfolioForm ? (
-              <div className="portfolio-form">
-                <h3>{editingPortfolioItem ? 'Editar Item' : 'Agregar Item'}</h3>
-                <div className="form-group">
-                  <label>Título *</label>
-                  <input
-                    type="text"
-                    value={portfolioForm.title}
-                    onChange={(e) => setPortfolioForm(prev => ({ ...prev, title: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Descripción</label>
-                  <textarea
-                    value={portfolioForm.description}
-                    onChange={(e) => setPortfolioForm(prev => ({ ...prev, description: e.target.value }))}
-                    rows={3}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>URL de Imagen</label>
-                  <input
-                    type="url"
-                    value={portfolioForm.image_url}
-                    onChange={(e) => setPortfolioForm(prev => ({ ...prev, image_url: e.target.value }))}
-                    placeholder="https://ejemplo.com/imagen.jpg"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>URL del Proyecto</label>
-                  <input
-                    type="url"
-                    value={portfolioForm.project_url}
-                    onChange={(e) => setPortfolioForm(prev => ({ ...prev, project_url: e.target.value }))}
-                    placeholder="https://ejemplo.com"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Categoría</label>
-                  <select
-                    value={portfolioForm.category}
-                    onChange={(e) => setPortfolioForm(prev => ({ ...prev, category: e.target.value }))}
-                  >
-                    <option value="Desarrollo">Desarrollo</option>
-                    <option value="Diseño">Diseño</option>
-                    <option value="Marketing">Marketing</option>
-                    <option value="Blockchain">Blockchain</option>
-                    <option value="Contenido">Contenido</option>
-                    <option value="Otros">Otros</option>
-                  </select>
-                </div>
-                <div className="portfolio-form-actions">
-                  <button
-                    type="button"
-                    onClick={editingPortfolioItem ? handleUpdatePortfolioItem : handleAddPortfolioItem}
-                    className="btn-primary"
-                    disabled={saving}
-                  >
-                    {editingPortfolioItem ? 'Actualizar' : 'Agregar'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowPortfolioForm(false);
-                      setEditingPortfolioItem(null);
-                      setPortfolioForm({
-                        title: '',
-                        description: '',
-                        image_url: '',
-                        project_url: '',
-                        category: 'Otros'
-                      });
-                    }}
-                    className="btn-secondary"
-                  >
-                    Cancelar
-                  </button>
-                </div>
+            <div className="skills-selection">
+              <div className="skills-grid">
+                {availableSkills.map((skill) => {
+                  const isSelected = isSkillSelected(skill);
+                  const level = getSkillLevel(skill);
+                  
+                  return (
+                    <div key={skill} className={`skill-select-item ${isSelected ? 'selected' : ''}`}>
+                      <label className="skill-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleSkill(skill)}
+                        />
+                        <span className="skill-name">{skill}</span>
+                      </label>
+                      {isSelected && (
+                        <select
+                          className="skill-level-select"
+                          value={level}
+                          onChange={(e) => handleSkillLevelChange(skill, e.target.value as Skill['level'])}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <option value="beginner">Principiante</option>
+                          <option value="intermediate">Intermedio</option>
+                          <option value="advanced">Avanzado</option>
+                          <option value="expert">Experto</option>
+                        </select>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowPortfolioForm(true)}
-                className="add-portfolio-button"
-              >
-                <FaPlus />
-                Agregar Item al Portfolio
-              </button>
-            )}
+              
+              {selectedSkills.length > 0 && (
+                <div className="selected-skills-summary">
+                  <h3>Habilidades seleccionadas ({selectedSkills.length})</h3>
+                  <div className="selected-skills-list">
+                    {selectedSkills.map((skill, index) => (
+                      <div key={index} className="selected-skill-badge">
+                        <span className="skill-name">{skill.name}</span>
+                        <span className="skill-level-badge">{skill.level}</span>
+                        <button
+                          type="button"
+                          className="remove-skill-btn"
+                          onClick={() => handleToggleSkill(skill.name)}
+                          title="Eliminar habilidad"
+                        >
+                          <FaTimes />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Sección 4: Seguridad */}

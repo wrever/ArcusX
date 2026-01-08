@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaEye, FaEyeSlash, FaArrowLeft, FaGoogle, FaGithub, FaGem, FaGlobe, FaUser, FaEnvelope, FaLock } from 'react-icons/fa';
+import { FaEye, FaEyeSlash, FaArrowLeft, FaGoogle, FaGithub, FaGem, FaGlobe, FaTasks } from 'react-icons/fa';
 import '../css/Register.css';
 import { authService } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
@@ -120,7 +120,7 @@ const Register = () => {
             <p>{t('register.subtitle')}</p>
             <div className="register-benefits">
               <div className="benefit-item">
-                <span className="benefit-icon"></span>
+                <span className="benefit-icon"><FaTasks /></span>
                 <span>{t('register.benefit.microtasks')}</span>
               </div>
               <div className="benefit-item">
@@ -179,10 +179,6 @@ const Register = () => {
               <span>{t('register.oauth.divider')}</span>
             </div>
             <div className="form-group">
-              <label htmlFor="username" style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                <FaUser style={{ marginRight: '6px', fontSize: '14px' }} />
-                {t('register.username')}
-              </label>
               <input
                 type="text"
                 id="username"
@@ -195,10 +191,6 @@ const Register = () => {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="email" style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                <FaEnvelope style={{ marginRight: '6px', fontSize: '14px' }} />
-                {t('register.email')}
-              </label>
               <input
                 type="email"
                 id="email"
@@ -210,11 +202,7 @@ const Register = () => {
                 disabled={loading}
               />
             </div>
-            <div className="form-group">
-              <label htmlFor="password" style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                <FaLock style={{ marginRight: '6px', fontSize: '14px' }} />
-                {t('register.password')}
-              </label>
+            <div className="form-group password-field">
               <div style={{ position: 'relative' }}>
                 <input
                   type={showPassword ? "text" : "password"}
@@ -236,11 +224,7 @@ const Register = () => {
                 </button>
               </div>
             </div>
-            <div className="form-group">
-              <label htmlFor="confirmPassword" style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                <FaLock style={{ marginRight: '6px', fontSize: '14px' }} />
-                {t('register.password.confirm')}
-              </label>
+            <div className="form-group password-field">
               <div style={{ position: 'relative' }}>
                 <input
                   type={showConfirmPassword ? "text" : "password"}
