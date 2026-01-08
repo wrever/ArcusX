@@ -1,0 +1,21 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /dashboard/
+Disallow: /admin
+Disallow: /admin/
+Disallow: /api/
+
+# Rutas protegidas 
+Disallow: /create-task
+Disallow: /apply-task/
+Disallow: /proposals/
+Disallow: /supervise-task/
+Disallow: /dashboard/settings/
+
+# Sitemap
+Sitemap: https://arcusx.pro/sitemap.xml
+
+# Crawl-delay opcional (en segundos)
+# Crawl-delay: 1
+

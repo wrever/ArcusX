@@ -3,6 +3,7 @@ import { FaRocket, FaUsers, FaLaptopCode, FaMoneyBillWave, FaArrowRight, FaLinke
 import '../css/Hero.css';
 import { useI18n } from '../i18n/I18nProvider';
 import Footer from './Footer';
+import SEO from './SEO';
 import brunoImg from '../images/bruno.jpg';
 import roqueImg from '../images/roque.jpg';
 import jereImg from '../images/jere.jpeg';
@@ -10,7 +11,74 @@ import desempleoImg from '../images/desempleo.webp';
 import gananciaImg from '../images/ganancia.webp';
 
 const Hero = () => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  
+  // Structured Data para Organization
+  const organizationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'ArcusX',
+    url: 'https://arcusx.pro',
+    logo: 'https://arcusx.pro/arcus-logo.png',
+    description: 'Plataforma Web3 de freelancing descentralizada en Stellar. Conecta clientes con trabajadores mediante contratos escrow seguros.',
+    sameAs: [
+      'https://twitter.com/ArcusX_one',
+      'https://instagram.com/arcusx_',
+      'https://www.linkedin.com/in/arcus-x-000348342/',
+      'https://warpcast.com/arcusx'
+    ],
+    contactPoint: {
+      '@type': 'ContactPoint',
+      contactType: 'Customer Service',
+      availableLanguage: ['Spanish', 'English']
+    }
+  };
+
+  // Structured Data para WebSite
+  const websiteSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'ArcusX',
+    url: 'https://arcusx.pro',
+    description: 'Plataforma Web3 de freelancing descentralizada en Stellar',
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: 'https://arcusx.pro/search?q={search_term_string}',
+      'query-input': 'required name=search_term_string'
+    },
+    inLanguage: ['es', 'en']
+  };
+
+  // Structured Data para Service
+  const serviceSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    serviceType: 'Freelancing Platform',
+    provider: {
+      '@type': 'Organization',
+      name: 'ArcusX'
+    },
+    areaServed: {
+      '@type': 'GeoCircle',
+      geoMidpoint: {
+        '@type': 'GeoCoordinates',
+        latitude: '-23.5505',
+        longitude: '-46.6333'
+      }
+    },
+    description: 'Plataforma de freelancing con pagos seguros en blockchain Stellar mediante contratos escrow',
+    offers: {
+      '@type': 'Offer',
+      price: '0.5',
+      priceCurrency: 'USD',
+      description: 'Comisión del 0.5% por transacción (vs 10-20% en plataformas tradicionales)'
+    }
+  };
+
+  const combinedStructuredData = {
+    '@context': 'https://schema.org',
+    '@graph': [organizationSchema, websiteSchema, serviceSchema]
+  };
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
     if (element) {
@@ -19,8 +87,16 @@ const Hero = () => {
   };
 
   return (
-    <div className="hero">
-      <div className="hero-container">
+    <>
+      <SEO
+        title={t('hero.title.line1') + ' ' + t('hero.title.web3') + ' ' + t('hero.title.for') + ' ' + t('hero.title.talent') + ' ' + t('hero.title.latam')}
+        description={t('hero.desc')}
+        url="/"
+        locale={lang}
+        structuredData={combinedStructuredData}
+      />
+      <div className="hero">
+        <div className="hero-container">
         <div className="hero-content">
           <h1 className="hero-title">
             {t('hero.title.line1')}{' '}
@@ -442,7 +518,8 @@ const Hero = () => {
       </div>
 
       <Footer />
-    </div>
+      </div>
+    </>
   );
 };
 

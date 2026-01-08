@@ -5,9 +5,10 @@ import '../css/Login.css';
 import { useAuth } from '../hooks/useAuth';
 import { authService } from '../services/authService';
 import { useI18n } from '../i18n/I18nProvider';
+import SEO from './SEO';
 
 const Login = () => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -85,13 +86,20 @@ const Login = () => {
   }
 
   return (
-    <div className="login-container">
-      <Link to="/" className="back-button">
-        <FaArrowLeft />
-        <span>{t('login.back')}</span>
-      </Link>
-      
-      <div className="login-card">
+    <>
+      <SEO
+        title="Iniciar Sesión"
+        description="Accede a tu cuenta en ArcusX y comienza a trabajar o contratar freelancers. Plataforma Web3 de freelancing descentralizada en Stellar."
+        url="/login"
+        locale={lang}
+      />
+      <div className="login-container">
+        <Link to="/" className="back-button">
+          <FaArrowLeft />
+          <span>{t('login.back')}</span>
+        </Link>
+        
+        <div className="login-card">
         <div className="login-header">
           <Link to="/" className="login-logo">
             ArcusX
@@ -203,7 +211,8 @@ const Login = () => {
           </p>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

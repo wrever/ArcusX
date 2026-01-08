@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  
+  <!-- Home -->
+  <url>
+    <loc>https://arcusx.pro/</loc>
+    <lastmod>2026-01-08</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="es" href="https://arcusx.pro/es" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://arcusx.pro/en" />
+  </url>
+  
+  <!-- Login -->
+  <url>
+    <loc>https://arcusx.pro/login</loc>
+    <lastmod>2026-01-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="es" href="https://arcusx.pro/es/login" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://arcusx.pro/en/login" />
+  </url>
+  
+  <!-- Register -->
+  <url>
+    <loc>https://arcusx.pro/register</loc>
+    <lastmod>2026-01-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="es" href="https://arcusx.pro/es/register" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://arcusx.pro/en/register" />
+  </url>
+  
+  <!-- Nota: Los perfiles públicos (/profile/:userId) deberían agregarse dinámicamente -->
+  <!-- cuando se implemente un endpoint backend que liste todos los perfiles públicos -->
+  
+</urlset>
+

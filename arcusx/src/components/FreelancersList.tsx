@@ -27,7 +27,6 @@ const FreelancersList = () => {
   // Paginación
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
   const limit = 20;
 
   // Debounce para búsqueda
@@ -60,7 +59,6 @@ const FreelancersList = () => {
       const response = await getFreelancers(filters);
       setFreelancers(response.freelancers);
       setTotalPages(response.pagination.total_pages);
-      setTotal(response.pagination.total);
     } catch (err: any) {
       setError(err.message || 'Error al cargar freelancers');
       setFreelancers([]);
@@ -95,10 +93,6 @@ const FreelancersList = () => {
 
   const handleSortByChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSortBy(e.target.value as FreelancerFilters['sortBy']);
-  };
-
-  const handleSortOrderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSortOrder(e.target.value as 'asc' | 'desc');
   };
 
   const handlePageChange = (newPage: number) => {

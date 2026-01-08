@@ -4,6 +4,7 @@ import { FaArrowLeft, FaUser, FaCheckCircle, FaBriefcase, FaStar, FaDollarSign, 
 import { getUserProfile, getUserPublicStats } from '../services/profileService';
 import type { UserProfile as UserProfileType, UserStatistics } from '../types/profile';
 import RatingDisplay from './RatingDisplay';
+import SEO from './SEO';
 import '../css/UserProfile.css';
 
 const UserProfile = () => {
@@ -92,10 +93,35 @@ const UserProfile = () => {
     );
   }
 
+  // Structured Data para Person (cuando el perfil está disponible)
+  const personSchema = profile ? {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: profile.username,
+    url: `https://arcusx.pro/profile/${userId}`,
+    image: profile.avatar_url ? `https://arcusx.pro${profile.avatar_url}` : 'https://arcusx.pro/arcus-logo.png',
+    description: profile.bio || `Perfil de ${profile.username} en ArcusX`,
+    ...(profile.portfolio_url && {
+      sameAs: [profile.portfolio_url]
+    })
+  } : null;
+
   return (
-    <div className="user-profile-container">
-      {/* Header con botón de volver */}
-      <div className="profile-header-nav">
+    <>
+      {profile && (
+        <SEO
+          title={`Perfil de ${profile.username}`}
+          description={profile.bio || `Perfil público de ${profile.username} en ArcusX. ${stats ? `Rating: ${stats.average_rating}/5, ${stats.tasks_completed} tareas completadas.` : ''}`}
+          image={profile.avatar_url ? `https://arcusx.pro${profile.avatar_url}` : 'https://arcusx.pro/arcus-logo.png'}
+          url={`/profile/${userId}`}
+          type="profile"
+          locale="es"
+          structuredData={personSchema || undefined}
+        />
+      )}
+      <div className="user-profile-container">
+        {/* Header con botón de volver */}
+        <div className="profile-header-nav">
         <button onClick={() => navigate(-1)} className="back-button">
           <FaArrowLeft />
           <span>Volver</span>
@@ -113,7 +139,7 @@ const UserProfile = () => {
           {profile.avatar_url ? (
             <img 
               src={`${import.meta.env.VITE_API_URL || ''}${profile.avatar_url}`} 
-              alt={profile.username}
+              alt={`Avatar de ${profile.username} - Perfil público en ArcusX`}
               className="profile-avatar"
             />
           ) : (
@@ -267,7 +293,7 @@ const UserProfile = () => {
                   <div className="portfolio-image">
                     <img 
                       src={item.image_url} 
-                      alt={item.title}
+                      alt={`${item.title} - Proyecto de ${profile.username} en ArcusX`}
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.style.display = 'none';
@@ -315,7 +341,8 @@ const UserProfile = () => {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 
