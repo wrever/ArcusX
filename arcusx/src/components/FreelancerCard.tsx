@@ -43,7 +43,7 @@ const FreelancerCard = ({ freelancer }: FreelancerCardProps) => {
         {avatarUrl ? (
           <img 
             src={avatarUrl} 
-            alt={freelancer.username}
+            alt={`Avatar de ${freelancer.username} - Freelancer en ArcusX`}
             className="freelancer-avatar-image"
           />
         ) : (

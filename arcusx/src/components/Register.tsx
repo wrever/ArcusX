@@ -5,9 +5,10 @@ import '../css/Register.css';
 import { authService } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
 import { useI18n } from '../i18n/I18nProvider';
+import SEO from './SEO';
 
 const Register = () => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -97,7 +98,14 @@ const Register = () => {
   };
 
   return (
-    <div className="register-container">
+    <>
+      <SEO
+        title="Crear Cuenta"
+        description="Únete a ArcusX y comienza tu viaje en el mundo Web3 del freelancing. Plataforma descentralizada con pagos seguros en Stellar y comisiones ultra-bajas del 0.5%."
+        url="/register"
+        locale={lang}
+      />
+      <div className="register-container">
       <Link to="/" className="back-button">
         <FaArrowLeft />
         <span>{t('register.back')}</span>
@@ -264,7 +272,8 @@ const Register = () => {
           </form>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

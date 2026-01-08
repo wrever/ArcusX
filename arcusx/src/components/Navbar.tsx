@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FaExclamationTriangle, FaLightbulb, FaStar, FaUsers, FaQuestionCircle, FaTachometerAlt, FaSignOutAlt, FaSignInAlt, FaUserPlus } from 'react-icons/fa';
+import { FaSignInAlt } from 'react-icons/fa';
 import '../css/Navbar.css';
 import logo from '../images/arcus-logo.png';
 import { useAuth } from '../hooks/useAuth';
