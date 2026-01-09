@@ -13,8 +13,8 @@ interface SEOProps {
 }
 
 const SEO: React.FC<SEOProps> = ({
-  title = 'ArcusX | Plataforma Web3 de Freelancing en Stellar - LATAM',
-  description = 'ArcusX - Plataforma Web3 de freelancing descentralizada en Stellar. Conecta clientes con trabajadores mediante contratos escrow seguros. 0.5% de comisión, pagos instantáneos en USDC. Trabajo remoto para talento latinoamericano.',
+  title = 'Trabajos Online en Stellar | ArcusX - Plataforma de Freelancing Web3',
+  description = 'Encuentra trabajos online en Stellar blockchain. Plataforma de freelancing Web3 con pagos instantáneos en USDC. Trabajos remotos para LATAM. Microtareas, freelancing en Stellar, trabajos Web3, trabajos blockchain. Arcus, Arcu.',
   image = 'https://arcusx.pro/arcus-logo.png',
   url = 'https://arcusx.pro',
   type = 'website',
@@ -27,18 +27,36 @@ const SEO: React.FC<SEOProps> = ({
   const finalUrl = url.startsWith('http') ? url : `${siteUrl}${url}`;
   const finalCanonical = canonical || finalUrl;
   const finalImage = image.startsWith('http') ? image : `${siteUrl}${image}`;
-  const finalTitle = title.includes('ArcusX') ? title : `${title} | ArcusX`;
+  const finalTitle = title.includes('ArcusX') || title.includes('Arcus') || title.includes('Arcu') ? title : `${title} | ArcusX`;
   
   const alternateLocales = locale === 'es' 
     ? ['en', 'es']
     : ['es', 'en'];
+
+  // Keywords dinámicas basadas en la página
+  const getKeywords = () => {
+    const baseKeywords = 'trabajos online, trabajos remotos, trabajos stellar, freelancing stellar, trabajos web3, trabajos blockchain, microtareas, freelancing, stellar blockchain, usdc, pagos instantaneos, trabajos freelance, trabajos online latam, arcusx, arcus, arcu, arcusx pro';
+    const urlKeywords = url.toLowerCase();
+    
+    if (urlKeywords.includes('login') || urlKeywords.includes('iniciar')) {
+      return `${baseKeywords}, iniciar sesion, login arcusx, acceder a trabajos online`;
+    }
+    if (urlKeywords.includes('register') || urlKeywords.includes('registro')) {
+      return `${baseKeywords}, registrarse, crear cuenta, unirse a arcusx, trabajos freelance stellar`;
+    }
+    if (urlKeywords.includes('profile') || urlKeywords.includes('perfil')) {
+      return `${baseKeywords}, perfil freelancer, perfil publico, trabajador stellar`;
+    }
+    
+    return baseKeywords;
+  };
 
   return (
     <Helmet>
       {/* Meta básicos */}
       <title>{finalTitle}</title>
       <meta name="description" content={description} />
-      <meta name="keywords" content="freelancing, web3, stellar, blockchain, usdc, escrow, latam, trabajo remoto, freelancers, cripto, pagos instantaneos" />
+      <meta name="keywords" content={getKeywords()} />
       <meta name="author" content="ArcusX Team" />
       <meta name="robots" content={noindex ? 'noindex, nofollow' : 'index, follow'} />
       <meta name="language" content={locale === 'es' ? 'Spanish' : 'English'} />

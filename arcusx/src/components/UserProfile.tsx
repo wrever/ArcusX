@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaUser, FaCheckCircle, FaBriefcase, FaStar, FaDollarSign, FaTasks, FaGlobe, FaLock } from 'react-icons/fa';
+import { FaArrowLeft, FaUser, FaCheckCircle, FaBriefcase, FaStar, FaDollarSign, FaTasks, FaLock } from 'react-icons/fa';
 import { getUserProfile, getUserPublicStats } from '../services/profileService';
 import type { UserProfile as UserProfileType, UserStatistics } from '../types/profile';
 import RatingDisplay from './RatingDisplay';
 import SEO from './SEO';
+import { getAvatarUrl, getDefaultAvatarUrl } from '../utils/avatarUtils';
 import '../css/UserProfile.css';
 import '../css/Preloader.css';
 import logo from '../images/arcus-logo.png';
@@ -105,7 +106,7 @@ const UserProfile = () => {
     '@type': 'Person',
     name: profile.username,
     url: `https://arcusx.pro/profile/${userId}`,
-    image: profile.avatar_url ? `https://arcusx.pro${profile.avatar_url}` : 'https://arcusx.pro/arcus-logo.png',
+    image: profile.avatar_url ? getAvatarUrl(profile.avatar_url) : getDefaultAvatarUrl(),
     description: profile.bio || `Perfil de ${profile.username} en ArcusX`,
     ...(profile.portfolio_url && {
       sameAs: [profile.portfolio_url]
@@ -118,7 +119,7 @@ const UserProfile = () => {
         <SEO
           title={`Perfil de ${profile.username}`}
           description={profile.bio || `Perfil público de ${profile.username} en ArcusX. ${stats ? `Rating: ${stats.average_rating}/5, ${stats.tasks_completed} tareas completadas.` : ''}`}
-          image={profile.avatar_url ? `https://arcusx.pro${profile.avatar_url}` : 'https://arcusx.pro/arcus-logo.png'}
+              image={profile.avatar_url ? getAvatarUrl(profile.avatar_url) : getDefaultAvatarUrl()}
           url={`/profile/${userId}`}
           type="profile"
           locale="es"
@@ -144,9 +145,20 @@ const UserProfile = () => {
         <div className="profile-avatar-section">
           {profile.avatar_url ? (
             <img 
-              src={`${import.meta.env.VITE_API_URL || ''}${profile.avatar_url}`} 
+              src={getAvatarUrl(profile.avatar_url)} 
               alt={`Avatar de ${profile.username} - Perfil público en ArcusX`}
               className="profile-avatar"
+              onError={(e) => {
+                // Si la imagen falla al cargar, reemplazar con placeholder
+                const target = e.target as HTMLImageElement;
+                const avatarSection = target.closest('.profile-avatar-section');
+                if (avatarSection) {
+                  const placeholder = document.createElement('div');
+                  placeholder.className = 'profile-avatar-placeholder';
+                  placeholder.textContent = profile.username?.charAt(0).toUpperCase() || '';
+                  avatarSection.replaceChild(placeholder, target);
+                }
+              }}
             />
           ) : (
             <div className="profile-avatar-placeholder">
@@ -182,7 +194,6 @@ const UserProfile = () => {
                 rel="noopener noreferrer"
                 className="meta-item portfolio-link"
               >
-                <FaGlobe />
                 <span className="meta-text">Portfolio Externo</span>
               </a>
             )}

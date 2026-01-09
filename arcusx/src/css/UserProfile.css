@@ -26,49 +26,89 @@
 .profile-header-nav {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: stretch;
   margin-bottom: 1.5rem;
   gap: 1rem;
-  flex-wrap: wrap;
-  position: relative;
-}
-
-.edit-profile-button {
-  padding: 0.625rem 1.25rem;
-  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
-  border: none;
-  border-radius: 10px;
-  color: white;
-  text-decoration: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  font-weight: 500;
-  font-size: 0.9rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  box-shadow: 0 4px 12px rgba(40, 192, 240, 0.25);
-  position: absolute;
-  top: 0;
-  right: 0;
-  z-index: 10;
-}
-
-.edit-profile-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(40, 192, 240, 0.4);
+  flex-wrap: nowrap;
+  width: 100%;
 }
 
 @media (max-width: 640px) {
   .profile-header-nav {
     margin-bottom: 1rem;
+    flex-wrap: nowrap;
+    gap: 0.75rem;
+    align-items: center;
+  }
+  
+  .back-button,
+  .edit-profile-button {
+    flex: 0 1 auto;
+    min-width: 0;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+  }
+  
+  .user-profile-container {
+    padding: 1rem;
+  }
+  
+  .profile-header {
+    padding: 1.25rem;
+    margin-top: 2.5rem;
+  }
+  
+  .profile-stats-grid {
+    gap: 0.875rem;
+    margin-top: 2rem;
+  }
+  
+  .stat-card {
+    padding: 0.875rem;
+    min-height: 70px;
+  }
+  
+  .stat-icon {
+    width: 44px;
+    height: 44px;
+    font-size: 1.1rem;
+  }
+  
+  .stat-value {
+    font-size: 1.35rem;
+  }
+  
+  .stat-label {
+    font-size: 0.7rem;
+  }
+  
+  .profile-section {
+    padding: 1.25rem;
+    margin-top: 2rem;
+  }
+  
+  .section-title {
+    font-size: 1.1rem;
+    margin-bottom: 1.25rem;
+  }
+  
+  .skills-grid {
+    gap: 0.625rem;
+  }
+  
+  .skill-badge {
+    padding: 0.5rem 0.875rem;
+    font-size: 0.8rem;
   }
 }
 
 .back-button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
+  padding: 0;
   background: rgba(40, 192, 240, 0.1);
   border: 1px solid rgba(40, 192, 240, 0.3);
   border-radius: 10px;
@@ -79,6 +119,15 @@
   font-size: 0.9rem;
   font-weight: 500;
   backdrop-filter: blur(10px);
+  white-space: nowrap;
+  flex-shrink: 0;
+  height: 40px;
+  min-height: 40px;
+  max-height: 40px;
+  line-height: 1;
+  box-sizing: border-box;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
 }
 
 .back-button:hover {
@@ -90,13 +139,17 @@
 
 @media (max-width: 640px) {
   .back-button {
-    padding: 0.5rem 1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
     font-size: 0.85rem;
+    height: 36px;
+    min-height: 36px;
+    max-height: 36px;
   }
 }
 
 .edit-profile-button {
-  padding: 0.625rem 1.25rem;
+  padding: 0;
   background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
   border: none;
   border-radius: 10px;
@@ -107,12 +160,20 @@
   font-size: 0.9rem;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   box-shadow: 0 4px 12px rgba(40, 192, 240, 0.25);
-  position: absolute;
-  top: 0;
-  right: 0;
-  z-index: 10;
+  position: relative;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: auto;
+  height: 40px;
+  min-height: 40px;
+  max-height: 40px;
+  line-height: 1;
+  box-sizing: border-box;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
 }
 
 .edit-profile-button:hover {
@@ -122,17 +183,12 @@
 
 @media (max-width: 640px) {
   .edit-profile-button {
-    padding: 0.5rem 1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
     font-size: 0.85rem;
-    position: relative;
-    top: auto;
-    right: auto;
-    margin-top: 0.5rem;
-  }
-  
-  .profile-header-nav {
-    flex-direction: column;
-    align-items: flex-start;
+    height: 36px;
+    min-height: 36px;
+    max-height: 36px;
   }
 }
 
@@ -176,6 +232,17 @@
     text-align: center;
     align-items: center;
     padding: 1.5rem;
+    margin-top: 3rem;
+  }
+  
+  .profile-meta {
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  
+  .meta-item {
+    font-size: 0.85rem;
   }
 }
 
@@ -899,19 +966,6 @@
   font-size: 0.85rem;
   color: var(--primary-blue);
   margin-top: 0.75rem;
-}
-
-/* Empty state */
-.empty-state {
-  text-align: center;
-  padding: 3rem;
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.empty-state svg {
-  font-size: 4rem;
-  margin-bottom: 1rem;
-  opacity: 0.5;
 }
 
 /* Loading y Error */

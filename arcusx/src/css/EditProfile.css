@@ -264,6 +264,35 @@
   background: rgba(148, 163, 184, 0.18);
 }
 
+.btn-logout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.7rem 1.6rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+  border: none;
+  transition: var(--transition);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(220, 38, 38, 0.9));
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.btn-logout:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(239, 68, 68, 0.5);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 1), rgba(220, 38, 38, 1));
+}
+
+.btn-logout:active {
+  transform: translateY(0);
+  box-shadow: 0 8px 15px rgba(239, 68, 68, 0.4);
+}
+
 .edit-profile-loading {
   margin-top: 5rem;
   display: flex;
@@ -314,6 +343,12 @@
   .btn-primary,
   .btn-secondary {
     justify-content: center;
+  }
+  
+  .btn-logout {
+    width: 100%;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9rem;
   }
 }
 

@@ -20,6 +20,7 @@ import type { UserProfile as UserProfileType, UserStatistics } from './types/pro
 import RatingDisplay from './components/RatingDisplay';
 import { useI18n } from './i18n/I18nProvider';
 import FreelancersList from './components/FreelancersList';
+import { getAvatarUrl } from './utils/avatarUtils';
 
 interface UserData {
   id: number;
@@ -1443,9 +1444,18 @@ const Dashboard = () => {
                       <div className="profile-avatar-display">
                         {userProfile?.avatar_url ? (
                           <img 
-                            src={`${API_URL.replace('/api', '')}${userProfile.avatar_url}`} 
+                            src={getAvatarUrl(userProfile.avatar_url)} 
                             alt={userProfile.username}
                             className="profile-avatar-img"
+                            onError={(e) => {
+                              // Si la imagen falla, mostrar placeholder
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              const placeholder = target.nextElementSibling as HTMLElement;
+                              if (placeholder && placeholder.classList.contains('profile-avatar-placeholder-display')) {
+                                placeholder.style.display = 'flex';
+                              }
+                            }}
                           />
                         ) : (
                           <div className="profile-avatar-placeholder-display">
@@ -1581,6 +1591,27 @@ const Dashboard = () => {
                       <span>{t('dashboard.settings.edit.profile')}</span>
                     </Link>
                     <p className="edit-hint">{t('dashboard.settings.edit.hint')}</p>
+                  </div>
+
+                  {/* Botón para cerrar sesión */}
+                  <div className="settings-logout-section">
+                    <button 
+                      className="settings-logout-button"
+                      onClick={async () => {
+                        if (window.confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+                          try {
+                            await logout();
+                            // Redirigir al inicio después de cerrar sesión
+                            window.location.href = '/';
+                          } catch (error) {
+                            console.error('Error al cerrar sesión:', error);
+                          }
+                        }
+                      }}
+                    >
+                      <FaSignOutAlt />
+                      <span>Cerrar Sesión</span>
+                    </button>
                   </div>
                 </>
               )}
