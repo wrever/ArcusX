@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaUser, FaEnvelope, FaLock, FaSave, FaTimes, FaUpload, FaGlobe, FaUnlock, FaLock as FaLockIcon } from 'react-icons/fa';
-import { API_URL } from '../config/database';
 import { getUserProfile, updateUserProfile, updateUserBasicData, uploadAvatar } from '../services/profileService';
 import type { UserProfile, Skill } from '../types/profile';
+import { getAvatarUrl } from '../utils/avatarUtils';
 import '../css/EditProfile.css';
 
 interface StoredUser {
@@ -272,9 +272,18 @@ const EditProfile: React.FC = () => {
           <div className="avatar-section">
             {avatarUrl ? (
               <img 
-                src={`${API_URL.replace('/api', '')}${avatarUrl}`} 
+                src={getAvatarUrl(avatarUrl)} 
                 alt="Avatar" 
                 className="avatar-image"
+                onError={(e) => {
+                  // Si la imagen falla, mostrar placeholder
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  const placeholder = target.nextElementSibling as HTMLElement;
+                  if (placeholder && placeholder.classList.contains('avatar-circle')) {
+                    placeholder.style.display = 'flex';
+                  }
+                }}
               />
             ) : (
               <div className="avatar-circle">

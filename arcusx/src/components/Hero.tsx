@@ -18,9 +18,10 @@ const Hero = () => {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: 'ArcusX',
+    alternateName: ['Arcus', 'Arcu', 'ArcusX Pro'],
     url: 'https://arcusx.pro',
     logo: 'https://arcusx.pro/arcus-logo.png',
-    description: 'Plataforma Web3 de freelancing descentralizada en Stellar. Conecta clientes con trabajadores mediante contratos escrow seguros.',
+    description: 'Plataforma de trabajos online en Stellar blockchain. Freelancing Web3 con pagos instantáneos en USDC. Trabajos remotos para LATAM.',
     sameAs: [
       'https://twitter.com/ArcusX_one',
       'https://instagram.com/arcusx_',
@@ -30,23 +31,25 @@ const Hero = () => {
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'Customer Service',
-      availableLanguage: ['Spanish', 'English']
-    }
+      availableLanguage: ['Spanish', 'English', 'Portuguese']
+    },
+    keywords: 'trabajos online, trabajos stellar, freelancing stellar, trabajos web3, trabajos blockchain, microtareas, arcusx, arcus, arcu'
   };
 
   // Structured Data para WebSite
   const websiteSchema = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'ArcusX',
+    name: 'ArcusX - Trabajos Online en Stellar',
+    alternateName: ['Arcus', 'Arcu', 'ArcusX Pro'],
     url: 'https://arcusx.pro',
-    description: 'Plataforma Web3 de freelancing descentralizada en Stellar',
+    description: 'Encuentra trabajos online en Stellar blockchain. Plataforma de freelancing Web3 con pagos instantáneos en USDC.',
     potentialAction: {
       '@type': 'SearchAction',
       target: 'https://arcusx.pro/search?q={search_term_string}',
       'query-input': 'required name=search_term_string'
     },
-    inLanguage: ['es', 'en']
+    inLanguage: ['es', 'en', 'pt']
   };
 
   // Structured Data para Service
@@ -54,6 +57,7 @@ const Hero = () => {
     '@context': 'https://schema.org',
     '@type': 'Service',
     serviceType: 'Freelancing Platform',
+    name: 'Trabajos Online en Stellar Blockchain',
     provider: {
       '@type': 'Organization',
       name: 'ArcusX'
@@ -66,18 +70,39 @@ const Hero = () => {
         longitude: '-46.6333'
       }
     },
-    description: 'Plataforma de freelancing con pagos seguros en blockchain Stellar mediante contratos escrow',
+    description: 'Plataforma de trabajos online en Stellar blockchain. Freelancing Web3 con pagos seguros mediante contratos escrow. Microtareas para LATAM.',
     offers: {
       '@type': 'Offer',
       price: '0.5',
       priceCurrency: 'USD',
       description: 'Comisión del 0.5% por transacción (vs 10-20% en plataformas tradicionales)'
+    },
+    keywords: 'trabajos online, trabajos stellar, freelancing stellar, trabajos web3, microtareas, arcusx'
+  };
+
+  // Structured Data para Product (Plataforma)
+  const productSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: 'ArcusX - Plataforma de Trabajos Online en Stellar',
+    description: 'Plataforma de freelancing Web3 para encontrar y realizar trabajos online en Stellar blockchain',
+    brand: {
+      '@type': 'Brand',
+      name: 'ArcusX'
+    },
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'USD',
+      priceValidUntil: '2027-12-31',
+      availability: 'https://schema.org/InStock',
+      url: 'https://arcusx.pro/register'
     }
   };
 
   const combinedStructuredData = {
     '@context': 'https://schema.org',
-    '@graph': [organizationSchema, websiteSchema, serviceSchema]
+    '@graph': [organizationSchema, websiteSchema, serviceSchema, productSchema]
   };
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
@@ -89,14 +114,14 @@ const Hero = () => {
   return (
     <>
       <SEO
-        title={t('hero.title.line1') + ' ' + t('hero.title.web3') + ' ' + t('hero.title.for') + ' ' + t('hero.title.talent') + ' ' + t('hero.title.latam')}
-        description={t('hero.desc')}
+        title="Trabajos Online en Stellar | ArcusX - Plataforma de Freelancing Web3 para LATAM"
+        description="Encuentra trabajos online en Stellar blockchain. Plataforma de freelancing Web3 con pagos instantáneos en USDC. Trabajos remotos para LATAM. Microtareas, freelancing en Stellar, trabajos Web3. Arcus, Arcu, ArcusX."
         url="/"
         locale={lang}
         structuredData={combinedStructuredData}
       />
-      <div className="hero">
-        <div className="hero-container">
+    <div className="hero">
+      <div className="hero-container">
         <div className="hero-content">
           <h1 className="hero-title">
             {t('hero.title.line1')}{' '}
@@ -518,7 +543,7 @@ const Hero = () => {
       </div>
 
       <Footer />
-      </div>
+    </div>
     </>
   );
 };

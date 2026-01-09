@@ -100,8 +100,8 @@ const Register = () => {
   return (
     <>
       <SEO
-        title="Crear Cuenta"
-        description="Únete a ArcusX y comienza tu viaje en el mundo Web3 del freelancing. Plataforma descentralizada con pagos seguros en Stellar y comisiones ultra-bajas del 0.5%."
+        title="Registrarse | ArcusX - Trabajos Freelance Stellar"
+        description="Únete a ArcusX. Plataforma de trabajos online en Stellar. Freelancing Web3, microtareas, pagos en USDC. Trabajos remotos para LATAM. Registro gratuito. Arcus, Arcu."
         url="/register"
         locale={lang}
       />

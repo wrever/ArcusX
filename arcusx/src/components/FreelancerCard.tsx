@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import RatingDisplay from './RatingDisplay';
 import { useI18n } from '../i18n/I18nProvider';
 import type { Freelancer } from '../types/freelancer';
+import { getAvatarUrl } from '../utils/avatarUtils';
 import '../css/FreelancerCard.css';
 
 interface FreelancerCardProps {
@@ -33,9 +34,7 @@ const FreelancerCard = ({ freelancer }: FreelancerCardProps) => {
     return bio.substring(0, maxLength).trim() + '...';
   };
 
-  const avatarUrl = freelancer.avatar_url 
-    ? `${import.meta.env.VITE_API_URL || ''}${freelancer.avatar_url}`
-    : null;
+  const avatarUrl = freelancer.avatar_url ? getAvatarUrl(freelancer.avatar_url) : null;
 
   return (
     <div className="freelancer-card-horizontal">

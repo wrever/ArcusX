@@ -88,8 +88,8 @@ const Login = () => {
   return (
     <>
       <SEO
-        title="Iniciar Sesión"
-        description="Accede a tu cuenta en ArcusX y comienza a trabajar o contratar freelancers. Plataforma Web3 de freelancing descentralizada en Stellar."
+        title="Iniciar Sesión | ArcusX - Trabajos Online en Stellar"
+        description="Accede a tu cuenta de ArcusX. Trabajos online, freelancing en Stellar, pagos instantáneos en USDC. Plataforma de trabajos remotos Web3 para LATAM. Arcus, Arcu."
         url="/login"
         locale={lang}
       />

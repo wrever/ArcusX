@@ -1772,6 +1772,44 @@
   margin: 0;
 }
 
+.settings-logout-section {
+  text-align: center;
+  padding: 2rem;
+  margin-top: 1.5rem;
+  background: rgba(239, 68, 68, 0.05);
+  border-radius: 12px;
+  border: 2px dashed rgba(239, 68, 68, 0.3);
+}
+
+.settings-logout-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(220, 38, 38, 0.9));
+  border-radius: 12px;
+  border: none;
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.settings-logout-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 1), rgba(220, 38, 38, 1));
+}
+
+.settings-logout-button:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
 .settings-form {
   display: flex;
   flex-direction: column;
@@ -1861,6 +1899,18 @@
 
   .edit-profile-button {
     width: 100%;
+    justify-content: center;
+  }
+
+  .settings-logout-section {
+    padding: 1.5rem;
+    margin-top: 1rem;
+  }
+
+  .settings-logout-button {
+    width: 100%;
+    padding: 0.875rem 1.5rem;
+    font-size: 1rem;
     justify-content: center;
   }
 
