@@ -120,7 +120,7 @@ const Hero = () => {
         locale={lang}
         structuredData={combinedStructuredData}
       />
-    <div className="hero">
+      <div className="hero">
       <div className="hero-container">
         <div className="hero-content">
           <h1 className="hero-title">

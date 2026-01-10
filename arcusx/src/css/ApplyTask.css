@@ -3,10 +3,11 @@
   flex-direction: column;
   align-items: center;
   padding: 2rem;
-  background-color: #0b1b2f; /* Fondo oscuro similar al dashboard */
+  background-color: var(--bg-primary);
   min-height: 100vh;
-  color: #fff;
+  color: var(--text-primary);
   position: relative;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .back-button {
@@ -16,14 +17,41 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #28c0f0;
+  color: #ffffff !important;
   text-decoration: none;
   font-size: 1rem;
-  transition: color 0.3s ease;
+  transition: all 0.3s ease;
+  padding: 0.75rem 1.25rem;
+  border-radius: 10px;
+  background: var(--primary-blue) !important;
+  border: 2px solid var(--primary-blue);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-md);
+  font-weight: 600;
+}
+
+/* Estilos específicos para modo claro y oscuro - Siempre con fondo azul */
+:root[data-theme="light"] .back-button {
+  background: var(--primary-blue) !important;
+  border-color: var(--primary-blue) !important;
+  color: #ffffff !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+:root[data-theme="dark"] .back-button {
+  background: var(--primary-blue) !important;
+  border-color: var(--primary-blue) !important;
+  color: #ffffff !important;
+  box-shadow: var(--shadow-md) !important;
 }
 
 .back-button:hover {
-  color: #1180b3;
+  color: #ffffff !important;
+  background: var(--primary-blue-hover) !important;
+  border-color: var(--primary-blue-hover) !important;
+  transform: translateX(-3px);
+  box-shadow: var(--shadow-lg);
+  opacity: 0.9;
 }
 
 .apply-task-content {
@@ -37,14 +65,22 @@
 
 .task-details-card,
 .application-form-card {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-card);
   backdrop-filter: blur(10px);
   padding: 2rem;
   border-radius: 12px;
-  border: 1px solid rgba(40, 192, 240, 0.3);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  border: 2px solid var(--border-color);
+  box-shadow: var(--shadow-md);
   flex: 1;
   min-width: 300px;
+}
+
+/* Asegurar fondo blanco en modo claro */
+:root[data-theme="light"] .task-details-card,
+:root[data-theme="light"] .application-form-card {
+  background: #ffffff !important;
+  border-color: rgba(100, 116, 139, 0.2) !important;
+  box-shadow: var(--shadow-sm) !important;
 }
 
 .task-header {
@@ -52,12 +88,12 @@
 }
 
 .task-header h2 {
-  color: #28c0f0;
+  color: var(--primary-blue);
   margin-bottom: 0.5rem;
 }
 
 .task-subtitle {
-  color: #b0b0b0;
+  color: var(--text-secondary);
   font-style: italic;
   margin-bottom: 0.5rem;
 }
@@ -87,7 +123,7 @@
 .task-description-full {
   margin-bottom: 1.5rem;
   line-height: 1.6;
-  color: #e1e1e1;
+  color: var(--text-secondary);
   word-wrap: break-word;
   overflow-wrap: break-word;
 }
@@ -98,7 +134,7 @@
   gap: 1rem;
   margin-bottom: 1.5rem;
   padding-top: 1rem;
-  border-top: 1px solid rgba(40, 192, 240, 0.3);
+  border-top: 1px solid var(--border-color);
 }
 
 .meta-item {
@@ -108,7 +144,7 @@
 
 .meta-label {
   font-size: 0.9rem;
-  color: #b0b0b0;
+  color: var(--text-secondary);
   margin-bottom: 0.2rem;
   white-space: nowrap;
 }
@@ -116,13 +152,13 @@
 .meta-value {
   font-size: 1rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .application-form-card h3 {
   text-align: center;
   margin-bottom: 1.5rem;
-  color: #28c0f0;
+  color: var(--primary-blue);
 }
 
 .application-form .form-group {
@@ -133,7 +169,7 @@
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 600;
-  color: #e1e1e1;
+  color: var(--text-primary);
 }
 
 .application-form input[type="text"],
@@ -143,50 +179,81 @@
 .application-form select {
   width: 100%;
   padding: 0.875rem;
-  border: 1px solid rgba(40, 192, 240, 0.3);
+  border: 2px solid var(--input-border);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
+  background: var(--input-background);
+  color: var(--text-primary);
   font-size: 1rem;
   transition: all 0.3s ease;
   box-sizing: border-box;
 }
 
+/* Asegurar fondo blanco en modo claro */
+:root[data-theme="light"] .application-form input[type="text"],
+:root[data-theme="light"] .application-form input[type="number"],
+:root[data-theme="light"] .application-form input[type="url"],
+:root[data-theme="light"] .application-form textarea,
+:root[data-theme="light"] .application-form select {
+  background: #ffffff !important;
+  color: var(--text-primary) !important;
+  border-color: var(--input-border) !important;
+}
+
 .application-form textarea {
   resize: vertical;
-  min-height: 150px; /* Aumentar altura del textarea */
+  min-height: 150px;
 }
 
 .application-form input::placeholder,
 .application-form textarea::placeholder {
-  color: #b0b0b0;
+  color: var(--text-muted);
+}
+
+:root[data-theme="light"] .application-form input::placeholder,
+:root[data-theme="light"] .application-form textarea::placeholder {
+  color: var(--text-muted) !important;
 }
 
 .application-form input:focus,
-.application-form textarea:focus {
+.application-form textarea:focus,
+.application-form select:focus {
   outline: none;
-  border-color: #28c0f0;
+  border-color: var(--primary-blue);
   box-shadow: 0 0 0 3px rgba(40, 192, 240, 0.2);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--input-background);
+}
+
+:root[data-theme="light"] .application-form input:focus,
+:root[data-theme="light"] .application-form textarea:focus,
+:root[data-theme="light"] .application-form select:focus {
+  background: #ffffff !important;
+  border-color: var(--primary-blue) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
 }
 
 .form-help {
   display: block;
   margin-top: 0.3rem;
-  color: #b0b0b0;
+  color: var(--text-secondary);
   font-size: 0.85rem;
 }
 
 .form-info {
-  background: rgba(40, 192, 240, 0.1);
+  background: var(--bg-card);
   padding: 1rem;
   border-radius: 8px;
-  border: 1px solid rgba(40, 192, 240, 0.3);
+  border: 2px solid var(--border-color);
   margin: 1rem 0;
 }
 
+/* Asegurar fondo blanco en modo claro */
+:root[data-theme="light"] .form-info {
+  background: #ffffff !important;
+  border-color: rgba(100, 116, 139, 0.2) !important;
+}
+
 .form-info h4 {
-  color: #28c0f0;
+  color: var(--primary-blue);
   margin-bottom: 0.5rem;
   font-size: 1rem;
 }
@@ -194,7 +261,7 @@
 .form-info ul {
   margin: 0;
   padding-left: 1.2rem;
-  color: #e1e1e1;
+  color: var(--text-secondary);
 }
 
 .form-info li {
@@ -205,7 +272,7 @@
 .application-form button[type="submit"] {
   width: 100%;
   padding: 0.875rem;
-  background: linear-gradient(135deg, #28c0f0, #1180b3);
+  background: var(--gradient-primary);
   border: none;
   border-radius: 8px;
   color: white;
@@ -214,16 +281,17 @@
   cursor: pointer;
   transition: all 0.3s ease;
   margin-top: 1.5rem;
-  box-shadow: 0 4px 15px rgba(40, 192, 240, 0.3);
+  box-shadow: var(--shadow-md);
 }
 
 .application-form button[type="submit"]:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(40, 192, 240, 0.4);
+  box-shadow: var(--shadow-lg);
 }
 
 .application-form button[type="submit"]:disabled {
-  background: #555;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
   cursor: not-allowed;
   box-shadow: none;
   transform: none;
@@ -255,15 +323,19 @@
   z-index: 1000;
 }
 
+:root[data-theme="light"] .popup-overlay {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
 .popup {
-  background: #2a2a2a;
+  background: var(--bg-card);
   border-radius: 12px;
   padding: 2rem;
   max-width: 400px;
   width: 90%;
   text-align: center;
-  border: 1px solid #404040;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  border: 2px solid var(--border-color);
+  box-shadow: var(--shadow-lg);
 }
 
 .popup-icon {
@@ -272,19 +344,19 @@
 }
 
 .popup h3 {
-  color: #fff;
+  color: var(--text-primary);
   margin: 0 0 1rem 0;
   font-size: 1.3rem;
 }
 
 .popup p {
-  color: #e1e1e1;
+  color: var(--text-secondary);
   margin: 0 0 1.5rem 0;
   line-height: 1.5;
 }
 
 .popup-button {
-  background: #28c0f0;
+  background: var(--gradient-primary);
   color: #fff;
   border: none;
   padding: 0.8rem 2rem;
@@ -296,7 +368,7 @@
 }
 
 .popup-button:hover {
-  background: #1ea8d4;
+  box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
 

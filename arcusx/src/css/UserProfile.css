@@ -2,13 +2,14 @@
 
 .user-profile-container {
   min-height: 100vh;
-  background: var(--dark-blue);
-  color: var(--text-light);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   padding: 1rem;
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 @media (min-width: 640px) {
@@ -150,10 +151,10 @@
 
 .edit-profile-button {
   padding: 0;
-  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+  background: var(--gradient-primary);
   border: none;
   border-radius: 10px;
-  color: white;
+  color: #ffffff;
   text-decoration: none;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   font-weight: 500;
@@ -162,7 +163,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  box-shadow: 0 4px 12px rgba(40, 192, 240, 0.25);
+  box-shadow: var(--shadow-md);
   position: relative;
   white-space: nowrap;
   flex-shrink: 0;
@@ -174,6 +175,12 @@
   box-sizing: border-box;
   padding-left: 1.25rem;
   padding-right: 1.25rem;
+}
+
+/* Botón de editar perfil visible en modo claro */
+:root[data-theme="light"] .edit-profile-button {
+  background: var(--gradient-primary) !important;
+  color: #ffffff !important;
 }
 
 .edit-profile-button:hover {
@@ -194,23 +201,36 @@
 
 /* Header del perfil */
 .profile-header {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  background: var(--bg-card);
   backdrop-filter: blur(20px);
   border-radius: 24px;
   padding: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 2px solid var(--border-color);
   margin-top: 4.5rem;
   margin-bottom: 2rem;
   display: flex;
   gap: 1.5rem;
   align-items: flex-start;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-md);
   transition: all 0.3s ease;
 }
 
+/* Fondo blanco y bordes más visibles en modo claro */
+:root[data-theme="light"] .profile-header {
+  background: #ffffff !important;
+  border-color: rgba(100, 116, 139, 0.4) !important;
+  border-width: 2px !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
 .profile-header:hover {
-  border-color: rgba(40, 192, 240, 0.2);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  border-color: var(--border-color-hover);
+  box-shadow: var(--shadow-lg);
+}
+
+:root[data-theme="light"] .profile-header:hover {
+  border-color: rgba(100, 116, 139, 0.5) !important;
+  box-shadow: var(--shadow-md) !important;
 }
 
 @media (min-width: 640px) {
@@ -397,11 +417,16 @@
 .profile-bio-full {
   font-size: 1rem;
   line-height: 1.8;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-secondary);
   white-space: pre-wrap;
   word-wrap: break-word;
   max-width: 100%;
   margin: 0;
+}
+
+/* Biografía visible en modo claro */
+:root[data-theme="light"] .profile-bio-full {
+  color: #475569 !important;
 }
 
 @media (min-width: 640px) {
@@ -439,23 +464,37 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
   font-size: 0.85rem;
   transition: all 0.3s ease;
   padding: 0.625rem 0.875rem;
-  background: rgba(40, 192, 240, 0.1);
-  border: 1px solid rgba(40, 192, 240, 0.2);
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
   border-radius: 12px;
   backdrop-filter: blur(10px);
   line-height: 1.4;
   min-height: 40px;
 }
 
+/* Fondo blanco y texto visible en modo claro */
+:root[data-theme="light"] .meta-item {
+  background: #ffffff !important;
+  border-color: rgba(100, 116, 139, 0.4) !important;
+  border-width: 2px !important;
+  color: #475569 !important;
+}
+
 .meta-item:hover {
-  color: rgba(255, 255, 255, 0.9);
-  background: rgba(40, 192, 240, 0.15);
-  border-color: rgba(40, 192, 240, 0.3);
+  color: var(--text-primary);
+  background: var(--bg-hover);
+  border-color: var(--border-color-hover);
   transform: translateY(-2px);
+}
+
+:root[data-theme="light"] .meta-item:hover {
+  background: #f1f5f9 !important;
+  border-color: rgba(100, 116, 139, 0.5) !important;
+  color: #0f172a !important;
 }
 
 .meta-icon {
@@ -478,6 +517,12 @@
   line-height: 1.4;
   margin: 0;
   padding: 0;
+  color: inherit;
+}
+
+/* Texto de meta visible en modo claro */
+:root[data-theme="light"] .meta-text {
+  color: #475569 !important;
 }
 
 @media (min-width: 640px) {
@@ -496,14 +541,24 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-primary);
   text-decoration: none;
   transition: all 0.3s ease;
   cursor: pointer;
   font-weight: 500;
-  background: linear-gradient(135deg, rgba(40, 192, 240, 0.2) 0%, rgba(17, 128, 179, 0.15) 100%);
-  border: 1px solid rgba(40, 192, 240, 0.4);
-  box-shadow: 0 2px 8px rgba(40, 192, 240, 0.2);
+  background: var(--bg-card);
+  border: 2px solid var(--primary-blue);
+  border-radius: 12px;
+  padding: 0.625rem 1rem;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Fondo blanco y texto visible en modo claro */
+:root[data-theme="light"] .portfolio-link {
+  background: #ffffff !important;
+  border-color: var(--primary-blue) !important;
+  border-width: 2px !important;
+  color: var(--primary-blue) !important;
 }
 
 .portfolio-link svg {
@@ -511,12 +566,17 @@
 }
 
 .portfolio-link:hover {
-  color: white;
-  background: linear-gradient(135deg, rgba(40, 192, 240, 0.3) 0%, rgba(17, 128, 179, 0.25) 100%);
-  border-color: rgba(40, 192, 240, 0.6);
-  box-shadow: 0 4px 12px rgba(40, 192, 240, 0.3);
+  color: #ffffff;
+  background: var(--primary-blue);
+  border-color: var(--primary-blue);
+  box-shadow: var(--shadow-md);
   transform: translateY(-2px);
   text-decoration: none;
+}
+
+:root[data-theme="light"] .portfolio-link:hover {
+  background: var(--primary-blue) !important;
+  color: #ffffff !important;
 }
 
 /* Estadísticas */
@@ -543,25 +603,38 @@
 }
 
 .stat-card {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  background: var(--bg-card);
   backdrop-filter: blur(20px);
   border-radius: 16px;
   padding: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 2px solid var(--border-color);
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: flex-start;
   gap: 1rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
   min-height: 80px;
+}
+
+/* Fondo blanco y bordes más visibles en modo claro */
+:root[data-theme="light"] .stat-card {
+  background: #ffffff !important;
+  border-color: rgba(100, 116, 139, 0.4) !important;
+  border-width: 2px !important;
+  box-shadow: var(--shadow-sm) !important;
 }
 
 .stat-card:hover {
   transform: translateY(-6px);
-  border-color: rgba(40, 192, 240, 0.4);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(40, 192, 240, 0.1);
+  border-color: var(--border-color-hover);
+  box-shadow: var(--shadow-md);
+}
+
+:root[data-theme="light"] .stat-card:hover {
+  border-color: rgba(100, 116, 139, 0.5) !important;
+  box-shadow: var(--shadow-md) !important;
 }
 
 @media (min-width: 640px) {
@@ -586,10 +659,65 @@
   align-items: center;
   justify-content: center;
   font-size: 1.2rem;
-  color: white;
+  color: #ffffff;
   flex-shrink: 0;
   transition: all 0.3s ease;
   align-self: center;
+}
+
+/* Iconos SVG dentro de .stat-icon siempre blancos */
+.stat-icon svg {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+.stat-icon svg path,
+.stat-icon svg circle,
+.stat-icon svg rect,
+.stat-icon svg polygon,
+.stat-icon svg polyline,
+.stat-icon svg line,
+.stat-icon svg * {
+  fill: #ffffff !important;
+  stroke: #ffffff !important;
+  color: #ffffff !important;
+}
+
+/* PERFIL PÚBLICO: Iconos de estadísticas SIEMPRE BLANCOS en ambos modos */
+.user-profile-container .stat-icon,
+.user-profile-container .stat-icon svg,
+.user-profile-container .stat-icon svg * {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+:root[data-theme="light"] .user-profile-container .stat-icon,
+:root[data-theme="light"] .user-profile-container .stat-icon svg,
+:root[data-theme="light"] .user-profile-container .stat-icon svg path,
+:root[data-theme="light"] .user-profile-container .stat-icon svg circle,
+:root[data-theme="light"] .user-profile-container .stat-icon svg rect,
+:root[data-theme="light"] .user-profile-container .stat-icon svg polygon,
+:root[data-theme="light"] .user-profile-container .stat-icon svg polyline,
+:root[data-theme="light"] .user-profile-container .stat-icon svg line,
+:root[data-theme="light"] .user-profile-container .stat-icon svg * {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+:root[data-theme="dark"] .user-profile-container .stat-icon,
+:root[data-theme="dark"] .user-profile-container .stat-icon svg,
+:root[data-theme="dark"] .user-profile-container .stat-icon svg path,
+:root[data-theme="dark"] .user-profile-container .stat-icon svg circle,
+:root[data-theme="dark"] .user-profile-container .stat-icon svg rect,
+:root[data-theme="dark"] .user-profile-container .stat-icon svg polygon,
+:root[data-theme="dark"] .user-profile-container .stat-icon svg polyline,
+:root[data-theme="dark"] .user-profile-container .stat-icon svg line,
+:root[data-theme="dark"] .user-profile-container .stat-icon svg * {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+  stroke: #ffffff !important;
 }
 
 .stat-card:hover .stat-icon {
@@ -616,16 +744,44 @@
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
 }
 
+.stat-icon.tasks-completed svg,
+.stat-icon.tasks-completed svg * {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
 .stat-icon.tasks-created {
   background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+}
+
+.stat-icon.tasks-created svg,
+.stat-icon.tasks-created svg * {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+  stroke: #ffffff !important;
 }
 
 .stat-icon.earnings {
   background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
 }
 
+.stat-icon.earnings svg,
+.stat-icon.earnings svg * {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
 .stat-icon.rating {
   background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+}
+
+.stat-icon.rating svg,
+.stat-icon.rating svg * {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+  stroke: #ffffff !important;
 }
 
 .stat-content {
@@ -644,7 +800,7 @@
 .stat-value {
   font-size: 1.5rem;
   font-weight: 700;
-  color: white;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -654,6 +810,15 @@
   width: 100%;
   margin: 0;
   padding: 0;
+}
+
+/* Valor de estadística: negro en modo claro, blanco en modo oscuro */
+:root[data-theme="light"] .stat-value {
+  color: #000000 !important;
+}
+
+:root[data-theme="dark"] .stat-value {
+  color: #ffffff !important;
 }
 
 @media (min-width: 640px) {
@@ -670,13 +835,18 @@
 
 .stat-label {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
   font-weight: 500;
   text-align: center;
   width: 100%;
   margin: 0;
   padding: 0;
   line-height: 1.3;
+}
+
+/* Label de estadística visible en modo claro */
+:root[data-theme="light"] .stat-label {
+  color: #0f172a !important;
 }
 
 @media (min-width: 640px) {
@@ -693,20 +863,33 @@
 
 /* Secciones */
 .profile-section {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  background: var(--bg-card);
   backdrop-filter: blur(20px);
   border-radius: 24px;
   padding: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 2px solid var(--border-color);
   margin-top: 3.125rem;
   margin-bottom: 2rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-md);
   transition: all 0.3s ease;
 }
 
+/* Fondo blanco y bordes más visibles en modo claro */
+:root[data-theme="light"] .profile-section {
+  background: #ffffff !important;
+  border-color: rgba(100, 116, 139, 0.4) !important;
+  border-width: 2px !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
 .profile-section:hover {
-  border-color: rgba(40, 192, 240, 0.2);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  border-color: var(--border-color-hover);
+  box-shadow: var(--shadow-lg);
+}
+
+:root[data-theme="light"] .profile-section:hover {
+  border-color: rgba(100, 116, 139, 0.5) !important;
+  box-shadow: var(--shadow-md) !important;
 }
 
 @media (min-width: 640px) {
@@ -724,11 +907,16 @@
 .section-title {
   font-size: 1.25rem;
   margin-bottom: 1.5rem;
-  color: white;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: 0.75rem;
   font-weight: 600;
+}
+
+/* Título de sección visible en modo claro */
+:root[data-theme="light"] .section-title {
+  color: #0f172a !important;
 }
 
 @media (min-width: 640px) {
@@ -783,13 +971,23 @@
 
 .skill-name {
   font-weight: 500;
-  color: white;
+  color: var(--text-primary);
+}
+
+/* Nombre de skill visible en modo claro */
+:root[data-theme="light"] .skill-name {
+  color: #0f172a !important;
 }
 
 .skill-level {
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
   text-transform: capitalize;
+}
+
+/* Nivel de skill visible en modo claro */
+:root[data-theme="light"] .skill-level {
+  color: #475569 !important;
 }
 
 /* Portfolio */
@@ -900,10 +1098,15 @@
 
 .portfolio-content h3 {
   margin: 0 0 0.75rem 0;
-  color: white;
+  color: var(--text-primary);
   font-size: 1.1rem;
   font-weight: 600;
   line-height: 1.3;
+}
+
+/* Título de portfolio visible en modo claro */
+:root[data-theme="light"] .portfolio-content h3 {
+  color: #0f172a !important;
 }
 
 @media (min-width: 640px) {
@@ -919,10 +1122,15 @@
 }
 
 .portfolio-content p {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
   line-height: 1.6;
   margin-bottom: 1rem;
   font-size: 0.9rem;
+}
+
+/* Texto de portfolio visible en modo claro */
+:root[data-theme="light"] .portfolio-content p {
+  color: #475569 !important;
 }
 
 @media (min-width: 640px) {

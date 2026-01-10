@@ -1,9 +1,9 @@
 /* FreelancerCard.css - Estilos para card horizontal de freelancer */
 
 .freelancer-card-horizontal {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-card, rgba(255, 255, 255, 0.03));
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 2px solid var(--border-color, rgba(255, 255, 255, 0.1));
   border-radius: 16px;
   padding: 1.5rem;
   transition: all 0.3s ease;
@@ -13,6 +13,7 @@
   width: 100%;
   position: relative;
   overflow: hidden;
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.1));
 }
 
 .freelancer-card-horizontal::before {
@@ -29,9 +30,9 @@
 
 .freelancer-card-horizontal:hover {
   transform: translateY(-3px);
-  box-shadow: 0 12px 32px rgba(40, 192, 240, 0.15);
-  border-color: rgba(40, 192, 240, 0.3);
-  background: rgba(255, 255, 255, 0.05);
+  box-shadow: var(--shadow-lg, 0 12px 32px rgba(40, 192, 240, 0.15));
+  border-color: var(--border-color-hover, rgba(40, 192, 240, 0.4));
+  background: var(--bg-hover, rgba(255, 255, 255, 0.05));
 }
 
 .freelancer-card-horizontal:hover::before {
@@ -104,11 +105,16 @@
   font-size: 1.3rem;
   font-weight: 600;
   margin: 0 0 0.75rem 0;
-  color: var(--text-light);
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   letter-spacing: -0.02em;
+}
+
+/* Nombre de usuario visible en modo claro */
+:root[data-theme="light"] .freelancer-username {
+  color: #000000 !important;
 }
 
 .freelancer-rating {
@@ -127,7 +133,7 @@
 .freelancer-bio {
   font-size: 0.95rem;
   line-height: 1.7;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-secondary);
   margin: 0;
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -135,6 +141,11 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Descripción visible en modo claro */
+:root[data-theme="light"] .freelancer-bio {
+  color: #475569 !important;
 }
 
 /* Footer */
@@ -152,7 +163,7 @@
   background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
   border: none;
   border-radius: 10px;
-  color: white;
+  color: #ffffff;
   text-decoration: none;
   font-weight: 600;
   font-size: 1rem;
@@ -162,10 +173,21 @@
   box-shadow: 0 4px 12px rgba(40, 192, 240, 0.2);
 }
 
+/* Texto SIEMPRE blanco en modo claro, incluso en hover */
+:root[data-theme="light"] .freelancer-view-profile-btn {
+  color: #ffffff !important;
+}
+
 .freelancer-view-profile-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(40, 192, 240, 0.4);
   background: linear-gradient(135deg, var(--secondary-blue) 0%, var(--primary-blue) 100%);
+  color: #ffffff !important;
+}
+
+/* Asegurar que el texto sea SIEMPRE blanco en hover, especialmente en modo claro */
+:root[data-theme="light"] .freelancer-view-profile-btn:hover {
+  color: #ffffff !important;
 }
 
 /* Responsive - Tablet */
