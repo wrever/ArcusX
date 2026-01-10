@@ -553,6 +553,27 @@ La arquitectura futura de ArcusX está diseñada para **escalar horizontalmente*
   - ⏳ Mejora de velocidad de carga (pendiente optimización avanzada)
   - ⏳ Contenido optimizado para Google (pendiente blog/artículos)
 
+- ✅ **Sistema de Dark/Light Mode** - **COMPLETADO**
+  - ✅ Toggle de modo oscuro/claro en toda la plataforma
+  - ✅ Variables CSS para temas consistentes
+  - ✅ Adaptación de todos los componentes a ambos modos
+  - ✅ Persistencia de preferencia del usuario
+  - ✅ Contraste y legibilidad optimizados en ambos modos
+
+- ✅ **Sistema de Traducción Automática** - **COMPLETADO**
+  - ✅ Soporte multi-idioma (Español/Inglés)
+  - ✅ Traducción del panel completo
+  - ✅ Toggle de idioma accesible
+  - ✅ Persistencia de preferencia de idioma
+
+- ✅ **Mejoras de UI/UX Adicionales** - **COMPLETADO**
+  - ✅ Mejoras visuales en páginas principales (Crear Tarea, Enviar Propuesta, Supervisar Tarea, Revisión de Propuestas)
+  - ✅ Optimización de visibilidad y contraste en modo claro
+  - ✅ Mejoras de diseño en popups y modales (Wallet Connect)
+  - ✅ Mejoras de diseño responsive en listas de freelancers
+  - ✅ Optimización de colores y bordes en todos los componentes
+  - ✅ Mejoras de centrado y espaciado en filtros y formularios
+
 ---
 
 ### 📅 Q2 2026 (Abril - Junio) - Producción Técnica

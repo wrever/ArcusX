@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaUser, FaTasks, FaWallet, FaChartLine, FaBell, FaCog, FaSignOutAlt, FaPlus, FaTimes, FaExclamationTriangle, FaUsers, FaCheckCircle, FaGlobe, FaLock, FaStar } from 'react-icons/fa';
+import { FaUser, FaTasks, FaWallet, FaChartLine, FaBell, FaCog, FaSignOutAlt, FaPlus, FaTimes, FaExclamationTriangle, FaUsers, FaCheckCircle, FaGlobe, FaLock, FaStar, FaGraduationCap } from 'react-icons/fa';
 import { MdTranslate } from 'react-icons/md';
 import ThemeToggle from './components/ThemeToggle';
 import { FiMenu } from 'react-icons/fi';
@@ -22,6 +22,7 @@ import type { UserProfile as UserProfileType, UserStatistics } from './types/pro
 import RatingDisplay from './components/RatingDisplay';
 import { useI18n } from './i18n/I18nProvider';
 import FreelancersList from './components/FreelancersList';
+import TutorialsTab from './components/TutorialsTab';
 import { getAvatarUrl } from './utils/avatarUtils';
 import { useTheme } from './contexts/ThemeContext';
 
@@ -641,6 +642,9 @@ const Dashboard = () => {
             <li className={activeTab === 'freelancers' ? 'active' : ''} onClick={() => setActiveTab('freelancers')}>
               <FaUsers /> <span>{t('dashboard.tabs.freelancers')}</span>
             </li>
+            <li className={activeTab === 'tutorials' ? 'active' : ''} onClick={() => setActiveTab('tutorials')}>
+              <FaGraduationCap /> <span>{t('dashboard.tabs.tutorials')}</span>
+            </li>
             <li className={activeTab === 'wallet' ? 'active' : ''} onClick={() => setActiveTab('wallet')}>
               <FaWallet /> <span>{t('dashboard.tabs.wallet')}</span>
             </li>
@@ -675,6 +679,7 @@ const Dashboard = () => {
             {activeTab === 'in-progress' && t('dashboard.title.in.progress')}
             {activeTab === 'manage-tasks' && t('dashboard.title.manage.tasks')}
             {activeTab === 'freelancers' && t('dashboard.title.freelancers')}
+            {activeTab === 'tutorials' && t('dashboard.title.tutorials')}
           </h1>
           <div className="header-actions">
             <div className="theme-language-buttons">
@@ -1402,6 +1407,11 @@ const Dashboard = () => {
           {/* Freelancers Tab */}
           {activeTab === 'freelancers' && (
             <FreelancersList />
+          )}
+          
+          {/* Tutorials Tab */}
+          {activeTab === 'tutorials' && (
+            <TutorialsTab />
           )}
           
           {/* Settings Tab */}

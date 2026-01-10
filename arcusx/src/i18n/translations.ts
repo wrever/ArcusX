@@ -239,6 +239,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     'dashboard.tabs.freelancers': 'Freelancers',
     'dashboard.tabs.wallet': 'Billetera',
     'dashboard.tabs.notifications': 'Notificaciones',
+    'dashboard.tabs.tutorials': 'Tutoriales',
     'dashboard.tabs.settings': 'Configuración',
     'dashboard.logout': 'Cerrar Sesión',
     'dashboard.level': 'Nivel',
@@ -249,6 +250,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     'dashboard.title.in.progress': 'Tareas en Progreso',
     'dashboard.title.manage.tasks': 'Administrar Tareas',
     'dashboard.title.freelancers': 'Freelancers',
+    'dashboard.title.tutorials': 'Tutoriales y Guías',
     'freelancers.title': 'Freelancers',
     'freelancers.subtitle': 'freelancer encontrado',
     'freelancers.subtitle.plural': 'freelancers encontrados',
@@ -419,6 +421,12 @@ export const translations: Record<Lang, Record<string, string>> = {
     'apply.error.wallet.invalid': 'La dirección de wallet Stellar no tiene un formato válido (debe empezar con G y tener 56 caracteres).',
     'apply.error.unexpected': 'Respuesta inesperada al enviar la aplicación.',
     'apply.error.send': 'Error al enviar la aplicación.',
+
+    // Tutorials
+    'tutorials.title': 'Aprende a usar ArcusX',
+    'tutorials.subtitle': 'Guías paso a paso para aprovechar al máximo la plataforma',
+    'tutorials.watch': 'Ver Tutorial',
+    'tutorials.duration': 'Duración',
   },
   en: {
     'lang.es': 'ES',
@@ -654,6 +662,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     'dashboard.tabs.freelancers': 'Freelancers',
     'dashboard.tabs.wallet': 'Wallet',
     'dashboard.tabs.notifications': 'Notifications',
+    'dashboard.tabs.tutorials': 'Tutorials',
     'dashboard.tabs.settings': 'Settings',
     'dashboard.logout': 'Log Out',
     'dashboard.level': 'Level',
@@ -664,6 +673,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     'dashboard.title.in.progress': 'Tasks in Progress',
     'dashboard.title.manage.tasks': 'Manage Tasks',
     'dashboard.title.freelancers': 'Freelancers',
+    'dashboard.title.tutorials': 'Tutorials and Guides',
     'freelancers.title': 'Freelancers',
     'freelancers.subtitle': 'freelancer found',
     'freelancers.subtitle.plural': 'freelancers found',
@@ -834,5 +844,11 @@ export const translations: Record<Lang, Record<string, string>> = {
     'apply.error.wallet.invalid': 'Stellar wallet address does not have a valid format (must start with G and have 56 characters).',
     'apply.error.unexpected': 'Unexpected response when sending application.',
     'apply.error.send': 'Error sending application.',
+
+    // Tutorials
+    'tutorials.title': 'Learn how to use ArcusX',
+    'tutorials.subtitle': 'Step-by-step guides to get the most out of the platform',
+    'tutorials.watch': 'Watch Tutorial',
+    'tutorials.duration': 'Duration',
   },
 };
