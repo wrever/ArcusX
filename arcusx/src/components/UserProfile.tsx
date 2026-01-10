@@ -8,11 +8,15 @@ import SEO from './SEO';
 import { getAvatarUrl, getDefaultAvatarUrl } from '../utils/avatarUtils';
 import '../css/UserProfile.css';
 import '../css/Preloader.css';
-import logo from '../images/arcus-logo.png';
+import logoDark from '../images/arcus-logo.png';
+import logoLight from '../images/arcusxlogoclaro.png';
+import { useTheme } from '../contexts/ThemeContext';
 
 const UserProfile = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
+  const { theme } = useTheme();
+  const logo = theme === 'light' ? logoLight : logoDark;
   const [profile, setProfile] = useState<UserProfileType | null>(null);
   const [stats, setStats] = useState<UserStatistics | null>(null);
   const [loading, setLoading] = useState(true);
@@ -206,7 +210,7 @@ const UserProfile = () => {
         <div className="profile-stats-grid">
           <div className="stat-card">
             <div className="stat-icon tasks-completed">
-              <FaTasks />
+              <FaTasks style={{ color: '#ffffff', fill: '#ffffff' }} />
             </div>
             <div className="stat-content">
               <div className="stat-value">{stats.tasks_completed}</div>
@@ -216,7 +220,7 @@ const UserProfile = () => {
           
           <div className="stat-card">
             <div className="stat-icon tasks-created">
-              <FaBriefcase />
+              <FaBriefcase style={{ color: '#ffffff', fill: '#ffffff' }} />
             </div>
             <div className="stat-content">
               <div className="stat-value">{stats.tasks_created}</div>
@@ -226,7 +230,7 @@ const UserProfile = () => {
           
           <div className="stat-card">
             <div className="stat-icon earnings">
-              <FaDollarSign />
+              <FaDollarSign style={{ color: '#ffffff', fill: '#ffffff' }} />
             </div>
             <div className="stat-content">
               <div className="stat-value">${stats.total_earned.toFixed(2)}</div>
@@ -236,7 +240,7 @@ const UserProfile = () => {
           
           <div className="stat-card">
             <div className="stat-icon rating">
-              <FaStar />
+              <FaStar style={{ color: '#ffffff', fill: '#ffffff' }} />
             </div>
             <div className="stat-content">
               <div className="stat-value">

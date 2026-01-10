@@ -3,10 +3,11 @@
   flex-direction: column;
   align-items: center;
   padding: 2rem;
-  background-color: #0b1b2f;
+  background-color: var(--bg-primary);
   min-height: 100vh;
-  color: #fff;
+  color: var(--text-primary);
   position: relative;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .back-button {
@@ -16,14 +17,24 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #28c0f0;
+  color: var(--primary-blue);
   text-decoration: none;
   font-size: 1rem;
-  transition: color 0.3s ease;
+  transition: all 0.3s ease;
+  padding: 0.75rem 1.25rem;
+  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-sm);
 }
 
 .back-button:hover {
-  color: #1180b3;
+  color: var(--text-primary);
+  background: var(--bg-hover);
+  border-color: var(--border-color-hover);
+  transform: translateX(-3px);
+  box-shadow: var(--shadow-md);
 }
 
 .proposal-review-content {
@@ -37,22 +48,22 @@
 
 /* Información de la tarea */
 .task-info-card {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-card);
   backdrop-filter: blur(10px);
   border-radius: 16px;
   padding: 2rem;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border: 2px solid var(--border-color);
+  box-shadow: var(--shadow-md);
 }
 
 .task-header h1 {
-  color: #28c0f0;
+  color: var(--primary-blue);
   margin-bottom: 0.5rem;
   font-size: 1.8rem;
 }
 
 .task-subtitle {
-  color: #b0b0b0;
+  color: var(--text-secondary);
   font-style: italic;
   margin-bottom: 1rem;
   font-size: 1.1rem;
@@ -102,25 +113,25 @@
 }
 
 .task-description h3 {
-  color: #fff;
+  color: var(--text-primary);
   margin-bottom: 1rem;
   font-size: 1.2rem;
 }
 
 .task-description p {
-  color: #e1e1e1;
+  color: var(--text-secondary);
   line-height: 1.6;
   font-size: 1rem;
 }
 
 /* Sección de propuestas */
 .proposals-section {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-card);
   backdrop-filter: blur(10px);
   border-radius: 16px;
   padding: 2rem;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border: 2px solid var(--border-color);
+  box-shadow: var(--shadow-md);
 }
 
 .proposals-header {
@@ -128,13 +139,13 @@
 }
 
 .proposals-header h2 {
-  color: #28c0f0;
+  color: var(--primary-blue);
   margin-bottom: 0.5rem;
   font-size: 1.5rem;
 }
 
 .proposals-header p {
-  color: #b0b0b0;
+  color: var(--text-secondary);
   font-size: 1rem;
 }
 
@@ -142,7 +153,7 @@
 .no-proposals {
   text-align: center;
   padding: 3rem 2rem;
-  color: #b0b0b0;
+  color: var(--text-secondary);
 }
 
 .no-proposals-icon {
@@ -151,7 +162,7 @@
 }
 
 .no-proposals h3 {
-  color: #fff;
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
   font-size: 1.3rem;
 }
@@ -164,18 +175,19 @@
 }
 
 .proposal-card {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-card);
   backdrop-filter: blur(10px);
   border-radius: 12px;
   padding: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 2px solid var(--border-color);
   transition: all 0.3s ease;
+  box-shadow: var(--shadow-sm);
 }
 
 .proposal-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-  border-color: rgba(40, 192, 240, 0.3);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-color-hover);
 }
 
 .proposal-card.accepted {
@@ -218,19 +230,19 @@
 }
 
 .applicant-details h3 {
-  color: #fff;
+  color: var(--text-primary);
   margin: 0 0 0.25rem 0;
   font-size: 1.1rem;
 }
 
 .applicant-email {
-  color: #b0b0b0;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   margin: 0 0 0.25rem 0;
 }
 
 .proposal-date {
-  color: #b0b0b0;
+  color: var(--text-secondary);
   font-size: 0.85rem;
   margin: 0;
   display: flex;
@@ -276,13 +288,13 @@
 }
 
 .proposal-message h4, .proposal-portfolio h4, .proposal-wallet h4 {
-  color: #28c0f0;
+  color: var(--primary-blue);
   margin-bottom: 0.5rem;
   font-size: 1rem;
 }
 
 .proposal-message p {
-  color: #e1e1e1;
+  color: var(--text-secondary);
   line-height: 1.5;
   font-size: 0.95rem;
 }
@@ -291,30 +303,31 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  color: #28c0f0;
+  color: var(--primary-blue);
   text-decoration: none;
   font-size: 0.9rem;
   transition: color 0.3s ease;
 }
 
 .portfolio-link:hover {
-  color: #1180b3;
+  color: var(--secondary-blue);
 }
 
 .wallet-info {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #e1e1e1;
+  color: var(--text-secondary);
   font-size: 0.9rem;
 }
 
 .wallet-address {
   font-family: 'Courier New', monospace;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-tertiary);
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   font-size: 0.85rem;
+  color: var(--text-primary);
 }
 
 /* Acciones de la propuesta */
@@ -338,13 +351,13 @@
 }
 
 .select-button {
-  background: linear-gradient(90deg, #28c0f0, #1180b3);
+  background: var(--gradient-primary);
   color: #fff;
 }
 
 .select-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(40, 192, 240, 0.3);
+  box-shadow: var(--shadow-md);
 }
 
 .accept-button {
@@ -354,7 +367,7 @@
 
 .accept-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3);
+  box-shadow: var(--shadow-md);
 }
 
 .reject-button {
@@ -364,18 +377,18 @@
 
 .reject-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(244, 67, 54, 0.3);
+  box-shadow: var(--shadow-md);
 }
 
 .cancel-button {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
 }
 
 .cancel-button:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: var(--bg-active);
+  border-color: var(--border-color-hover);
 }
 
 .action-button:disabled {

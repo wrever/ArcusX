@@ -2,9 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaUser, FaTasks, FaWallet, FaChartLine, FaBell, FaCog, FaSignOutAlt, FaPlus, FaTimes, FaExclamationTriangle, FaUsers, FaCheckCircle, FaGlobe, FaLock, FaStar } from 'react-icons/fa';
 import { MdTranslate } from 'react-icons/md';
+import ThemeToggle from './components/ThemeToggle';
 import { FiMenu } from 'react-icons/fi';
 import './css/dashboard.css';
-import arcusLogo from './images/arcus-logo.png';
+import arcusLogoDark from './images/arcus-logo.png';
+import arcusLogoLight from './images/arcusxlogoclaro.png';
 import axios from 'axios';
 import { API_URL } from './config/database';
 import { useAuth } from './hooks/useAuth';
@@ -21,6 +23,7 @@ import RatingDisplay from './components/RatingDisplay';
 import { useI18n } from './i18n/I18nProvider';
 import FreelancersList from './components/FreelancersList';
 import { getAvatarUrl } from './utils/avatarUtils';
+import { useTheme } from './contexts/ThemeContext';
 
 interface UserData {
   id: number;
@@ -51,6 +54,8 @@ interface TaskData {
 
 const Dashboard = () => {
   const { t, toggle, lang } = useI18n();
+  const { theme } = useTheme();
+  const arcusLogo = theme === 'light' ? arcusLogoLight : arcusLogoDark;
   const [activeTab, setActiveTab] = useState('tasks');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [difficultyFilter, setDifficultyFilter] = useState('all');
@@ -605,7 +610,7 @@ const Dashboard = () => {
           </div>
           <div className="user-info">
             <Link to="/dashboard" className="user-dashboard-link">
-              <h3 style={{ color: "#fff", textDecoration: "underline", cursor: "pointer" }}>
+              <h3 className="user-name-display">
                 {userData.name}
               </h3>
             </Link>
@@ -672,16 +677,19 @@ const Dashboard = () => {
             {activeTab === 'freelancers' && t('dashboard.title.freelancers')}
           </h1>
           <div className="header-actions">
-            <button
-              type="button"
-              className="language-toggle-button"
-              onClick={toggle}
-              aria-label={t('lang.toggle')}
-              title={t('lang.toggle')}
-            >
-              <MdTranslate />
-              <span>{lang === 'es' ? 'EN' : 'ES'}</span>
-            </button>
+            <div className="theme-language-buttons">
+              <ThemeToggle variant="inline" visible={true} />
+              <button
+                type="button"
+                className="language-toggle-button"
+                onClick={toggle}
+                aria-label={t('lang.toggle')}
+                title={t('lang.toggle')}
+              >
+                <MdTranslate />
+                <span>{lang === 'es' ? 'EN' : 'ES'}</span>
+              </button>
+            </div>
             <WalletButton />
             <div className="notification-dropdown-container" ref={notificationDropdownRef}>
               <button 
@@ -869,18 +877,10 @@ const Dashboard = () => {
               }}>
                 <input
                   type="text"
+                  className="search-input"
                   placeholder={t('dashboard.tasks.search.placeholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{
-                    flex: 1,
-                    padding: '0.75rem 1rem',
-                    backgroundColor: 'rgba(7, 35, 60, 0.95)',
-                    border: '1px solid rgba(40, 192, 240, 0.3)',
-                    borderRadius: '8px',
-                    color: '#fff',
-                    fontSize: '0.95rem'
-                  }}
                 />
                 {searchQuery && (
                   <button
@@ -937,14 +937,7 @@ const Dashboard = () => {
                     onChange={(e) => setMinPrice(e.target.value)}
                     min="0"
                     step="0.01"
-                    style={{
-                      padding: '0.75rem 1rem',
-                      backgroundColor: 'rgba(7, 35, 60, 0.95)',
-                      border: '1px solid rgba(40, 192, 240, 0.3)',
-                      borderRadius: '8px',
-                      color: '#fff',
-                      fontSize: '0.95rem'
-                    }}
+                    className="filter-price-input"
                   />
 
                   <input
@@ -954,14 +947,7 @@ const Dashboard = () => {
                     onChange={(e) => setMaxPrice(e.target.value)}
                     min="0"
                     step="0.01"
-                    style={{
-                      padding: '0.75rem 1rem',
-                      backgroundColor: 'rgba(7, 35, 60, 0.95)',
-                      border: '1px solid rgba(40, 192, 240, 0.3)',
-                      borderRadius: '8px',
-                      color: '#fff',
-                      fontSize: '0.95rem'
-                    }}
+                    className="filter-price-input"
                   />
 
                   <select
@@ -1401,8 +1387,9 @@ const Dashboard = () => {
                         <button 
                           onClick={() => deleteNotification(notification.id)}
                           className="delete-button"
+                          aria-label={t('dashboard.notifications.delete')}
                         >
-                          {t('dashboard.notifications.delete')}
+                          <FaTimes />
                         </button>
                       </div>
                     </div>

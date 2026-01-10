@@ -2,15 +2,19 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { HelmetProvider } from 'react-helmet-async'
 import './index.css'
+import './css/themes.css'
 import App from './App.tsx'
 import { I18nProvider } from './i18n/I18nProvider'
+import { ThemeProvider } from './contexts/ThemeContext'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <HelmetProvider>
-      <I18nProvider>
-        <App />
-      </I18nProvider>
-    </HelmetProvider>
+    <ThemeProvider>
+      <HelmetProvider>
+        <I18nProvider>
+          <App />
+        </I18nProvider>
+      </HelmetProvider>
+    </ThemeProvider>
   </StrictMode>,
 )

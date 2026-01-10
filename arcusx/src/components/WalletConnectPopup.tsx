@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { FaBolt } from 'react-icons/fa';
+import { FaBolt, FaDownload } from 'react-icons/fa';
 import '../css/WalletConnectPopup.css';
 
 interface WalletConnectPopupProps {
@@ -14,11 +14,30 @@ const WalletConnectPopup: React.FC<WalletConnectPopupProps> = ({
   onClose,
   onConnectFreighter,
 }) => {
+  // Añadir/quitar clase al body cuando el modal está abierto/cerrado
+  useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add('wallet-modal-open');
+    } else {
+      document.body.classList.remove('wallet-modal-open');
+    }
+
+    // Limpiar al desmontar
+    return () => {
+      document.body.classList.remove('wallet-modal-open');
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="wallet-popup-overlay">
-      <div className="wallet-popup-content">
+    <div className="wallet-popup-overlay" onClick={(e) => {
+      // Cerrar al hacer click en el overlay (fuera del contenido)
+      if (e.target === e.currentTarget) {
+        onClose();
+      }
+    }}>
+      <div className="wallet-popup-content" onClick={(e) => e.stopPropagation()}>
         <button className="wallet-popup-close" onClick={onClose}>
           ×
         </button>
@@ -53,7 +72,7 @@ const WalletConnectPopup: React.FC<WalletConnectPopupProps> = ({
               className="download-button freighter-download"
               onClick={() => window.open('https://www.freighter.app/', '_blank')}
             >
-              <div className="download-icon">Descargar</div>
+              <FaDownload className="download-icon" />
               <span>Download Freighter</span>
             </button>
           </div>

@@ -1,18 +1,19 @@
 .navbar {
   width: 100%;
   height: 80px;
-  background: rgba(7, 35, 60, 0.95);
+  background: var(--bg-primary, rgba(7, 35, 60, 0.95));
   backdrop-filter: blur(10px);
   position: fixed;
   top: 0;
   left: 0;
   z-index: 1000;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
   transition: all 0.3s ease;
 }
 
 .navbar.scrolled {
-  background: rgba(7, 35, 60, 0.85);
+  background: var(--bg-primary, rgba(7, 35, 60, 0.85));
+  opacity: 0.95;
 }
 
 .navbar.menu-open {
@@ -54,7 +55,7 @@
 }
 
 .nav-link {
-  color: #fff;
+  color: var(--text-primary, #fff);
   text-decoration: none;
   font-size: 1rem;
   font-weight: 500;
@@ -71,12 +72,12 @@
   left: 0;
   width: 0;
   height: 2px;
-  background: linear-gradient(90deg, #28c0f0, #1180b3);
+  background: var(--gradient-primary, linear-gradient(90deg, #28c0f0, #1180b3));
   transition: width 0.3s ease;
 }
 
 .nav-link:hover {
-  color: #28c0f0;
+  color: var(--primary-blue, #28c0f0);
 }
 
 .nav-link:hover::after {
@@ -99,19 +100,19 @@
 }
 
 .nav-button.login {
-  color: #fff;
+  color: var(--text-primary, #fff);
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.2));
 }
 
 .nav-button.login:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: var(--bg-hover, rgba(255, 255, 255, 0.1));
+  border-color: var(--border-color-hover, rgba(255, 255, 255, 0.3));
 }
 
 .nav-button.register {
-  background: linear-gradient(90deg, #28c0f0, #1180b3);
-  color: #fff;
+  background: var(--gradient-primary, linear-gradient(90deg, #28c0f0, #1180b3));
+  color: var(--text-primary, #fff);
   border: none;
 }
 
@@ -135,7 +136,7 @@
   display: block;
   height: 3px;
   width: 100%;
-  background-color: #fff;
+  background-color: var(--text-primary, #fff);
   border-radius: 3px;
   transition: all 0.3s ease;
 }
@@ -177,7 +178,7 @@
     top: 80px;
     left: 0;
     width: 100%;
-    background: rgba(7, 35, 60, 0.98);
+    background: var(--bg-primary, rgba(7, 35, 60, 0.98));
     backdrop-filter: blur(10px);
     flex-direction: column;
     align-items: center;
@@ -186,7 +187,7 @@
     opacity: 0;
     transition: all 0.3s ease;
     pointer-events: none;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md, 0 4px 6px rgba(0, 0, 0, 0.1));
   }
 
   .navbar-links.open {

@@ -1,0 +1,135 @@
+.theme-toggle {
+  position: fixed;
+  left: 18px;
+  bottom: 18px;
+  z-index: 9998;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.18));
+  background: var(--bg-card, rgba(20, 20, 25, 0.88));
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Ocultar botón de tema cuando hay un modal abierto */
+body:has(.wallet-popup-overlay) .theme-toggle:not(.theme-toggle-inline) {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
+}
+
+/* Variante inline para dashboard */
+.theme-toggle-inline {
+  position: relative;
+  left: auto;
+  bottom: auto;
+  width: 40px;
+  height: 40px;
+  margin-right: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.theme-toggle:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.42);
+  border-color: var(--border-color-hover, rgba(255, 255, 255, 0.28));
+  background: var(--bg-hover, rgba(25, 25, 32, 0.92));
+}
+
+.theme-toggle:active {
+  transform: translateY(0px) scale(0.99);
+}
+
+.theme-toggle-icon-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-toggle-icon {
+  font-size: 1.2rem;
+  color: var(--text-primary, #fff);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: absolute;
+}
+
+.sun-icon {
+  animation: rotateIn 0.3s ease-out;
+}
+
+.moon-icon {
+  animation: rotateIn 0.3s ease-out;
+}
+
+@keyframes rotateIn {
+  from {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+/* Responsive para FAB */
+@media (max-width: 768px) {
+  .theme-toggle:not(.theme-toggle-inline) {
+    width: 44px;
+    height: 44px;
+    left: 16px;
+    bottom: 16px;
+  }
+
+  .theme-toggle-icon {
+    font-size: 1.2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .theme-toggle:not(.theme-toggle-inline) {
+    width: 40px;
+    height: 40px;
+    left: 14px;
+    bottom: 14px;
+  }
+
+  .theme-toggle-icon {
+    font-size: 1.1rem;
+  }
+}
+
+/* Efecto de brillo en hover */
+.theme-toggle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: left 0.5s;
+}
+
+.theme-toggle:hover::before {
+  left: 100%;
+}
+

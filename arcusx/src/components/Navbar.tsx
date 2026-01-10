@@ -2,15 +2,19 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FaSignInAlt } from 'react-icons/fa';
 import '../css/Navbar.css';
-import logo from '../images/arcus-logo.png';
+import logoDark from '../images/arcus-logo.png';
+import logoLight from '../images/arcusxlogoclaro.png';
 import { useAuth } from '../hooks/useAuth';
 import { useI18n } from '../i18n/I18nProvider';
+import { useTheme } from '../contexts/ThemeContext';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { isAuthenticated, logout } = useAuth();
   const { t } = useI18n();
+  const { theme } = useTheme();
+  const logo = theme === 'light' ? logoLight : logoDark;
 
   useEffect(() => {
     const handleScroll = () => {

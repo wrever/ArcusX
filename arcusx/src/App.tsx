@@ -4,6 +4,7 @@ import { TrustlessWorkConfig } from '@trustless-work/escrow';
 import { TRUSTLESS_WORK_API_KEY, TRUSTLESS_WORK_BASE_URL } from './config/trustlessWork';
 import Navbar from './components/Navbar';
 import LanguageFab from './components/LanguageFab';
+import ThemeToggle from './components/ThemeToggle';
 import Hero from './components/Hero';
 import Login from './components/Login';
 import Register from './components/Register';
@@ -29,6 +30,7 @@ function AppContent({ isLoading }: { isLoading: boolean }) {
   return (
     <>
       <LanguageFab visible={location.pathname === '/'} />
+      <ThemeToggle visible={location.pathname === '/'} />
       {isLoading ? (
         <Preloader />
       ) : (

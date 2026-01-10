@@ -1,9 +1,14 @@
 import { Link } from 'react-router-dom';
 import { FaLinkedin, FaTwitter, FaInstagram } from 'react-icons/fa';
-import footerLogo from '../images/arcus-logo.png';
+import footerLogoDark from '../images/arcus-logo.png';
+import footerLogoLight from '../images/arcusxlogoclaro.png';
 import '../css/Hero.css';
+import { useTheme } from '../contexts/ThemeContext';
 
 const Footer = () => {
+  const { theme } = useTheme();
+  const footerLogo = theme === 'light' ? footerLogoLight : footerLogoDark;
+  
   return (
     <footer className="footer">
       <div className="footer-container">

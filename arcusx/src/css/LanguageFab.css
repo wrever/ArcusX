@@ -1,8 +1,8 @@
 .lang-fab{
   position: fixed;
-  left: 18px;
+  left: 80px;
   bottom: 18px;
-  z-index: 9999;
+  z-index: 9998;
 
   display: inline-flex;
   align-items: center;
@@ -10,21 +10,30 @@
 
   padding: 12px 14px;
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.18);
-  background: rgba(20, 20, 25, .88);
+  border: 1px solid var(--border-color, rgba(255,255,255,.18));
+  background: var(--bg-card, rgba(20, 20, 25, .88));
   backdrop-filter: blur(10px);
 
-  color: #fff;
+  color: var(--text-primary, #fff);
   cursor: pointer;
   box-shadow: 0 12px 28px rgba(0,0,0,.35);
   transition: transform .15s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease;
 }
 
+/* Ocultar botón de idioma cuando hay un modal abierto */
+body:has(.wallet-popup-overlay) .lang-fab {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
+}
+
 .lang-fab:hover{
   transform: translateY(-2px);
   box-shadow: 0 16px 34px rgba(0,0,0,.42);
-  background: rgba(25, 25, 32, .92);
-  border-color: rgba(255,255,255,.28);
+  background: var(--bg-hover, rgba(25, 25, 32, .92));
+  border-color: var(--border-color-hover, rgba(255,255,255,.28));
 }
 
 .lang-fab:active{
