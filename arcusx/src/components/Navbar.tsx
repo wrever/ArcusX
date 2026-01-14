@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FaSignInAlt } from 'react-icons/fa';
 import '../css/Navbar.css';
 import logoDark from '../images/arcus-logo.png';
 import logoLight from '../images/arcusxlogoclaro.png';
@@ -37,13 +36,6 @@ const Navbar = () => {
     setIsMenuOpen(false);
   };
 
-  const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-      closeMenu();
-    }
-  };
 
   const handleLogout = async () => {
     try {
@@ -71,40 +63,45 @@ const Navbar = () => {
         </div>
         
         <div className={`navbar-links ${isMenuOpen ? 'open' : ''}`}>
-          <a onClick={() => scrollToSection('problematica')} className="nav-link">
-            {t('nav.problem')}
+          <Link to="/swap" className="nav-link" onClick={closeMenu}>
+            {t('nav.swap')}
+          </Link>
+          <a 
+            href="https://docs.arcusx.pro" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="nav-link"
+            onClick={closeMenu}
+          >
+            {t('nav.docs')}
           </a>
-          <a onClick={() => scrollToSection('solucion')} className="nav-link">
-            {t('nav.solution')}
-          </a>
-          <a onClick={() => scrollToSection('caracteristicas')} className="nav-link">
-            {t('nav.features')}
-          </a>
-          <a onClick={() => scrollToSection('equipo')} className="nav-link">
-            {t('nav.team')}
-          </a>
-          <a onClick={() => scrollToSection('faq')} className="nav-link">
-            {t('nav.faq')}
+          <a 
+            href="https://github.com/ArcusX" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            className="nav-link"
+            onClick={closeMenu}
+          >
+            {t('nav.github')}
           </a>
           
           {isAuthenticated ? (
             <>
               <Link to="/dashboard" className="nav-button login" onClick={closeMenu}>
-                Dashboard
+                {t('nav.dashboard')}
               </Link>
               <button onClick={handleLogout} className="nav-button register">
-                Cerrar Sesión
+                {t('nav.logout')}
               </button>
             </>
           ) : (
             <>
-          <Link to="/login" className="nav-button login" onClick={closeMenu}>
-            <FaSignInAlt style={{ marginRight: '6px' }} />
-            {t('nav.login')}
-          </Link>
-          <Link to="/register" className="nav-button register" onClick={closeMenu}>
-            {t('nav.register')}
-          </Link>
+              <Link to="/login" className="nav-button login" onClick={closeMenu}>
+                {t('nav.login')}
+              </Link>
+              <Link to="/register" className="nav-button register" onClick={closeMenu}>
+                {t('nav.register')}
+              </Link>
             </>
           )}
         </div>

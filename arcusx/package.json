@@ -17,6 +17,7 @@
     "@emotion/styled": "^11.14.0",
     "@paper-design/shaders-react": "^0.0.68",
     "@react-three/fiber": "^9.5.0",
+    "@soroswap/sdk": "^0.3.8",
     "@stellar/stellar-sdk": "^11.2.2",
     "@supabase/supabase-js": "^2.78.0",
     "@trustless-work/escrow": "^3.0.2",

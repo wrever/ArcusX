@@ -1,0 +1,46 @@
+/* ============================================
+   SWAP DETAILS STYLES
+   ============================================ */
+
+.swap-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: var(--bg-tertiary);
+  border-radius: 12px;
+  margin-top: 0.5rem;
+}
+
+.swap-details-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+
+.swap-details-label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.swap-details-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.swap-details-value.warning {
+  color: #f59e0b;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .swap-details {
+    padding: 0.75rem;
+  }
+
+  .swap-details-row {
+    font-size: 0.85rem;
+  }
+}

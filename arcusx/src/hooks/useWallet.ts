@@ -66,6 +66,10 @@ export const useWallet = () => {
     setWalletState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
+      // Verificar si ya hay una wallet guardada
+      const savedWallet = localStorage.getItem('stellar_wallet');
+      const wasAlreadyConnected = savedWallet && JSON.parse(savedWallet).connected;
+
       // Intentar conectar directamente con Freighter
       kit.setWallet('freighter');
       const { address } = await kit.getAddress();
@@ -87,6 +91,11 @@ export const useWallet = () => {
         connected: true,
         walletType: 'stellar'
       }));
+
+      // Recargar la página solo si es la primera conexión (no estaba guardada antes)
+      if (!wasAlreadyConnected) {
+        window.location.reload();
+      }
 
     } catch (error: any) {
       setWalletState(prev => ({
