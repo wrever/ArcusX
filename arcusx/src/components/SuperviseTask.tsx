@@ -900,7 +900,7 @@ const SuperviseTask = () => {
         };
 
         const result = await approveMilestoneTrustlessEscrow(
-                       task.escrow_id,
+                    task.escrow_id,
             '0',
                        address,
             kit,
@@ -926,21 +926,21 @@ const SuperviseTask = () => {
             setLastEscrowFetch(0);
         }
 
-        return result;
-    };
-
+                    return result;
+                };
+                
     const handleReleaseFunds = async (): Promise<{ success: boolean; txHash?: string; error?: string; alreadyReleased?: boolean }> => {
         if (!task || !task.escrow_id || !address || !kit) {
             throw new Error('Wallet no conectada o datos faltantes');
         }
 
         const result = await releaseFundsTrustlessEscrow(
-            task.escrow_id,
+                    task.escrow_id,
             address,
-            kit,
-            releaseFunds,
-            sendTransaction
-        );
+                    kit,
+                    releaseFunds,
+                    sendTransaction
+                );
 
         return result;
     };
@@ -1000,7 +1000,7 @@ const SuperviseTask = () => {
             }
 
             const response = await axios.post(`${API_URL}/auth/complete_task.php`, {
-                                    task_id: parseInt(taskId!, 10),
+                task_id: parseInt(taskId!, 10),
                 action: 'accept',
                 escrow_completed: escrowCompleted,
                 tx_hash: null
@@ -1069,8 +1069,8 @@ const SuperviseTask = () => {
                 } else {
                     setError(checkResult.reason || 'No puedes cancelar esta tarea');
                 }
-                return;
-            }
+            return;
+        }
 
             // 2. Si está permitida, mostrar popup de confirmación
             setConfirmDialogConfig({
@@ -1248,7 +1248,7 @@ const SuperviseTask = () => {
                 // Cerrar el popup de firma si está abierto
                 setShowRefundSignature(false);
                 setRefundTransaction(null);
-                    } else {
+            } else {
                 setError('Error al cancelar tarea: ' + errorMessage);
             }
             setCancellingTask(false);
@@ -1352,7 +1352,7 @@ const SuperviseTask = () => {
             
             setError('Error al retirar fondos: ' + errorMessage);
         } finally {
-        setWithdrawingFunds(false);
+            setWithdrawingFunds(false);
         }
     };
 
@@ -1765,8 +1765,8 @@ const SuperviseTask = () => {
     } else if (isClient && task.client_accepted_completion === 1) {
         //  Solo mostrar este mensaje si el escrow está activo
         if (task.escrow_id && task.escrow_status === 'active') {
-            buttonText = 'Esperando confirmación del trabajador';
-            isButtonDisabled = true;
+        buttonText = 'Esperando confirmación del trabajador';
+        isButtonDisabled = true;
         } else {
             buttonText = 'Tarea Resuelta';
             isButtonDisabled = true;
@@ -1774,8 +1774,8 @@ const SuperviseTask = () => {
     } else if (isWorker && task.worker_accepted_completion === 1) {
         //  Solo mostrar este mensaje si el escrow está activo
         if (task.escrow_id && task.escrow_status === 'active') {
-            buttonText = 'Esperando confirmación del cliente';
-            isButtonDisabled = true;
+        buttonText = 'Esperando confirmación del cliente';
+        isButtonDisabled = true;
         } else {
             buttonText = 'Tarea Resuelta';
             isButtonDisabled = true;
@@ -1784,8 +1784,8 @@ const SuperviseTask = () => {
         // El trabajador puede marcar como completado para notificar al cliente
         //  Solo si el escrow está activo
         if (task.escrow_id && task.escrow_status === 'active') {
-            buttonText = 'Marcar como Completado';
-            isButtonDisabled = false; // Permitir que el trabajador marque como completado
+        buttonText = 'Marcar como Completado';
+        isButtonDisabled = false; // Permitir que el trabajador marque como completado
         } else {
             buttonText = 'Tarea Resuelta';
             isButtonDisabled = true;
@@ -2159,14 +2159,14 @@ const SuperviseTask = () => {
                                      task.status !== 'cancelled' &&
                                      task.status !== 'disputed' &&
                                      !(hasExistingDispute || isRefunded || isResolved) ? (
-                                <>
-                                    <button 
-                                        className="btn-success"
-                                        onClick={handleAcceptWork}
-                                        disabled={acceptingWork || !isConnected}
-                                    >
+                                        <>
+                                            <button 
+                                                className="btn-success"
+                                                onClick={handleAcceptWork}
+                                                disabled={acceptingWork || !isConnected}
+                                            >
                                         {acceptingWork ? 'Procesando...' : ' Aceptar Trabajo (Liberar Fondos)'}
-                                    </button>
+                                            </button>
                                     {/*  PROTECCIÓN: Ocultar botón de cancelar si hay archivos subidos por el trabajador */}
                                     {/* Esto protege a los trabajadores que han entregado su trabajo correctamente */}
                                     {(() => {
@@ -2176,13 +2176,13 @@ const SuperviseTask = () => {
                                         if (!hasFiles) {
                                             // Si no hay archivos, mostrar el botón de cancelar normalmente
                                             return (
-                                                <button 
-                                                    className="btn-danger"
-                                                    onClick={handleCancelTask}
-                                                    disabled={cancellingTask || checkingCancellation || !isConnected}
-                                                >
+                                            <button 
+                                                className="btn-danger"
+                                                onClick={handleCancelTask}
+                                                disabled={cancellingTask || checkingCancellation || !isConnected}
+                                            >
                                                     {checkingCancellation ? 'Verificando...' : cancellingTask ? 'Procesando...' : ' Cancelar Tarea (Reembolsar)'}
-                                                </button>
+                                            </button>
                                             );
                                         }
                                         
@@ -2253,8 +2253,8 @@ const SuperviseTask = () => {
                                                 </div>
                                             )}
                                             {isRefunded && !isResolved && task.escrow_status !== 'resolved' && task.status !== 'resolved' && (
-                                                <div style={{
-                                                    padding: '15px',
+                                        <div style={{
+                                            padding: '15px',
                                                     marginTop: '15px',
                                                     backgroundColor: '#d4edda',
                                                     border: '2px solid #28a745',
@@ -2267,8 +2267,8 @@ const SuperviseTask = () => {
                                                     </strong>
                                                     <p style={{ margin: 0, fontSize: '14px' }}>
                                                         Esta tarea ha sido reembolsada completamente. Los botones de aceptar y cancelar han sido deshabilitados.
-                                                    </p>
-                                                </div>
+                                            </p>
+                                        </div>
                                             )}
                                         </>
                                     )}

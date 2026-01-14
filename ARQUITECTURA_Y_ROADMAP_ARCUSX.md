@@ -515,7 +515,6 @@ La arquitectura futura de ArcusX está diseñada para **escalar horizontalmente*
 - ⏳ **Sección de Tutoriales y Guías** (PRIORIDAD - Feature Principal) - **PENDIENTE**
   - ⏳ Página dedicada a tutoriales
   - ⏳ Sistema de videos integrados (YouTube/Vimeo embeds)
-  - ⏳ Categorías de tutoriales (Cómo empezar, Uso de Escrow, Resolución de disputas, etc.)
   - ⏳ Videos grabados por el equipo
   - ⏳ Guías paso a paso escritas
   - ⏳ Sección destacada en landing page
