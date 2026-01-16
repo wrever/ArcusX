@@ -22,16 +22,18 @@ import ProtectedRoute from './components/ProtectedRoute';
 import UserProfile from './components/UserProfile';
 import EditProfile from './components/EditProfile';
 import SwapPage from './pages/SwapPage';
+import TutorialsPage from './pages/TutorialsPage';
 import './App.css';
 
 
 function AppContent({ isLoading }: { isLoading: boolean }) {
   const location = useLocation();
+  const showFloatingButtons = ['/', '/swap', '/tutoriales'].includes(location.pathname);
 
   return (
     <>
-      <LanguageFab visible={location.pathname === '/'} />
-      <ThemeToggle visible={location.pathname === '/'} />
+      <LanguageFab visible={showFloatingButtons} />
+      <ThemeToggle visible={showFloatingButtons} />
       {isLoading ? (
         <Preloader />
       ) : (
@@ -54,6 +56,7 @@ function AppContent({ isLoading }: { isLoading: boolean }) {
             <Route path="/profile/:userId" element={<UserProfile />} />
             <Route path="/dashboard/settings/profile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
             <Route path="/swap" element={<><Navbar /><SwapPage /></>} />
+            <Route path="/tutoriales" element={<><Navbar /><TutorialsPage /></>} />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminRoute><AdminPanel isAdmin={true} /></AdminRoute>} />
             <Route path="/admin" element={<Navigate to="/admin/login" replace />} />

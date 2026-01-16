@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FaExchangeAlt, FaInfoCircle, FaExclamationTriangle } from 'react-icons/fa';
+import { FaInfoCircle, FaExclamationTriangle } from 'react-icons/fa';
 import { useI18n } from '../i18n/I18nProvider';
 import { useWallet } from '../hooks/useWallet';
 import SwapInputGroup from './SwapInputGroup';
@@ -64,7 +64,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ swap }) => {
             disabled={!isConnected}
             aria-label={t('swap.swapTokens')}
           >
-            <FaExchangeAlt />
+            <span className="swap-icon-symbol">⇄</span>
           </button>
         </div>
 

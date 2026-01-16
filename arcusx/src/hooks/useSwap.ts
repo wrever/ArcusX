@@ -261,7 +261,7 @@ export const useSwap = () => {
         assetOut,
         amount: amountInStroops,
         tradeType: 'EXACT_IN',
-        slippageBps: 150, // Siempre 150 (1.5%) según especificaciones de soporte de Soroswap
+        slippageBps: 300, // 300 (3%) para mejores resultados
         maxHops: 7, // Según especificaciones de soporte de Soroswap
         // No pasar gaslessTrustline por defecto - solo si el usuario no tiene trustline
       });

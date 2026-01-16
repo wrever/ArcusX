@@ -1,0 +1,911 @@
+Soroswap Logo
+Search...
+🚀 Soroswap API
+📋 What You Can Do
+App
+Auth
+API Keys
+Quote
+Pools
+AssetList
+Price
+Liquidity
+redocly logoAPI docs by Redocly
+Soroswap API (1.0)
+Download OpenAPI specification:Download
+
+🚀 Soroswap API
+Soroswap.Finance is both an Automated Market Maker (AMM) and a DEX Aggregator on the Stellar blockchain.
+
+It aggregates liquidity from Soroban DEXes (Soroswap, Phoenix, Aqua and Comet(TBA)), and the Stellar Classic DEX — giving you the best trade routes, liquidity tools, and real-time market data.
+
+📋 What You Can Do
+🔄 Quote – Get the best trade route between two assets with split-routing logic across AMMs and SDEX.
+🧱 Build – Generate and simulate unsigned transactions (XDR) for swaps or liquidity actions.
+🚀 Send – Submit signed transactions via RPC — or swap completely gasless with Launchtube.
+⚡ Gasless Trustlines – Use gaslessTrustline in /quote to open trustlines for users without requiring them to hold XLM or deal with trustline setup themselves.
+💰 Platform Fees – Add your own fee to user swaps with platformFee.
+💧 Liquidity – Create LPs, add liquidity, remove liquidity.
+💲 Price – Get real-time token prices.
+🧠 Pools – View detailed pool information for Soroswap AMM.
+📮 Downnload the Postman Collection here
+
+App
+Health
+Checks if the indexer is up and running, and returns which protocols are available for quote requests on each network (mainnet/testnet)
+
+Responses
+200 Health check result - Shows indexer status and available protocols per network
+
+get
+/health
+Response samples
+200
+Content type
+application/json
+
+Copy
+Expand allCollapse all
+{
+"status": {
+"indexer": {},
+"reachable": true
+}
+}
+Testnet tokens
+These tokens are for using in testnet, they have already pools created on soroswap and you can mint them on the soroswap frontend while connected on testnet
+
+Responses
+200 List of tokens available by network
+
+get
+/api/tokens
+Response samples
+200
+Content type
+application/json
+
+Copy
+Expand allCollapse all
+[
+{
+"network": "mainnet",
+"assets": [ ]
+},
+{
+"network": "testnet",
+"assets": []
+},
+{
+"network": "standalone",
+"assets": [ ]
+}
+]
+Soroswap contracts
+Returns the actual contract address for Soroswap contracts on the specified network. Available contracts: factory, router, aggregator. Available networks: mainnet, testnet
+
+path Parameters
+network
+required
+string
+contractName
+required
+string
+Responses
+200 Soroswap contract address for the specified network and contract type
+
+get
+/api/{network}/{contractName}
+Response samples
+200
+Content type
+application/json
+
+Copy
+{
+"address": "CA4HEQTL2WPEUYKYKCDOHCDNIV4QHNJ7EL4J4NQ6VADP7SYHVRYZ7AW2"
+}
+AppController_faucet
+query Parameters
+address
+required
+string
+contract
+required
+string
+Responses
+201
+
+post
+/api/faucet
+Auth
+Register a new user
+Creates a new user account in the system. The account will be disabled until it is activated by an administrator.
+
+Request Body schema: application/json
+required
+username
+required
+string
+User username
+
+password
+required
+string
+User password
+
+email
+required
+string
+User email address
+
+Responses
+201 User registered successfully
+409 The email address is already registered in the system
+
+post
+/register
+Request samples
+Payload
+Content type
+application/json
+
+Copy
+{
+"username": "user",
+"password": "StrongPassword123!",
+"email": "user@example.com"
+}
+Response samples
+201
+Content type
+application/json
+
+Copy
+{
+"message": "User test@example.com registered"
+}
+Login
+Authenticates the user and returns access and refresh tokens
+
+Request Body schema: application/json
+required
+email
+required
+string
+password
+required
+string
+Responses
+200 Login successful
+403 Invalid credentials or disabled account
+
+post
+/login
+Request samples
+Payload
+Content type
+application/json
+
+Copy
+{
+"email": "test@example.com",
+"password": "StrongPassword123!"
+}
+Response samples
+200
+Content type
+application/json
+
+Copy
+{
+"username": "test@example.com",
+"role": "USER",
+"access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+"refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+Refresh access token
+Generates a new pair of tokens using the refresh token. Pass the refresh token in the Authorization header as Bearer token.
+
+Authorizations:
+bearer
+Responses
+200 Tokens refreshed successfully
+403 Invalid or expired refresh token
+
+post
+/refresh
+Response samples
+200
+Content type
+application/json
+
+Copy
+{
+"username": "test@example.com",
+"role": "USER",
+"access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+"refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+API Keys
+Generate API Key
+Generates a new API key for the authenticated user. Only one API key per user is allowed - generating a new one will revoke the previous one.
+
+Authorizations:
+bearer
+Request Body schema: application/json
+required
+name	
+string
+Optional name for the API key
+
+Responses
+201 API key generated successfully
+
+post
+/api-keys/generate
+Request samples
+Payload
+Content type
+application/json
+
+Copy
+{
+"name": "My Server API Key"
+}
+Response samples
+201
+Content type
+application/json
+
+Copy
+{
+"key": "sk_1234567890abcdef...",
+"id": 1
+}
+Get API Keys
+Retrieves all API keys for the authenticated user
+
+Authorizations:
+bearer
+Responses
+200 API keys retrieved successfully
+
+get
+/api-keys
+Response samples
+200
+Content type
+application/json
+
+Copy
+Expand allCollapse all
+[
+{
+"id": 0,
+"name": "string",
+"key": "string",
+"createdAt": "string",
+"lastUsedAt": "string"
+}
+]
+Revoke API Key
+Revokes an API key for the authenticated user
+
+Authorizations:
+bearer
+Responses
+200 API key revoked successfully
+
+post
+/api-keys/{keyId}/revoke
+Response samples
+200
+Content type
+application/json
+
+Copy
+{
+"success": true
+}
+Quote
+Available protocols
+Returns the list of protocols available to get quotes on the specified network
+
+query Parameters
+network	
+string
+Enum: "testnet" "mainnet"
+Network on which the operation will be performed
+
+Responses
+200 List of available protocols
+400 Error getting protocols
+
+get
+/protocols
+Response samples
+200
+Content type
+application/json
+
+Copy
+[
+"soroswap",
+"phoenix",
+"aqua",
+"sdex"
+]
+Quote
+Calculates the best price for a given swap by aggregating liquidity from multiple protocols on the Stellar blockchain.
+
+It finds the optimal path to execute the swap through the Soroswap Aggregator, splitting the trade across several routes to secure the best rate.
+
+⚡ Gasless Trustline Feature:
+This feature lets your users open a trustline without needing to understand what a trustline is or how much it costs. Then, the /build endpoint will create the transaction with all the needed operations.
+
+When enabled, the Soroswap API will return a quote that includes an additional swap to purchase 0.5 XLM to cover the trustline creation cost.
+
+The quote will also include the trustline cost expressed in both assetIn and assetOut, so you can display this information to the user if desired (see the response schema for details).
+
+query Parameters
+network	
+string
+Enum: "testnet" "mainnet"
+Network on which the operation will be performed
+
+Request Body schema: application/json
+required
+Data required to perform the swap
+
+assetIn
+required
+string
+Input asset contract address
+
+assetOut
+required
+string
+Output asset contract address
+
+amount
+required
+integer <int64>
+Expected input amount in stroops
+
+tradeType
+required
+string
+Enum: "EXACT_IN" "EXACT_OUT"
+Type of trade: EXACT_IN = input fixed; EXACT_OUT = output fixed
+
+protocols
+required
+Array of arrays
+Array of protocols to aggregate liquidity from
+
+parts	
+number
+Number of route splits for optimization. Higher values improve price discovery but increase latency. Max: 1000..
+
+slippageBps	
+number
+Slippage tolerance in basis points (bps). 10000 = 100%, 100 = 1%, 50 = 0.5%. Default is 50 bps (0.5%)
+
+maxHops	
+number
+Maximum number of hops to aggregate liquidity from
+
+assetList	
+Array of strings
+Restricts intermediate tokens to a specific list. Only useful for Soroban transactions (Router and Aggregator). Not useful for SDEX.
+
+feeBps	
+number
+Platform/referral fee in basis points. Splitted between platform and soroswap, fee in basis points (bps). 10000 = 100%, 100 = 1%, 50 = 0.5%
+
+gaslessTrustline	
+string
+Whether to use gasless trustline swap. Only use this if you are sure that the user does not have a trustline for the output asset and if you have an sponsor account.
+
+Responses
+200 Found quote
+400 Error in input parameters or route not found
+
+post
+/quote
+Request samples
+Payload
+Content type
+application/json
+
+Copy
+Expand allCollapse all
+{
+"assetIn": "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA",
+"assetOut": "CDTKPWPLOURQA2SGTKTUQOWRCBZEORB4BWBOMJ3D3ZTQQSGE5F6JBQLV",
+"amount": "10000000",
+"tradeType": "EXACT_IN",
+"protocols": [
+"soroswap",
+"aqua"
+],
+"slippageBps": "50",
+"parts": 10,
+"maxHops": 2,
+"assetList": [
+"SOROSWAP",
+"STELLAR_EXPERT"
+],
+"feeBps": 50,
+"gaslessTrustline": "create"
+}
+Response samples
+200
+Content type
+application/json
+Example
+
+Regular Quote Response
+Regular Quote Response
+
+Copy
+Expand allCollapse all
+{
+"assetIn": "CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75",
+"assetOut": "CDTKPWPLOURQA2SGTKTUQOWRCBZEORB4BWBOMJ3D3ZTQQSGE5F6JBQLV",
+"amountIn": "10000000",
+"amountOut": 9067253,
+"otherAmountThreshold": 9067253,
+"tradeType": "EXACT_IN",
+"priceImpactPct": "0.50",
+"platform": "aggregator",
+"rawTrade": {
+"amountIn": "10000000",
+"amountOutMin": 9067253,
+"distribution": []
+},
+"routePlan": [
+{}
+],
+"platformFee": {
+"feeBps": 50,
+"feeAmount": 50000
+}
+}
+Build
+Builds an unsigned XDR for a quote.
+
+If Gasless Trustline Swap is enabled, the XDR must be signed by both the user and the sponsor.
+
+⚡ Gasless Trustline Flow
+When enabled, the transaction will include all the operations required to perform the swap, plus extra operations to:
+
+💰 Buy 0.5 XLM — The user purchases 0.5 XLM and sends it to the sponsor wallet.
+🛡 Sponsor Trustline Reserve — The sponsor wallet covers the reserve required to open the user’s trustline.
+Note: The gaslessTrustline feature only works with a swap on the Stellar Classic DEX, and will be applied only to the first swap for a specific user.
+
+query Parameters
+network	
+string
+Enum: "testnet" "mainnet"
+Network on which the operation will be performed
+
+Request Body schema: application/json
+required
+Data required to build the quote
+
+quote
+required
+object
+The quote to build the XDR for
+
+from	
+string
+The wallet address that will send the funds
+
+to	
+string
+The wallet address that will receive the funds. If Gasless Trustline Swap is enabled, this is the wallet address must be the same as the from address (hence, don't provide this parameter)
+
+referralId	
+string
+The referral id wallet address (required when feeBps is provided)
+
+sponsor	
+string
+The wallet address that will sponsor the transaction. Only required for Gasless Trustline Swap and Soroban sponsored transactions
+
+signedUserXdr	
+string
+The signed transaction XDR from Step 1 of Soroban sponsored transactions. Required for Step 2 when sponsor is provided for non-SDEX platforms.
+
+Responses
+200 XDR built successfully
+400 Invalid quote data or missing required fields
+428 Precondition Required - Multi-step action needed
+
+post
+/quote/build
+Request samples
+Payload
+Content type
+application/json
+Example
+
+Data required to build the XDR for a regular EXACT_IN aggregator swap
+Data required to build the XDR for a regular EXACT_IN aggregator swap
+
+Copy
+Expand allCollapse all
+{
+"quote": {
+"assetIn": "CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75",
+"assetOut": "CDTKPWPLOURQA2SGTKTUQOWRCBZEORB4BWBOMJ3D3ZTQQSGE5F6JBQLV",
+"amountIn": "10000000",
+"amountOut": "9067253",
+"otherAmountThreshold": "9067253",
+"tradeType": "EXACT_IN",
+"priceImpactPct": "0.50",
+"platform": "aggregator",
+"rawTrade": {},
+"routePlan": []
+},
+"to": "GCSQJ7TCEVWXK2JZPTTTCJCVZZNMQXEJWVHIOCUAQHWNJSXKHX7OHVUW",
+"from": "GBQJ4HBCQHJQKSKNT3JRKC5VKA3QJUXBVFWIVSMHKPQSJ7XP2IXTCAAK"
+}
+Response samples
+200428
+Content type
+application/json
+
+Copy
+{
+"xdr": "AAAAAgAAAAB8shYDi1JO9x2/3jMeVzK2IGtrsFVWLCL4uHRJf+YPyAAAA+gCzi7HAAAApgAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAGAAAAAAAAAABc12cL..."
+}
+Send
+This endpoint allows users to send pre-signed Soroswap transactions to the Stellar Blockchain using Soroswaps RPC. When using Soroban platforms (Router and Aggregator), this endpoint allows to use Launchtube, and hence, and avoid gas fees.
+
+query Parameters
+network	
+string
+Enum: "testnet" "mainnet"
+Network on which the operation will be performed
+
+Request Body schema: application/json
+required
+Data of the signed transaction
+
+xdr
+required
+string
+The signed transaction in XDR format
+
+launchtube
+required
+boolean
+Whether to use launchtube or not
+
+Responses
+200 Transaction sent successfully to the blockchain
+400 Invalid transaction or signature
+
+post
+/send
+Request samples
+Payload
+Content type
+application/json
+
+Copy
+{
+"xdr": "AAAAAgAAAABiSu3MsKtQvDuQO5i2b...",
+"launchtube": false
+}
+Response samples
+200
+Content type
+application/json
+
+Copy
+{
+"hash": "0x123...",
+"status": "success"
+}
+Pools
+Pools
+Retrieves the pools available for a specific network and protocol.
+
+GET /pools?network=MAINNET&protocol=SOROSWAP&assetList=SOROSWAP,AQUA
+query Parameters
+network
+required
+string
+Enum: "testnet" "mainnet"
+Network in which the pairs will be searched
+
+protocol
+required
+Array of strings
+Protocol in which the pairs will be searched
+
+assetList	
+Array of strings
+Filter pairs by asset lists (e.g. SOROSWAP, AQUA, STELLAR_EXPERT, LOBSTR)
+
+Responses
+200 Returns an array of pools
+400 Bad Request
+502 Invalid request
+
+get
+/pools
+Response samples
+200
+Content type
+application/json
+
+Copy
+Expand allCollapse all
+[
+{
+"protocol": "soroswap",
+"address": "CAM7DY53G63XA4AJRS24Z6VFYAFSSF76C3RZ45BE5YU3FQS5255OOABP",
+"tokenA": "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA",
+"tokenB": "CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75",
+"reserveA": "4286614183151",
+"reserveB": "1009473414112",
+"ledger": 57727251
+}
+]
+Pool for two tokens
+Retrieves the pool for the given tokens
+
+path Parameters
+tokenA
+required
+string
+tokenB
+required
+string
+query Parameters
+network
+required
+string
+Enum: "testnet" "mainnet"
+protocol
+required
+Array of strings
+Responses
+200 Returns an array of pools
+400 Bad Request
+
+get
+/pools/{tokenA}/{tokenB}
+Response samples
+200
+Content type
+application/json
+
+Copy
+Expand allCollapse all
+[
+{
+"protocol": "soroswap",
+"address": "CAM7DY53G63XA4AJRS24Z6VFYAFSSF76C3RZ45BE5YU3FQS5255OOABP",
+"tokenA": "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA",
+"tokenB": "CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75",
+"reserveA": "4286614183151",
+"reserveB": "1009473414112",
+"ledger": 57727251
+}
+]
+AssetList
+Get asset lists
+Get all available asset lists or a specific list by name. If no name is provided, returns metadata for all available lists. If a name is provided, returns the complete asset list with all assets.
+
+query Parameters
+name	
+string
+Enum: "SOROSWAP" "STELLAR_EXPERT" "LOBSTR" "AQUA" "ALL"
+Name of the specific asset list to retrieve. Use "ALL" to get all tokens from the database.
+
+Responses
+200 Asset list metadata (when no name provided) or complete asset list (when name provided)
+404 Asset list not found
+
+get
+/asset-list
+Response samples
+200
+Content type
+application/json
+
+Copy
+Expand allCollapse all
+{
+"name": "SOROSWAP Asset List",
+"provider": "Soroswap",
+"description": "Official Soroswap asset list",
+"assets": [
+{}
+]
+}
+Price
+Price information
+Retrieves the price of one or more assets in relation to a reference currency.
+
+Example of query: GET /price?network=MAINNET&asset=CB64D3G7SM2RTH6JSGG34DDTFTQ5CFDKVDZJZSODMCX4NJ2HV2KN7OHT&referenceCurrency=USD
+query Parameters
+network
+required
+string
+Enum: "testnet" "mainnet"
+Network in which the price will be searched
+
+asset
+required
+Array of strings
+Example: asset=CB64D3G7SM2RTH6JSGG34DDTFTQ5CFDKVDZJZSODMCX4NJ2HV2KN7OHT
+Asset contract address or list separated by commas
+
+referenceCurrency	
+any
+Example: referenceCurrency=USD
+Reference currency (default USD)
+
+Responses
+200 Returns the price data. Always uses the asset contract address.
+
+get
+/price
+Response samples
+200
+Content type
+application/json
+
+Copy
+Expand allCollapse all
+[
+{
+"asset": "CB64D3G7SM2RTH6JSGG34DDTFTQ5CFDKVDZJZSODMCX4NJ2HV2KN7OHT",
+"referenceCurrency": "USD",
+"price": "1.000000"
+}
+]
+Liquidity
+Add liquidity to a pool
+query Parameters
+network
+required
+string
+Request Body schema: application/json
+required
+assetA
+required
+string
+assetB
+required
+string
+amountA
+required
+integer <int64>
+amountB
+required
+integer <int64>
+to
+required
+string
+slippageBps	
+string
+Slippage tolerance in basis points (bps). 10000 = 100%, 100 = 1%, 50 = 0.5%. Default is 50 bps (0.5%)
+
+Responses
+200 Returns the transaction xdr and information about the pool
+400 Bad Request
+
+post
+/liquidity/add
+Request samples
+Payload
+Content type
+application/json
+
+Copy
+{
+"assetA": "CAS3J7GY...",
+"assetB": "CCW67TSZ...",
+"amountA": "10000000",
+"amountB": "10000000",
+"to": "GALAXYVOID...",
+"slippageBps": "50"
+}
+Remove liquidity from a pool
+query Parameters
+network
+required
+string
+Request Body schema: application/json
+required
+assetA
+required
+string
+assetB
+required
+string
+liquidity
+required
+integer <int64>
+amountA
+required
+integer <int64>
+amountB
+required
+integer <int64>
+to
+required
+string
+slippageBps	
+string
+Slippage tolerance in basis points (bps). 10000 = 100%, 100 = 1%, 50 = 0.5%. Default is 50 bps (0.5%)
+
+Responses
+200 Returns the transaction xdr and information about the pool
+400 Bad Request
+
+post
+/liquidity/remove
+Request samples
+Payload
+Content type
+application/json
+
+Copy
+{
+"assetA": "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA",
+"assetB": "CCW67TSZV3SSS2HXMBQ5JFGCKJNXKZM7UQUWUZPUTHXSTZLEO7SJMI75",
+"liquidity": "10000000",
+"amountA": "10000000",
+"amountB": "10000000",
+"to": "GALAXYVOIDAOPZTDLHILAJQKCVVFMD4IKLXLSZV5YHO7VY74IWZILUTO",
+"slippageBps": "50"
+}
+Get user positions in pools
+Retrieves all liquidity positions for a specific user address with detailed pool information and calculations.
+
+Example: GET /liquidity/positions/GALAXYVOIDAOPZTDLHILAJQKCVVFMD4IKLXLSZV5YHO7VY74IWZILUTO?network=mainnet
+
+path Parameters
+address
+required
+string
+query Parameters
+network
+required
+string
+Enum: "mainnet" "testnet"
+Network to query positions on
+
+Responses
+200 Returns an array of user positions with enriched pool information including token details and position metrics
+400 Bad Request
+503 Service Unavailable - Error fetching pool details
+
+get
+/liquidity/positions/{address}
+Response samples
+200
+Content type
+application/json
+
+Copy
+Expand allCollapse all
+[
+{
+"poolInfo": {},
+"userPosition": "18305475",
+"userShares": 0.15,
+"tokenAAmountEquivalent": "642992127472",
+"tokenBAmountEquivalent": "151421012116"
+}
+]

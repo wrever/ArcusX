@@ -1,0 +1,18 @@
+/* Tutorials Page Styles */
+.tutorials-page {
+  min-height: 100vh;
+  padding-top: 100px;
+  padding-bottom: 4rem;
+  background: var(--bg-primary, rgba(7, 35, 60, 1));
+}
+
+.tutorials-page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/* Light mode support */
+:root[data-theme="light"] .tutorials-page {
+  background: var(--bg-primary-light, #f8fafc);
+}
