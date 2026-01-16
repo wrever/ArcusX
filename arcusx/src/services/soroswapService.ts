@@ -373,7 +373,7 @@ class SoroswapService {
         amount: amountStr, // String según ejemplo de Postman
         tradeType: params.tradeType || 'EXACT_IN',
         protocols: protocols,
-        slippageBps: params.slippageBps || 150, // 1.5% por defecto según soporte
+        slippageBps: params.slippageBps || 300, // 3% por defecto para mejores resultados
         maxHops: params.maxHops || 7, // 7 según soporte oficial
         ...(params.gaslessTrustline && { gaslessTrustline: params.gaslessTrustline })
       };

@@ -63,8 +63,14 @@ const Navbar = () => {
         </div>
         
         <div className={`navbar-links ${isMenuOpen ? 'open' : ''}`}>
+          <Link to="/" className="nav-link" onClick={closeMenu}>
+            {t('nav.home')}
+          </Link>
           <Link to="/swap" className="nav-link" onClick={closeMenu}>
             {t('nav.swap')}
+          </Link>
+          <Link to="/tutoriales" className="nav-link" onClick={closeMenu}>
+            {t('nav.tutorials')}
           </Link>
           <a 
             href="https://docs.arcusx.pro" 
@@ -74,15 +80,6 @@ const Navbar = () => {
             onClick={closeMenu}
           >
             {t('nav.docs')}
-          </a>
-          <a 
-            href="https://github.com/ArcusX" 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            className="nav-link"
-            onClick={closeMenu}
-          >
-            {t('nav.github')}
           </a>
           
           {isAuthenticated ? (

@@ -6,7 +6,9 @@ export const translations: Record<Lang, Record<string, string>> = {
     'lang.en': 'EN',
     'lang.toggle': 'Cambiar idioma',
 
+    'nav.home': 'Inicio',
     'nav.swap': 'Swap',
+    'nav.tutorials': 'Tutoriales',
     'nav.docs': 'Documentación',
     'nav.github': 'GitHub',
     'nav.dashboard': 'Dashboard',
@@ -427,7 +429,6 @@ export const translations: Record<Lang, Record<string, string>> = {
     'tutorials.duration': 'Duración',
 
     // Swap
-    'nav.swap': 'Swap',
     'swap.title': 'Swap XLM ↔ USDC',
     'swap.subtitle': 'Intercambia entre XLM y USDC de forma rápida y segura',
     'swap.from': 'Desde',
@@ -465,7 +466,9 @@ export const translations: Record<Lang, Record<string, string>> = {
     'lang.en': 'EN',
     'lang.toggle': 'Switch language',
 
+    'nav.home': 'Home',
     'nav.swap': 'Swap',
+    'nav.tutorials': 'Tutorials',
     'nav.docs': 'Documentation',
     'nav.github': 'GitHub',
     'nav.dashboard': 'Dashboard',
@@ -882,7 +885,6 @@ export const translations: Record<Lang, Record<string, string>> = {
     'tutorials.duration': 'Duration',
 
     // Swap
-    'nav.swap': 'Swap',
     'swap.title': 'Swap XLM ↔ USDC',
     'swap.subtitle': 'Intercambia entre XLM y USDC de forma rápida y segura',
     'swap.from': 'From',

@@ -33,9 +33,9 @@ const TutorialsTab: React.FC = () => {
         es: 'Conoce qué es Stellar, cómo funciona la blockchain y qué wallets puedes usar. Aprende sobre Freighter y otras opciones para gestionar tus activos digitales.',
         en: 'Learn what Stellar is, how the blockchain works and what wallets you can use. Learn about Freighter and other options to manage your digital assets.'
       },
-      thumbnail: 'https://img.youtube.com/vi/VIDEO_ID_1/maxresdefault.jpg',
-      youtubeUrl: 'https://www.youtube.com/watch?v=VIDEO_ID_1',
-      duration: '8:00'
+      thumbnail: 'https://img.youtube.com/vi/UvOQeifU9Qc/maxresdefault.jpg',
+      youtubeUrl: 'https://youtu.be/UvOQeifU9Qc',
+      duration: '5:27'
     },
     {
       id: 2,
@@ -47,9 +47,9 @@ const TutorialsTab: React.FC = () => {
         es: 'Aprende qué es ArcusX, cómo funciona la plataforma, qué puedes hacer como cliente o freelancer, y los conceptos básicos para empezar a usarla.',
         en: 'Learn what ArcusX is, how the platform works, what you can do as a client or freelancer, and the basic concepts to get started.'
       },
-      thumbnail: 'https://img.youtube.com/vi/VIDEO_ID_2/maxresdefault.jpg',
-      youtubeUrl: 'https://www.youtube.com/watch?v=VIDEO_ID_2',
-      duration: '6:30'
+      thumbnail: 'https://img.youtube.com/vi/lxytFT_MarI/maxresdefault.jpg',
+      youtubeUrl: 'https://youtu.be/lxytFT_MarI',
+      duration: '3:23'
     },
     {
       id: 3,
@@ -58,12 +58,12 @@ const TutorialsTab: React.FC = () => {
         en: 'How to Connect your Freighter Wallet'
       },
       description: {
-        es: 'Tutorial paso a paso para instalar Freighter, crear tu wallet y conectar tu cuenta a la plataforma ArcusX.',
-        en: 'Step-by-step tutorial to install Freighter, create your wallet and connect your account to the ArcusX platform.'
+        es: 'Aprende a conectar tu wallet Freighter a la plataforma ArcusX de forma rápida y sencilla.',
+        en: 'Learn how to connect your Freighter wallet to the ArcusX platform quickly and easily.'
       },
-      thumbnail: 'https://img.youtube.com/vi/VIDEO_ID_3/maxresdefault.jpg',
-      youtubeUrl: 'https://www.youtube.com/watch?v=VIDEO_ID_3',
-      duration: '5:00'
+      thumbnail: 'https://img.youtube.com/vi/7glLKl1_AQk/maxresdefault.jpg',
+      youtubeUrl: 'https://youtu.be/7glLKl1_AQk',
+      duration: '1:19'
     },
     {
       id: 4,
@@ -75,9 +75,9 @@ const TutorialsTab: React.FC = () => {
         es: 'Guía completa para publicar tu primera tarea en ArcusX: establecer presupuesto, descripción, categorías y todo lo necesario para encontrar al freelancer perfecto.',
         en: 'Complete guide to publish your first task on ArcusX: set budget, description, categories and everything needed to find the perfect freelancer.'
       },
-      thumbnail: 'https://img.youtube.com/vi/VIDEO_ID_4/maxresdefault.jpg',
-      youtubeUrl: 'https://www.youtube.com/watch?v=VIDEO_ID_4',
-      duration: '7:00'
+      thumbnail: 'https://img.youtube.com/vi/_h67MSoIc54/maxresdefault.jpg',
+      youtubeUrl: 'https://youtu.be/_h67MSoIc54',
+      duration: '1:58'
     },
     {
       id: 5,
@@ -89,23 +89,23 @@ const TutorialsTab: React.FC = () => {
         es: 'Aprende cómo aplicar a tareas como freelancer: crear una propuesta atractiva, mostrar tu portafolio y aumentar tus posibilidades de ser seleccionado.',
         en: 'Learn how to apply to tasks as a freelancer: create an attractive proposal, show your portfolio and increase your chances of being selected.'
       },
-      thumbnail: 'https://img.youtube.com/vi/VIDEO_ID_5/maxresdefault.jpg',
-      youtubeUrl: 'https://www.youtube.com/watch?v=VIDEO_ID_5',
-      duration: '6:00'
+      thumbnail: 'https://img.youtube.com/vi/iVnqCM-87BU/maxresdefault.jpg',
+      youtubeUrl: 'https://youtu.be/iVnqCM-87BU',
+      duration: '1:14'
     },
     {
       id: 6,
       title: {
-        es: 'Sistema de Escrow y Pagos',
-        en: 'Escrow System and Payments'
+        es: 'Escoger a tu Freelancer Ideal, Aprobarlo y Fondear Tarea',
+        en: 'Choose your Ideal Freelancer, Approve them and Fund Task'
       },
       description: {
-        es: 'Explicación detallada del funcionamiento del escrow en ArcusX: cómo fondear una tarea, aprobar trabajo y liberar pagos de forma segura.',
-        en: 'Detailed explanation of how escrow works on ArcusX: how to fund a task, approve work and release payments securely.'
+        es: 'Explicación detallada del funcionamiento del escrow en ArcusX: cómo fondear una tarea y liberar pagos de forma segura.',
+        en: 'Detailed explanation of how escrow works on ArcusX: how to fund a task and release payments securely.'
       },
-      thumbnail: 'https://img.youtube.com/vi/VIDEO_ID_6/maxresdefault.jpg',
-      youtubeUrl: 'https://www.youtube.com/watch?v=VIDEO_ID_6',
-      duration: '10:00'
+      thumbnail: 'https://img.youtube.com/vi/Fr6nTCuXvlA/maxresdefault.jpg',
+      youtubeUrl: 'https://youtu.be/Fr6nTCuXvlA',
+      duration: '2:01'
     },
     {
       id: 7,
@@ -117,23 +117,23 @@ const TutorialsTab: React.FC = () => {
         es: 'Aprende cómo comunicarte con el freelancer durante el trabajo, revisar entregables y completar una tarea exitosamente.',
         en: 'Learn how to communicate with the freelancer during work, review deliverables and successfully complete a task.'
       },
-      thumbnail: 'https://img.youtube.com/vi/VIDEO_ID_7/maxresdefault.jpg',
-      youtubeUrl: 'https://www.youtube.com/watch?v=VIDEO_ID_7',
-      duration: '8:30'
+      thumbnail: 'https://img.youtube.com/vi/m9NYRqIaDIg/maxresdefault.jpg',
+      youtubeUrl: 'https://youtu.be/m9NYRqIaDIg',
+      duration: '1:50'
     },
     {
       id: 8,
       title: {
-        es: 'Gestión de Disputas',
-        en: 'Dispute Management'
+        es: 'Cómo Usar el Swap de la Plataforma',
+        en: 'How to Use the Platform Swap'
       },
       description: {
-        es: 'Cómo crear una disputa cuando surge un problema, proporcionar evidencia y entender el proceso de resolución de conflictos.',
-        en: 'How to create a dispute when a problem arises, provide evidence and understand the conflict resolution process.'
+        es: 'Aprende a intercambiar XLM y USDC de forma rápida y segura usando la función de swap integrada en ArcusX.',
+        en: 'Learn how to swap XLM and USDC quickly and securely using the integrated swap feature on ArcusX.'
       },
-      thumbnail: 'https://img.youtube.com/vi/VIDEO_ID_8/maxresdefault.jpg',
-      youtubeUrl: 'https://www.youtube.com/watch?v=VIDEO_ID_8',
-      duration: '9:00'
+      thumbnail: 'https://img.youtube.com/vi/yreoraIbj8I/maxresdefault.jpg',
+      youtubeUrl: 'https://youtu.be/yreoraIbj8I',
+      duration: '1:13'
     }
   ];
 

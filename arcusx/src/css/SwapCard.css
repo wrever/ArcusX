@@ -41,24 +41,63 @@
 }
 
 .swap-icon-button {
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
-  background: var(--gradient-primary);
-  border: 2px solid var(--bg-card);
+  background: var(--bg-card, rgba(7, 35, 60, 0.95));
+  border: 3px solid var(--primary-blue, #28c0f0);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: var(--shadow-md);
-  font-size: 1.2rem;
+  box-shadow: 0 4px 12px rgba(40, 192, 240, 0.3);
+  font-size: 1.5rem;
+  font-weight: bold;
+  position: relative;
+  z-index: 10;
+}
+
+.swap-icon-symbol {
+  display: block;
+  font-size: 28px;
+  line-height: 1;
+  color: white;
+  font-weight: bold;
+  user-select: none;
 }
 
 .swap-icon-button:hover:not(:disabled) {
   transform: rotate(180deg) scale(1.1);
-  box-shadow: var(--shadow-blue);
+  box-shadow: 0 6px 20px rgba(40, 192, 240, 0.5);
+  background: var(--primary-blue, #28c0f0);
+  border-color: var(--bg-card, rgba(7, 35, 60, 0.95));
+}
+
+.swap-icon-button:hover:not(:disabled) .swap-icon-symbol {
+  color: white;
+}
+
+/* Modo claro */
+:root[data-theme="light"] .swap-icon-button {
+  background: white;
+  border-color: var(--primary-blue-light, #3b82f6);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+:root[data-theme="light"] .swap-icon-symbol {
+  color: #0f172a;
+}
+
+:root[data-theme="light"] .swap-icon-button:hover:not(:disabled) {
+  background: var(--primary-blue-light, #3b82f6);
+  border-color: white;
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
+
+:root[data-theme="light"] .swap-icon-button:hover:not(:disabled) .swap-icon-symbol {
+  color: white;
 }
 
 .swap-icon-button:disabled {
