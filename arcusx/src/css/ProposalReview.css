@@ -250,6 +250,41 @@
   gap: 0.25rem;
 }
 
+.proposal-footer {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.view-profile-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  background: var(--primary-blue);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.view-profile-button:hover {
+  background: var(--primary-blue-hover, #1a9bc7);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(40, 192, 240, 0.3);
+}
+
+.view-profile-button:active {
+  transform: translateY(0);
+}
+
 .proposal-status {
   display: flex;
   align-items: center;

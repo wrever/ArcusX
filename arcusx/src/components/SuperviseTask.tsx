@@ -3703,6 +3703,9 @@ const SuperviseTask = () => {
                     taskPrice={task.price}
                     escrowId={task.escrow_id}
                     clientAddress={address || ''}
+                    taskId={task.id ? parseInt(task.id) : undefined}
+                    workerId={task.accepted_applicant_id ? parseInt(task.accepted_applicant_id) : undefined}
+                    workerName={task.worker_username}
                     onApproveMilestone={handleApproveMilestone}
                     onReleaseFunds={handleReleaseFunds}
                     onVerifyMilestone={handleVerifyMilestone}

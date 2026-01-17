@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaUser, FaCalendarAlt, FaWallet, FaExternalLinkAlt, FaCheck, FaTimes, FaSpinner, FaEye, FaHome, FaFileAlt, FaCheckCircle } from 'react-icons/fa';
+import { FaArrowLeft, FaUser, FaCalendarAlt, FaWallet, FaExternalLinkAlt, FaCheck, FaTimes, FaSpinner, FaEye, FaHome, FaFileAlt, FaCheckCircle, FaUserCircle } from 'react-icons/fa';
 import axios from 'axios';
 import { API_URL } from '../config/database';
 import { useWallet } from '../hooks/useWallet';
@@ -917,6 +917,18 @@ El proyecto está activo y el trabajador puede comenzar.`);
                         <span className="wallet-address">{proposal.worker_wallet_address}</span>
                       </div>
                     </div>
+                  </div>
+
+                  <div className="proposal-footer">
+                    <Link 
+                      to={`/profile/${proposal.applicant_id}`}
+                      className="view-profile-button"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <FaUserCircle />
+                      Ver Perfil Público
+                    </Link>
                   </div>
 
                   {proposal.status === 'pending' && (

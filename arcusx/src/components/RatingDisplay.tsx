@@ -18,6 +18,7 @@ interface RatingDisplayProps {
   };
   showDistribution?: boolean;
   size?: 'small' | 'medium' | 'large';
+  hideRatingValue?: boolean;
 }
 
 const RatingDisplay = ({
@@ -25,7 +26,8 @@ const RatingDisplay = ({
   totalRatings,
   ratingDistribution,
   showDistribution = false,
-  size = 'medium'
+  size = 'medium',
+  hideRatingValue = false
 }: RatingDisplayProps) => {
   const fullStars = Math.floor(averageRating);
   const hasHalfStar = averageRating % 1 >= 0.5;
@@ -44,12 +46,14 @@ const RatingDisplay = ({
           <FaStar key={`empty-${i}`} className="star star-empty" />
         ))}
       </div>
-      <div className="rating-info">
-        <span className="rating-value">{averageRating.toFixed(1)}</span>
-        {totalRatings > 0 && (
-          <span className="rating-count">({totalRatings})</span>
-        )}
-      </div>
+      {!hideRatingValue && (
+        <div className="rating-info">
+          <span className="rating-value">{averageRating.toFixed(1)}</span>
+          {totalRatings > 0 && (
+            <span className="rating-count">({totalRatings})</span>
+          )}
+        </div>
+      )}
       
       {showDistribution && ratingDistribution && (
         <div className="rating-distribution">
