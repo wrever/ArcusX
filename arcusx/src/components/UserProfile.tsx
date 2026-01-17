@@ -251,6 +251,7 @@ const UserProfile = () => {
                       averageRating={stats.average_rating} 
                       totalRatings={stats.total_ratings}
                       size="small"
+                      hideRatingValue={true}
                     />
                   </>
                 ) : (

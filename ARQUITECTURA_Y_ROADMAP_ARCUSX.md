@@ -1,9 +1,9 @@
 # 🏗️ ARQUITECTURA Y ROADMAP - ARCUSX
 ## Documento para Stellar Community Fund
 
-**Fecha:** 06 de Enero, 2026  
-**Versión:** 1.0  
-**Estado:** Plataforma Funcional en Producción
+**Fecha:** Enero 2026
+**Versión:** 1.1  
+**Estado:** Plataforma Funcional en Producción (Testnet)
 
 ---
 
@@ -276,11 +276,41 @@ Usuario crea disputa → Frontend (DisputeManagement)
 - Configuración de comisiones
 - Estadísticas de plataforma
 
+✅ **Sistema de Ratings y Reviews**
+- Sistema completo de ratings (1-5 estrellas)
+- Formulario de reviews con texto opcional
+- Visualización de ratings en perfiles públicos
+- Distribución de ratings
+- Promedio de ratings calculado
+- Integración en flujo de completar tarea
+
+✅ **Sistema de Swap de Tokens**
+- Página de swap (XLM ↔ USDC)
+- Integración con Soroswap API
+- Obtención de cotizaciones en tiempo real
+- Validación de balances
+- Manejo de errores mejorado
+- Integración con Freighter
+
+✅ **Sistema de Tutoriales**
+- Página pública de tutoriales (`/tutoriales`)
+- Sistema de videos integrados (YouTube)
+- 8 tutoriales configurados
+- Integración con routing y navbar
+
+✅ **Sistema de Notificaciones**
+- Sistema completo de notificaciones
+- UI de notificaciones en dashboard
+- Contador de no leídas
+- Filtros y gestión de notificaciones
+- Integración con eventos de la plataforma
+
 ✅ **Optimizaciones**
 - Caching de datos
 - Debouncing en búsquedas
 - Lazy loading de componentes
 - Optimización de queries
+- Fallback mechanisms para APIs externas
 
 ---
 
@@ -512,12 +542,14 @@ La arquitectura futura de ArcusX está diseñada para **escalar horizontalmente*
   - ✅ Backend endpoints
   - ✅ Estadísticas públicas correctamente calculadas 
 
-- ⏳ **Sección de Tutoriales y Guías** (PRIORIDAD - Feature Principal) - **PENDIENTE**
-  - ⏳ Página dedicada a tutoriales
-  - ⏳ Sistema de videos integrados (YouTube/Vimeo embeds)
-  - ⏳ Videos grabados por el equipo
-  - ⏳ Guías paso a paso escritas
-  - ⏳ Sección destacada en landing page
+- ✅ **Sección de Tutoriales y Guías** (PRIORIDAD - Feature Principal) - **COMPLETADO**
+  - ✅ Página dedicada a tutoriales (`/tutoriales`)
+  - ✅ Sistema de videos integrados (YouTube embeds)
+  - ✅ Componente `TutorialsTab` con grid de tutoriales
+  - ✅ 8 tutoriales configurados con descripciones
+  - ✅ Integración con Navbar y routing
+  - ⏳ Videos grabados por el equipo (pendiente producción de contenido)
+  - ⏳ Guías escritas detalladas (pendiente contenido)
 
 - ✅ **Mejoras de Perfiles Públicos** - **COMPLETADO**
   - ✅ Diseño mejorado de perfil público
@@ -529,17 +561,18 @@ La arquitectura futura de ArcusX está diseñada para **escalar horizontalmente*
   - ✅ Bio con formato preservado
   - ✅ Diseño responsive mejorado
 
-- ⏳ **Features Simples Frontend (Sin Costos)** - **PENDIENTE**
-  - ⏳ Sistema de Favoritos (freelancers y tareas)
-  - ⏳ Mejoras de búsqueda (filtros avanzados, autocompletado)
-  - ⏳ Dashboard de Analytics para Usuarios (gráficos con datos existentes)
-  - ⏳ Notificaciones mejoradas en UI
+- ✅ **Features Simples Frontend (Sin Costos)** - **PARCIALMENTE COMPLETADO**
+  - ⏳ Sistema de Favoritos (freelancers y tareas) - PENDIENTE
+  - ✅ Mejoras de búsqueda (filtros avanzados en freelancers, tareas con múltiples filtros)
+  - ⏳ Dashboard de Analytics para Usuarios (gráficos con datos existentes) - PENDIENTE
+  - ✅ Notificaciones mejoradas en UI (sistema completo de notificaciones implementado)
 
-- ⏳ **Mejoras de UI/UX** - **PARCIALMENTE COMPLETADO**
-  - ⏳ Mejorar UI de ratings con visualización mejorada
+- ✅ **Mejoras de UI/UX** - **COMPLETADO**
+  - ✅ Sistema completo de ratings con visualización mejorada (`RatingSystem`, `RatingDisplay`, `ReviewForm`)
   - ✅ Mejoras visuales generales (cards de freelancers, filtros centrados, diseño responsivo)
   - ✅ Mejoras de responsive design (freelancers list completamente responsive)
   - ✅ Optimización de componentes React (componentes modulares y reutilizables)
+  - ✅ Mejoras de visibilidad en swap button (icono ⇄ con estilos adaptativos)
 
 - ✅ **SEO y Contenido (Sin Costos)** - **COMPLETADO**
   - ✅ Optimización SEO completa
@@ -568,10 +601,39 @@ La arquitectura futura de ArcusX está diseñada para **escalar horizontalmente*
 - ✅ **Mejoras de UI/UX Adicionales** - **COMPLETADO**
   - ✅ Mejoras visuales en páginas principales (Crear Tarea, Enviar Propuesta, Supervisar Tarea, Revisión de Propuestas)
   - ✅ Optimización de visibilidad y contraste en modo claro
-  - ✅ Mejoras de diseño en popups y modales (Wallet Connect)
+  - ✅ Mejoras de diseño en popups y modales (Wallet Connect, EscrowProcessPopup, CompleteTaskPopup)
   - ✅ Mejoras de diseño responsive en listas de freelancers
   - ✅ Optimización de colores y bordes en todos los componentes
   - ✅ Mejoras de centrado y espaciado en filtros y formularios
+
+- ✅ **Sistema de Swap de Tokens** (Feature Principal) - **COMPLETADO**
+  - ✅ Página de swap (`/swap`) con integración completa
+  - ✅ Integración con Soroswap API
+  - ✅ Swap XLM ↔ USDC funcional
+  - ✅ Obtención de cotizaciones en tiempo real
+  - ✅ Validación de balances
+  - ✅ Manejo de errores (especialmente "No Liquidity")
+  - ✅ UI completa con inputs, detalles de swap y botón de acción
+  - ✅ Integración con Freighter para firmar transacciones
+  - ✅ Configuración de slippage (3% por defecto)
+
+- ✅ **Sistema de Ratings y Reviews** (Feature Principal) - **COMPLETADO**
+  - ✅ Sistema completo de ratings (1-5 estrellas)
+  - ✅ Formulario de reviews con texto opcional
+  - ✅ Visualización de ratings en perfiles
+  - ✅ Distribución de ratings (1-5 estrellas)
+  - ✅ Promedio de ratings calculado
+  - ✅ Integración en flujo de completar tarea
+  - ✅ Ratings públicos en perfiles de usuario
+
+- ✅ **Sistema de Notificaciones Mejorado** - **COMPLETADO**
+  - ✅ Sistema completo de notificaciones en backend
+  - ✅ UI de notificaciones en dashboard
+  - ✅ Contador de no leídas
+  - ✅ Filtros de notificaciones
+  - ✅ Marcar como leída / marcar todas como leídas
+  - ✅ Notificaciones en tiempo real (polling)
+  - ✅ Integración con sistema de tareas y escrows
 
 ---
 
@@ -582,7 +644,8 @@ La arquitectura futura de ArcusX está diseñada para **escalar horizontalmente*
 **Presupuesto:** ~$18.3k (55k / 3, parte del presupuesto total de $55k)
 
 - ⏳ **Expansión de Tutoriales y Contenido Educativo** (PRIORIDAD)
-  - ⏳ Más videos tutoriales (workflows completos)
+  - ✅ Infraestructura de tutoriales implementada
+  - ⏳ Producción de más videos tutoriales (workflows completos)
   - ⏳ Guías escritas detalladas para cada feature
   - ⏳ FAQ interactivo con búsqueda
   - ⏳ Sección de "Tips y Mejores Prácticas"
@@ -1121,6 +1184,7 @@ ArcusX tiene una **arquitectura sólida y funcional** que está lista para escal
 ---
 
 **Documento preparado para Stellar Community Fund**  
-**Fecha:** 06 de Enero, 2026  
-**Versión:** 1.0
+**Fecha:** Enero 2025  
+**Versión:** 1.1  
+**Última Actualización:** Enero 2025 (Actualización de quarters basada en estado actual del proyecto)
 
