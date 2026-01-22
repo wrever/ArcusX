@@ -39,11 +39,20 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="ArcusX" />
     
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
     <script>
       // Polyfill para global
       if (typeof global === 'undefined') {
         window.global = window;
       }
+      
+      // Aplicar tema ANTES de que React cargue (evita FOUC)
+      (function() {
+        const savedTheme = localStorage.getItem('arcusx-theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      })();
     </script>
   </head>
   <body>

@@ -109,19 +109,10 @@ function handleGetTaskDetails($task_id) {
     global $conn;
     
     try {
-        // Crear conexión y seleccionar base de datos explícitamente
-        $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-        if ($conn->connect_error) {
-            throw new Exception("Error de conexión: " . $conn->connect_error);
+        // Usar la conexión global de config.php (igual que get_tasks.php)
+        if (!isset($conn) || $conn->connect_error) {
+            throw new Exception("Error de conexión: " . ($conn->connect_error ?? "Conexión no disponible"));
         }
-        
-        // Asegurar que la base de datos esté seleccionada
-        if (!$conn->select_db(DB_NAME)) {
-            throw new Exception("Error al seleccionar la base de datos: " . DB_NAME);
-        }
-        
-        // Establecer charset UTF-8
-        $conn->set_charset("utf8mb4");
 
         // CONSULTA 1: Obtener los detalles básicos de la tarea (sin JOINs complejos)
         $sql = "SELECT 
@@ -286,6 +277,8 @@ function handleGetTaskDetails($task_id) {
  * Maneja la subida de archivos
  */
 function handleFileUpload($task_id) {
+    global $conn;
+    
     // Verificar que se envió un archivo
     if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
         http_response_code(400);
@@ -304,9 +297,9 @@ function handleFileUpload($task_id) {
     }
     
     try {
-        $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-        if ($conn->connect_error) {
-            throw new Exception("Error de conexión: " . $conn->connect_error);
+        // Usar la conexión global de config.php
+        if (!isset($conn) || $conn->connect_error) {
+            throw new Exception("Error de conexión: " . ($conn->connect_error ?? "Conexión no disponible"));
         }
         
         // Crear directorio files si no existe (en la raíz del servidor)
@@ -391,6 +384,8 @@ function handleFileUpload($task_id) {
  * Maneja la eliminación de archivos
  */
 function handleFileDelete($task_id) {
+    global $conn;
+    
     // Obtener datos del cuerpo de la petición
     $input = json_decode(file_get_contents('php://input'), true);
     
@@ -403,9 +398,9 @@ function handleFileDelete($task_id) {
     $file_id = $input['file_id'];
     
     try {
-        $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-        if ($conn->connect_error) {
-            throw new Exception("Error de conexión: " . $conn->connect_error);
+        // Usar la conexión global de config.php
+        if (!isset($conn) || $conn->connect_error) {
+            throw new Exception("Error de conexión: " . ($conn->connect_error ?? "Conexión no disponible"));
         }
         
         // Obtener archivos actuales de la tarea
@@ -487,6 +482,8 @@ function handleFileDelete($task_id) {
  * Maneja la descarga de archivos (GET con action=download)
  */
 function handleFileDownload($task_id, $allowed_origins, $origin) {
+    global $conn;
+    
     $file_id = isset($_GET['file_id']) ? $_GET['file_id'] : null;
     
     if (!$file_id) {
@@ -503,9 +500,9 @@ function handleFileDownload($task_id, $allowed_origins, $origin) {
     }
     
     try {
-        $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-        if ($conn->connect_error) {
-            throw new Exception("Error de conexión: " . $conn->connect_error);
+        // Usar la conexión global de config.php
+        if (!isset($conn) || $conn->connect_error) {
+            throw new Exception("Error de conexión: " . ($conn->connect_error ?? "Conexión no disponible"));
         }
         
         // Obtener archivos de la tarea

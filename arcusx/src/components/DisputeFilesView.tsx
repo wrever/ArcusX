@@ -456,6 +456,8 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
               <img
                 src={getPreviewUrl(previewFile)}
                 alt={previewFile.filename}
+                loading="lazy"
+                decoding="async"
                 style={{
                   maxWidth: '100%',
                   maxHeight: '70vh',
