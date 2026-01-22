@@ -455,34 +455,15 @@
 .form-section {
   margin-bottom: 2rem;
   padding: 1.5rem;
-  background: var(--bg-card);
-  backdrop-filter: blur(10px);
-  border-radius: 12px;
-  border: 2px solid var(--border-color);
+  background: transparent;
+  border: none;
   position: relative;
   z-index: 1;
   transition: var(--transition);
-  box-shadow: var(--shadow-sm);
-}
-
-/* Fondo blanco siempre en modo claro */
-:root[data-theme="light"] .form-section {
-  background: #ffffff !important;
-  border-color: rgba(100, 116, 139, 0.2) !important;
-  box-shadow: var(--shadow-sm) !important;
 }
 
 .form-section:hover {
-  background: var(--bg-hover);
-  border-color: var(--border-color-hover);
-  box-shadow: var(--shadow-md);
-}
-
-/* En modo claro, mantener fondo blanco en hover */
-:root[data-theme="light"] .form-section:hover {
-  background: #ffffff !important;
-  border-color: rgba(100, 116, 139, 0.3) !important;
-  box-shadow: var(--shadow-md) !important;
+  background: transparent;
 }
 
 .form-section h3 {
@@ -522,15 +503,19 @@
 /* Grupos de formulario */
 .form-group {
   margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
 }
 
 .form-group label {
-  display: block;
-  margin-bottom: 0.75rem;
+  display: block !important;
+  margin-bottom: 0.75rem !important;
   font-weight: 600;
   color: var(--text-primary);
   font-size: 0.95rem;
   letter-spacing: 0.3px;
+  width: 100%;
+  text-align: left;
 }
 
 /* Asegurar que los labels sean negros en modo claro */

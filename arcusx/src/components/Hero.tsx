@@ -250,7 +250,7 @@ const Hero = () => {
         <div className="section-container">
           <div className="problem-content">
             <div className="problem-image-container">
-              <img src={desempleoImg} alt="Búsqueda de trabajo" className="problem-image" />
+              <img src={desempleoImg} alt="Búsqueda de trabajo" className="problem-image" loading="lazy" decoding="async" />
               <div className="image-overlay"></div>
               <div className="image-dots"></div>
             </div>
@@ -371,7 +371,7 @@ const Hero = () => {
             </div>
             {/*CODE OWNER: BRUNO MIRANDA*/}
             <div className="problem-image-container">
-              <img src={gananciaImg} alt="Ganancias en ArcusX" className="problem-image" />
+              <img src={gananciaImg} alt="Ganancias en ArcusX" className="problem-image" loading="lazy" decoding="async" />
               <div className="image-overlay"></div>
               <div className="image-dots"></div>
             </div>
@@ -427,7 +427,7 @@ const Hero = () => {
             <div className="team-grid">
               <div className="team-card">
                 <div className="team-member-image">
-                  <img src={brunoImg} alt="Bruno Miranda" className="member-img" />
+                  <img src={brunoImg} alt="Bruno Miranda" className="member-img" loading="lazy" decoding="async" />
                 </div>
                 
                 <div className="member-info">
@@ -453,7 +453,7 @@ const Hero = () => {
               </div>
               <div className="team-card">
                 <div className="team-member-image">
-                  <img src={crisImg} alt="Cristopher Escobar" className="member-img" />
+                  <img src={crisImg} alt="Cristopher Escobar" className="member-img" loading="lazy" decoding="async" />
                 </div>
                 <div className="member-info">
                   <h3>Cristopher Escobar</h3>
@@ -474,7 +474,7 @@ const Hero = () => {
               </div>
               <div className="team-card">
                 <div className="team-member-image">
-                  <img src={pauImg} alt="Pau Koh" className="member-img" />
+                  <img src={pauImg} alt="Pau Koh" className="member-img" loading="lazy" decoding="async" />
                 </div>
                 <div className="member-info">
                   <h3>Pau Koh</h3>

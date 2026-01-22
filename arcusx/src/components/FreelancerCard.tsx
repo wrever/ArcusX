@@ -3,6 +3,7 @@
  * Componente horizontal para mostrar información resumida de un freelancer
  */
 
+import { memo, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import RatingDisplay from './RatingDisplay';
 import { useI18n } from '../i18n/I18nProvider';
@@ -14,7 +15,7 @@ interface FreelancerCardProps {
   freelancer: Freelancer;
 }
 
-const FreelancerCard = ({ freelancer }: FreelancerCardProps) => {
+const FreelancerCard = memo(({ freelancer }: FreelancerCardProps) => {
   const { t } = useI18n();
   
   // Función para obtener iniciales del nombre
@@ -27,14 +28,18 @@ const FreelancerCard = ({ freelancer }: FreelancerCardProps) => {
       .slice(0, 2);
   };
 
-  // Truncar descripción a máximo 120 caracteres
-  const truncateBio = (bio: string | null | undefined, maxLength: number = 120): string => {
-    if (!bio) return t('freelancers.card.no.bio');
-    if (bio.length <= maxLength) return bio;
-    return bio.substring(0, maxLength).trim() + '...';
-  };
+  // Truncar descripción a máximo 120 caracteres - Memoizado
+  const truncatedBio = useMemo(() => {
+    const maxLength = 120;
+    if (!freelancer.bio) return t('freelancers.card.no.bio');
+    if (freelancer.bio.length <= maxLength) return freelancer.bio;
+    return freelancer.bio.substring(0, maxLength).trim() + '...';
+  }, [freelancer.bio, t]);
 
-  const avatarUrl = freelancer.avatar_url ? getAvatarUrl(freelancer.avatar_url) : null;
+  const avatarUrl = useMemo(() => 
+    freelancer.avatar_url ? getAvatarUrl(freelancer.avatar_url) : null,
+    [freelancer.avatar_url]
+  );
 
   return (
     <div className="freelancer-card-horizontal">
@@ -44,6 +49,8 @@ const FreelancerCard = ({ freelancer }: FreelancerCardProps) => {
             src={avatarUrl} 
             alt={`Avatar de ${freelancer.username} - Freelancer en ArcusX`}
             className="freelancer-avatar-image"
+            loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="freelancer-avatar-placeholder">
@@ -68,7 +75,7 @@ const FreelancerCard = ({ freelancer }: FreelancerCardProps) => {
 
         <div className="freelancer-card-body">
           <p className="freelancer-bio">
-            {truncateBio(freelancer.bio)}
+            {truncatedBio}
           </p>
         </div>
       </div>
@@ -83,7 +90,9 @@ const FreelancerCard = ({ freelancer }: FreelancerCardProps) => {
       </div>
     </div>
   );
-};
+});
+
+FreelancerCard.displayName = 'FreelancerCard';
 
 export default FreelancerCard;
 

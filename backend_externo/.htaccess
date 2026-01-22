@@ -10,6 +10,14 @@
     RewriteCond %{REQUEST_METHOD} DELETE
     RewriteRule ^api/auth/get_task_details\.php$ - [L]
     
+    # Permitir acceso a assets (CSS, JS, imágenes, etc.)
+    RewriteCond %{REQUEST_URI} ^/assets/
+    RewriteRule . - [L]
+    
+    # Permitir acceso a archivos estáticos
+    RewriteCond %{REQUEST_URI} \.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|webp|json|xml|txt)$ [NC]
+    RewriteRule . - [L]
+    
     # SPA Routing: Redirigir todas las rutas que no sean archivos/directorios a index.html
     # Esto aplica solo para rutas que no empiecen con /api/
     RewriteCond %{REQUEST_URI} !^/api/

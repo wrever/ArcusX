@@ -14,6 +14,11 @@
   animation: fadeIn 0.3s ease-out;
 }
 
+/* Modo claro */
+:root[data-theme="light"] .pending-notifications-overlay {
+  background: rgba(0, 0, 0, 0.5) !important;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -35,6 +40,13 @@
   position: relative;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
   animation: slideUp 0.3s ease-out;
+}
+
+/* Modo claro */
+:root[data-theme="light"] .pending-notifications-popup {
+  background: #ffffff !important;
+  border: 2px solid rgba(100, 116, 139, 0.3) !important;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.2) !important;
 }
 
 @keyframes slideUp {
@@ -68,6 +80,17 @@
   z-index: 10;
 }
 
+/* Modo claro */
+:root[data-theme="light"] .pending-notifications-close {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(100, 116, 139, 0.2) !important;
+}
+
+:root[data-theme="light"] .pending-notifications-close:hover {
+  background: #e2e8f0 !important;
+}
+
 .pending-notifications-close:hover {
   background: rgba(255, 255, 255, 0.2);
   transform: rotate(90deg);
@@ -78,6 +101,11 @@
   margin-bottom: 2rem;
   padding-bottom: 1.5rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Modo claro */
+:root[data-theme="light"] .pending-notifications-header {
+  border-bottom: 1px solid rgba(100, 116, 139, 0.2) !important;
 }
 
 .pending-notifications-icon {
@@ -107,10 +135,24 @@
   background-clip: text;
 }
 
+/* Modo claro */
+:root[data-theme="light"] .pending-notifications-title {
+  background: linear-gradient(90deg, #0f172a, #28c0f0) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  color: #0f172a !important;
+}
+
 .pending-notifications-subtitle {
   font-size: 1rem;
   color: rgba(255, 255, 255, 0.7);
   margin: 0;
+}
+
+/* Modo claro */
+:root[data-theme="light"] .pending-notifications-subtitle {
+  color: #475569 !important;
 }
 
 .pending-notifications-list {
@@ -149,6 +191,12 @@
   transition: all 0.3s ease;
 }
 
+/* Modo claro */
+:root[data-theme="light"] .pending-notification-item {
+  background: #f8fafc !important;
+  border: 1px solid rgba(100, 116, 139, 0.2) !important;
+}
+
 .pending-notification-item:hover {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 193, 7, 0.3);
@@ -166,10 +214,20 @@
   margin: 0 0 0.5rem 0;
 }
 
+/* Modo claro */
+:root[data-theme="light"] .pending-notification-task-title {
+  color: #0f172a !important;
+}
+
 .pending-notification-task-subtitle {
   font-size: 0.95rem;
   color: rgba(255, 255, 255, 0.7);
   margin: 0;
+}
+
+/* Modo claro */
+:root[data-theme="light"] .pending-notification-task-subtitle {
+  color: #475569 !important;
 }
 
 .pending-notification-worker-info {
@@ -201,10 +259,20 @@
   min-width: 80px;
 }
 
+/* Modo claro */
+:root[data-theme="light"] .pending-notification-label {
+  color: #64748b !important;
+}
+
 .pending-notification-value {
   color: #fff;
   font-weight: 600;
   word-break: break-word;
+}
+
+/* Modo claro */
+:root[data-theme="light"] .pending-notification-value {
+  color: #0f172a !important;
 }
 
 .pending-notification-actions {
@@ -249,6 +317,11 @@
   gap: 1rem;
   padding-top: 1.5rem;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Modo claro */
+:root[data-theme="light"] .pending-notifications-footer {
+  border-top: 1px solid rgba(100, 116, 139, 0.2) !important;
 }
 
 .pending-notifications-cancel-button,

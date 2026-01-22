@@ -78,7 +78,7 @@ const UserProfile = () => {
       <div className="preloader">
         <div className="preloader-content">
           <div className="logo">
-            <img src={logo} alt="ArcusX Logo" className="logo-image" />
+            <img src={logo} alt="ArcusX Logo" className="logo-image" loading="lazy" decoding="async" />
           </div>
           <div className="loading-circle">
             <div className="circle"></div>
@@ -152,6 +152,8 @@ const UserProfile = () => {
               src={getAvatarUrl(profile.avatar_url)} 
               alt={`Avatar de ${profile.username} - Perfil público en ArcusX`}
               className="profile-avatar"
+              loading="lazy"
+              decoding="async"
               onError={(e) => {
                 // Si la imagen falla al cargar, reemplazar con placeholder
                 const target = e.target as HTMLImageElement;

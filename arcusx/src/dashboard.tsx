@@ -20,7 +20,9 @@ import { getUserTransactions, getUserEarningsSummary, Transaction } from './serv
 import { getUserProfile, getUserPublicStats } from './services/profileService';
 import type { UserProfile as UserProfileType, UserStatistics } from './types/profile';
 import RatingDisplay from './components/RatingDisplay';
+import { getUserRatingSummary } from './services/ratingService';
 import { useI18n } from './i18n/I18nProvider';
+import { useDebounce } from './hooks/useDebounce';
 import FreelancersList from './components/FreelancersList';
 import TutorialsTab from './components/TutorialsTab';
 import { getAvatarUrl } from './utils/avatarUtils';
@@ -30,6 +32,7 @@ interface UserData {
   id: number;
   username: string;
   email: string;
+  avatar_url?: string;
   // Agrega otros campos del usuario si existen en tu objeto de usuario
 }
 
@@ -62,6 +65,7 @@ const Dashboard = () => {
   const [difficultyFilter, setDifficultyFilter] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 500); // Debounce de 500ms
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [sortBy, setSortBy] = useState('date_desc');
@@ -104,6 +108,11 @@ const Dashboard = () => {
   const [name] = useState<string>(storedUserData?.username || '');
   const [email] = useState<string>(storedUserData?.email || '');
   
+  // Estado para avatar del usuario (para mostrar en sidebar)
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(
+    storedUserData?.avatar_url || null
+  );
+  
   const navigate = useNavigate();
   const { logout, user } = useAuth();
   
@@ -113,13 +122,26 @@ const Dashboard = () => {
   const [transactionsError, setTransactionsError] = useState<string>('');
   const [totalEarnings, setTotalEarnings] = useState<number>(0);
   const [totalPaid, setTotalPaid] = useState<number>(0);
-
+  
   // Estado para perfil de usuario
   const [userProfile, setUserProfile] = useState<UserProfileType | null>(null);
+  
+  // Actualizar avatar cuando se carga el perfil
+  useEffect(() => {
+    if (userProfile?.avatar_url) {
+      setUserAvatarUrl(userProfile.avatar_url);
+    } else if (storedUserData?.avatar_url) {
+      setUserAvatarUrl(storedUserData.avatar_url);
+    }
+  }, [userProfile?.avatar_url, storedUserData?.avatar_url]);
   const [userStats, setUserStats] = useState<UserStatistics | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [transactionsPage, setTransactionsPage] = useState(1);
   const [transactionsTotalPages, setTransactionsTotalPages] = useState(1);
+  
+  // Estado para rating del usuario (para mostrar en sidebar)
+  const [userRating, setUserRating] = useState<{ average_rating: number; total_ratings: number } | null>(null);
+  const [loadingRating, setLoadingRating] = useState(false);
   
   // Las tareas ya vienen filtradas del backend, solo excluir asignadas
   const filteredTasks = fetchedTasks.filter(task => task.status !== 'assigned');
@@ -184,8 +206,8 @@ const Dashboard = () => {
         try {
           // Construir query params con todos los filtros
           const params = new URLSearchParams();
-          if (searchQuery.trim()) {
-            params.append('search', searchQuery.trim());
+          if (debouncedSearchQuery.trim()) {
+            params.append('search', debouncedSearchQuery.trim());
           }
           if (minPrice && parseFloat(minPrice) > 0) {
             params.append('min_price', minPrice);
@@ -222,7 +244,34 @@ const Dashboard = () => {
 
       fetchTasks();
     }
-  }, [activeTab, searchQuery, minPrice, maxPrice, categoryFilter, difficultyFilter, sortBy]); // Ejecutar cuando cambien los filtros
+  }, [activeTab, debouncedSearchQuery, minPrice, maxPrice, categoryFilter, difficultyFilter, sortBy]); // Ejecutar cuando cambien los filtros (usando debouncedSearchQuery)
+  // -------------------------------------------- //
+
+  // --- Lógica para obtener el rating del usuario para mostrar en el sidebar --- //
+  useEffect(() => {
+    if (user?.id) {
+      const fetchUserRating = async () => {
+        setLoadingRating(true);
+        try {
+          const ratingData = await getUserRatingSummary(user.id);
+          setUserRating({
+            average_rating: ratingData.average_rating || 0,
+            total_ratings: ratingData.total_ratings || 0
+          });
+        } catch (error: any) {
+          // Si falla, establecer valores por defecto
+          setUserRating({
+            average_rating: 0,
+            total_ratings: 0
+          });
+        } finally {
+          setLoadingRating(false);
+        }
+      };
+      
+      fetchUserRating();
+    }
+  }, [user?.id]);
   // -------------------------------------------- //
 
   // --- Lógica para obtener el conteo de tareas completadas desde la API --- //
@@ -308,18 +357,16 @@ const Dashboard = () => {
   }, [activeTab, user?.id]); // Ejecutar este efecto cuando cambie la pestaña activa o el user.id
   // -------------------------------------------- //
 
-  // --- Lógica para obtener perfil del usuario cuando se activa la pestaña settings --- //
+  // --- Lógica para obtener perfil del usuario al cargar el dashboard --- //
+  const profileLoadedRef = useRef(false);
   useEffect(() => {
-    if (activeTab === 'settings' && user?.id) {
+    if (user?.id && !profileLoadedRef.current) {
+      profileLoadedRef.current = true;
       const fetchUserProfile = async () => {
         setLoadingProfile(true);
         try {
-          const [profileData, statsData] = await Promise.all([
-            getUserProfile(user.id),
-            getUserPublicStats(user.id)
-          ]);
+          const profileData = await getUserProfile(user.id);
           setUserProfile(profileData);
-          setUserStats(statsData);
         } catch (error: any) {
           // Si falla, usar datos básicos del localStorage
           const stored = localStorage.getItem('user');
@@ -355,6 +402,22 @@ const Dashboard = () => {
       };
 
       fetchUserProfile();
+    }
+  }, [user?.id]); // Cargar al inicio cuando el usuario esté disponible
+
+  // --- Lógica para obtener estadísticas del usuario cuando se activa la pestaña settings --- //
+  useEffect(() => {
+    if (activeTab === 'settings' && user?.id) {
+      const fetchUserStats = async () => {
+        try {
+          const statsData = await getUserPublicStats(user.id);
+          setUserStats(statsData);
+        } catch (error: any) {
+          // Si falla, no hacer nada (ya tenemos el perfil básico)
+        }
+      };
+
+      fetchUserStats();
     }
   }, [activeTab, user?.id]);
   // -------------------------------------------- //
@@ -606,24 +669,72 @@ const Dashboard = () => {
         </div>
         
         <div className="sidebar-user">
-          <div className="user-avatar">
-            <FaUser />
-          </div>
+          <Link 
+            to={`/profile/${user?.id || storedUserData?.id || ''}`} 
+            className="user-avatar-link"
+            style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}
+          >
+            <div className="user-avatar">
+              {userAvatarUrl || userProfile?.avatar_url ? (
+                <img 
+                  src={getAvatarUrl(userAvatarUrl || userProfile?.avatar_url || '')} 
+                  alt={userData.name}
+                  className="user-avatar-image"
+                  loading="lazy"
+                  decoding="async"
+                  onError={(e) => {
+                    // Si la imagen falla, ocultar y mostrar placeholder
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    const parent = target.parentElement;
+                    if (parent) {
+                      const placeholder = parent.querySelector('.user-avatar-placeholder');
+                      if (placeholder) {
+                        (placeholder as HTMLElement).style.display = 'flex';
+                      }
+                    }
+                  }}
+                />
+              ) : null}
+              {(!userAvatarUrl && !userProfile?.avatar_url) && (
+                <div className="user-avatar-placeholder">
+                  {userData.name
+                    .split(' ')
+                    .map(name => name[0])
+                    .join('')
+                    .toUpperCase()
+                    .slice(0, 2)}
+                </div>
+              )}
+            </div>
+          </Link>
           <div className="user-info">
-            <Link to="/dashboard" className="user-dashboard-link">
+            <Link 
+              to={`/profile/${user?.id || storedUserData?.id || ''}`} 
+              className="user-dashboard-link"
+              style={{ textDecoration: 'none' }}
+            >
               <h3 className="user-name-display">
                 {userData.name}
               </h3>
             </Link>
-            <div className="user-level">
-              <span>{t('dashboard.level')} {userData.level}</span>
-              <div className="level-progress">
-                <div 
-                  className="level-progress-bar" 
-                  style={{ width: `${userData.experience}%` }}
-                ></div>
+            <Link 
+              to={`/profile/${user?.id || storedUserData?.id || ''}`} 
+              className="user-rating-link"
+              style={{ textDecoration: 'none', display: 'block' }}
+            >
+              <div className="user-level">
+                {loadingRating ? (
+                  <span style={{ color: '#888', fontSize: '0.9rem' }}>...</span>
+                ) : (
+                  <RatingDisplay
+                    averageRating={userRating?.average_rating || 0}
+                    totalRatings={userRating?.total_ratings || 0}
+                    size="small"
+                  />
+                )}
               </div>
-            </div>
+            </Link>
           </div>
         </div>
         
@@ -1440,7 +1551,9 @@ const Dashboard = () => {
                     <div className="profile-display-header">
                       <div className="profile-avatar-display">
                         {userProfile?.avatar_url ? (
-                          <img 
+                          <img
+                            loading="lazy"
+                            decoding="async" 
                             src={getAvatarUrl(userProfile.avatar_url)} 
                             alt={userProfile.username}
                             className="profile-avatar-img"
@@ -1578,15 +1691,25 @@ const Dashboard = () => {
                     </div>
                   )}
 
-                  {/* Botón para editar */}
+                  {/* Botones para editar y ver perfil */}
                   <div className="settings-edit-section">
-                    <Link 
-                      to="/dashboard/settings/profile" 
-                      className="edit-full-profile-button"
-                    >
-                      <FaUser />
-                      <span>{t('dashboard.settings.edit.profile')}</span>
-                    </Link>
+                    <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                      <Link 
+                        to="/dashboard/settings/profile" 
+                        className="edit-full-profile-button"
+                      >
+                        <FaUser />
+                        <span>{t('dashboard.settings.edit.profile')}</span>
+                      </Link>
+                      <Link 
+                        to={`/profile/${user?.id || storedUserData?.id || ''}`} 
+                        className="edit-full-profile-button"
+                        style={{ background: 'var(--primary-blue)', color: '#fff' }}
+                      >
+                        <FaGlobe />
+                        <span>Ver Perfil Público</span>
+                      </Link>
+                    </div>
                     <p className="edit-hint">{t('dashboard.settings.edit.hint')}</p>
                   </div>
 

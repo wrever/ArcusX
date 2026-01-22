@@ -10,11 +10,37 @@ const Preloader: React.FC = () => {
   const logo = theme === 'light' ? logoLight : logoDark;
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 2000); // 2 segundos de carga
-
-    return () => clearTimeout(timer);
+    // Tiempo mínimo de visualización (1.5 segundos)
+    const minDisplayTime = 1500;
+    const startTime = Date.now();
+    
+    const handleLoad = () => {
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, minDisplayTime - elapsed);
+      
+      setTimeout(() => {
+        setLoading(false);
+      }, remaining);
+    };
+    
+    // Si ya está cargado, esperar el tiempo mínimo
+    if (document.readyState === 'complete') {
+      setTimeout(() => {
+        setLoading(false);
+      }, minDisplayTime);
+    } else {
+      window.addEventListener('load', handleLoad);
+      
+      // Timeout máximo de seguridad (2 segundos)
+      const timeout = setTimeout(() => {
+        setLoading(false);
+      }, 2000);
+      
+      return () => {
+        clearTimeout(timeout);
+        window.removeEventListener('load', handleLoad);
+      };
+    }
   }, []);
 
   if (!loading) return null;

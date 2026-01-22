@@ -206,7 +206,7 @@
 }
 
 .form-section {
-  padding: 1.25rem 1.4rem;
+  padding: 1.75rem 2rem;
   border-radius: 16px;
   background: var(--bg-card);
   border: 2px solid var(--border-color);
@@ -223,9 +223,11 @@
 }
 
 .form-section h2 {
-  font-size: 1.1rem;
-  margin-bottom: 0.85rem;
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+  margin-top: 0;
   color: var(--text-primary);
+  font-weight: 600;
 }
 
 /* Título de sección en negro en modo claro */
@@ -234,9 +236,11 @@
 }
 
 .section-help {
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   color: var(--text-secondary);
-  margin-bottom: 0.9rem;
+  margin-bottom: 1.5rem;
+  margin-top: 0;
+  line-height: 1.5;
 }
 
 /* Texto de ayuda visible en modo claro */
@@ -247,17 +251,22 @@
 .form-group {
   display: flex;
   flex-direction: column;
-  margin-bottom: 0.95rem;
+  margin-bottom: 1.25rem;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
 }
 
 .form-group label {
   font-size: 0.9rem;
-  margin-bottom: 0.35rem;
-  display: inline-flex;
+  margin-bottom: 0.5rem;
+  display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.5rem;
   color: var(--text-primary);
   font-weight: 500;
+  width: 100%;
 }
 
 /* Labels en negro en modo claro */
@@ -271,12 +280,14 @@
   border-radius: 10px;
   border: 2px solid var(--input-border);
   background: var(--input-background);
-  padding: 0.65rem 0.85rem;
+  padding: 0.75rem 1rem;
   font-size: 0.95rem;
   color: var(--text-primary);
   outline: none;
   transition: var(--transition);
   font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Campos de relleno blancos con texto negro en modo claro */
@@ -300,15 +311,18 @@
 
 .form-group textarea {
   resize: vertical;
-  min-height: 100px;
+  min-height: 120px;
+  width: 100%;
+  font-family: inherit;
 }
 
 .char-count {
   display: block;
   text-align: right;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: var(--text-secondary);
-  margin-top: 0.25rem;
+  margin-top: 0.5rem;
+  padding-right: 0.25rem;
 }
 
 /* Contador de caracteres visible en modo claro */
@@ -473,12 +487,17 @@
   }
 
   .edit-profile-card {
-    padding: 1.5rem 1.3rem;
+    padding: 1.5rem 1.25rem;
   }
 
   .edit-profile-card-header {
     flex-direction: column;
     align-items: flex-start;
+    gap: 1.25rem;
+  }
+
+  .form-section {
+    padding: 1.5rem 1.25rem;
   }
 
   .form-row {
@@ -500,23 +519,50 @@
     padding: 0.75rem 1.5rem;
     font-size: 0.9rem;
   }
+
+  .checkbox-label {
+    padding: 1.75rem 1.5rem;
+    gap: 1.25rem;
+    max-width: 100%;
+  }
+
+  .checkbox-custom {
+    width: 60px;
+    height: 60px;
+    font-size: 1.6rem;
+  }
+
+  .checkbox-text {
+    text-align: center;
+    width: 100%;
+  }
 }
 
 /* Checkbox personalizado */
 .checkbox-group {
   margin-bottom: 0;
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: center;
+  width: 100%;
 }
 
 .checkbox-label {
   display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  cursor: pointer;
-  padding: 1rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 2rem 2.5rem;
   background: var(--bg-card);
-  border-radius: 8px;
+  border-radius: 16px;
   border: 2px solid var(--border-color);
   transition: var(--transition);
+  width: 100%;
+  max-width: 500px;
+  box-sizing: border-box;
+  margin: 0 auto;
+  text-align: center;
 }
 
 /* Fondo blanco y bordes más visibles en modo claro */
@@ -526,49 +572,77 @@
   border-width: 2px !important;
 }
 
-.checkbox-label:hover {
-  background: var(--bg-hover);
-  border-color: var(--border-color-hover);
-}
-
-:root[data-theme="light"] .checkbox-label:hover {
-  background: #f8fafc !important;
-  border-color: rgba(100, 116, 139, 0.5) !important;
-}
-
-.checkbox-label input[type="checkbox"] {
-  display: none;
-}
 
 .checkbox-custom {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  background: rgba(40, 192, 240, 0.1);
-  border: 2px solid rgba(40, 192, 240, 0.3);
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--primary-blue);
-  font-size: 1.2rem;
+  font-size: 1.75rem;
   flex-shrink: 0;
   transition: var(--transition);
+  cursor: pointer;
+  user-select: none;
+  padding: 0;
+  margin: 0;
+  outline: none;
+  border: 2px solid;
 }
 
-.checkbox-label input[type="checkbox"]:checked + .checkbox-custom {
+/* Estilo cuando el perfil es público (candado abierto) */
+.checkbox-custom.public {
   background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
   border-color: var(--primary-blue);
   color: white;
 }
 
+.checkbox-custom.public:hover {
+  background: linear-gradient(135deg, var(--secondary-blue) 0%, var(--primary-blue) 100%);
+  transform: scale(1.05);
+}
+
+/* Estilo cuando el perfil es privado (candado cerrado) */
+.checkbox-custom.private {
+  background: rgba(148, 163, 184, 0.1);
+  border-color: rgba(148, 163, 184, 0.3);
+  color: #94a3b8;
+}
+
+.checkbox-custom.private:hover {
+  background: rgba(148, 163, 184, 0.2);
+  border-color: rgba(148, 163, 184, 0.5);
+  transform: scale(1.05);
+}
+
+.checkbox-custom:active {
+  transform: scale(0.95);
+}
+
+.checkbox-custom:focus {
+  box-shadow: 0 0 0 3px rgba(40, 192, 240, 0.3);
+}
+
+/* Estilos para cuando el perfil es público (candado abierto) */
+.checkbox-label:has(.checkbox-custom:focus) .checkbox-custom {
+  box-shadow: 0 0 0 3px rgba(40, 192, 240, 0.3);
+}
+
 .checkbox-text {
-  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: center;
+  width: 100%;
 }
 
 .checkbox-text strong {
   display: block;
-  margin-bottom: 0.25rem;
+  margin: 0;
   color: var(--text-primary);
+  font-size: 1.15rem;
+  font-weight: 600;
 }
 
 /* Título de checkbox en negro en modo claro */
@@ -580,6 +654,7 @@
   margin: 0;
   color: var(--text-secondary);
   font-size: 0.9rem;
+  line-height: 1.5;
 }
 
 /* Texto de checkbox visible en modo claro */
@@ -600,10 +675,12 @@
   gap: 0.75rem;
   max-height: 400px;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 0.5rem;
   border-radius: 12px;
   background: var(--bg-card);
   border: 2px solid var(--border-color);
+  box-sizing: border-box;
 }
 
 /* Fondo blanco y bordes más visibles en modo claro */
@@ -622,6 +699,10 @@
   background: var(--bg-card);
   border: 2px solid var(--border-color);
   transition: var(--transition);
+  box-sizing: border-box;
+  min-width: 0;
+  overflow: hidden;
+  width: 100%;
 }
 
 /* Fondo blanco y bordes más visibles en modo claro */
@@ -657,6 +738,8 @@
   gap: 0.5rem;
   cursor: pointer;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .skill-checkbox input[type="checkbox"] {
@@ -670,6 +753,11 @@
   font-size: 0.9rem;
   color: var(--text-primary);
   font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
 }
 
 /* Nombre de skill en negro en modo claro */
@@ -686,6 +774,12 @@
   font-size: 0.85rem;
   cursor: pointer;
   outline: none;
+  transition: var(--transition);
+  flex-shrink: 0;
+  min-width: 120px;
+  max-width: 150px;
+  box-sizing: border-box;
+  width: auto;
 }
 
 /* Selector de nivel de skill blanco con texto negro en modo claro */
@@ -694,8 +788,6 @@
   border-color: rgba(100, 116, 139, 0.4) !important;
   border-width: 2px !important;
   color: #0f172a !important;
-}
-  transition: var(--transition);
 }
 
 .skill-level-select:hover {
@@ -795,16 +887,27 @@
   .skills-grid {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 0.5rem;
+    overflow-x: hidden;
   }
 
   .skill-select-item {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .skill-checkbox {
+    width: 100%;
+    min-width: 0;
   }
 
   .skill-level-select {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
 }
 

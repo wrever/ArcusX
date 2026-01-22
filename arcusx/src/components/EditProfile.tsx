@@ -384,20 +384,20 @@ const EditProfile: React.FC = () => {
             </div>
 
             <div className="form-group checkbox-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={publicProfile}
-                  onChange={e => setPublicProfile(e.target.checked)}
-                />
-                <span className="checkbox-custom">
+              <div className="checkbox-label">
+                <button
+                  type="button"
+                  className={`checkbox-custom ${publicProfile ? 'public' : 'private'}`}
+                  onClick={() => setPublicProfile(!publicProfile)}
+                  aria-label={publicProfile ? "Hacer perfil privado" : "Hacer perfil público"}
+                >
                   {publicProfile ? <FaUnlock /> : <FaLockIcon />}
-                </span>
+                </button>
                 <div className="checkbox-text">
                   <strong>Perfil Público</strong>
                   <p>Permitir que otros usuarios vean tu perfil y estadísticas</p>
                 </div>
-              </label>
+              </div>
             </div>
           </div>
 

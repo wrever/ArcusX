@@ -9,6 +9,7 @@ import { getFreelancers } from '../services/freelancerService';
 import type { Freelancer, FreelancerFilters } from '../types/freelancer';
 import FreelancerCard from './FreelancerCard';
 import { useI18n } from '../i18n/I18nProvider';
+import { useDebounce } from '../hooks/useDebounce';
 import '../css/FreelancersList.css';
 
 const FreelancersList = () => {
@@ -29,17 +30,8 @@ const FreelancersList = () => {
   const [totalPages, setTotalPages] = useState(1);
   const limit = 20;
 
-  // Debounce para búsqueda
-  const [searchDebounced, setSearchDebounced] = useState('');
-
-  // Debounce para búsqueda (500ms)
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setSearchDebounced(search);
-    }, 500);
-
-    return () => clearTimeout(timeout);
-  }, [search]);
+  // Debounce para búsqueda usando hook personalizado
+  const searchDebounced = useDebounce(search, 500);
 
   const fetchFreelancers = useCallback(async () => {
     setLoading(true);
