@@ -26,16 +26,24 @@ const AdminPanel = lazy(() => import('./components/AdminPanel'));
 const EditProfile = lazy(() => import('./components/EditProfile'));
 const SwapPage = lazy(() => import('./pages/SwapPage'));
 const TutorialsPage = lazy(() => import('./pages/TutorialsPage'));
+const SupportChatButton = lazy(() => import('./components/SupportChatButton'));
 
 
 function AppContent({ isLoading }: { isLoading: boolean }) {
   const location = useLocation();
   const showFloatingButtons = ['/', '/swap', '/tutoriales'].includes(location.pathname);
+  const showSupportButton = location.pathname === '/';
 
   return (
     <>
       <LanguageFab visible={showFloatingButtons} />
       <ThemeToggle visible={showFloatingButtons} />
+      {/* Botón flotante de soporte - visible solo en la página principal */}
+      {showSupportButton && (
+        <Suspense fallback={null}>
+          <SupportChatButton />
+        </Suspense>
+      )}
       {isLoading ? (
         <Preloader />
       ) : (
