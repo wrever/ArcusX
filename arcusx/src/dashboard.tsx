@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaUser, FaTasks, FaWallet, FaChartLine, FaBell, FaCog, FaSignOutAlt, FaPlus, FaTimes, FaExclamationTriangle, FaUsers, FaCheckCircle, FaGlobe, FaLock, FaStar, FaGraduationCap } from 'react-icons/fa';
+import { FaUser, FaTasks, FaWallet, FaChartLine, FaBell, FaCog, FaSignOutAlt, FaPlus, FaTimes, FaExclamationTriangle, FaUsers, FaCheckCircle, FaGlobe, FaLock, FaStar, FaGraduationCap, FaExchangeAlt, FaQuestionCircle } from 'react-icons/fa';
 import { MdTranslate } from 'react-icons/md';
 import ThemeToggle from './components/ThemeToggle';
 import { FiMenu } from 'react-icons/fi';
@@ -25,6 +25,8 @@ import { useI18n } from './i18n/I18nProvider';
 import { useDebounce } from './hooks/useDebounce';
 import FreelancersList from './components/FreelancersList';
 import TutorialsTab from './components/TutorialsTab';
+import SwapPage from './pages/SwapPage';
+import SupportPage from './pages/SupportPage';
 import { getAvatarUrl } from './utils/avatarUtils';
 import { useTheme } from './contexts/ThemeContext';
 
@@ -753,17 +755,23 @@ const Dashboard = () => {
             <li className={activeTab === 'freelancers' ? 'active' : ''} onClick={() => setActiveTab('freelancers')}>
               <FaUsers /> <span>{t('dashboard.tabs.freelancers')}</span>
             </li>
-            <li className={activeTab === 'tutorials' ? 'active' : ''} onClick={() => setActiveTab('tutorials')}>
-              <FaGraduationCap /> <span>{t('dashboard.tabs.tutorials')}</span>
-            </li>
             <li className={activeTab === 'wallet' ? 'active' : ''} onClick={() => setActiveTab('wallet')}>
               <FaWallet /> <span>{t('dashboard.tabs.wallet')}</span>
+            </li>
+            <li className={activeTab === 'swap' ? 'active' : ''} onClick={() => setActiveTab('swap')}>
+              <FaExchangeAlt /> <span>{t('dashboard.tabs.swap')}</span>
+            </li>
+            <li className={activeTab === 'tutorials' ? 'active' : ''} onClick={() => setActiveTab('tutorials')}>
+              <FaGraduationCap /> <span>{t('dashboard.tabs.tutorials')}</span>
             </li>
             <li className={activeTab === 'notifications' ? 'active' : ''} onClick={() => setActiveTab('notifications')}>
               <FaBell /> <span>{t('dashboard.tabs.notifications')}</span>
               {unreadCount > 0 && (
                 <span className="notification-badge">{unreadCount}</span>
               )}
+            </li>
+            <li className={activeTab === 'support' ? 'active' : ''} onClick={() => setActiveTab('support')}>
+              <FaQuestionCircle /> <span>{t('dashboard.tabs.support')}</span>
             </li>
             <li className={activeTab === 'settings' ? 'active' : ''} onClick={() => setActiveTab('settings')}>
               <FaCog /> <span>{t('dashboard.tabs.settings')}</span>
@@ -791,6 +799,8 @@ const Dashboard = () => {
             {activeTab === 'manage-tasks' && t('dashboard.title.manage.tasks')}
             {activeTab === 'freelancers' && t('dashboard.title.freelancers')}
             {activeTab === 'tutorials' && t('dashboard.title.tutorials')}
+            {activeTab === 'swap' && t('dashboard.title.swap')}
+            {activeTab === 'support' && t('dashboard.title.support')}
           </h1>
           <div className="header-actions">
             <div className="theme-language-buttons">
@@ -1520,9 +1530,19 @@ const Dashboard = () => {
             <FreelancersList />
           )}
           
+          {/* Swap Tab */}
+          {activeTab === 'swap' && (
+            <SwapPage />
+          )}
+          
           {/* Tutorials Tab */}
           {activeTab === 'tutorials' && (
             <TutorialsTab />
+          )}
+          
+          {/* Support Tab */}
+          {activeTab === 'support' && (
+            <SupportPage />
           )}
           
           {/* Settings Tab */}
