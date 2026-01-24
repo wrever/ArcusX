@@ -4,6 +4,7 @@ import { FaTasks, FaSearch, FaEye, FaCheckCircle, FaExclamationTriangle, FaWalle
 import { getAdminTasks, getAdminTaskDetails } from '../services/adminService';
 import { useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks';
 import '../css/AdminPanel.css';
+import EscrowLifecycle from './EscrowLifecycle';
 
 interface TaskManagementProps {
   onUpdate?: () => void;
@@ -519,6 +520,8 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                           </div>
                         )}
                       </div>
+                        <EscrowLifecycle status={selectedTask.escrow_status} />
+
                     ) : (
                       <div style={{ 
                         padding: '20px', 
