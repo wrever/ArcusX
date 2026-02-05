@@ -1381,6 +1381,7 @@
 .landing-roadmap-item[data-side="right"] .landing-roadmap-node { order: 2; }
 .landing-roadmap-item[data-side="right"] .landing-roadmap-content { order: 3; }
 
+/* Nodo base: siempre tiene fondo visible (evita nodos sin círculo en producción/servidor) */
 .landing-roadmap-node {
   width: 52px;
   height: 52px;
@@ -1390,38 +1391,41 @@
   justify-content: center;
   font-size: 1.15rem;
   flex-shrink: 0;
-  border: 3px solid transparent;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  border: 3px solid rgba(16, 221, 136, 0.35);
+  background: var(--bg-surface, #141414);
+  color: var(--text-secondary, rgba(255, 255, 255, 0.75));
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background 0.2s ease, border-color 0.2s ease;
   position: relative;
   z-index: 2;
 }
 
 .landing-roadmap-item[data-phase="done"] .landing-roadmap-node {
-  background: var(--primary-blue);
-  color: var(--bg-primary);
+  background: var(--primary-blue, #10dd88);
+  color: var(--bg-primary, #0a0a0a);
   border-color: rgba(16, 221, 136, 0.4);
   box-shadow: 0 0 0 4px rgba(16, 221, 136, 0.2), 0 0 24px rgba(16, 221, 136, 0.4);
 }
 
 .landing-roadmap-item[data-phase="now"] .landing-roadmap-node {
-  background: var(--bg-surface);
-  color: var(--primary-blue);
-  border-color: var(--primary-blue);
+  background: var(--bg-surface, #141414);
+  color: var(--primary-blue, #10dd88);
+  border-color: var(--primary-blue, #10dd88);
   box-shadow: 0 0 0 4px rgba(16, 221, 136, 0.25), 0 0 28px rgba(16, 221, 136, 0.5);
   animation: roadmapNodePulseArc 2.2s ease-in-out infinite;
 }
 
 .landing-roadmap-item[data-phase="next"] .landing-roadmap-node {
-  background: var(--bg-surface);
-  color: var(--text-secondary);
-  border-color: var(--border-color);
+  background: var(--bg-surface, #141414);
+  color: var(--text-secondary, rgba(255, 255, 255, 0.75));
+  border-color: var(--border-color, rgba(255, 255, 255, 0.08));
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
 }
 
 .landing-roadmap-item[data-phase="vision"] .landing-roadmap-node {
-  background: var(--bg-surface);
-  color: var(--text-muted);
-  border-color: var(--border-subtle);
+  background: var(--bg-surface, #141414);
+  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+  border-color: var(--border-subtle, rgba(255, 255, 255, 0.08));
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
