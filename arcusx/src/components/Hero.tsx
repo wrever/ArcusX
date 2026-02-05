@@ -70,10 +70,6 @@ const Hero = () => {
     '@graph': [organizationSchema, websiteSchema, serviceSchema, productSchema]
   };
 
-  const scrollToSection = (id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   return (
     <>
       <SEO

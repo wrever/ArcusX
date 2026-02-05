@@ -424,6 +424,7 @@
   margin: 0 0 2rem 0;
 }
 
+/* Por defecto (móvil): icono arriba del texto */
 .landing-value-list li {
   display: flex;
   flex-direction: column;
@@ -450,6 +451,19 @@
   align-items: center;
   justify-content: center;
   margin-top: 0;
+}
+
+/* Pantallas grandes: icono a la izquierda del texto */
+@media (min-width: 601px) {
+  .landing-value-list li {
+    flex-direction: row;
+    align-items: flex-start;
+    text-align: left;
+    gap: 1rem;
+  }
+  .landing-value-icon {
+    margin-top: 0.15em;
+  }
 }
 
 .landing-value-list-text {
@@ -1009,6 +1023,25 @@
   justify-content: center;
   font-size: 1.5rem;
   margin-bottom: 1.25rem;
+}
+
+/* Pantallas grandes: icono a la izquierda del texto */
+@media (min-width: 601px) {
+  .landing-feature {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 1rem;
+    align-items: start;
+  }
+  .landing-feature-icon {
+    grid-column: 1;
+    margin-bottom: 0;
+  }
+  .landing-feature h3,
+  .landing-feature p,
+  .landing-feature-bullet {
+    grid-column: 2;
+  }
 }
 
 .landing-feature h3 {
@@ -1579,11 +1612,22 @@
   opacity: 0.7;
 }
 
-/* Desktop: siempre mostrar body, título con borde inferior como antes */
+/* Desktop: siempre mostrar body, título con borde inferior; contenido visible junto al nodo */
 @media (min-width: 601px) {
   .landing-roadmap-card-body,
   .landing-roadmap-card-body[hidden] {
     display: block !important;
+    visibility: visible !important;
+  }
+
+  .landing-roadmap-content {
+    min-width: 220px;
+    visibility: visible;
+  }
+
+  .landing-roadmap-card {
+    min-width: 0;
+    visibility: visible;
   }
 
   .landing-roadmap-accordion-trigger h3 {
@@ -1686,7 +1730,7 @@
   .landing-roadmap-content {
     order: 2;
     flex: 1 1 auto;
-    min-width: 0;
+    min-width: 200px; /* evita que el texto desaparezca en 601–900px */
     max-width: none;
     padding-left: 1rem;
     padding-right: 0;

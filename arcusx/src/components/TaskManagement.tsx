@@ -450,77 +450,79 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                         </p>
                       </div>
                     ) : escrowInfo ? (
-                      <div className="detail-grid">
-                        <div className="detail-item">
-                          <label>Contract ID:</label>
-                          <span>
-                            <a 
-                              href={`https://stellar.expert/explorer/testnet/contract/${selectedTask.escrow_id}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{ 
-                                color: 'var(--primary-green, #10dd88)', 
-                                textDecoration: 'none',
-                                wordBreak: 'break-all'
-                              }}
-                            >
-                              {selectedTask.escrow_id.slice(0, 8)}...{selectedTask.escrow_id.slice(-6)}
-                              <FaLink style={{ marginLeft: '5px', fontSize: '12px' }} />
-                            </a>
-                          </span>
-                        </div>
-                        <div className="detail-item">
-                          <label>Balance Actual:</label>
-                          <span style={{ 
-                            fontWeight: 'bold',
-                            color: parseFloat(escrowInfo.balance || '0') > 0 ? '#10b981' : '#ef4444'
-                          }}>
-                            {parseFloat(escrowInfo.balance || '0').toFixed(7)} USDC
-                          </span>
-                        </div>
-                        <div className="detail-item">
-                          <label>Monto Total:</label>
-                          <span>{parseFloat(escrowInfo.amount || '0').toFixed(7)} USDC</span>
-                        </div>
-                        <div className="detail-item">
-                          <label>Estado Real:</label>
-                          <span className={`badge ${
-                            escrowInfo.status === 'released' || escrowInfo.status === 'completed' ? 'success' :
-                            escrowInfo.status === 'disputed' ? 'warning' :
-                            escrowInfo.status === 'active' ? 'info' : 'error'
-                          }`}>
-                            {escrowInfo.status || 'unknown'}
-                          </span>
-                        </div>
-                        <div className="detail-item">
-                          <label>Estado en BD:</label>
-                          <span>{getEscrowStatusBadge(selectedTask.escrow_status)}</span>
-                        </div>
-                        <div className="detail-item">
-                          <label>Activo:</label>
-                          <span className={`badge ${escrowInfo.isActive ? 'success' : 'error'}`}>
-                            {escrowInfo.isActive ? 'Sí' : 'No'}
-                          </span>
-                        </div>
-                        {escrowInfo.inconsistencies?.inconsistencyFound && (
-                          <div className="detail-item full-width">
-                            <div style={{
-                              padding: '12px',
-                              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                              border: '1px solid rgba(239, 68, 68, 0.3)',
-                              borderRadius: '8px',
-                              marginTop: '10px'
-                            }}>
-                              <FaExclamationTriangle style={{ color: '#ef4444', marginRight: '8px' }} />
-                              <strong style={{ color: '#ef4444' }}>Inconsistencias Detectadas:</strong>
-                              <p style={{ marginTop: '8px', color: 'rgba(255, 255, 255, 0.8)' }}>
-                                {JSON.stringify(escrowInfo.inconsistencies, null, 2)}
-                              </p>
-                            </div>
+                      <>
+                        <div className="detail-grid">
+                          <div className="detail-item">
+                            <label>Contract ID:</label>
+                            <span>
+                              <a 
+                                href={`https://stellar.expert/explorer/testnet/contract/${selectedTask.escrow_id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ 
+                                  color: 'var(--primary-green, #10dd88)', 
+                                  textDecoration: 'none',
+                                  wordBreak: 'break-all'
+                                }}
+                              >
+                                {selectedTask.escrow_id.slice(0, 8)}...{selectedTask.escrow_id.slice(-6)}
+                                <FaLink style={{ marginLeft: '5px', fontSize: '12px' }} />
+                              </a>
+                            </span>
                           </div>
-                        )}
-                      </div>
+                          <div className="detail-item">
+                            <label>Balance Actual:</label>
+                            <span style={{ 
+                              fontWeight: 'bold',
+                              color: parseFloat(escrowInfo.balance || '0') > 0 ? '#10b981' : '#ef4444'
+                            }}>
+                              {parseFloat(escrowInfo.balance || '0').toFixed(7)} USDC
+                            </span>
+                          </div>
+                          <div className="detail-item">
+                            <label>Monto Total:</label>
+                            <span>{parseFloat(escrowInfo.amount || '0').toFixed(7)} USDC</span>
+                          </div>
+                          <div className="detail-item">
+                            <label>Estado Real:</label>
+                            <span className={`badge ${
+                              escrowInfo.status === 'released' || escrowInfo.status === 'completed' ? 'success' :
+                              escrowInfo.status === 'disputed' ? 'warning' :
+                              escrowInfo.status === 'active' ? 'info' : 'error'
+                            }`}>
+                              {escrowInfo.status || 'unknown'}
+                            </span>
+                          </div>
+                          <div className="detail-item">
+                            <label>Estado en BD:</label>
+                            <span>{getEscrowStatusBadge(selectedTask.escrow_status)}</span>
+                          </div>
+                          <div className="detail-item">
+                            <label>Activo:</label>
+                            <span className={`badge ${escrowInfo.isActive ? 'success' : 'error'}`}>
+                              {escrowInfo.isActive ? 'Sí' : 'No'}
+                            </span>
+                          </div>
+                          {escrowInfo.inconsistencies?.inconsistencyFound && (
+                            <div className="detail-item full-width">
+                              <div style={{
+                                padding: '12px',
+                                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                borderRadius: '8px',
+                                marginTop: '10px'
+                              }}>
+                                <FaExclamationTriangle style={{ color: '#ef4444', marginRight: '8px' }} />
+                                <strong style={{ color: '#ef4444' }}>Inconsistencias Detectadas:</strong>
+                                <p style={{ marginTop: '8px', color: 'rgba(255, 255, 255, 0.8)' }}>
+                                  {JSON.stringify(escrowInfo.inconsistencies, null, 2)}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                         <EscrowLifecycle status={selectedTask.escrow_status} />
+                      </>
 
                     ) : (
                       <div style={{ 

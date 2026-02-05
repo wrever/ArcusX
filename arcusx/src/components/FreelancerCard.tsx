@@ -94,7 +94,7 @@ const FreelancerCard = memo(({ freelancer }: FreelancerCardProps) => {
         </div>
 
         <div className="freelancer-card-body">
-          <RatingDisplay rating={freelancer.average_rating} totalRatings={freelancer.total_ratings} />
+          <RatingDisplay averageRating={freelancer.average_rating} totalRatings={freelancer.total_ratings} />
           <p className="freelancer-bio">{truncatedBio}</p>
 
           {skills.visible.length > 0 && (
