@@ -139,7 +139,7 @@
   width: 100px;
   height: 100px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #28c0f0 0%, #1180b3 100%);
+  background: linear-gradient(135deg, #10dd88 0%, #0ab86a 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -170,7 +170,7 @@
 }
 
 .admin-title-highlight {
-  background: linear-gradient(135deg, #28c0f0 0%, #1180b3 100%);
+  background: linear-gradient(135deg, #10dd88 0%, #0ab86a 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -186,7 +186,7 @@
 .admin-divider {
   width: 60px;
   height: 3px;
-  background: linear-gradient(90deg, transparent, #28c0f0, transparent);
+  background: linear-gradient(90deg, transparent, #10dd88, transparent);
   margin: 0 auto;
   border-radius: 2px;
 }
@@ -233,7 +233,7 @@
 }
 
 .admin-label-icon {
-  color: #28c0f0;
+  color: #10dd88;
   font-size: 0.9rem;
 }
 
@@ -259,7 +259,7 @@
 
 .admin-input:focus {
   background: rgba(255, 255, 255, 0.08);
-  border-color: #28c0f0;
+  border-color: #10dd88;
   box-shadow: 0 0 0 3px rgba(40, 192, 240, 0.1);
 }
 
@@ -286,7 +286,7 @@
 }
 
 .admin-password-toggle:hover:not(:disabled) {
-  color: #28c0f0;
+  color: #10dd88;
 }
 
 .admin-password-toggle:disabled {
@@ -298,7 +298,7 @@
 .admin-submit-button {
   width: 100%;
   padding: 1.1rem 1.5rem;
-  background: linear-gradient(135deg, #28c0f0 0%, #1180b3 100%);
+  background: linear-gradient(135deg, #10dd88 0%, #0ab86a 100%);
   border: none;
   border-radius: 12px;
   color: #fff;
@@ -315,7 +315,7 @@
 }
 
 .admin-submit-button:hover:not(:disabled) {
-  background: linear-gradient(135deg, #1180b3 0%, #28c0f0 100%);
+  background: linear-gradient(135deg, #0ab86a 0%, #10dd88 100%);
   box-shadow: 0 6px 25px rgba(40, 192, 240, 0.5);
   transform: translateY(-2px);
 }
@@ -362,7 +362,7 @@
 }
 
 .admin-security-note svg {
-  color: #28c0f0;
+  color: #10dd88;
   font-size: 0.9rem;
 }
 

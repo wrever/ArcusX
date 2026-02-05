@@ -1,11 +1,11 @@
 /**
  * FreelancerCard.tsx
- * Card horizontal "Upwork + Web3": identidad wallet + señales de confianza + stats rápidos.
+ * Card horizontal: nombre, verificado, rating, bio, habilidades y CTAs.
  */
 
 import { memo, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { FaCheckCircle, FaBolt, FaStar, FaLock } from 'react-icons/fa';
+import { FaCheckCircle, FaStar } from 'react-icons/fa';
 import RatingDisplay from './RatingDisplay';
 import { useI18n } from '../i18n/I18nProvider';
 import type { Freelancer } from '../types/freelancer';
@@ -84,50 +84,12 @@ const FreelancerCard = memo(({ freelancer }: FreelancerCardProps) => {
               </span>
             )}
 
-            <span className="freelancer-badge escrow" title={t('freelancers.badge.escrow')}>
-              <FaLock />
-              {t('freelancers.badge.escrow')}
-            </span>
-
-            {signals.badges.includes('fastResponder') && (
-              <span className="freelancer-badge fast" title={t('freelancers.badge.fast')}>
-                <FaBolt />
-                {t('freelancers.badge.fast')}
-              </span>
-            )}
-
             {signals.badges.includes('topRated') && (
               <span className="freelancer-badge top" title={t('freelancers.badge.top')}>
                 <FaStar />
                 {t('freelancers.badge.top')}
               </span>
             )}
-          </div>
-
-          <div className="freelancer-sub-row">
-            <span className="freelancer-wallet" title={signals.wallet}>
-              {signals.walletShort}
-            </span>
-            <span className="freelancer-joined">
-              {t('freelancers.card.joined')} {new Date(freelancer.joined_date).toLocaleDateString()}
-            </span>
-          </div>
-        </div>
-
-        <div className="freelancer-card-metrics">
-          <div className="freelancer-metric">
-            <span className="metric-label">{t('freelancers.metric.delivery')}</span>
-            <span className="metric-value">
-              {signals.avgDeliveryDays} {t('freelancers.metric.days')}
-            </span>
-          </div>
-          <div className="freelancer-metric">
-            <span className="metric-label">{t('freelancers.metric.jobs')}</span>
-            <span className="metric-value">{freelancer.tasks_completed}</span>
-          </div>
-          <div className="freelancer-metric">
-            <span className="metric-label">{t('freelancers.metric.disputes')}</span>
-            <span className="metric-value">{signals.disputeRatePct.toFixed(1)}%</span>
           </div>
         </div>
 
@@ -137,11 +99,15 @@ const FreelancerCard = memo(({ freelancer }: FreelancerCardProps) => {
 
           {skills.visible.length > 0 && (
             <div className="freelancer-skills">
-              {skills.visible.map((s) => (
-                <span key={s} className="skill-chip">
-                  {s}
-                </span>
-              ))}
+              {skills.visible.map((s, idx) => {
+                const label = typeof s === 'string' ? s : (s && typeof s === 'object' && 'name' in s ? (s as { name: string }).name : String(s));
+                const key = typeof s === 'string' ? s : (s && typeof s === 'object' && 'name' in s ? `skill-${(s as { name: string }).name}-${idx}` : `skill-${idx}`);
+                return (
+                  <span key={key} className="skill-chip">
+                    {label}
+                  </span>
+                );
+              })}
               {skills.more > 0 && <span className="skill-chip more">+{skills.more}</span>}
             </div>
           )}

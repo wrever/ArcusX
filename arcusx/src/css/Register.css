@@ -63,7 +63,7 @@
 
 .register-info h1 .highlight-text {
   color: #ffffff !important;
-  background: linear-gradient(90deg, #28c0f0, #1180b3);
+  background: linear-gradient(90deg, #10dd88, #0ab86a);
   background-size: 200% 100%;
   padding: 0.3rem 1rem;
   border-radius: 8px;
@@ -197,7 +197,7 @@
   height: 40px;
   background: rgba(40, 192, 240, 0.1);
   border-radius: 10px;
-  color: #28c0f0;
+  color: #10dd88;
   font-size: 1rem;
   flex-shrink: 0;
 }
@@ -228,7 +228,7 @@
 }
 
 .form-group input:focus {
-  border-color: #28c0f0;
+  border-color: #10dd88;
   box-shadow: 0 0 0 4px rgba(40, 192, 240, 0.15);
   outline: none;
   background: rgba(0, 0, 0, 0.4);
@@ -319,13 +319,13 @@
 }
 
 .toggle-password:hover {
-  color: #28c0f0;
+  color: #10dd88;
 }
 
 .register-button {
   width: 100%;
   padding: 1rem;
-  background: linear-gradient(90deg, #28c0f0, #1180b3);
+  background: linear-gradient(90deg, #10dd88, #0ab86a);
   border: none;
   border-radius: 12px;
   color: white;
@@ -371,14 +371,14 @@
 }
 
 .login-link a {
-  color: #28c0f0;
+  color: #10dd88;
   text-decoration: none;
   font-weight: 600;
   transition: color 0.3s ease;
 }
 
 .login-link a:hover {
-  color: #1180b3;
+  color: #0ab86a;
 }
 
 @media (max-width: 768px) {
@@ -431,7 +431,7 @@
 /* Estilo para inputs con valor */
 .form-group input:not(:placeholder-shown) {
   background: white;
-  border-color: #28c0f0;
+  border-color: #10dd88;
 }
 
 /* OAuth Styles para Register */
@@ -485,7 +485,7 @@
 }
 
 .oauth-button:hover:not(:disabled) {
-  border-color: #28c0f0;
+  border-color: #10dd88;
   background: rgba(0, 0, 0, 0.4);
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(40, 192, 240, 0.25);

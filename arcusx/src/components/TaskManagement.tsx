@@ -459,7 +459,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                               target="_blank"
                               rel="noopener noreferrer"
                               style={{ 
-                                color: '#28c0f0', 
+                                color: 'var(--primary-green, #10dd88)', 
                                 textDecoration: 'none',
                                 wordBreak: 'break-all'
                               }}

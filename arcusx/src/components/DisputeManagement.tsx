@@ -1523,7 +1523,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                   display: 'flex',
                   gap: '10px',
                   padding: '0 0 20px 0',
-                  borderBottom: '2px solid rgba(40, 192, 240, 0.2)',
+                  borderBottom: '2px solid rgba(16, 221, 136, 0.2)',
                   marginBottom: '20px'
                 }}>
                   <button
@@ -1531,9 +1531,9 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                     style={{
                       padding: '12px 24px',
                       background: activeTab === 'summary' 
-                        ? 'linear-gradient(90deg, #28c0f0, #1180b3)'
+                        ? 'linear-gradient(90deg, #10dd88, #0ab86a)'
                         : 'rgba(255, 255, 255, 0.1)',
-                      border: `1px solid ${activeTab === 'summary' ? 'transparent' : 'rgba(40, 192, 240, 0.3)'}`,
+                      border: `1px solid ${activeTab === 'summary' ? 'transparent' : 'rgba(16, 221, 136, 0.3)'}`,
                       borderRadius: '8px',
                       color: '#fff',
                       fontWeight: 'bold',
@@ -1564,9 +1564,9 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                     style={{
                       padding: '12px 24px',
                       background: activeTab === 'chat' 
-                        ? 'linear-gradient(90deg, #28c0f0, #1180b3)'
+                        ? 'linear-gradient(90deg, #10dd88, #0ab86a)'
                         : 'rgba(255, 255, 255, 0.1)',
-                      border: `1px solid ${activeTab === 'chat' ? 'transparent' : 'rgba(40, 192, 240, 0.3)'}`,
+                      border: `1px solid ${activeTab === 'chat' ? 'transparent' : 'rgba(16, 221, 136, 0.3)'}`,
                       borderRadius: '8px',
                       color: '#fff',
                       fontWeight: 'bold',
@@ -1597,9 +1597,9 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                     style={{
                       padding: '12px 24px',
                       background: activeTab === 'files' 
-                        ? 'linear-gradient(90deg, #28c0f0, #1180b3)'
+                        ? 'linear-gradient(90deg, #10dd88, #0ab86a)'
                         : 'rgba(255, 255, 255, 0.1)',
-                      border: `1px solid ${activeTab === 'files' ? 'transparent' : 'rgba(40, 192, 240, 0.3)'}`,
+                      border: `1px solid ${activeTab === 'files' ? 'transparent' : 'rgba(16, 221, 136, 0.3)'}`,
                       borderRadius: '8px',
                       color: '#fff',
                       fontWeight: 'bold',
@@ -1630,9 +1630,9 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                     style={{
                       padding: '12px 24px',
                       background: activeTab === 'timeline' 
-                        ? 'linear-gradient(90deg, #28c0f0, #1180b3)'
+                        ? 'linear-gradient(90deg, #10dd88, #0ab86a)'
                         : 'rgba(255, 255, 255, 0.1)',
-                      border: `1px solid ${activeTab === 'timeline' ? 'transparent' : 'rgba(40, 192, 240, 0.3)'}`,
+                      border: `1px solid ${activeTab === 'timeline' ? 'transparent' : 'rgba(16, 221, 136, 0.3)'}`,
                       borderRadius: '8px',
                       color: '#fff',
                       fontWeight: 'bold',

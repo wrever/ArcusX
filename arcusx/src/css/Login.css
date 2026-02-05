@@ -365,7 +365,7 @@
   align-items: center;
   text-align: center;
   margin: 2rem 0 1.5rem;
-  color: #28c0f0 !important;
+  color: #10dd88 !important;
   font-size: 0.9rem;
   font-weight: 600 !important;
   position: relative;
@@ -383,7 +383,7 @@
 .oauth-divider span {
   padding: 0 1.5rem;
   background: linear-gradient(145deg, rgba(7, 35, 60, 0.95), rgba(17, 128, 179, 0.1)) !important;
-  color: #28c0f0 !important;
+  color: #10dd88 !important;
   text-shadow: 0 0 15px rgba(40, 192, 240, 0.6) !important;
   letter-spacing: 0.5px;
   font-weight: 600 !important;

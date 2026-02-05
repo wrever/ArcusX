@@ -48,7 +48,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
     if (type.includes('zip') || type.includes('rar') || type.includes('archive')) {
       return <FaFileArchive style={{ color: '#f59e0b' }} />;
     }
-    return <FaFile style={{ color: '#28c0f0' }} />;
+    return <FaFile style={{ color: '#10dd88' }} />;
   };
 
   const canPreview = (file: DisputeFile): boolean => {
@@ -100,7 +100,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
           style={{
             padding: '12px 24px',
             background: activeTab === 'task_files' 
-              ? 'linear-gradient(90deg, #28c0f0, #1180b3)'
+              ? 'linear-gradient(90deg, #10dd88, #0ab86a)'
               : 'rgba(255, 255, 255, 0.1)',
             border: `1px solid ${activeTab === 'task_files' ? 'transparent' : 'rgba(40, 192, 240, 0.3)'}`,
             borderRadius: '8px',
@@ -140,7 +140,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
           style={{
             padding: '12px 24px',
             background: activeTab === 'chat_files' 
-              ? 'linear-gradient(90deg, #28c0f0, #1180b3)'
+              ? 'linear-gradient(90deg, #10dd88, #0ab86a)'
               : 'rgba(255, 255, 255, 0.1)',
             border: `1px solid ${activeTab === 'chat_files' ? 'transparent' : 'rgba(40, 192, 240, 0.3)'}`,
             borderRadius: '8px',
@@ -180,7 +180,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
           style={{
             padding: '12px 24px',
             background: activeTab === 'delivery_files' 
-              ? 'linear-gradient(90deg, #28c0f0, #1180b3)'
+              ? 'linear-gradient(90deg, #10dd88, #0ab86a)'
               : 'rgba(255, 255, 255, 0.1)',
             border: `1px solid ${activeTab === 'delivery_files' ? 'transparent' : 'rgba(40, 192, 240, 0.3)'}`,
             borderRadius: '8px',
@@ -299,7 +299,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
                         background: 'rgba(40, 192, 240, 0.2)',
                         border: '1px solid rgba(40, 192, 240, 0.3)',
                         borderRadius: '6px',
-                        color: '#28c0f0',
+                        color: '#10dd88',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -327,7 +327,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
                     style={{
                       flex: 1,
                       padding: '8px',
-                      background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                      background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
                       border: 'none',
                       borderRadius: '6px',
                       color: '#fff',
@@ -342,11 +342,11 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
                       transition: 'all 0.3s ease'
                     }}
                     onMouseOver={(e) => {
-                      e.currentTarget.style.background = 'linear-gradient(90deg, #1180b3, #28c0f0)';
+                      e.currentTarget.style.background = 'linear-gradient(90deg, #0ab86a, #10dd88)';
                       e.currentTarget.style.transform = 'scale(1.05)';
                     }}
                     onMouseOut={(e) => {
-                      e.currentTarget.style.background = 'linear-gradient(90deg, #28c0f0, #1180b3)';
+                      e.currentTarget.style.background = 'linear-gradient(90deg, #10dd88, #0ab86a)';
                       e.currentTarget.style.transform = 'scale(1)';
                     }}
                   >
@@ -372,7 +372,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
           flexWrap: 'wrap'
         }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#28c0f0' }}>
+            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10dd88' }}>
               {summary.total_files}
             </div>
             <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
@@ -380,7 +380,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
             </div>
           </div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#28c0f0' }}>
+            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10dd88' }}>
               {summary.task_files_count}
             </div>
             <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
@@ -388,7 +388,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
             </div>
           </div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#28c0f0' }}>
+            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10dd88' }}>
               {summary.chat_files_count}
             </div>
             <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
@@ -396,7 +396,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
             </div>
           </div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#28c0f0' }}>
+            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10dd88' }}>
               {summary.delivery_files_count}
             </div>
             <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>

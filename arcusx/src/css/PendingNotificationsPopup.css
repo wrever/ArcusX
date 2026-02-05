@@ -129,7 +129,7 @@
   font-weight: 700;
   color: #fff;
   margin: 0 0 0.5rem 0;
-  background: linear-gradient(90deg, #28c0f0, #1180b3);
+  background: linear-gradient(90deg, #10dd88, #0ab86a);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -137,7 +137,7 @@
 
 /* Modo claro */
 :root[data-theme="light"] .pending-notifications-title {
-  background: linear-gradient(90deg, #0f172a, #28c0f0) !important;
+  background: linear-gradient(90deg, #0f172a, #10dd88) !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
   background-clip: text !important;
@@ -249,7 +249,7 @@
 
 .pending-notification-icon-small {
   font-size: 1rem;
-  color: #28c0f0;
+  color: #10dd88;
   flex-shrink: 0;
 }
 
@@ -350,7 +350,7 @@
 }
 
 .pending-notifications-send-button {
-  background: linear-gradient(90deg, #28c0f0, #1180b3);
+  background: linear-gradient(90deg, #10dd88, #0ab86a);
   color: #fff;
   box-shadow: 0 4px 12px rgba(40, 192, 240, 0.3);
 }

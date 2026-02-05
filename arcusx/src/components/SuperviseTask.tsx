@@ -2236,10 +2236,10 @@ const SuperviseTask = () => {
                                                 <div style={{
                                                     padding: '20px',
                                                     marginTop: '15px',
-                                                    backgroundColor: '#d1ecf1',
-                                                    border: '2px solid #0c5460',
+                                                    backgroundColor: 'rgba(16, 221, 136, 0.12)',
+                                                    border: '2px solid rgba(16, 221, 136, 0.5)',
                                                     borderRadius: '8px',
-                                                    color: '#0c5460',
+                                                    color: '#10dd88',
                                                     textAlign: 'center'
                                                 }}>
                                                     <strong style={{ fontSize: '18px', display: 'block', marginBottom: '10px' }}>
@@ -2257,7 +2257,7 @@ const SuperviseTask = () => {
                                             padding: '15px',
                                                     marginTop: '15px',
                                                     backgroundColor: '#d4edda',
-                                                    border: '2px solid #28a745',
+                                                    border: '2px solid #10dd88',
                                                     borderRadius: '8px',
                                                     color: '#155724',
                                                     textAlign: 'center'
@@ -2317,10 +2317,10 @@ const SuperviseTask = () => {
                                                 <div style={{
                                                     padding: '20px',
                                                     marginTop: '15px',
-                                                    backgroundColor: '#d1ecf1',
-                                                    border: '2px solid #0c5460',
+                                                    backgroundColor: 'rgba(16, 221, 136, 0.12)',
+                                                    border: '2px solid rgba(16, 221, 136, 0.5)',
                                                     borderRadius: '8px',
-                                                    color: '#0c5460',
+                                                    color: '#10dd88',
                                                     textAlign: 'center'
                                                 }}>
                                                     <strong style={{ fontSize: '18px', display: 'block', marginBottom: '10px' }}>
@@ -2338,7 +2338,7 @@ const SuperviseTask = () => {
                                                     padding: '15px',
                                                     marginTop: '15px',
                                                     backgroundColor: '#d4edda',
-                                                    border: '2px solid #28a745',
+                                                    border: '2px solid #10dd88',
                                                     borderRadius: '8px',
                                                     color: '#155724',
                                                     textAlign: 'center'
@@ -2401,7 +2401,7 @@ const SuperviseTask = () => {
                                     padding: '15px',
                                     backgroundColor: '#f8f9fa',
                                     borderRadius: '8px',
-                                    border: '2px solid #28a745'
+                                    border: '2px solid #10dd88'
                                 }}>
                                     <h3 style={{ marginTop: 0, marginBottom: '10px', color: '#28a745', fontSize: '18px' }}> Retirar Fondos</h3>
                                     <p style={{ marginBottom: '15px', color: '#666', fontSize: '14px' }}>
@@ -2459,11 +2459,11 @@ const SuperviseTask = () => {
                                         <div style={{
                                             marginBottom: '20px',
                                             padding: '15px',
-                                            backgroundColor: '#d1ecf1',
+                                            backgroundColor: 'rgba(16, 221, 136, 0.12)',
                                             borderRadius: '8px',
-                                            border: '2px solid #0c5460'
+                                            border: '2px solid rgba(16, 221, 136, 0.5)'
                                         }}>
-                                            <p style={{ margin: 0, color: '#0c5460', fontSize: '14px' }}>
+                                            <p style={{ margin: 0, color: '#10dd88', fontSize: '14px' }}>
                                                  Ambos han aceptado. Haz clic en "Retirar Dinero" para iniciar el proceso de firmas.
                                             </p>
                                         </div>
@@ -2525,7 +2525,7 @@ const SuperviseTask = () => {
                                             padding: '15px',
                                             backgroundColor: '#d4edda',
                                             borderRadius: '8px',
-                                            border: '2px solid #28a745'
+                                            border: '2px solid #10dd88'
                                         }}>
                                             <p style={{ margin: 0, color: '#155724', fontSize: '14px', fontWeight: 'bold' }}>
                                                  ¡Pago recibido! El cliente ha liberado los fondos y ya has recibido tu pago.
@@ -2642,14 +2642,14 @@ const SuperviseTask = () => {
                     }
                 }}>
                     <div style={{
-                        backgroundColor: 'rgba(7, 35, 60, 0.98)',
+                        backgroundColor: 'rgba(10, 10, 10, 0.98)',
                         borderRadius: '20px',
                         padding: '32px',
                         maxWidth: '600px',
                         width: '90%',
                         maxHeight: '90vh',
                         overflowY: 'auto',
-                        border: '2px solid rgba(40, 192, 240, 0.3)',
+                        border: '2px solid rgba(16, 221, 136, 0.3)',
                         boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
                     }} onClick={(e) => e.stopPropagation()}>
                         <div style={{
@@ -2764,7 +2764,7 @@ const SuperviseTask = () => {
                                     minHeight: '150px',
                                     padding: '12px',
                                     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                    border: '2px solid rgba(40, 192, 240, 0.3)',
+                                    border: '2px solid rgba(16, 221, 136, 0.3)',
                                     borderRadius: '8px',
                                     color: '#fff',
                                     fontSize: '14px',
@@ -2774,11 +2774,11 @@ const SuperviseTask = () => {
                                     transition: 'all 0.3s ease'
                                 }}
                                 onFocus={(e) => {
-                                    e.currentTarget.style.borderColor = '#28c0f0';
+                                    e.currentTarget.style.borderColor = '#10dd88';
                                     e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
                                 }}
                                 onBlur={(e) => {
-                                    e.currentTarget.style.borderColor = 'rgba(40, 192, 240, 0.3)';
+                                    e.currentTarget.style.borderColor = 'rgba(16, 221, 136, 0.3)';
                                     e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
                                 }}
                             />
@@ -2881,7 +2881,7 @@ const SuperviseTask = () => {
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(17, 128, 179, 0.3) 100%)',
+                    background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(10, 184, 106, 0.3) 100%)',
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
@@ -2894,21 +2894,21 @@ const SuperviseTask = () => {
                         maxWidth: '550px',
                         width: '90%',
                         textAlign: 'center',
-                        boxShadow: '0 20px 60px rgba(40, 192, 240, 0.3), 0 0 0 1px rgba(40, 192, 240, 0.1)',
+                        boxShadow: '0 20px 60px rgba(16, 221, 136, 0.3), 0 0 0 1px rgba(16, 221, 136, 0.1)',
                         animation: 'scaleIn 0.5s ease-out',
-                        border: '1px solid rgba(40, 192, 240, 0.2)'
+                        border: '1px solid rgba(16, 221, 136, 0.2)'
                     }}>
                         <div style={{
                             fontSize: '80px',
                             marginBottom: '20px',
-                            filter: 'drop-shadow(0 0 10px rgba(40, 192, 240, 0.5))'
+                            filter: 'drop-shadow(0 0 10px rgba(16, 221, 136, 0.5))'
                         }}>
                             
                         </div>
                         <h3 style={{
                             fontSize: '28px',
                             fontWeight: 'bold',
-                            background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                            background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
                             WebkitBackgroundClip: 'text',
                             WebkitTextFillColor: 'transparent',
                             backgroundClip: 'text',
@@ -2931,35 +2931,35 @@ const SuperviseTask = () => {
                                 Has pagado al trabajador y todo está bien
                             </p>
                             <div style={{
-                                background: 'linear-gradient(135deg, rgba(40, 192, 240, 0.1) 0%, rgba(17, 128, 179, 0.1) 100%)',
+                                background: 'linear-gradient(135deg, rgba(16, 221, 136, 0.1) 0%, rgba(10, 184, 106, 0.1) 100%)',
                                 padding: '20px',
                                 borderRadius: '12px',
                                 marginTop: '15px',
                                 textAlign: 'left',
-                                border: '1px solid rgba(40, 192, 240, 0.2)'
+                                border: '1px solid rgba(16, 221, 136, 0.2)'
                             }}>
                                 <p style={{ margin: '8px 0', fontSize: '16px', color: '#fff' }}>
-                                    <strong style={{ color: '#28c0f0' }}> Total pagado:</strong> {paymentSuccessData.amount} USDC
+                                    <strong style={{ color: '#10dd88' }}> Total pagado:</strong> {paymentSuccessData.amount} USDC
                                 </p>
                                 <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
-                                    <strong style={{ color: '#28c0f0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><FaDollarSign /> Trabajador recibirá:</strong> {paymentSuccessData.netAmount} USDC
+                                    <strong style={{ color: '#10dd88', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><FaDollarSign /> Trabajador recibirá:</strong> {paymentSuccessData.netAmount} USDC
                                 </p>
                                 <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
-                                    <strong style={{ color: '#28c0f0' }}> Comisión de plataforma:</strong> {(parseFloat(paymentSuccessData.amount) - parseFloat(paymentSuccessData.netAmount || '0')).toFixed(7)} USDC
+                                    <strong style={{ color: '#10dd88' }}> Comisión de plataforma:</strong> {(parseFloat(paymentSuccessData.amount) - parseFloat(paymentSuccessData.netAmount || '0')).toFixed(7)} USDC
                                 </p>
                                 <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
-                                    <strong style={{ color: '#28c0f0' }}> Hash de transacción:</strong>
+                                    <strong style={{ color: '#10dd88' }}> Hash de transacción:</strong>
                                 </p>
                                 <code style={{
                                     display: 'block',
                                     fontSize: '12px',
-                                    color: '#28c0f0',
-                                    background: 'rgba(40, 192, 240, 0.1)',
+                                    color: '#10dd88',
+                                    background: 'rgba(16, 221, 136, 0.1)',
                                     padding: '8px',
                                     borderRadius: '4px',
                                     wordBreak: 'break-all',
                                     marginTop: '5px',
-                                    border: '1px solid rgba(40, 192, 240, 0.2)'
+                                    border: '1px solid rgba(16, 221, 136, 0.2)'
                                 }}>
                                     {paymentSuccessData.txHash}
                                 </code>
@@ -2975,7 +2975,7 @@ const SuperviseTask = () => {
                                     fetchData(); // Recargar datos para actualizar la UI
                                 }}
                                 style={{
-                                    background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                                    background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
                                     color: '#fff',
                                     border: 'none',
                                     padding: '14px 32px',
@@ -2985,17 +2985,17 @@ const SuperviseTask = () => {
                                     cursor: 'pointer',
                                     transition: 'all 0.3s ease',
                                     minWidth: '200px',
-                                    boxShadow: '0 4px 12px rgba(40, 192, 240, 0.3)'
+                                    boxShadow: '0 4px 12px rgba(16, 221, 136, 0.3)'
                                 }}
                                 onMouseOver={(e) => {
-                                    e.currentTarget.style.background = 'linear-gradient(90deg, #1180b3, #28c0f0)';
+                                    e.currentTarget.style.background = 'linear-gradient(90deg, #0ab86a, #10dd88)';
                                     e.currentTarget.style.transform = 'translateY(-2px)';
-                                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(40, 192, 240, 0.4)';
+                                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(16, 221, 136, 0.4)';
                                 }}
                                 onMouseOut={(e) => {
-                                    e.currentTarget.style.background = 'linear-gradient(90deg, #28c0f0, #1180b3)';
+                                    e.currentTarget.style.background = 'linear-gradient(90deg, #10dd88, #0ab86a)';
                                     e.currentTarget.style.transform = 'translateY(0)';
-                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(40, 192, 240, 0.3)';
+                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 221, 136, 0.3)';
                                 }}
                             >
                                 Volver a Tarea
@@ -3041,7 +3041,7 @@ const SuperviseTask = () => {
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(17, 128, 179, 0.3) 100%)',
+                    background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(10, 184, 106, 0.3) 100%)',
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
@@ -3054,21 +3054,21 @@ const SuperviseTask = () => {
                         maxWidth: '550px',
                         width: '90%',
                         textAlign: 'center',
-                        boxShadow: '0 20px 60px rgba(40, 192, 240, 0.3), 0 0 0 1px rgba(40, 192, 240, 0.1)',
+                        boxShadow: '0 20px 60px rgba(16, 221, 136, 0.3), 0 0 0 1px rgba(16, 221, 136, 0.1)',
                         animation: 'scaleIn 0.5s ease-out',
-                        border: '1px solid rgba(40, 192, 240, 0.2)'
+                        border: '1px solid rgba(16, 221, 136, 0.2)'
                     }}>
                         <div style={{
                             fontSize: '80px',
                             marginBottom: '20px',
-                            filter: 'drop-shadow(0 0 10px rgba(40, 192, 240, 0.5))'
+                            filter: 'drop-shadow(0 0 10px rgba(16, 221, 136, 0.5))'
                         }}>
                             
                         </div>
                         <h3 style={{
                             fontSize: '28px',
                             fontWeight: 'bold',
-                            background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                            background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
                             WebkitBackgroundClip: 'text',
                             WebkitTextFillColor: 'transparent',
                             backgroundClip: 'text',
@@ -3091,34 +3091,34 @@ const SuperviseTask = () => {
                                 ¡Has recibido tu pago correctamente!
                             </p>
                             <div style={{
-                                background: 'linear-gradient(135deg, rgba(40, 192, 240, 0.1) 0%, rgba(17, 128, 179, 0.1) 100%)',
+                                background: 'linear-gradient(135deg, rgba(16, 221, 136, 0.1) 0%, rgba(10, 184, 106, 0.1) 100%)',
                                 padding: '20px',
                                 borderRadius: '12px',
                                 marginTop: '15px',
                                 textAlign: 'left',
-                                border: '1px solid rgba(40, 192, 240, 0.2)'
+                                border: '1px solid rgba(16, 221, 136, 0.2)'
                             }}>
                                 <p style={{ margin: '8px 0', fontSize: '16px', color: '#fff' }}>
-                                    <strong style={{ color: '#28c0f0' }}> Monto recibido:</strong> {paymentSuccessData.netAmount || paymentSuccessData.amount} USDC
+                                    <strong style={{ color: '#10dd88' }}> Monto recibido:</strong> {paymentSuccessData.netAmount || paymentSuccessData.amount} USDC
                                 </p>
                                 {paymentSuccessData.netAmount && (
                                     <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
-                                        <strong style={{ color: '#28c0f0' }}> Monto total:</strong> {paymentSuccessData.amount} USDC (después de comisión)
+                                        <strong style={{ color: '#10dd88' }}> Monto total:</strong> {paymentSuccessData.amount} USDC (después de comisión)
                                     </p>
                                 )}
                                 <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
-                                    <strong style={{ color: '#28c0f0' }}> Hash de transacción:</strong>
+                                    <strong style={{ color: '#10dd88' }}> Hash de transacción:</strong>
                                 </p>
                                 <code style={{
                                     display: 'block',
                                     fontSize: '12px',
-                                    color: '#28c0f0',
-                                    background: 'rgba(40, 192, 240, 0.1)',
+                                    color: '#10dd88',
+                                    background: 'rgba(16, 221, 136, 0.1)',
                                     padding: '8px',
                                     borderRadius: '4px',
                                     wordBreak: 'break-all',
                                     marginTop: '5px',
-                                    border: '1px solid rgba(40, 192, 240, 0.2)'
+                                    border: '1px solid rgba(16, 221, 136, 0.2)'
                                 }}>
                                     {paymentSuccessData.txHash}
                                 </code>
@@ -3134,7 +3134,7 @@ const SuperviseTask = () => {
                                     fetchData(); // Recargar datos para actualizar la UI
                                 }}
                                 style={{
-                                    background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                                    background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
                                     color: '#fff',
                                     border: 'none',
                                     padding: '14px 32px',
@@ -3144,17 +3144,17 @@ const SuperviseTask = () => {
                                     cursor: 'pointer',
                                     transition: 'all 0.3s ease',
                                     minWidth: '200px',
-                                    boxShadow: '0 4px 12px rgba(40, 192, 240, 0.3)'
+                                    boxShadow: '0 4px 12px rgba(16, 221, 136, 0.3)'
                                 }}
                                 onMouseOver={(e) => {
-                                    e.currentTarget.style.background = 'linear-gradient(90deg, #1180b3, #28c0f0)';
+                                    e.currentTarget.style.background = 'linear-gradient(90deg, #0ab86a, #10dd88)';
                                     e.currentTarget.style.transform = 'translateY(-2px)';
-                                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(40, 192, 240, 0.4)';
+                                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(16, 221, 136, 0.4)';
                                 }}
                                 onMouseOut={(e) => {
-                                    e.currentTarget.style.background = 'linear-gradient(90deg, #28c0f0, #1180b3)';
+                                    e.currentTarget.style.background = 'linear-gradient(90deg, #10dd88, #0ab86a)';
                                     e.currentTarget.style.transform = 'translateY(0)';
-                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(40, 192, 240, 0.3)';
+                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 221, 136, 0.3)';
                                 }}
                             >
                                 Volver a Tarea
@@ -3200,7 +3200,7 @@ const SuperviseTask = () => {
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(17, 128, 179, 0.3) 100%)',
+                    background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(10, 184, 106, 0.3) 100%)',
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
@@ -3213,21 +3213,21 @@ const SuperviseTask = () => {
                         maxWidth: '550px',
                         width: '90%',
                         textAlign: 'center',
-                        boxShadow: '0 20px 60px rgba(40, 192, 240, 0.3), 0 0 0 1px rgba(40, 192, 240, 0.1)',
+                        boxShadow: '0 20px 60px rgba(16, 221, 136, 0.3), 0 0 0 1px rgba(16, 221, 136, 0.1)',
                         animation: 'scaleIn 0.5s ease-out',
-                        border: '1px solid rgba(40, 192, 240, 0.2)'
+                        border: '1px solid rgba(16, 221, 136, 0.2)'
                     }}>
                         <div style={{
                             fontSize: '80px',
                             marginBottom: '20px',
-                            filter: 'drop-shadow(0 0 10px rgba(40, 192, 240, 0.5))'
+                            filter: 'drop-shadow(0 0 10px rgba(16, 221, 136, 0.5))'
                         }}>
                             
                         </div>
                         <h3 style={{
                             fontSize: '28px',
                             fontWeight: 'bold',
-                            background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                            background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
                             WebkitBackgroundClip: 'text',
                             WebkitTextFillColor: 'transparent',
                             backgroundClip: 'text',
@@ -3250,18 +3250,18 @@ const SuperviseTask = () => {
                                 Para recibir tu reembolso, debes firmar la transacción con Freighter
                             </p>
                             <div style={{
-                                background: 'linear-gradient(135deg, rgba(40, 192, 240, 0.1) 0%, rgba(17, 128, 179, 0.1) 100%)',
+                                background: 'linear-gradient(135deg, rgba(16, 221, 136, 0.1) 0%, rgba(10, 184, 106, 0.1) 100%)',
                                 padding: '20px',
                                 borderRadius: '12px',
                                 marginTop: '15px',
                                 textAlign: 'left',
-                                border: '1px solid rgba(40, 192, 240, 0.2)'
+                                border: '1px solid rgba(16, 221, 136, 0.2)'
                             }}>
                                 <p style={{ margin: '8px 0', fontSize: '16px', color: '#fff' }}>
-                                    <strong style={{ color: '#28c0f0' }}> Monto a reembolsar:</strong> {refundTransaction.refundAmount.toFixed(7)} USDC
+                                    <strong style={{ color: '#10dd88' }}> Monto a reembolsar:</strong> {refundTransaction.refundAmount.toFixed(7)} USDC
                                 </p>
                                 <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
-                                    <strong style={{ color: '#28c0f0', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><FaMapMarkerAlt aria-hidden="true" /> Tu dirección:</strong> {address?.slice(0, 6)}...{address?.slice(-4)}
+                                    <strong style={{ color: '#10dd88', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><FaMapMarkerAlt aria-hidden="true" /> Tu dirección:</strong> {address?.slice(0, 6)}...{address?.slice(-4)}
                                 </p>
                                 <p style={{ margin: '8px 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic' }}>
                                      Sin firmar esta transacción, NO recibirás el reembolso
@@ -3309,7 +3309,7 @@ const SuperviseTask = () => {
                                 onClick={handleSignRefundTransaction}
                                 disabled={cancellingTask || !isConnected || !kit}
                                 style={{
-                                    background: cancellingTask || !isConnected || !kit ? 'rgba(40, 192, 240, 0.5)' : 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                                    background: cancellingTask || !isConnected || !kit ? 'rgba(16, 221, 136, 0.5)' : 'linear-gradient(90deg, #10dd88, #0ab86a)',
                                     color: '#fff',
                                     border: 'none',
                                     padding: '14px 32px',
@@ -3319,7 +3319,7 @@ const SuperviseTask = () => {
                                     cursor: cancellingTask || !isConnected || !kit ? 'not-allowed' : 'pointer',
                                     transition: 'all 0.3s ease',
                                     minWidth: '200px',
-                                    boxShadow: cancellingTask || !isConnected || !kit ? 'none' : '0 4px 12px rgba(40, 192, 240, 0.3)',
+                                    boxShadow: cancellingTask || !isConnected || !kit ? 'none' : '0 4px 12px rgba(16, 221, 136, 0.3)',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
@@ -3327,16 +3327,16 @@ const SuperviseTask = () => {
                                 }}
                                 onMouseOver={(e) => {
                                     if (!cancellingTask && isConnected && kit) {
-                                        e.currentTarget.style.background = 'linear-gradient(90deg, #1180b3, #28c0f0)';
+                                        e.currentTarget.style.background = 'linear-gradient(90deg, #0ab86a, #10dd88)';
                                         e.currentTarget.style.transform = 'translateY(-2px)';
-                                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(40, 192, 240, 0.4)';
+                                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(16, 221, 136, 0.4)';
                                     }
                                 }}
                                 onMouseOut={(e) => {
                                     if (!cancellingTask && isConnected && kit) {
-                                        e.currentTarget.style.background = 'linear-gradient(90deg, #28c0f0, #1180b3)';
+                                        e.currentTarget.style.background = 'linear-gradient(90deg, #10dd88, #0ab86a)';
                                         e.currentTarget.style.transform = 'translateY(0)';
-                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(40, 192, 240, 0.3)';
+                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 221, 136, 0.3)';
                                     }
                                 }}
                             >
@@ -3364,7 +3364,7 @@ const SuperviseTask = () => {
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(17, 128, 179, 0.3) 100%)',
+                    background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(10, 184, 106, 0.3) 100%)',
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
@@ -3377,21 +3377,21 @@ const SuperviseTask = () => {
                         maxWidth: '550px',
                         width: '90%',
                         textAlign: 'center',
-                        boxShadow: '0 20px 60px rgba(40, 192, 240, 0.3), 0 0 0 1px rgba(40, 192, 240, 0.1)',
+                        boxShadow: '0 20px 60px rgba(16, 221, 136, 0.3), 0 0 0 1px rgba(16, 221, 136, 0.1)',
                         animation: 'scaleIn 0.5s ease-out',
-                        border: '1px solid rgba(40, 192, 240, 0.2)'
+                        border: '1px solid rgba(16, 221, 136, 0.2)'
                     }}>
                         <div style={{
                             fontSize: '80px',
                             marginBottom: '20px',
-                            filter: 'drop-shadow(0 0 10px rgba(40, 192, 240, 0.5))'
+                            filter: 'drop-shadow(0 0 10px rgba(16, 221, 136, 0.5))'
                         }}>
                             
                         </div>
                         <h3 style={{
                             fontSize: '28px',
                             fontWeight: 'bold',
-                            background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                            background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
                             WebkitBackgroundClip: 'text',
                             WebkitTextFillColor: 'transparent',
                             backgroundClip: 'text',
@@ -3414,15 +3414,15 @@ const SuperviseTask = () => {
                                 {refundNotificationMessage}
                             </p>
                             <div style={{
-                                background: 'linear-gradient(135deg, rgba(40, 192, 240, 0.1) 0%, rgba(17, 128, 179, 0.1) 100%)',
+                                background: 'linear-gradient(135deg, rgba(16, 221, 136, 0.1) 0%, rgba(10, 184, 106, 0.1) 100%)',
                                 padding: '20px',
                                 borderRadius: '12px',
                                 marginTop: '15px',
                                 textAlign: 'left',
-                                border: '1px solid rgba(40, 192, 240, 0.2)'
+                                border: '1px solid rgba(16, 221, 136, 0.2)'
                             }}>
                                 <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.8)' }}>
-                                    <strong style={{ color: '#28c0f0' }}> Próximos pasos:</strong>
+                                    <strong style={{ color: '#10dd88' }}> Próximos pasos:</strong>
                                 </p>
                                 <ul style={{ 
                                     margin: '10px 0', 
@@ -3444,7 +3444,7 @@ const SuperviseTask = () => {
                                     setRefundNotificationMessage('');
                                 }}
                                 style={{
-                                    background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                                    background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
                                     color: '#fff',
                                     border: 'none',
                                     padding: '14px 32px',
@@ -3454,17 +3454,17 @@ const SuperviseTask = () => {
                                     cursor: 'pointer',
                                     transition: 'all 0.3s ease',
                                     minWidth: '200px',
-                                    boxShadow: '0 4px 12px rgba(40, 192, 240, 0.3)'
+                                    boxShadow: '0 4px 12px rgba(16, 221, 136, 0.3)'
                                 }}
                                 onMouseOver={(e) => {
-                                    e.currentTarget.style.background = 'linear-gradient(90deg, #1180b3, #28c0f0)';
+                                    e.currentTarget.style.background = 'linear-gradient(90deg, #0ab86a, #10dd88)';
                                     e.currentTarget.style.transform = 'translateY(-2px)';
-                                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(40, 192, 240, 0.4)';
+                                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(16, 221, 136, 0.4)';
                                 }}
                                 onMouseOut={(e) => {
-                                    e.currentTarget.style.background = 'linear-gradient(90deg, #28c0f0, #1180b3)';
+                                    e.currentTarget.style.background = 'linear-gradient(90deg, #10dd88, #0ab86a)';
                                     e.currentTarget.style.transform = 'translateY(0)';
-                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(40, 192, 240, 0.3)';
+                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 221, 136, 0.3)';
                                 }}
                             >
                                 Entendido
@@ -3482,7 +3482,7 @@ const SuperviseTask = () => {
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(17, 128, 179, 0.3) 100%)',
+                    background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(10, 184, 106, 0.3) 100%)',
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
@@ -3495,21 +3495,21 @@ const SuperviseTask = () => {
                         maxWidth: '550px',
                         width: '90%',
                         textAlign: 'center',
-                        boxShadow: '0 20px 60px rgba(40, 192, 240, 0.3), 0 0 0 1px rgba(40, 192, 240, 0.1)',
+                        boxShadow: '0 20px 60px rgba(16, 221, 136, 0.3), 0 0 0 1px rgba(16, 221, 136, 0.1)',
                         animation: 'scaleIn 0.5s ease-out',
-                        border: '1px solid rgba(40, 192, 240, 0.2)'
+                        border: '1px solid rgba(16, 221, 136, 0.2)'
                     }}>
                         <div style={{
                             fontSize: '80px',
                             marginBottom: '20px',
-                            filter: 'drop-shadow(0 0 10px rgba(40, 192, 240, 0.5))'
+                            filter: 'drop-shadow(0 0 10px rgba(16, 221, 136, 0.5))'
                         }}>
                             
                         </div>
                         <h3 style={{
                             fontSize: '28px',
                             fontWeight: 'bold',
-                            background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                            background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
                             WebkitBackgroundClip: 'text',
                             WebkitTextFillColor: 'transparent',
                             backgroundClip: 'text',
@@ -3533,26 +3533,26 @@ const SuperviseTask = () => {
                             </p>
                             {disputeTxHash && (
                                 <div style={{
-                                    background: 'linear-gradient(135deg, rgba(40, 192, 240, 0.1) 0%, rgba(17, 128, 179, 0.1) 100%)',
+                                    background: 'linear-gradient(135deg, rgba(16, 221, 136, 0.1) 0%, rgba(10, 184, 106, 0.1) 100%)',
                                     padding: '20px',
                                     borderRadius: '12px',
                                     marginTop: '15px',
                                     textAlign: 'left',
-                                    border: '1px solid rgba(40, 192, 240, 0.2)'
+                                    border: '1px solid rgba(16, 221, 136, 0.2)'
                                 }}>
                                     <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
-                                        <strong style={{ color: '#28c0f0' }}> Hash de transacción:</strong>
+                                        <strong style={{ color: '#10dd88' }}> Hash de transacción:</strong>
                                     </p>
                                     <code style={{
                                         display: 'block',
                                         fontSize: '12px',
-                                        color: '#28c0f0',
-                                        background: 'rgba(40, 192, 240, 0.1)',
+                                        color: '#10dd88',
+                                        background: 'rgba(16, 221, 136, 0.1)',
                                         padding: '8px',
                                         borderRadius: '4px',
                                         wordBreak: 'break-all',
                                         marginTop: '5px',
-                                        border: '1px solid rgba(40, 192, 240, 0.2)'
+                                        border: '1px solid rgba(16, 221, 136, 0.2)'
                                     }}>
                                         {disputeTxHash}
                                     </code>
@@ -3566,7 +3566,7 @@ const SuperviseTask = () => {
                                     setDisputeTxHash(null);
                                 }}
                                 style={{
-                                    background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                                    background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
                                     color: '#fff',
                                     border: 'none',
                                     padding: '14px 32px',
@@ -3576,17 +3576,17 @@ const SuperviseTask = () => {
                                     cursor: 'pointer',
                                     transition: 'all 0.3s ease',
                                     minWidth: '200px',
-                                    boxShadow: '0 4px 12px rgba(40, 192, 240, 0.3)'
+                                    boxShadow: '0 4px 12px rgba(16, 221, 136, 0.3)'
                                 }}
                                 onMouseOver={(e) => {
-                                    e.currentTarget.style.background = 'linear-gradient(90deg, #1180b3, #28c0f0)';
+                                    e.currentTarget.style.background = 'linear-gradient(90deg, #0ab86a, #10dd88)';
                                     e.currentTarget.style.transform = 'translateY(-2px)';
-                                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(40, 192, 240, 0.4)';
+                                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(16, 221, 136, 0.4)';
                                 }}
                                 onMouseOut={(e) => {
-                                    e.currentTarget.style.background = 'linear-gradient(90deg, #28c0f0, #1180b3)';
+                                    e.currentTarget.style.background = 'linear-gradient(90deg, #10dd88, #0ab86a)';
                                     e.currentTarget.style.transform = 'translateY(0)';
-                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(40, 192, 240, 0.3)';
+                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 221, 136, 0.3)';
                                 }}
                             >
                                 Entendido

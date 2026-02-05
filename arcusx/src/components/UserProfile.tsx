@@ -66,10 +66,10 @@ const UserProfile = () => {
 
   const getSkillLevelColor = (level: string) => {
     switch (level) {
-      case 'expert': return '#28c0f0';
-      case 'advanced': return '#1a8fb8';
-      case 'intermediate': return '#0f5f7a';
-      default: return '#0a3d4f';
+      case 'expert': return 'var(--primary-green, #10dd88)';
+      case 'advanced': return '#0ab86a';
+      case 'intermediate': return '#089954';
+      default: return '#067a45';
     }
   };
 

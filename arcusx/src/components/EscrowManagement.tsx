@@ -445,7 +445,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
       {/* Estadísticas de resumen */}
       <div className="escrow-stats-cards">
         <div className="escrow-stat-card">
-          <div className="escrow-stat-icon" style={{ color: '#28c0f0' }}>
+          <div className="escrow-stat-icon" style={{ color: '#10dd88' }}>
             <FaWallet />
           </div>
           <div className="escrow-stat-content">
@@ -803,7 +803,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
                               target="_blank"
                               rel="noopener noreferrer"
                               style={{ 
-                                color: '#28c0f0', 
+                                color: '#10dd88', 
                                 textDecoration: 'none',
                                 wordBreak: 'break-all'
                               }}

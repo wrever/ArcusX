@@ -45,7 +45,7 @@
   height: 56px;
   border-radius: 50%;
   background: var(--bg-card, rgba(7, 35, 60, 0.95));
-  border: 3px solid var(--primary-blue, #28c0f0);
+  border: 3px solid var(--primary-blue, #10dd88);
   color: white;
   display: flex;
   align-items: center;
@@ -71,7 +71,7 @@
 .swap-icon-button:hover:not(:disabled) {
   transform: rotate(180deg) scale(1.1);
   box-shadow: 0 6px 20px rgba(40, 192, 240, 0.5);
-  background: var(--primary-blue, #28c0f0);
+  background: var(--primary-blue, #10dd88);
   border-color: var(--bg-card, rgba(7, 35, 60, 0.95));
 }
 
@@ -82,8 +82,8 @@
 /* Modo claro */
 :root[data-theme="light"] .swap-icon-button {
   background: white;
-  border-color: var(--primary-blue-light, #3b82f6);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+  border-color: var(--primary-blue-light, #10dd88);
+  box-shadow: 0 4px 12px rgba(16, 221, 136, 0.2);
 }
 
 :root[data-theme="light"] .swap-icon-symbol {
@@ -91,9 +91,9 @@
 }
 
 :root[data-theme="light"] .swap-icon-button:hover:not(:disabled) {
-  background: var(--primary-blue-light, #3b82f6);
+  background: var(--primary-blue-light, #10dd88);
   border-color: white;
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 6px 20px rgba(16, 221, 136, 0.4);
 }
 
 :root[data-theme="light"] .swap-icon-button:hover:not(:disabled) .swap-icon-symbol {
@@ -157,8 +157,8 @@
 
 /* No Liquidity Message (Bonito) */
 .swap-no-liquidity {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%);
-  border: 2px solid rgba(59, 130, 246, 0.3);
+  background: linear-gradient(135deg, rgba(16, 221, 136, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%);
+  border: 2px solid rgba(16, 221, 136, 0.3);
   border-radius: 20px;
   padding: 2rem;
   margin-bottom: 1.5rem;
@@ -175,7 +175,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, #3b82f6, #9333ea, #3b82f6);
+  background: linear-gradient(90deg, #10dd88, #9333ea, #10dd88);
   background-size: 200% 100%;
   animation: shimmer 3s linear infinite;
 }
@@ -208,7 +208,7 @@
   font-size: 3rem;
   display: inline-block;
   animation: bounce 2s ease-in-out infinite;
-  filter: drop-shadow(0 4px 8px rgba(59, 130, 246, 0.3));
+  filter: drop-shadow(0 4px 8px rgba(16, 221, 136, 0.3));
 }
 
 .warning-icon {
@@ -248,7 +248,7 @@
   font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 0.75rem;
-  background: linear-gradient(135deg, #3b82f6, #9333ea);
+  background: linear-gradient(135deg, #10dd88, #9333ea);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -272,6 +272,46 @@
 /* Action Container */
 .swap-action-container {
   margin-top: 1.5rem;
+}
+
+/* Conectar Wallet: mismo estilo que el botón de swap (ancho completo, gradiente verde) */
+.swap-action-container .wallet-button-container {
+  width: 100%;
+}
+
+.swap-action-container .wallet-button {
+  width: 100%;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: var(--gradient-primary);
+  color: #0a0a0a !important;
+  box-shadow: var(--shadow-blue);
+  min-width: unset;
+}
+
+.swap-action-container .wallet-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg), var(--shadow-blue);
+}
+
+.swap-action-container .wallet-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.swap-action-container .wallet-button svg,
+.swap-action-container .wallet-button span {
+  color: #0a0a0a !important;
 }
 
 .swap-button {
@@ -445,8 +485,8 @@
 }
 
 :root[data-theme="light"] .swap-no-liquidity {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(147, 51, 234, 0.15) 100%);
-  border-color: rgba(59, 130, 246, 0.4);
+  background: linear-gradient(135deg, rgba(16, 221, 136, 0.15) 0%, rgba(147, 51, 234, 0.15) 100%);
+  border-color: rgba(16, 221, 136, 0.4);
 }
 
 :root[data-theme="light"] .swap-no-liquidity-title {

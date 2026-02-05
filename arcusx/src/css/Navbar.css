@@ -1,19 +1,19 @@
 .navbar {
   width: 100%;
   height: 80px;
-  background: var(--bg-primary, rgba(7, 35, 60, 0.95));
-  backdrop-filter: blur(10px);
+  background: var(--bg-primary);
+  backdrop-filter: blur(12px);
   position: fixed;
   top: 0;
   left: 0;
   z-index: 1000;
-  border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  border-bottom: 1px solid var(--border-color);
   transition: all 0.3s ease;
 }
 
 .navbar.scrolled {
-  background: var(--bg-primary, rgba(7, 35, 60, 0.85));
-  opacity: 0.95;
+  background: rgba(10, 10, 10, 0.92);
+  opacity: 0.98;
 }
 
 .navbar.menu-open {
@@ -90,25 +90,25 @@
 }
 
 .nav-button.login {
-  color: var(--text-primary, #fff);
+  color: var(--text-primary);
   background: transparent;
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.2));
+  border: 1px solid var(--border-color);
 }
 
 .nav-button.login:hover {
-  background: var(--bg-hover, rgba(255, 255, 255, 0.1));
-  border-color: var(--border-color-hover, rgba(255, 255, 255, 0.3));
+  background: var(--bg-hover);
+  border-color: var(--border-color-hover);
 }
 
 .nav-button.register {
-  background: var(--gradient-primary, linear-gradient(90deg, #28c0f0, #1180b3));
-  color: var(--text-primary, #fff);
+  background: var(--gradient-primary);
+  color: #0a0a0a;
   border: none;
 }
 
 .nav-button.register:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(40, 192, 240, 0.3);
+  box-shadow: var(--shadow-blue);
 }
 
 /* Hamburger Menu */
@@ -168,7 +168,7 @@
     top: 80px;
     left: 0;
     width: 100%;
-    background: var(--bg-primary, rgba(7, 35, 60, 0.98));
+    background: var(--bg-primary);
     backdrop-filter: blur(10px);
     flex-direction: column;
     align-items: center;
