@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { FaGavel, FaEye, FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaWallet, FaLink, FaComments, FaFile, FaClock, FaBolt } from 'react-icons/fa';
+import { FaGavel, FaEye, FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaComments, FaFile, FaClock, FaBolt } from 'react-icons/fa';
 import { getAdminDisputes, getAdminDisputeDetails, resolveAdminDispute } from '../services/adminService';
 import { useWallet } from '../hooks/useWallet';
 import { useResolveDispute, useSendTransaction, useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks';
@@ -46,7 +46,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
   
   // Formulario de resolución
   const [showResolveForm, setShowResolveForm] = useState(false);
-  const [resolving, setResolving] = useState(false);
+  const [, setResolving] = useState(false);
   const [resolution, setResolution] = useState({
     decision: 'client' as 'client' | 'worker' | 'split',
     reason: '',
@@ -60,11 +60,11 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
   const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds();
   
   // Estado para información del escrow
-  const [escrowInfo, setEscrowInfo] = useState<any | null>(null);
-  const [loadingEscrowInfo, setLoadingEscrowInfo] = useState(false);
+  const [, setEscrowInfo] = useState<any | null>(null);
+  const [, setLoadingEscrowInfo] = useState(false);
   
   // Estado para disputeResolver requerido (para mostrar en el formulario)
-  const [requiredDisputeResolver, setRequiredDisputeResolver] = useState<string | null>(null);
+  const [, setRequiredDisputeResolver] = useState<string | null>(null);
   
   // Estado para tabs del modal de detalles
   const [activeTab, setActiveTab] = useState<'summary' | 'chat' | 'files' | 'timeline'>('summary');
@@ -1220,6 +1220,10 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
     }
   };
 
+  // Kept for form submit when resolve form is shown (e.g. from DisputeCaseView or modal)
+  const resolveHandlerRef = useRef(handleResolve);
+  resolveHandlerRef.current = handleResolve;
+
   const getStatusBadge = (status: string) => {
     const badges: any = {
       pending: { class: 'warning', label: 'Pendiente', icon: <FaExclamationTriangle /> },
@@ -1489,6 +1493,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
           setShowResolveForm(false);
           setSelectedDispute(null);
           setEscrowInfo(null);
+          setResolution({ decision: 'client', reason: '', refund_percentage: 50 });
           setActiveTab('summary');
         }}>
           <div className="admin-modal dispute-modal" onClick={(e) => e.stopPropagation()}>
@@ -1504,6 +1509,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                   setShowResolveForm(false);
                   setSelectedDispute(null);
                   setEscrowInfo(null);
+                  setResolution({ decision: 'client', reason: '', refund_percentage: 50 });
                   setActiveTab('summary');
                 }}
               >
