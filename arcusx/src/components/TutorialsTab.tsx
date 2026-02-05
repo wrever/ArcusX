@@ -159,7 +159,7 @@ const TutorialsTab: React.FC = () => {
                 onError={(e) => {
                   // Si falla la imagen, usar un placeholder genérico
                   const target = e.target as HTMLImageElement;
-                  target.src = 'https://via.placeholder.com/640x360/07233c/28c0f0?text=ArcusX+Tutorial';
+                  target.src = 'https://via.placeholder.com/640x360/0a0a0a/10dd88?text=ArcusX+Tutorial';
                 }}
               />
               <div className="tutorial-play-overlay">

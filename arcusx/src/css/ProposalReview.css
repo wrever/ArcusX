@@ -99,7 +99,7 @@
 }
 
 .category-tag {
-  background-color: #28c0f0;
+  background-color: #10dd88;
   color: #fff;
 }
 
@@ -270,7 +270,7 @@
 }
 
 .proposal-card.pending {
-  border-left: 4px solid #28c0f0;
+  border-left: 4px solid #10dd88;
 }
 
 .proposal-header {
@@ -290,7 +290,7 @@
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #28c0f0, #1180b3);
+  background: linear-gradient(135deg, #10dd88, #0ab86a);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -398,7 +398,7 @@
 }
 
 .status-badge.pending {
-  background-color: #28c0f0;
+  background-color: #10dd88;
   color: #fff;
 }
 
@@ -658,7 +658,7 @@
 /* Panel de confirmación de selección */
 .selection-confirmation {
   background: rgba(40, 192, 240, 0.1);
-  border: 2px solid #28c0f0;
+  border: 2px solid #10dd88;
   border-radius: 12px;
   padding: 2rem;
   margin-top: 2rem;
@@ -735,7 +735,7 @@
 }
 
 .confirmation-header h3 {
-  color: #28c0f0;
+  color: #10dd88;
   margin-bottom: 0.5rem;
   font-size: 1.3rem;
 }
@@ -783,7 +783,7 @@
 }
 
 .summary-item strong {
-  color: #28c0f0;
+  color: #10dd88;
   display: block;
   margin-bottom: 0.5rem;
   font-size: 0.9rem;
@@ -852,7 +852,7 @@
 }
 
 .summary-item a {
-  color: #28c0f0;
+  color: #10dd88;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
@@ -866,7 +866,7 @@
 }
 
 .summary-item a:hover {
-  color: #1180b3;
+  color: #0ab86a;
 }
 
 /* Modo claro */
@@ -938,7 +938,7 @@
   min-height: 50px !important;
   max-height: 50px !important;
   border: 4px solid rgba(40, 192, 240, 0.2) !important;
-  border-top-color: #28c0f0 !important;
+  border-top-color: #10dd88 !important;
   border-radius: 50% !important;
   animation: spin 1s linear infinite !important;
   margin-bottom: 1rem !important;
@@ -1077,7 +1077,7 @@
 }
 
 .popup-button {
-  background: #28c0f0;
+  background: #10dd88;
   color: #fff;
   border: none;
   padding: 0.8rem 2rem;
@@ -1387,7 +1387,7 @@
 }
 
 .escrow-task-info h3 {
-  color: #28c0f0;
+  color: #10dd88;
   font-size: 1.1rem;
   font-weight: 600;
   margin: 0 0 1rem 0;
@@ -1429,7 +1429,7 @@
 .escrow-step.in-progress {
   background: rgba(40, 192, 240, 0.1);
   border: 1px solid rgba(40, 192, 240, 0.3);
-  color: #28c0f0;
+  color: #10dd88;
 }
 
 .escrow-step.completed {
@@ -1482,7 +1482,7 @@
 }
 
 .escrow-step-button {
-  background: linear-gradient(90deg, #28c0f0, #1180b3);
+  background: linear-gradient(90deg, #10dd88, #0ab86a);
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -1496,7 +1496,7 @@
 
 .escrow-step-button:hover:not(:disabled) {
   transform: translateY(-2px);
-  background: linear-gradient(90deg, #1180b3, #28c0f0);
+  background: linear-gradient(90deg, #0ab86a, #10dd88);
   box-shadow: 0 4px 12px rgba(40, 192, 240, 0.4);
 }
 
@@ -1544,7 +1544,7 @@
 
 .escrow-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #28c0f0 0%, #1180b3 100%);
+  background: linear-gradient(90deg, #10dd88 0%, #0ab86a 100%);
   border-radius: 4px;
   transition: width 0.3s ease;
 }
@@ -1610,7 +1610,7 @@
 
 .metamask-status.connected {
   background: rgba(40, 192, 240, 0.1);
-  border: 1px solid #28c0f0;
+  border: 1px solid #10dd88;
 }
 
 .metamask-status.error {

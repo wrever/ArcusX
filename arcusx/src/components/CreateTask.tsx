@@ -433,7 +433,7 @@ const CreateTask = () => {
                 <p className="commission-text">
                    Comisión de plataforma ({platformFeePercent}%): {commissionAmount} USDC
                 </p>
-                <p className="total-amount-text" style={{ fontWeight: 'bold', color: '#28c0f0', fontSize: '1.1em' }}>
+                <p className="total-amount-text" style={{ fontWeight: 'bold', color: '#10dd88', fontSize: '1.1em' }}>
                   <FaCreditCard style={{ marginRight: '6px' }} /> Total a pagar: <strong>{totalAmount} USDC</strong>
                 </p>
                 <p className="contract-cost-text">

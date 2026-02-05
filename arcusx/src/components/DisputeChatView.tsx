@@ -129,7 +129,7 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
                 width: '40px',
                 height: '40px',
                 borderRadius: '50%',
-                background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -152,7 +152,7 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
                 width: '40px',
                 height: '40px',
                 borderRadius: '50%',
-                background: 'linear-gradient(90deg, #1180b3, #28c0f0)',
+                background: 'linear-gradient(90deg, #0ab86a, #10dd88)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -283,8 +283,8 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
                       height: '32px',
                       borderRadius: '50%',
                       background: isClient 
-                        ? 'linear-gradient(90deg, #28c0f0, #1180b3)'
-                        : 'linear-gradient(90deg, #1180b3, #28c0f0)',
+                        ? 'linear-gradient(90deg, #10dd88, #0ab86a)'
+                        : 'linear-gradient(90deg, #0ab86a, #10dd88)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -324,7 +324,7 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
                             background: 'rgba(40, 192, 240, 0.1)',
                             borderRadius: '6px',
                             border: '1px solid rgba(40, 192, 240, 0.2)',
-                            color: '#28c0f0',
+                            color: '#10dd88',
                             textDecoration: 'none',
                             fontSize: '13px',
                             transition: 'all 0.3s ease'
@@ -364,7 +364,7 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
           flexWrap: 'wrap'
         }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#28c0f0' }}>
+            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10dd88' }}>
               {stats.total_messages}
             </div>
             <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
@@ -372,7 +372,7 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
             </div>
           </div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#28c0f0' }}>
+            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10dd88' }}>
               {stats.client_messages}
             </div>
             <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
@@ -380,7 +380,7 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
             </div>
           </div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#28c0f0' }}>
+            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10dd88' }}>
               {stats.worker_messages}
             </div>
             <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
@@ -388,7 +388,7 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
             </div>
           </div>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#28c0f0' }}>
+            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10dd88' }}>
               {stats.files_shared}
             </div>
             <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>

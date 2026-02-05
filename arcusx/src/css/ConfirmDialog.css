@@ -85,7 +85,7 @@
 }
 
 .confirm-dialog-icon.info {
-  color: #28c0f0;
+  color: #10dd88;
 }
 
 .confirm-dialog-title {
@@ -185,7 +185,7 @@
 }
 
 .confirm-dialog-button-info {
-  background: linear-gradient(90deg, #28c0f0, #1180b3);
+  background: linear-gradient(90deg, #10dd88, #0ab86a);
   color: #ffffff;
   box-shadow: 0 4px 12px rgba(40, 192, 240, 0.3);
 }

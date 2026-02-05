@@ -56,7 +56,7 @@
 
 .header-icon {
   font-size: 4rem;
-  color: #28c0f0;
+  color: #10dd88;
   margin-bottom: 1rem;
   filter: drop-shadow(0 4px 15px rgba(40, 192, 240, 0.3));
 }
@@ -99,7 +99,7 @@
 
 .benefit-icon {
   font-size: 2rem;
-  color: #28c0f0;
+  color: #10dd88;
   flex-shrink: 0;
   filter: drop-shadow(0 2px 8px rgba(40, 192, 240, 0.4));
 }
@@ -156,7 +156,7 @@
   top: 0.75rem;
   width: 1.8rem;
   height: 1.8rem;
-  background: linear-gradient(90deg, #28c0f0, #1180b3);
+  background: linear-gradient(90deg, #10dd88, #0ab86a);
   color: white;
   border-radius: 50%;
   display: flex;
@@ -177,7 +177,7 @@
 
 .verification-note {
   background: rgba(40, 192, 240, 0.1);
-  border-left: 4px solid #28c0f0;
+  border-left: 4px solid #10dd88;
   padding: 1rem 1.5rem;
   border-radius: 8px;
   width: 100%;
@@ -194,7 +194,7 @@
 }
 
 .verification-note p strong {
-  color: #28c0f0;
+  color: #10dd88;
 }
 
 .verification-footer {
@@ -235,7 +235,7 @@
 
 .success-icon {
   font-size: 5rem;
-  color: #28c0f0;
+  color: #10dd88;
   margin-bottom: 1.5rem;
   filter: drop-shadow(0 4px 15px rgba(40, 192, 240, 0.5));
 }
@@ -257,7 +257,7 @@
 }
 
 .primary-button {
-  background: linear-gradient(90deg, #28c0f0, #1180b3);
+  background: linear-gradient(90deg, #10dd88, #0ab86a);
   color: white;
   border: none;
   padding: 1rem 2.5rem;
@@ -276,7 +276,7 @@
 .primary-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(40, 192, 240, 0.6);
-  background: linear-gradient(90deg, #1180b3, #28c0f0);
+  background: linear-gradient(90deg, #0ab86a, #10dd88);
 }
 
 /* Warning state */
@@ -332,7 +332,7 @@
 
 .recommendation {
   background: rgba(40, 192, 240, 0.1);
-  border-left: 4px solid #28c0f0;
+  border-left: 4px solid #10dd88;
   padding: 1rem;
   border-radius: 6px;
   margin-top: 1rem;
@@ -342,7 +342,7 @@
 }
 
 .recommendation strong {
-  color: #28c0f0;
+  color: #10dd88;
 }
 
 .warning-actions {
@@ -353,8 +353,8 @@
 
 .secondary-button {
   background: rgba(255, 255, 255, 0.05);
-  border: 2px solid #28c0f0;
-  color: #28c0f0;
+  border: 2px solid #10dd88;
+  color: #10dd88;
   padding: 0.75rem 2rem;
   border-radius: 8px;
   font-size: 1rem;
@@ -366,7 +366,7 @@
 
 .secondary-button:hover {
   background: rgba(40, 192, 240, 0.1);
-  border-color: #1180b3;
+  border-color: #0ab86a;
   color: #ffffff;
 }
 
@@ -396,7 +396,7 @@
 
 .spinner-icon {
   font-size: 4rem;
-  color: #28c0f0;
+  color: #10dd88;
   animation: spin 2s linear infinite;
   filter: drop-shadow(0 4px 15px rgba(40, 192, 240, 0.4));
 }

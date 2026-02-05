@@ -157,7 +157,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
       title: 'Total Escrows',
       value: stats?.totalEscrows || 0,
       icon: <FaChartLine />,
-      color: '#28c0f0',
+      color: '#10dd88',
       description: 'Escrows creados',
       trend: null
     },
@@ -402,7 +402,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
               backgroundColor: 'rgba(40, 192, 240, 0.2)',
               border: '1px solid rgba(40, 192, 240, 0.4)',
               borderRadius: '6px',
-              color: '#28c0f0',
+              color: '#10dd88',
               cursor: escrowsStats.loading ? 'not-allowed' : 'pointer',
               fontSize: '14px'
             }}

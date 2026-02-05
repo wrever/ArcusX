@@ -596,7 +596,7 @@ const Dashboard = () => {
       case 'error':
         return '#ef4444';
       case 'info':
-        return '#28c0f0';
+        return 'var(--primary-green, #10dd88)';
       default:
         return '#6b7280';
     }
@@ -868,8 +868,8 @@ const Dashboard = () => {
                                 <span style={{ 
                                   fontSize: '10px', 
                                   padding: '2px 6px', 
-                                  background: 'rgba(40, 192, 240, 0.2)', 
-                                  color: '#28c0f0',
+                                  background: 'rgba(16, 221, 136, 0.2)', 
+                                  color: 'var(--primary-green, #10dd88)',
                                   borderRadius: '4px',
                                   display: 'flex',
                                   alignItems: 'center',
@@ -1102,11 +1102,11 @@ const Dashboard = () => {
                     {searchQuery && (
                       <span style={{
                         padding: '0.25rem 0.75rem',
-                        backgroundColor: 'rgba(40, 192, 240, 0.2)',
-                        border: '1px solid rgba(40, 192, 240, 0.4)',
+                        backgroundColor: 'rgba(16, 221, 136, 0.2)',
+                        border: '1px solid rgba(16, 221, 136, 0.4)',
                         borderRadius: '50px',
                         fontSize: '0.85rem',
-                        color: '#28c0f0'
+                        color: 'var(--primary-green, #10dd88)'
                       }}>
                         Búsqueda: {searchQuery}
                       </span>
@@ -1114,11 +1114,11 @@ const Dashboard = () => {
                     {minPrice && (
                       <span style={{
                         padding: '0.25rem 0.75rem',
-                        backgroundColor: 'rgba(40, 192, 240, 0.2)',
-                        border: '1px solid rgba(40, 192, 240, 0.4)',
+                        backgroundColor: 'rgba(16, 221, 136, 0.2)',
+                        border: '1px solid rgba(16, 221, 136, 0.4)',
                         borderRadius: '50px',
                         fontSize: '0.85rem',
-                        color: '#28c0f0'
+                        color: 'var(--primary-green, #10dd88)'
                       }}>
                         Min: {minPrice} USDC
                       </span>
@@ -1126,11 +1126,11 @@ const Dashboard = () => {
                     {maxPrice && (
                       <span style={{
                         padding: '0.25rem 0.75rem',
-                        backgroundColor: 'rgba(40, 192, 240, 0.2)',
-                        border: '1px solid rgba(40, 192, 240, 0.4)',
+                        backgroundColor: 'rgba(16, 221, 136, 0.2)',
+                        border: '1px solid rgba(16, 221, 136, 0.4)',
                         borderRadius: '50px',
                         fontSize: '0.85rem',
-                        color: '#28c0f0'
+                        color: 'var(--primary-green, #10dd88)'
                       }}>
                         Max: {maxPrice} USDC
                       </span>
@@ -1138,11 +1138,11 @@ const Dashboard = () => {
                     {categoryFilter !== 'all' && (
                       <span style={{
                         padding: '0.25rem 0.75rem',
-                        backgroundColor: 'rgba(40, 192, 240, 0.2)',
-                        border: '1px solid rgba(40, 192, 240, 0.4)',
+                        backgroundColor: 'rgba(16, 221, 136, 0.2)',
+                        border: '1px solid rgba(16, 221, 136, 0.4)',
                         borderRadius: '50px',
                         fontSize: '0.85rem',
-                        color: '#28c0f0'
+                        color: 'var(--primary-green, #10dd88)'
                       }}>
                         {categoryFilter}
                       </span>
@@ -1150,11 +1150,11 @@ const Dashboard = () => {
                     {difficultyFilter !== 'all' && (
                       <span style={{
                         padding: '0.25rem 0.75rem',
-                        backgroundColor: 'rgba(40, 192, 240, 0.2)',
-                        border: '1px solid rgba(40, 192, 240, 0.4)',
+                        backgroundColor: 'rgba(16, 221, 136, 0.2)',
+                        border: '1px solid rgba(16, 221, 136, 0.4)',
                         borderRadius: '50px',
                         fontSize: '0.85rem',
-                        color: '#28c0f0'
+                        color: 'var(--primary-green, #10dd88)'
                       }}>
                         {difficultyFilter}
                       </span>
@@ -1313,7 +1313,7 @@ const Dashboard = () => {
                           <div className="transaction-cell">
                             <Link 
                               to={`/task/${transaction.task_id}`}
-                              style={{ color: '#28c0f0', textDecoration: 'none' }}
+                              style={{ color: 'var(--primary-green, #10dd88)', textDecoration: 'none' }}
                             >
                               {transaction.task_title}
                             </Link>
@@ -1344,8 +1344,8 @@ const Dashboard = () => {
                           disabled={transactionsPage === 1}
                           style={{
                             padding: '0.5rem 1rem',
-                            backgroundColor: transactionsPage === 1 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(40, 192, 240, 0.2)',
-                            border: '1px solid rgba(40, 192, 240, 0.4)',
+                            backgroundColor: transactionsPage === 1 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(16, 221, 136, 0.2)',
+                            border: '1px solid rgba(16, 221, 136, 0.4)',
                             borderRadius: '6px',
                             color: '#fff',
                             cursor: transactionsPage === 1 ? 'not-allowed' : 'pointer'
@@ -1361,8 +1361,8 @@ const Dashboard = () => {
                           disabled={transactionsPage >= transactionsTotalPages}
                           style={{
                             padding: '0.5rem 1rem',
-                            backgroundColor: transactionsPage >= transactionsTotalPages ? 'rgba(255, 255, 255, 0.05)' : 'rgba(40, 192, 240, 0.2)',
-                            border: '1px solid rgba(40, 192, 240, 0.4)',
+                            backgroundColor: transactionsPage >= transactionsTotalPages ? 'rgba(255, 255, 255, 0.05)' : 'rgba(16, 221, 136, 0.2)',
+                            border: '1px solid rgba(16, 221, 136, 0.4)',
                             borderRadius: '6px',
                             color: '#fff',
                             cursor: transactionsPage >= transactionsTotalPages ? 'not-allowed' : 'pointer'
@@ -1475,8 +1475,8 @@ const Dashboard = () => {
                               <span style={{ 
                                 fontSize: '11px', 
                                 padding: '3px 8px', 
-                                background: 'rgba(40, 192, 240, 0.2)', 
-                                color: '#28c0f0',
+                                background: 'rgba(16, 221, 136, 0.2)', 
+                                color: 'var(--primary-green, #10dd88)',
                                 borderRadius: '6px',
                                 display: 'flex',
                                 alignItems: 'center',

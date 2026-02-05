@@ -45,10 +45,10 @@ const Preloader: React.FC = () => {
 
   if (!loading) return null;
 
+  const isDark = theme !== 'light';
   return (
     <div 
-      className="preloader"
-      style={{ background: theme === 'light' ? '#ffffff' : '#07233c' }}
+      className={`preloader ${isDark ? 'preloader-dark' : 'preloader-light'}`}
     >
       <div className="preloader-content">
         <div className="logo">

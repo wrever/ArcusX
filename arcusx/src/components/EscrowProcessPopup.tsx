@@ -373,7 +373,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
             <p style={{ 
               fontWeight: 'bold', 
               marginBottom: '12px',
-              color: '#28c0f0',
+              color: '#10dd88',
               fontSize: '15px'
             }}>
                Desglose del pago:
@@ -427,7 +427,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
               }}>
                 <span style={{ 
                   fontWeight: 'bold', 
-                  color: '#28c0f0', 
+                  color: '#10dd88', 
                   fontSize: '16px',
                   display: 'flex',
                   alignItems: 'center',
@@ -437,7 +437,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
                 </span>
                 <strong style={{ 
                   fontSize: '18px', 
-                  background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                  background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text'
@@ -492,7 +492,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
               left: 0,
               right: 0,
               height: '4px',
-              background: 'linear-gradient(90deg, #28c0f0, #1180b3)'
+              background: 'linear-gradient(90deg, #10dd88, #0ab86a)'
             }} />
             
             <div style={{
@@ -506,7 +506,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
             <h3 style={{
               fontSize: '28px',
               fontWeight: 'bold',
-              background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+              background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
@@ -586,9 +586,9 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
                       color: 'rgba(255, 255, 255, 0.6)',
                       margin: 0
                     }}>
-                      <strong style={{ color: '#28c0f0' }}>Contract ID:</strong>{' '}
+                      <strong style={{ color: '#10dd88' }}>Contract ID:</strong>{' '}
                       <code style={{ 
-                        color: '#28c0f0',
+                        color: '#10dd88',
                         background: 'rgba(40, 192, 240, 0.1)',
                         padding: '4px 8px',
                         borderRadius: '4px',
@@ -606,7 +606,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
               <button 
                 onClick={handleGoToSupervise}
                 style={{
-                  background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                  background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
                   color: '#fff',
                   border: 'none',
                   padding: '14px 32px',
@@ -619,12 +619,12 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
                   boxShadow: '0 4px 12px rgba(40, 192, 240, 0.3)'
                 }}
                 onMouseOver={(e) => {
-                  e.currentTarget.style.background = 'linear-gradient(90deg, #1180b3, #28c0f0)';
+                  e.currentTarget.style.background = 'linear-gradient(90deg, #0ab86a, #10dd88)';
                   e.currentTarget.style.transform = 'translateY(-2px)';
                   e.currentTarget.style.boxShadow = '0 6px 16px rgba(40, 192, 240, 0.4)';
                 }}
                 onMouseOut={(e) => {
-                  e.currentTarget.style.background = 'linear-gradient(90deg, #28c0f0, #1180b3)';
+                  e.currentTarget.style.background = 'linear-gradient(90deg, #10dd88, #0ab86a)';
                   e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.boxShadow = '0 4px 12px rgba(40, 192, 240, 0.3)';
                 }}

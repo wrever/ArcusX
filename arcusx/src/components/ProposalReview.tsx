@@ -1046,7 +1046,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
               left: 0,
               right: 0,
               height: '4px',
-              background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+              background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
               borderRadius: '24px 24px 0 0'
             }}></div>
 
@@ -1068,7 +1068,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
             <h3 style={{
               fontSize: '32px',
               fontWeight: '700',
-              background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+              background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
@@ -1092,7 +1092,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
                     fontSize: '20px', 
                     marginBottom: '20px', 
                     fontWeight: '600',
-                    color: '#28c0f0'
+                    color: '#10dd88'
                   }}>
                     ¡Proceso Completado Exitosamente!
                   </p>
@@ -1163,9 +1163,9 @@ El proyecto está activo y el trabajador puede comenzar.`);
                           color: 'rgba(255, 255, 255, 0.8)',
                           margin: '4px 0'
                         }}>
-                          <strong style={{ color: '#28c0f0' }}>Wallet:</strong>{' '}
+                          <strong style={{ color: '#10dd88' }}>Wallet:</strong>{' '}
                           <code style={{ 
-                            color: '#28c0f0',
+                            color: '#10dd88',
                             background: 'rgba(40, 192, 240, 0.1)',
                             padding: '2px 6px',
                             borderRadius: '4px',
@@ -1197,9 +1197,9 @@ El proyecto está activo y el trabajador puede comenzar.`);
                           color: 'rgba(255, 255, 255, 0.6)',
                           margin: 0
                         }}>
-                          <strong style={{ color: '#28c0f0' }}>Contract ID:</strong>{' '}
+                          <strong style={{ color: '#10dd88' }}>Contract ID:</strong>{' '}
                           <code style={{ 
-                            color: '#28c0f0',
+                            color: '#10dd88',
                             background: 'rgba(40, 192, 240, 0.1)',
                             padding: '4px 8px',
                             borderRadius: '4px',
@@ -1217,7 +1217,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
                   <p style={{ 
                     fontSize: '18px',
                     fontWeight: '600',
-                    color: '#28c0f0',
+                    color: '#10dd88',
                     marginBottom: '16px'
                   }}>
                     <strong>¡Contrato escrow creado exitosamente!</strong>
@@ -1230,14 +1230,14 @@ El proyecto está activo y el trabajador puede comenzar.`);
                     textAlign: 'left'
                   }}>
                     <p style={{ margin: '8px 0', color: 'rgba(255, 255, 255, 0.9)' }}>
-                      <strong style={{ color: '#28c0f0' }}>Dirección del contrato:</strong>
+                      <strong style={{ color: '#10dd88' }}>Dirección del contrato:</strong>
                     </p>
                     <code className="contract-address" style={{
                       display: 'block',
                       background: 'rgba(7, 35, 60, 0.5)',
                       padding: '12px',
                       borderRadius: '8px',
-                      color: '#28c0f0',
+                      color: '#10dd88',
                       fontSize: '14px',
                       wordBreak: 'break-all',
                       margin: '8px 0',
@@ -1246,10 +1246,10 @@ El proyecto está activo y el trabajador puede comenzar.`);
                       {popupMessage.split('Dirección del contrato: ')[1]?.split('\n')[0]}
                     </code>
                     <p style={{ margin: '8px 0', color: 'rgba(255, 255, 255, 0.9)' }}>
-                      <strong style={{ color: '#28c0f0' }}>Red:</strong> {popupMessage.split('Red: ')[1]?.split('\n')[0]}
+                      <strong style={{ color: '#10dd88' }}>Red:</strong> {popupMessage.split('Red: ')[1]?.split('\n')[0]}
                     </p>
                     <p style={{ margin: '8px 0', color: 'rgba(255, 255, 255, 0.9)' }}>
-                      <strong style={{ color: '#28c0f0' }}>Estado:</strong> {popupMessage.split('Estado: ')[1]}
+                      <strong style={{ color: '#10dd88' }}>Estado:</strong> {popupMessage.split('Estado: ')[1]}
                     </p>
                   </div>
                 </div>
@@ -1264,7 +1264,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
                 onClick={handleGoToSupervise} 
                 className="popup-button success-button"
                 style={{
-                  background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                  background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
                   color: '#fff',
                   border: 'none',
                   padding: '16px 40px',

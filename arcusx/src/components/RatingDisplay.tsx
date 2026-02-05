@@ -29,9 +29,11 @@ const RatingDisplay = ({
   size = 'medium',
   hideRatingValue = false
 }: RatingDisplayProps) => {
-  const fullStars = Math.floor(averageRating);
-  const hasHalfStar = averageRating % 1 >= 0.5;
-  const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+  const rating = Number(averageRating);
+  const clamped = Number.isFinite(rating) ? Math.min(5, Math.max(0, rating)) : 0;
+  const fullStars = Math.min(5, Math.max(0, Math.floor(clamped)));
+  const hasHalfStar = clamped % 1 >= 0.5;
+  const emptyStars = Math.min(5, Math.max(0, 5 - fullStars - (hasHalfStar ? 1 : 0)));
 
   const sizeClass = `rating-${size}`;
 
@@ -48,7 +50,7 @@ const RatingDisplay = ({
       </div>
       {!hideRatingValue && (
         <div className="rating-info">
-          <span className="rating-value">{averageRating.toFixed(1)}</span>
+          <span className="rating-value">{clamped.toFixed(1)}</span>
           {totalRatings > 0 && (
             <span className="rating-count">({totalRatings})</span>
           )}
