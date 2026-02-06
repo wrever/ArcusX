@@ -1,3 +1,10 @@
+/**
+ * Centralized translations (ES / EN).
+ * - Add new keys to BOTH `es` and `en` objects.
+ * - Use in components: const { t } = useI18n(); then t('key.name').
+ * - Key naming: section.context (e.g. proposals.accept.button, dashboard.create.task).
+ */
+
 export type Lang = 'es' | 'en';
 
 export const translations: Record<Lang, Record<string, string>> = {
@@ -481,6 +488,36 @@ export const translations: Record<Lang, Record<string, string>> = {
     'apply.error.wallet.invalid': 'La dirección de wallet Stellar no tiene un formato válido (debe empezar con G y tener 56 caracteres).',
     'apply.error.unexpected': 'Respuesta inesperada al enviar la aplicación.',
     'apply.error.send': 'Error al enviar la aplicación.',
+
+    // Proposals (ProposalReview) – Apply / Create task / Supervise / Accept proposals
+    'proposals.title': 'Propuestas Recibidas',
+    'proposals.subtitle': 'Revisa las propuestas de los trabajadores y selecciona al mejor candidato.',
+    'proposals.empty.title': 'No hay propuestas aún',
+    'proposals.empty.desc': 'Los trabajadores aún no han enviado propuestas para esta tarea.',
+    'proposals.status.accepted': 'Aceptada',
+    'proposals.status.rejected': 'Rechazada',
+    'proposals.status.pending': 'Pendiente',
+    'proposals.message.label': 'Mensaje del Trabajador',
+    'proposals.view.portfolio': 'Ver Portfolio',
+    'proposals.accept.button': 'Aceptar Propuesta',
+    'proposals.accept.processing': 'Procesando...',
+    'proposals.escrow.multisig': 'Sistema Multisig 2-de-2: Se crea una cuenta escrow única para cada tarea. Los fondos en USDC están seguros y requieren ambas firmas (cliente + trabajador) para liberar.',
+    'proposals.supervise.button': 'Supervisar Tarea',
+    'proposals.dashboard.button': 'Ir al Dashboard',
+
+    // Supervise Task
+    'supervise.task.title.client': 'Supervisar Tarea',
+    'supervise.task.title.worker': 'Tarea en Progreso',
+    'supervise.task.assigned': 'Trabajador Asignado',
+    'supervise.task.creator': 'Creador de Tarea',
+    'supervise.accept.work.button': 'Aceptar Trabajo (Liberar Fondos)',
+    'supervise.accept.work.processing': 'Procesando...',
+
+    // Escrow process popup
+    'escrow.step.complete.title': 'Proceso Completado',
+    'escrow.step.complete.description': 'El trabajador ha sido seleccionado exitosamente',
+    'escrow.go.supervise': 'Ir a Supervisar',
+    'escrow.supervise.task': 'Supervisar Tarea',
 
     // Tutorials
     'tutorials.title': 'Aprende a usar ArcusX',
@@ -1228,6 +1265,36 @@ export const translations: Record<Lang, Record<string, string>> = {
     'apply.error.wallet.invalid': 'Stellar wallet address does not have a valid format (must start with G and have 56 characters).',
     'apply.error.unexpected': 'Unexpected response when sending application.',
     'apply.error.send': 'Error sending application.',
+
+    // Proposals (ProposalReview) – Apply / Create task / Supervise / Accept proposals
+    'proposals.title': 'Proposals Received',
+    'proposals.subtitle': 'Review worker proposals and select the best candidate.',
+    'proposals.empty.title': 'No proposals yet',
+    'proposals.empty.desc': 'Workers have not sent proposals for this task yet.',
+    'proposals.status.accepted': 'Accepted',
+    'proposals.status.rejected': 'Rejected',
+    'proposals.status.pending': 'Pending',
+    'proposals.message.label': 'Worker Message',
+    'proposals.view.portfolio': 'View Portfolio',
+    'proposals.accept.button': 'Accept Proposal',
+    'proposals.accept.processing': 'Processing...',
+    'proposals.escrow.multisig': '2-of-2 Multisig: A unique escrow account is created for each task. USDC funds are secure and require both signatures (client + worker) to release.',
+    'proposals.supervise.button': 'Supervise Task',
+    'proposals.dashboard.button': 'Go to Dashboard',
+
+    // Supervise Task
+    'supervise.task.title.client': 'Supervise Task',
+    'supervise.task.title.worker': 'Task in Progress',
+    'supervise.task.assigned': 'Assigned Worker',
+    'supervise.task.creator': 'Task Creator',
+    'supervise.accept.work.button': 'Accept Work (Release Funds)',
+    'supervise.accept.work.processing': 'Processing...',
+
+    // Escrow process popup
+    'escrow.step.complete.title': 'Process Completed',
+    'escrow.step.complete.description': 'The worker has been successfully selected',
+    'escrow.go.supervise': 'Go to Supervise',
+    'escrow.supervise.task': 'Supervise Task',
 
     // Tutorials
     'tutorials.title': 'Learn how to use ArcusX',

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaWallet, FaFileContract, FaCoins, FaCheckCircle, FaSpinner, FaTimes, FaHome, FaDollarSign } from 'react-icons/fa';
 import { usePlatformFee } from '../hooks/usePlatformFee';
+import { useI18n } from '../i18n/I18nProvider';
 
 interface ProcessStep {
   id: string;
@@ -43,6 +44,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
   onConnectWallet
 }) => {
   const navigate = useNavigate();
+  const { t } = useI18n();
   // Obtener platform fee para calcular el total con comisión
   const { platformFee } = usePlatformFee();
   
@@ -89,11 +91,11 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
     },
     {
       id: 'complete',
-      title: 'Proceso Completado',
-      description: 'El trabajador ha sido seleccionado exitosamente',
+      title: t('escrow.step.complete.title'),
+      description: t('escrow.step.complete.description'),
       icon: <FaCheckCircle />,
       status: 'pending',
-      buttonText: 'Ir a Supervisar'
+      buttonText: t('escrow.go.supervise')
     }
   ]);
 
@@ -629,7 +631,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
                   e.currentTarget.style.boxShadow = '0 4px 12px rgba(40, 192, 240, 0.3)';
                 }}
               >
-                Supervisar Tarea
+                {t('escrow.supervise.task')}
               </button>
               <button 
                 onClick={handleSuccessPopupClose}
@@ -654,7 +656,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
-                <FaHome style={{ marginRight: '8px' }} /> Ir al Dashboard
+                <FaHome style={{ marginRight: '8px' }} /> {t('proposals.dashboard.button')}
               </button>
             </div>
           </div>

@@ -22,6 +22,7 @@ import {
 import { calculateCommissionFromWorkerAmount, calculateTotalWithCommission } from '../config/commission';
 import { usePlatformFee } from '../hooks/usePlatformFee';
 import EscrowProcessPopup from './EscrowProcessPopup';
+import { useI18n } from '../i18n/I18nProvider';
 import '../css/ProposalReview.css';
 
 interface TaskData {
@@ -58,6 +59,7 @@ interface ProposalData {
 const ProposalReview = () => {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
+  const { t } = useI18n();
 
     const [task, setTask] = useState<TaskData | null>(null);
     const [proposals, setProposals] = useState<ProposalData[]>([]);
@@ -838,8 +840,8 @@ El proyecto está activo y el trabajador puede comenzar.`);
         {!(task?.escrow_id && task?.accepted_applicant_id) && (
         <div className="proposals-section">
           <div className="proposals-header">
-            <h2>Propuestas Recibidas ({proposals.length})</h2>
-            <p>Revisa las propuestas de los trabajadores y selecciona al mejor candidato.</p>
+            <h2>{t('proposals.title')} ({proposals.length})</h2>
+            <p>{t('proposals.subtitle')}</p>
             <div className="cost-info-box" style={{
               background: 'rgba(255, 165, 0, 0.1)',
               border: '1px solid rgba(255, 165, 0, 0.3)',
@@ -848,7 +850,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
               marginTop: '1rem'
             }}>
               <p style={{ margin: 0, color: '#4ade80', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <FaCheckCircle style={{ fontSize: '14px' }} /> <strong>Sistema Multisig 2-de-2:</strong> Se crea una cuenta escrow única para cada tarea. Los fondos en USDC están seguros y requieren ambas firmas (cliente + trabajador) para liberar.
+                <FaCheckCircle style={{ fontSize: '14px' }} /> <strong>{t('proposals.escrow.multisig')}</strong>
               </p>
             </div>
           </div>
@@ -856,8 +858,8 @@ El proyecto está activo y el trabajador puede comenzar.`);
             {proposals.length === 0 ? (
             <div className="no-proposals">
               <div className="no-proposals-icon"><FaFileAlt /></div>
-              <h3>No hay propuestas aún</h3>
-              <p>Los trabajadores aún no han enviado propuestas para esta tarea.</p>
+              <h3>{t('proposals.empty.title')}</h3>
+              <p>{t('proposals.empty.desc')}</p>
             </div>
             ) : (
                 <div className="proposals-list">
@@ -878,20 +880,20 @@ El proyecto está activo y el trabajador puede comenzar.`);
                     </div>
                     <div className="proposal-status">
                       {proposal.status === 'accepted' && (
-                        <span className="status-badge accepted">Aceptada</span>
+                        <span className="status-badge accepted">{t('proposals.status.accepted')}</span>
                       )}
                       {proposal.status === 'rejected' && (
-                        <span className="status-badge rejected">Rechazada</span>
+                        <span className="status-badge rejected">{t('proposals.status.rejected')}</span>
                       )}
                       {proposal.status === 'pending' && (
-                        <span className="status-badge pending">Pendiente</span>
+                        <span className="status-badge pending">{t('proposals.status.pending')}</span>
                       )}
                     </div>
                   </div>
 
                   <div className="proposal-content">
                     <div className="proposal-message">
-                      <h4>Mensaje del Trabajador</h4>
+                      <h4>{t('proposals.message.label')}</h4>
                             <p>{proposal.message}</p>
                     </div>
 
@@ -905,7 +907,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
                           className="portfolio-link"
                         >
                           <FaExternalLinkAlt />
-                          Ver Portfolio
+                          {t('proposals.view.portfolio')}
                         </a>
                       </div>
                     )}
@@ -965,7 +967,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
                   <div className="summary-item">
                     <strong>Portfolio:</strong>
                     <a href={selectedProposal.portfolio_url} target="_blank" rel="noopener noreferrer">
-                      <FaExternalLinkAlt /> Ver Portfolio
+                      <FaExternalLinkAlt /> {t('proposals.view.portfolio')}
                     </a>
                   </div>
                 )}
@@ -986,7 +988,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
                   ) : (
                     <FaCheck />
                   )}
-                  {actionLoading ? 'Procesando...' : 'Aceptar Propuesta'}
+                  {actionLoading ? t('proposals.accept.processing') : t('proposals.accept.button')}
                 </button>
                 <button
                   className="action-button reject-button"
@@ -1289,7 +1291,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
                   e.currentTarget.style.boxShadow = '0 4px 16px rgba(40, 192, 240, 0.4)';
                 }}
               >
-                <FaEye style={{ marginRight: '8px' }} /> Supervisar Tarea
+                <FaEye style={{ marginRight: '8px' }} /> {t('proposals.supervise.button')}
               </button>
               <button 
                 onClick={handleGoToDashboard} 
@@ -1319,7 +1321,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
-                <FaHome style={{ marginRight: '8px' }} /> Ir al Dashboard
+                <FaHome style={{ marginRight: '8px' }} /> {t('proposals.dashboard.button')}
               </button>
             </div>
           </div>
