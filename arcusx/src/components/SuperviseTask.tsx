@@ -37,6 +37,7 @@ import ConfirmDialog from './ConfirmDialog';
 import RatingSystem from './RatingSystem';
 import CompleteTaskPopup from './CompleteTaskPopup';
 import { FaExclamationTriangle, FaTimes, FaFlag, FaLock, FaHome, FaDollarSign, FaComments, FaMapMarkerAlt } from 'react-icons/fa';
+import { useI18n } from '../i18n/I18nProvider';
 import '../css/ConfirmDialog.css';
 
 interface TaskDetails {
@@ -205,6 +206,7 @@ const DisputeStatusNotificationComponent = ({
 const SuperviseTask = () => {
     const { taskId, acceptedApplicantId } = useParams<{ taskId: string, acceptedApplicantId: string }>();
     const navigate = useNavigate();
+    const { t } = useI18n();
     const [task, setTask] = useState<TaskDetails | null>(null);
     const [withdrawingFunds, setWithdrawingFunds] = useState(false);
     const [worker, setWorker] = useState<UserDetails | null>(null);
@@ -1798,9 +1800,9 @@ const SuperviseTask = () => {
             <div className="supervise-task-header">
                 <div className="header-content">
                     <div className="header-text">
-                <h1>{isClient ? 'Supervisar Tarea' : 'Progresando Tarea'}: {task.title}</h1>
+                <h1>{isClient ? t('supervise.task.title.client') : t('supervise.task.title.worker')}: {task.title}</h1>
                 <p className="assigned-worker-info">
-                  {isClient ? 'Trabajador Asignado' : 'Creador de Tarea'}:{' '}
+                  {isClient ? t('supervise.task.assigned') : t('supervise.task.creator')}:{' '}
                   <Link 
                     to={`/profile/${isClient ? worker.id : task.user_id}`}
                     style={{
@@ -2165,7 +2167,7 @@ const SuperviseTask = () => {
                                                 onClick={handleAcceptWork}
                                                 disabled={acceptingWork || !isConnected}
                                             >
-                                        {acceptingWork ? 'Procesando...' : ' Aceptar Trabajo (Liberar Fondos)'}
+                                        {acceptingWork ? t('supervise.accept.work.processing') : t('supervise.accept.work.button')}
                                             </button>
                                     {/*  PROTECCIÓN: Ocultar botón de cancelar si hay archivos subidos por el trabajador */}
                                     {/* Esto protege a los trabajadores que han entregado su trabajo correctamente */}
