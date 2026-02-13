@@ -6,6 +6,7 @@ import axios from 'axios';
 import Popup from './Popup';
 import { API_URL } from '../config/database';
 import { getPlatformFee } from '../services/platformFeeService';
+import { useI18n } from '../i18n/I18nProvider';
 
 interface UserLimits {
   can_create: boolean;
@@ -17,6 +18,7 @@ interface UserLimits {
 
 const CreateTask = () => {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -187,7 +189,7 @@ const CreateTask = () => {
 
     // Validar que el usuario está logeado
     if (!user || !user.id) {
-      showErrorPopup('Error de Autenticación', 'Debes estar logeado para crear una tarea.');
+      showErrorPopup(t('common.error'), t('create.task.error.auth'));
       setLoading(false);
       return;
     }
@@ -244,7 +246,7 @@ const CreateTask = () => {
           });
         }
       } else {
-        showErrorPopup('Error del Servidor', 'Respuesta inesperada del servidor.');
+        showErrorPopup(t('common.error'), t('create.task.error.server'));
       }
 
     } catch (err: any) {
@@ -267,7 +269,7 @@ const CreateTask = () => {
         } catch (e) {
         }
       } else {
-        showErrorPopup('Error al Crear Tarea', err.response?.data?.message || 'Error al crear la tarea.');
+        showErrorPopup(t('common.error'), err.response?.data?.message || t('create.task.error.create'));
       }
     } finally {
       setLoading(false);
@@ -278,11 +280,11 @@ const CreateTask = () => {
     <div className="create-task-container">
       <Link to="/dashboard" className="back-button">
         <FaArrowLeft />
-        <span>Volver al Dashboard</span>
+        <span>{t('create.back')}</span>
       </Link>
 
       <div className="create-task-form-card">
-        <h2>Crear Nueva Tarea</h2>
+        <h2>{t('create.title')}</h2>
         
         {/* Mostrar límites del usuario */}
         {userLimits ? (
@@ -306,7 +308,7 @@ const CreateTask = () => {
           <div className="user-limits-info">
             <div className="limit-item">
               <FaCheckCircle />
-              <span>Cargando límites...</span>
+              <span>{t('create.loading.limits')}</span>
             </div>
           </div>
         )}
@@ -320,7 +322,7 @@ const CreateTask = () => {
               </div>
               <div className="warning-title-section">
                 <h3>
-                  {userLimits.cooldown_remaining > 0 ? 'Tiempo de Espera Activo' : 'Límite Alcanzado'}
+                  {userLimits.cooldown_remaining > 0 ? t('create.limit.cooldown.title') : t('create.limit.reached.title')}
                 </h3>
                 {userLimits.cooldown_remaining > 0 && (
                   <div className="cooldown-badge">
@@ -333,29 +335,29 @@ const CreateTask = () => {
               {userLimits.cooldown_remaining > 0 ? (
                 <>
                   <div className="warning-message">
-                    <p>Debes esperar <strong className="highlight-time">{formatTime(userLimits.cooldown_remaining)}</strong> para crear otra tarea</p>
+                    <p>{t('create.limit.cooldown')} <strong className="highlight-time">{formatTime(userLimits.cooldown_remaining)}</strong> {t('create.limit.to.create')}</p>
                   </div>
                   <div className="next-task-info">
                     <FaCheckCircle className="info-icon" />
-                    <span>Próxima tarea disponible: <strong>{userLimits.next_task_time}</strong></span>
+                    <span>{t('create.next.task.available')} <strong>{userLimits.next_task_time}</strong></span>
                   </div>
                 </>
               ) : (
                 <>
                   <div className="warning-message">
-                    <p>Has alcanzado el límite de tareas para hoy o esta semana</p>
+                    <p>{t('create.limit.reached')}</p>
                   </div>
                   <div className="limits-stats">
                     <div className="limit-stat-item">
-                      <span className="limit-label">Tareas hoy:</span>
+                      <span className="limit-label">{t('create.tasks.today')}</span>
                       <span className="limit-value">{userLimits.tasks_today}/5</span>
                     </div>
                     <div className="limit-stat-item">
-                      <span className="limit-label">Esta semana:</span>
+                      <span className="limit-label">{t('create.tasks.week')}</span>
                       <span className="limit-value">{userLimits.tasks_this_week}/50</span>
                     </div>
                   </div>
-                  <p className="limit-hint">Intenta mañana o la próxima semana</p>
+                  <p className="limit-hint">{t('create.limit.hint')}</p>
                 </>
               )}
             </div>
@@ -367,13 +369,13 @@ const CreateTask = () => {
           {/* Información básica */}
           <div className="form-section">
             <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <FaFileAlt /> Información Básica
+              <FaFileAlt /> {t('create.section.basic')}
             </h3>
             
             <div className="form-group">
               <label htmlFor="title">
                 <FaHeading style={{ marginRight: '6px', fontSize: '14px' }} />
-                Título de la Tarea *
+                {t('create.label.title')}
               </label>
               <input
                 type="text"
@@ -381,7 +383,7 @@ const CreateTask = () => {
                 name="title"
                 value={formData.title}
                 onChange={handleChange}
-                placeholder="Ej: Desarrollo de aplicación web"
+                placeholder={t('create.task.placeholder.title')}
                 required
               />
             </div>
@@ -389,7 +391,7 @@ const CreateTask = () => {
             <div className="form-group">
               <label htmlFor="subtitle">
                 <FaHeading style={{ marginRight: '6px', fontSize: '14px' }} />
-                Subtítulo (opcional)
+                {t('create.label.subtitle')}
               </label>
               <input
                 type="text"
@@ -397,7 +399,7 @@ const CreateTask = () => {
                 name="subtitle"
                 value={formData.subtitle}
                 onChange={handleChange}
-                placeholder="Breve descripción adicional"
+                placeholder={t('create.task.placeholder.subtitle')}
                 maxLength={255}
               />
             </div>
@@ -405,14 +407,14 @@ const CreateTask = () => {
             <div className="form-group">
               <label htmlFor="description">
                 <FaAlignLeft style={{ marginRight: '6px', fontSize: '14px' }} />
-                Descripción Detallada *
+                {t('create.label.description')}
               </label>
               <textarea
                 id="description"
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
-                placeholder="Describe en detalle qué necesitas que se haga..."
+                placeholder={t('create.task.placeholder.description')}
                 rows={4}
                 required
               />
@@ -422,22 +424,22 @@ const CreateTask = () => {
 
           {/* Presupuesto y categorización */}
           <div className="form-section">
-            <h3> Presupuesto y Categorización</h3>
+            <h3> {t('create.section.budget')}</h3>
             
             {/* Información del precio - Arriba del campo */}
             {formData.price && workerAmount && commissionAmount && totalAmount && (
               <div className="net-amount-display">
                 <p className="net-amount-text">
-                   El trabajador recibirá: <strong>{workerAmount} USDC</strong>
+                   {t('create.worker.receives')} <strong>{workerAmount} USDC</strong>
                 </p>
                 <p className="commission-text">
-                   Comisión de plataforma ({platformFeePercent}%): {commissionAmount} USDC
+                   {t('create.commission.label')} ({platformFeePercent}%): {commissionAmount} USDC
                 </p>
                 <p className="total-amount-text" style={{ fontWeight: 'bold', color: '#10dd88', fontSize: '1.1em' }}>
-                  <FaCreditCard style={{ marginRight: '6px' }} /> Total a pagar: <strong>{totalAmount} USDC</strong>
+                  <FaCreditCard style={{ marginRight: '6px' }} /> {t('create.total.pay')} <strong>{totalAmount} USDC</strong>
                 </p>
                 <p className="contract-cost-text">
-                   Nota: Se requiere una pequeña cantidad de XLM para fees de transacción de Stellar (~0.0001 XLM)
+                   {t('create.note.xlm')}
                 </p>
               </div>
             )}
@@ -446,11 +448,11 @@ const CreateTask = () => {
               <div className="form-group">
                 <label htmlFor="price">
                   <FaDollarSign style={{ marginRight: '6px', fontSize: '14px' }} />
-                  Pago al Trabajador *
+                  {t('create.label.payment')}
                 </label>
                 <p className="helper-text" style={{ fontSize: '0.85em', color: 'rgba(255, 255, 255, 0.7)', marginTop: '0.25rem', marginBottom: '0.5rem' }}>
                   <FaInfoCircle style={{ marginRight: '4px', fontSize: '12px' }} />
-                  Ingresa el monto exacto que recibirá el trabajador. Se te cobrará este monto más una comisión del {platformFeePercent}%.
+                  {t('create.helper.payment').replace('{{p}}', String(platformFeePercent))}
                 </p>
                 <input
                   type="number"
@@ -458,7 +460,7 @@ const CreateTask = () => {
                   name="price"
                   value={formData.price}
                   onChange={handleChange}
-                  placeholder="100"
+                  placeholder={t('create.placeholder.price')}
                   min="0"
                   step="0.01"
                   required
@@ -468,7 +470,7 @@ const CreateTask = () => {
               <div className="form-group">
                 <label htmlFor="currency">
                   <FaCreditCard style={{ marginRight: '6px', fontSize: '14px' }} />
-                  Moneda *
+                  {t('create.label.currency')}
                 </label>
                 <input
                   type="text"
@@ -486,7 +488,7 @@ const CreateTask = () => {
               <div className="form-group">
                 <label htmlFor="category">
                   <FaTag style={{ marginRight: '6px', fontSize: '14px' }} />
-                  Categoría *
+                  {t('create.label.category')}
                 </label>
                 <select
                   id="category"
@@ -495,18 +497,18 @@ const CreateTask = () => {
                   onChange={handleChange}
                   required
                 >
-                  <option value="Desarrollo">Desarrollo</option>
-                  <option value="Diseño">Diseño</option>
-                  <option value="Marketing">Marketing</option>
-                  <option value="Blockchain">Blockchain</option>
-                  <option value="Contenido">Contenido</option>
+                  <option value="Desarrollo">{t('dashboard.tasks.category.development')}</option>
+                  <option value="Diseño">{t('dashboard.tasks.category.design')}</option>
+                  <option value="Marketing">{t('dashboard.tasks.category.marketing')}</option>
+                  <option value="Blockchain">{t('dashboard.tasks.category.blockchain')}</option>
+                  <option value="Contenido">{t('dashboard.tasks.category.content')}</option>
                 </select>
               </div>
 
               <div className="form-group">
                 <label htmlFor="difficulty">
                   <FaLayerGroup style={{ marginRight: '6px', fontSize: '14px' }} />
-                  Dificultad *
+                  {t('create.label.difficulty')}
                 </label>
                 <select
                   id="difficulty"
@@ -515,9 +517,9 @@ const CreateTask = () => {
                   onChange={handleChange}
                   required
                 >
-                  <option value="Fácil">Fácil</option>
-                  <option value="Intermedio">Intermedio</option>
-                  <option value="Difícil">Difícil</option>
+                  <option value="Fácil">{t('dashboard.tasks.difficulty.easy')}</option>
+                  <option value="Intermedio">{t('dashboard.tasks.difficulty.medium')}</option>
+                  <option value="Difícil">{t('dashboard.tasks.difficulty.hard')}</option>
                 </select>
               </div>
             </div>
@@ -525,24 +527,24 @@ const CreateTask = () => {
 
           {/* Información adicional */}
           <div className="form-section">
-            <h3> Información Adicional</h3>
+            <h3> {t('create.section.extra')}</h3>
             <div className="info-box">
-              <p><strong>¿Cómo funciona?</strong></p>
+              <p><strong>{t('create.how.title')}</strong></p>
               <ul>
-                <li>Publica tu tarea y recibe propuestas de trabajadores calificados</li>
-                <li>Revisa las propuestas y selecciona al mejor candidato para tu proyecto</li>
-                <li>Se creará automáticamente un contrato inteligente (escrow) en Stellar para garantizar el pago seguro</li>
-                <li>El trabajador recibirá el pago al completar y entregar la tarea satisfactoriamente</li>
-                <li>Ambas partes deben aceptar la finalización para liberar los fondos</li>
+                <li>{t('create.bullet1')}</li>
+                <li>{t('create.bullet2')}</li>
+                <li>{t('create.bullet.escrow')}</li>
+                <li>{t('create.bullet3')}</li>
+                <li>{t('create.bullet4')}</li>
               </ul>
-              <p style={{ marginTop: '1rem' }}><strong> Sobre los costos:</strong></p>
+              <p style={{ marginTop: '1rem' }}><strong> {t('create.costs.title')}</strong></p>
               <ul>
-                <li><strong>Pago al trabajador:</strong> El monto que ingreses es exactamente lo que recibirá el trabajador al completar la tarea.</li>
-                <li><strong>Comisión ArcusX ({platformFeePercent}%):</strong> Se te cobrará adicionalmente sobre el monto del trabajador. Por ejemplo, si pagas $10 al trabajador, pagarás $10.05 en total (incluye $0.05 de comisión).</li>
-                <li><strong>Moneda:</strong> El sistema usa USDC (USD Coin) como moneda principal para todos los pagos.</li>
-                <li><strong>Total a pagar:</strong> El monto del trabajador más la comisión del {platformFeePercent}%. Este es el monto total que se descontará de tu wallet al fondear el escrow.</li>
-                <li><strong>Fees de transacción:</strong> Se requiere una pequeña cantidad de XLM para fees de transacción de Stellar (~0.0001 XLM por transacción).</li>
-                <li>Estos costos garantizan la seguridad de las transacciones y el mantenimiento de la plataforma.</li>
+                <li>{t('create.costs.bullet.worker')}</li>
+                <li>{t('create.costs.bullet.commission').replace('{{p}}', String(platformFeePercent))}</li>
+                <li>{t('create.costs.bullet.currency')}</li>
+                <li>{t('create.costs.bullet.total').replace('{{p}}', String(platformFeePercent))}</li>
+                <li>{t('create.costs.bullet.fees')}</li>
+                <li>{t('create.costs.bullet.note')}</li>
               </ul>
             </div>
           </div>
@@ -557,9 +559,9 @@ const CreateTask = () => {
                 opacity: (loading || (userLimits && userLimits.can_create === false)) ? 0.5 : 1
               }}
             >
-              {loading ? 'Creando...' : 
-               (userLimits && userLimits.can_create === false) ? 'Límite alcanzado' :
-               'Publicar Tarea'}
+              {loading ? t('create.submitting') : 
+               (userLimits && userLimits.can_create === false) ? t('create.limit.reached.title') :
+               t('create.publish')}
             </button>
           </div>
         </form>

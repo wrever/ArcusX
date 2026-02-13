@@ -313,6 +313,178 @@
   transform: translateY(-2px);
 }
 
+/* — Job search bar (hero) — */
+.landing-hero-job-search {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto 0.5rem;
+}
+
+.landing-hero-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(10, 14, 22, 0.85);
+  border: 2px solid rgba(16, 221, 136, 0.35);
+  border-radius: 14px;
+  padding: 0 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.landing-hero-search-bar:focus-within {
+  border-color: rgba(16, 221, 136, 0.8);
+  box-shadow: 0 0 0 3px rgba(16, 221, 136, 0.15);
+}
+
+.landing-hero-search-icon {
+  color: rgba(16, 221, 136, 0.9);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.landing-hero-search-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 1rem;
+  padding: 1rem 0;
+  outline: none;
+}
+
+.landing-hero-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.landing-hero-search-loading {
+  font-size: 0.85rem;
+  color: rgba(16, 221, 136, 0.8);
+  white-space: nowrap;
+}
+
+.landing-hero-search-hint {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 1.5rem;
+}
+
+.landing-hero-search-results {
+  margin-top: 0.5rem;
+  width: 100%;
+  background: rgba(10, 14, 22, 0.97);
+  border: 2px solid rgba(16, 221, 136, 0.4);
+  border-radius: 14px;
+  max-height: min(420px, 70vh);
+  overflow-y: auto;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(16, 221, 136, 0.1);
+}
+
+.landing-hero-search-results-loading,
+.landing-hero-search-results-empty {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.landing-hero-search-results-heading {
+  padding: 0.75rem 1rem;
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(16, 221, 136, 0.95);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid rgba(16, 221, 136, 0.2);
+}
+
+.landing-hero-search-results-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem 0;
+}
+
+.landing-hero-search-card {
+  margin: 0;
+  padding: 0 1rem;
+}
+
+.landing-hero-search-card-content {
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  transition: background 0.15s ease;
+}
+
+.landing-hero-search-card:last-child .landing-hero-search-card-content {
+  border-bottom: none;
+}
+
+.landing-hero-search-card-content:hover {
+  background: rgba(16, 221, 136, 0.06);
+}
+
+.landing-hero-search-card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.35rem;
+  line-height: 1.3;
+}
+
+.landing-hero-search-card-meta {
+  font-size: 0.8rem;
+  color: rgba(16, 221, 136, 0.85);
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.landing-hero-search-card-desc {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin: 0 0 0.75rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.landing-hero-search-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.landing-hero-search-card-price {
+  font-weight: 700;
+  color: rgba(16, 221, 136, 0.95);
+  font-size: 1rem;
+}
+
+.landing-hero-search-card-apply {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  background: rgba(16, 221, 136, 0.2);
+  color: rgba(16, 221, 136, 1);
+  border: 1px solid rgba(16, 221, 136, 0.5);
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.landing-hero-search-card-apply:hover {
+  background: rgba(16, 221, 136, 0.35);
+  transform: translateY(-1px);
+}
+
 .landing-hero-trust {
   font-size: 0.95rem;
   color: var(--text-muted);
@@ -321,12 +493,18 @@
   align-items: baseline;
   justify-content: center;
   gap: 0.25rem 0;
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
 }
 
 .landing-hero-stat-item {
   display: inline-flex;
   align-items: baseline;
   gap: 0.35rem;
+  margin-right: 0.25rem;
+}
+.landing-hero-stat-item:last-of-type {
+  margin-right: 0;
 }
 
 .landing-hero-stat {

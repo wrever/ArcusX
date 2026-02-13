@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { FaRobot, FaTimes } from 'react-icons/fa';
 import SupportBot from './SupportBot';
+import { useI18n } from '../i18n/I18nProvider';
 import '../css/SupportChatButton.css';
 
 const SupportChatButton: React.FC = () => {
+  const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleChat = () => {
@@ -20,7 +22,7 @@ const SupportChatButton: React.FC = () => {
       <button 
         className={`support-chat-button ${isOpen ? 'active' : ''}`}
         onClick={toggleChat}
-        aria-label="Abrir chat de soporte"
+        aria-label={t('support.open.chat')}
         type="button"
       >
         <div className="support-chat-button-icon-wrapper">
@@ -40,7 +42,7 @@ const SupportChatButton: React.FC = () => {
               <button 
                 className="support-chat-close-button"
                 onClick={closeChat}
-                aria-label="Cerrar chat"
+                aria-label={t('support.close.chat')}
                 type="button"
               >
                 <span className="support-chat-close-icon">

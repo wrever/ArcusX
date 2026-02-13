@@ -255,7 +255,7 @@ const FreelancersList = () => {
               <button
                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
                 className="sort-order-btn"
-                title={sortOrder === 'asc' ? 'Ascendente' : 'Descendente'}
+                title={sortOrder === 'asc' ? t('freelancers.sort.asc') : t('freelancers.sort.desc')}
               >
                 <FaSortAmountDown style={{ transform: sortOrder === 'asc' ? 'rotate(180deg)' : 'none' }} />
               </button>

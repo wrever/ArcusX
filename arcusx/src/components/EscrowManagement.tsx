@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { FaWallet, FaSearch, FaEye, FaCheckCircle, FaExclamationTriangle, FaLink, FaTimesCircle, FaSpinner, FaSync, FaChartLine } from 'react-icons/fa';
 import { getAdminEscrows } from '../services/adminService';
 import { useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks';
+import { useI18n } from '../i18n/I18nProvider';
 import '../css/AdminPanel.css';
 import '../css/EscrowManagement.css';
 
@@ -11,6 +12,7 @@ interface EscrowManagementProps {
 }
 
 const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate }) => {
+  const { t } = useI18n();
   const [escrows, setEscrows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,7 +104,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
       // Calcular estadísticas básicas con estados reales
       calculateStats(enrichedEscrows);
     } catch (err: any) {
-      setError(err.message || 'Error al cargar escrows');
+      setError(err.message || t('admin.escrows.error.load'));
     } finally {
       setLoading(false);
     }
@@ -292,7 +294,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
       .map(e => e.escrow_id);
     
     if (trustlessEscrows.length === 0) {
-      setError('No hay escrows de Trustless Work para verificar');
+      setError(t('admin.escrows.error.noTrustless'));
       return;
     }
     
@@ -325,7 +327,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
     }
     
     setLoading(false);
-    setSuccess(`Se verificaron ${trustlessEscrows.length} escrows`);
+    setSuccess(t('admin.escrows.success.verified').replace('{{n}}', String(trustlessEscrows.length)));
   };
 
   const handleViewDetails = async (escrowId: string) => {
@@ -336,7 +338,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
     // Buscar el escrow en la lista
     const escrow = escrows.find(e => e.escrow_id === escrowId);
     if (!escrow) {
-      setError('Escrow no encontrado');
+      setError(t('admin.escrows.error.notFound'));
       setLoadingDetails(false);
       return;
     }
@@ -422,9 +424,9 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
       <div className="admin-section-header">
         <h2>
           <FaWallet />
-          Gestión de Escrows
+          {t('admin.escrows.title')}
         </h2>
-        <p>Administra todos los escrows del sistema y verifica su estado en Trustless Work</p>
+        <p>{t('admin.escrows.subtitle')}</p>
       </div>
 
       {/* Mensajes de error y éxito */}
@@ -449,7 +451,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
             <FaWallet />
           </div>
           <div className="escrow-stat-content">
-            <h3>Total Escrows</h3>
+            <h3>{t('admin.escrows.stats.total')}</h3>
             <p className="escrow-stat-value">{stats.total}</p>
           </div>
         </div>
@@ -458,7 +460,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
             <FaCheckCircle />
           </div>
           <div className="escrow-stat-content">
-            <h3>Activos</h3>
+            <h3>{t('admin.escrows.stats.active')}</h3>
             <p className="escrow-stat-value">{stats.active}</p>
           </div>
         </div>
@@ -467,9 +469,9 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
             <FaChartLine />
           </div>
           <div className="escrow-stat-content">
-            <h3>Balance Total</h3>
+            <h3>{t('admin.escrows.stats.balanceTotal')}</h3>
             <p className="escrow-stat-value">
-              {stats.totalBalance > 0 ? `${stats.totalBalance.toFixed(7)} USDC` : 'Calculando...'}
+              {stats.totalBalance > 0 ? `${stats.totalBalance.toFixed(7)} USDC` : t('admin.escrows.stats.calculating')}
             </p>
           </div>
         </div>
@@ -478,7 +480,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
             <FaCheckCircle />
           </div>
           <div className="escrow-stat-content">
-            <h3>Completados</h3>
+            <h3>{t('admin.escrows.stats.completed')}</h3>
             <p className="escrow-stat-value">{stats.completed}</p>
           </div>
         </div>
@@ -488,7 +490,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
               <FaExclamationTriangle />
             </div>
             <div className="escrow-stat-content">
-              <h3>En Disputa</h3>
+              <h3>{t('admin.escrows.stats.disputed')}</h3>
               <p className="escrow-stat-value">{stats.disputed}</p>
             </div>
           </div>
@@ -499,7 +501,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
               <FaExclamationTriangle />
             </div>
             <div className="escrow-stat-content">
-              <h3>Inconsistencias</h3>
+              <h3>{t('admin.escrows.stats.inconsistencies')}</h3>
               <p className="escrow-stat-value">{stats.inconsistencies}</p>
             </div>
           </div>
@@ -513,20 +515,20 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
             <FaSearch className="search-icon" />
             <input
               type="text"
-              placeholder="Buscar por Contract ID o Task ID..."
+              placeholder={t('admin.escrows.search.placeholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="admin-input search-input"
             />
             <button type="submit" className="admin-button primary small">
-              Buscar
+              {t('admin.escrows.search.button')}
             </button>
             {search && (
               <button 
                 type="button"
                 onClick={handleClearSearch}
                 className="admin-button secondary small"
-                title="Limpiar búsqueda"
+                title={t('admin.escrows.search.clear')}
               >
                 <FaTimesCircle />
               </button>
@@ -535,7 +537,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
         </form>
         
         <div className="filter-group">
-          <label>Estado Escrow:</label>
+          <label>{t('admin.escrows.filter.escrow')}</label>
           <select
             value={escrowStatusFilter}
             onChange={(e) => {
@@ -544,17 +546,17 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
             }}
             className="admin-select"
           >
-            <option value="">Todos</option>
-            <option value="pending">Pendiente</option>
-            <option value="active">Activo</option>
-            <option value="completed">Completado</option>
-            <option value="disputed">En Disputa</option>
-            <option value="released">Liberado</option>
+            <option value="">{t('admin.tasks.filter.all')}</option>
+            <option value="pending">{t('admin.tasks.status.pending')}</option>
+            <option value="active">{t('admin.tasks.status.active')}</option>
+            <option value="completed">{t('admin.tasks.status.completed')}</option>
+            <option value="disputed">{t('admin.tasks.status.disputed')}</option>
+            <option value="released">{t('admin.tasks.status.released')}</option>
           </select>
         </div>
 
         <div className="filter-group">
-          <label>Estado Tarea:</label>
+          <label>{t('admin.escrows.filter.task')}</label>
           <select
             value={taskStatusFilter}
             onChange={(e) => {
@@ -563,17 +565,17 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
             }}
             className="admin-select"
           >
-            <option value="">Todos</option>
-            <option value="open">Abierta</option>
-            <option value="in_progress">En Progreso</option>
-            <option value="completed">Completada</option>
-            <option value="disputed">En Disputa</option>
-            <option value="cancelled">Cancelada</option>
+            <option value="">{t('admin.tasks.filter.all')}</option>
+            <option value="open">{t('admin.tasks.status.open')}</option>
+            <option value="in_progress">{t('admin.tasks.status.in_progress')}</option>
+            <option value="completed">{t('admin.tasks.status.completed')}</option>
+            <option value="disputed">{t('admin.tasks.status.disputed')}</option>
+            <option value="cancelled">{t('admin.tasks.status.cancelled')}</option>
           </select>
         </div>
 
         <div className="filter-group">
-          <label>Desde:</label>
+          <label>{t('admin.escrows.filter.from')}</label>
           <input
             type="date"
             value={startDate}
@@ -586,7 +588,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
         </div>
 
         <div className="filter-group">
-          <label>Hasta:</label>
+          <label>{t('admin.escrows.filter.to')}</label>
           <input
             type="date"
             value={endDate}
@@ -602,10 +604,10 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
           onClick={batchVerifyEscrows}
           disabled={loading || escrows.length === 0}
           className="admin-button primary"
-          title="Verificar todos los escrows visibles con Trustless Work"
+          title={t('admin.escrows.verifyAll.title')}
         >
           <FaSync style={{ marginRight: '8px' }} />
-          Verificar Todos
+          {t('admin.escrows.verifyAll')}
         </button>
       </div>
 
@@ -613,12 +615,12 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
       {loading ? (
         <div className="admin-loading">
           <div className="loading-spinner"></div>
-          <p>Cargando escrows...</p>
+          <p>{t('admin.escrows.loading')}</p>
         </div>
       ) : escrows.length === 0 ? (
         <div className="admin-empty-state">
           <FaWallet />
-          <p>No se encontraron escrows</p>
+          <p>{t('admin.escrows.empty')}</p>
         </div>
       ) : (
         <>
@@ -626,16 +628,16 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>Contract ID</th>
-                  <th>Tarea</th>
-                  <th>Cliente</th>
-                  <th>Trabajador</th>
-                  <th>Monto</th>
-                  <th>Estado Escrow</th>
-                  <th>Estado Tarea</th>
-                  <th>Fecha</th>
-                  <th>Verificación</th>
-                  <th>Acciones</th>
+                  <th>{t('admin.escrows.th.contractId')}</th>
+                  <th>{t('admin.escrows.th.task')}</th>
+                  <th>{t('admin.tasks.th.client')}</th>
+                  <th>{t('admin.tasks.th.worker')}</th>
+                  <th>{t('admin.escrows.th.amount')}</th>
+                  <th>{t('admin.escrows.th.escrowStatus')}</th>
+                  <th>{t('admin.escrows.th.taskStatus')}</th>
+                  <th>{t('admin.escrows.th.date')}</th>
+                  <th>{t('admin.escrows.th.verification')}</th>
+                  <th>{t('admin.tasks.th.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -699,7 +701,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
                               <button
                                 onClick={() => verifyEscrowStatus(escrow.escrow_id)}
                                 className="admin-button secondary small"
-                                title="Verificar estado"
+                                title={t('admin.escrows.verifyStatus')}
                               >
                                 <FaSync />
                               </button>
@@ -713,7 +715,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
                         <button
                           onClick={() => handleViewDetails(escrow.escrow_id)}
                           className="admin-button secondary small"
-                          title="Ver detalles"
+                          title={t('admin.escrows.viewDetails')}
                         >
                           <FaEye />
                         </button>
@@ -733,17 +735,17 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
                 disabled={page === 1}
                 className="admin-button secondary"
               >
-                Anterior
+                {t('admin.escrows.prev')}
               </button>
               <span>
-                Página {page} de {totalPages} ({total} escrows)
+                {t('admin.escrows.pageOf').replace('{{page}}', String(page)).replace('{{total}}', String(totalPages)).replace('{{count}}', String(total))}
               </span>
               <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
                 className="admin-button secondary"
               >
-                Siguiente
+                {t('admin.escrows.next')}
               </button>
             </div>
           )}
@@ -759,7 +761,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
         }}>
           <div className="admin-modal escrow-modal" onClick={(e) => e.stopPropagation()}>
             <div className="admin-modal-header">
-              <h3>Detalles del Escrow</h3>
+              <h3>{t('admin.escrows.detailsTitle')}</h3>
               <button
                 className="admin-modal-close"
                 onClick={() => {
@@ -775,7 +777,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
             {loadingDetails ? (
               <div className="admin-loading">
                 <div className="loading-spinner"></div>
-                <p>Cargando detalles...</p>
+                <p>{t('admin.escrows.loadingDetails')}</p>
               </div>
             ) : (
               <div className="admin-modal-content">
@@ -784,19 +786,19 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
                   <div className="dispute-details-section">
                     <h4>
                       <FaWallet style={{ marginRight: '8px' }} />
-                      Información del Escrow (Trustless Work)
+                      {t('admin.escrows.section.escrow')}
                     </h4>
                     {loadingEscrowInfo ? (
                       <div style={{ padding: '20px', textAlign: 'center' }}>
                         <FaSpinner className="spinning" style={{ fontSize: '24px', margin: '0 auto', display: 'block' }} />
                         <p style={{ marginTop: '10px', color: 'rgba(255, 255, 255, 0.6)' }}>
-                          Cargando información del escrow desde Trustless Work...
+                          {t('admin.escrows.loadingInfo')}
                         </p>
                       </div>
                     ) : escrowInfo ? (
                       <div className="detail-grid">
                         <div className="detail-item">
-                          <label>Contract ID:</label>
+                          <label>{t('admin.escrows.label.contractId')}</label>
                           <span>
                             <a 
                               href={`https://stellar.expert/explorer/testnet/contract/${selectedEscrow.escrow_id}`}
@@ -814,7 +816,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
                           </span>
                         </div>
                         <div className="detail-item">
-                          <label>Balance Actual:</label>
+                          <label>{t('admin.escrows.label.balance')}</label>
                           <span style={{ 
                             fontWeight: 'bold',
                             color: parseFloat(escrowInfo.balance || '0') > 0 ? '#10b981' : '#ef4444'
@@ -823,11 +825,11 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
                           </span>
                         </div>
                         <div className="detail-item">
-                          <label>Monto Total:</label>
+                          <label>{t('admin.escrows.label.amount')}</label>
                           <span>{parseFloat(escrowInfo.amount || '0').toFixed(7)} USDC</span>
                         </div>
                         <div className="detail-item">
-                          <label>Estado Real:</label>
+                          <label>{t('admin.escrows.label.statusReal')}</label>
                           <span className={`badge ${
                             escrowInfo.status === 'released' || escrowInfo.status === 'completed' ? 'success' :
                             escrowInfo.status === 'disputed' ? 'warning' :
@@ -837,13 +839,13 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
                           </span>
                         </div>
                         <div className="detail-item">
-                          <label>Estado en BD:</label>
+                          <label>{t('admin.escrows.label.statusDb')}</label>
                           <span>{getStatusBadge(selectedEscrow.escrow_status)}</span>
                         </div>
                         <div className="detail-item">
-                          <label>Activo:</label>
+                          <label>{t('admin.escrows.label.active')}</label>
                           <span className={`badge ${escrowInfo.isActive ? 'success' : 'error'}`}>
-                            {escrowInfo.isActive ? 'Sí' : 'No'}
+                            {escrowInfo.isActive ? t('admin.escrows.yes') : t('admin.escrows.no')}
                           </span>
                         </div>
                         {escrowInfo.inconsistencies?.inconsistencyFound && (
@@ -856,7 +858,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
                               marginTop: '10px'
                             }}>
                               <FaExclamationTriangle style={{ color: '#ef4444', marginRight: '8px' }} />
-                              <strong style={{ color: '#ef4444' }}>Inconsistencias Detectadas:</strong>
+                              <strong style={{ color: '#ef4444' }}>{t('admin.escrows.inconsistenciesDetected')}</strong>
                               <p style={{ marginTop: '8px', color: 'rgba(255, 255, 255, 0.8)' }}>
                                 {JSON.stringify(escrowInfo.inconsistencies, null, 2)}
                               </p>
@@ -865,7 +867,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
                         )}
                         {escrowInfo.milestones && escrowInfo.milestones.length > 0 && (
                           <div className="detail-item full-width">
-                            <label>Milestones:</label>
+                            <label>{t('admin.escrows.label.milestones')}</label>
                             <div style={{ marginTop: '8px' }}>
                               {escrowInfo.milestones.map((milestone: any, idx: number) => (
                                 <div key={idx} style={{
@@ -874,7 +876,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
                                   borderRadius: '6px',
                                   marginBottom: '6px'
                                 }}>
-                                  <strong>Milestone {idx}:</strong> {milestone.description || 'Sin descripción'}
+                                  <strong>Milestone {idx}:</strong> {milestone.description || t('admin.escrows.noDescription')}
                                   {milestone.amount && (
                                     <span style={{ marginLeft: '10px', color: '#10b981' }}>
                                       {parseFloat(milestone.amount).toFixed(7)} USDC
@@ -893,7 +895,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
                         color: 'rgba(255, 255, 255, 0.6)'
                       }}>
                         <FaExclamationTriangle style={{ marginBottom: '10px', fontSize: '24px' }} />
-                        <p>No se pudo obtener información del escrow desde Trustless Work</p>
+                        <p>{t('admin.escrows.error.noInfo')}</p>
                         <p style={{ fontSize: '12px', marginTop: '5px' }}>
                           Contract ID: {selectedEscrow.escrow_id}
                         </p>
@@ -904,18 +906,18 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
 
                 {/* Información de la tarea asociada */}
                 <div className="dispute-details-section">
-                  <h4>Información de la Tarea</h4>
+                  <h4>{t('admin.escrows.section.task')}</h4>
                   <div className="detail-grid">
                     <div className="detail-item">
-                      <label>Tarea ID:</label>
+                      <label>{t('admin.escrows.label.taskId')}</label>
                       <span>#{selectedEscrow.task_id}</span>
                     </div>
                     <div className="detail-item">
-                      <label>Título:</label>
-                      <span>{selectedEscrow.task_title || 'Sin título'}</span>
+                      <label>{t('admin.tasks.label.title')}</label>
+                      <span>{selectedEscrow.task_title || t('common.noTitle')}</span>
                     </div>
                     <div className="detail-item">
-                      <label>Precio:</label>
+                      <label>{t('admin.tasks.label.price')}</label>
                       <span>
                         {selectedEscrow.task_price 
                           ? `${parseFloat(selectedEscrow.task_price).toFixed(7)} ${selectedEscrow.task_currency || 'USDC'}`
@@ -923,15 +925,15 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
                       </span>
                     </div>
                     <div className="detail-item">
-                      <label>Estado de la tarea:</label>
+                      <label>{t('admin.escrows.label.taskStatus')}</label>
                       <span>{getTaskStatusBadge(selectedEscrow.task_status)}</span>
                     </div>
                     <div className="detail-item">
-                      <label>Cliente:</label>
+                      <label>{t('admin.tasks.th.client')}:</label>
                       <span>{selectedEscrow.client_username || 'N/A'}</span>
                     </div>
                     <div className="detail-item">
-                      <label>Trabajador:</label>
+                      <label>{t('admin.tasks.th.worker')}:</label>
                       <span>{selectedEscrow.worker_username || 'N/A'}</span>
                     </div>
                     <div className="detail-item">

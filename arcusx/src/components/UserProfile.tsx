@@ -11,11 +11,13 @@ import '../css/Preloader.css';
 import logoDark from '../images/arcus-logo.png';
 import logoLight from '../images/arcusxlogoclaro.png';
 import { useTheme } from '../contexts/ThemeContext';
+import { useI18n } from '../i18n/I18nProvider';
 
 const UserProfile = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { theme } = useTheme();
+  const { t } = useI18n();
   const logo = theme === 'light' ? logoLight : logoDark;
   const [profile, setProfile] = useState<UserProfileType | null>(null);
   const [stats, setStats] = useState<UserStatistics | null>(null);
@@ -29,7 +31,7 @@ const UserProfile = () => {
 
   useEffect(() => {
     if (!userId) {
-      setError('ID de usuario no proporcionado');
+      setError(t('profile.error.noUserId'));
       setLoading(false);
       return;
     }
@@ -47,14 +49,14 @@ const UserProfile = () => {
         setProfile(profileData);
         setStats(statsData);
       } catch (err: any) {
-        setError(err.message || 'Error al cargar perfil del usuario');
+        setError(err.message || t('profile.error.load'));
       } finally {
         setLoading(false);
       }
     };
 
     fetchProfile();
-  }, [userId]);
+  }, [userId, t]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-ES', {
@@ -93,11 +95,11 @@ const UserProfile = () => {
     return (
       <div className="user-profile-container">
         <div className="error-message">
-          <h3>{isPrivateError ? 'Perfil Privado' : 'Error'}</h3>
-          <p>{error || 'Perfil no encontrado'}</p>
+          <h3>{isPrivateError ? t('profile.private.title') : t('common.error')}</h3>
+          <p>{error || t('profile.not.found')}</p>
           <button onClick={() => navigate(-1)} className="back-button">
             <FaArrowLeft />
-            <span>Volver</span>
+            <span>{t('common.back')}</span>
           </button>
         </div>
       </div>
@@ -121,7 +123,7 @@ const UserProfile = () => {
     <>
       {profile && (
         <SEO
-          title={`Perfil de ${profile.username}`}
+          title={t('profile.title').replace('{{username}}', profile.username)}
           description={profile.bio || `Perfil público de ${profile.username} en ArcusX. ${stats ? `Rating: ${stats.average_rating}/5, ${stats.tasks_completed} tareas completadas.` : ''}`}
               image={profile.avatar_url ? getAvatarUrl(profile.avatar_url) : getDefaultAvatarUrl()}
           url={`/profile/${userId}`}
@@ -135,11 +137,11 @@ const UserProfile = () => {
         <div className="profile-header-nav">
         <button onClick={() => navigate(-1)} className="back-button">
           <FaArrowLeft />
-          <span>Volver</span>
+          <span>{t('common.back')}</span>
         </button>
         {isOwner && (
           <Link to="/dashboard/settings/profile" className="edit-profile-button">
-            Editar Perfil
+            {t('profile.edit.button')}
           </Link>
         )}
       </div>
@@ -172,7 +174,7 @@ const UserProfile = () => {
             </div>
           )}
           {profile.verified && (
-            <div className="verified-badge" title="Usuario verificado">
+            <div className="verified-badge" title={t('profile.verified.title')}>
               <FaCheckCircle />
             </div>
           )}
@@ -182,9 +184,9 @@ const UserProfile = () => {
           <div className="profile-name-row">
             <h1>{profile.username}</h1>
             {!profile.public_profile && (
-              <span className="private-badge" title="Perfil privado">
+              <span className="private-badge" title={t('profile.private.title')}>
                 <FaLock />
-                Privado
+                {t('profile.private.badge')}
               </span>
             )}
           </div>
@@ -200,7 +202,7 @@ const UserProfile = () => {
                 rel="noopener noreferrer"
                 className="meta-item portfolio-link"
               >
-                <span className="meta-text">Portfolio Externo</span>
+                <span className="meta-text">{t('profile.section.external.portfolio')}</span>
               </a>
             )}
           </div>
@@ -216,7 +218,7 @@ const UserProfile = () => {
             </div>
             <div className="stat-content">
               <div className="stat-value">{stats.tasks_completed}</div>
-              <div className="stat-label">Tareas Completadas</div>
+              <div className="stat-label">{t('profile.stats.completed')}</div>
             </div>
           </div>
           
@@ -226,7 +228,7 @@ const UserProfile = () => {
             </div>
             <div className="stat-content">
               <div className="stat-value">{stats.tasks_created}</div>
-              <div className="stat-label">Tareas Creadas</div>
+              <div className="stat-label">{t('profile.stats.created')}</div>
             </div>
           </div>
           
@@ -236,7 +238,7 @@ const UserProfile = () => {
             </div>
             <div className="stat-content">
               <div className="stat-value">${stats.total_earned.toFixed(2)}</div>
-              <div className="stat-label">Total Ganado</div>
+              <div className="stat-label">{t('profile.stats.earned')}</div>
             </div>
           </div>
           
@@ -270,14 +272,14 @@ const UserProfile = () => {
 
       {/* Biografía */}
       <div className="profile-section">
-        <h2 className="section-title">Biografía</h2>
+        <h2 className="section-title">{t('profile.section.bio')}</h2>
         {profile.bio ? (
           <div className="bio-content">
             <p className="profile-bio-full">{profile.bio}</p>
           </div>
         ) : (
           <div className="empty-state">
-            <p>Este usuario aún no ha agregado una biografía.</p>
+            <p>{t('profile.bio.empty')}</p>
           </div>
         )}
       </div>
@@ -285,8 +287,8 @@ const UserProfile = () => {
       {/* Skills */}
       {profile.skills && profile.skills.length > 0 ? (
         <div className="profile-section">
-          <h2 className="section-title">Habilidades</h2>
-          <div className="skills-grid">
+<h2 className="section-title">{t('profile.section.skills')}</h2>
+        <div className="skills-grid">
             {profile.skills.map((skill, index) => (
               <div 
                 key={skill.id || index} 
@@ -306,9 +308,9 @@ const UserProfile = () => {
         </div>
       ) : (
         <div className="profile-section">
-          <h2 className="section-title">Habilidades</h2>
+          <h2 className="section-title">{t('profile.section.skills')}</h2>
           <div className="empty-state">
-            <p>Este usuario aún no ha agregado habilidades.</p>
+            <p>{t('profile.skills.empty')}</p>
           </div>
         </div>
       )}

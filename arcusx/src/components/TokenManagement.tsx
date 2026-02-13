@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaPlus, FaTrash, FaCheck, FaTimes, FaShieldAlt } from 'react-icons/fa';
+import { useI18n } from '../i18n/I18nProvider';
 import '../css/TokenManagement.css';
 
 interface Token {
@@ -16,6 +17,7 @@ interface TokenManagementProps {
 }
 
 const TokenManagement: React.FC<TokenManagementProps> = ({ onUpdate }) => {
+  const { t } = useI18n();
   const [tokens, setTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -51,7 +53,7 @@ const TokenManagement: React.FC<TokenManagementProps> = ({ onUpdate }) => {
       
       setTokens(mockTokens);
     } catch (err) {
-      setError('Error al cargar tokens');
+      setError(t('token.loadError'));
     } finally {
       setLoading(false);
     }
@@ -65,23 +67,23 @@ const TokenManagement: React.FC<TokenManagementProps> = ({ onUpdate }) => {
     try {
       // Validaciones para Stellar
       if (!newToken.address || !newToken.address.startsWith('G') || newToken.address.length !== 56) {
-        setError('La dirección del token debe ser una dirección Stellar válida (empieza con G y tiene 56 caracteres)');
+        setError(t('token.addressInvalid'));
         return;
       }
       if (!newToken.symbol || !newToken.name) {
-        setError('El símbolo y nombre del token son obligatorios');
+        setError(t('token.symbolRequired'));
         return;
       }
 
       // Simular agregado - no API calls
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simular delay
-      setMessage('Token agregado correctamente (simulado)');
+      setMessage(t('token.addSuccess'));
       setNewToken({ address: '', symbol: '', name: '', decimals: 18 });
       setShowAddForm(false);
       await fetchTokens();
       onUpdate();
     } catch (err) {
-      setError('Error al agregar token');
+      setError(t('token.addError'));
     } finally {
       setSaving(false);
     }
@@ -92,18 +94,18 @@ const TokenManagement: React.FC<TokenManagementProps> = ({ onUpdate }) => {
     try {
       // Simular toggle - no API calls
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simular delay
-      setMessage(`Token ${allowed ? 'habilitado' : 'deshabilitado'} correctamente (simulado)`);
+      setMessage(allowed ? t('token.enabledSuccess') : t('token.disabledSuccess'));
       await fetchTokens();
       onUpdate();
     } catch (err) {
-      setError('Error al actualizar token');
+      setError(t('token.updateError'));
     } finally {
       setSaving(false);
     }
   };
 
   const handleRemoveToken = async (_tokenAddress: string) => {
-    if (!window.confirm('¿Estás seguro de que quieres eliminar este token?')) {
+    if (!window.confirm(t('token.delete.confirm'))) {
       return;
     }
 
@@ -111,11 +113,11 @@ const TokenManagement: React.FC<TokenManagementProps> = ({ onUpdate }) => {
     try {
       // Simular eliminación - no API calls
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simular delay
-      setMessage('Token eliminado correctamente (simulado)');
+      setMessage(t('token.removedSuccess'));
       await fetchTokens();
       onUpdate();
     } catch (err) {
-      setError('Error al eliminar token');
+      setError(t('token.error.delete'));
     } finally {
       setSaving(false);
     }
@@ -198,14 +200,14 @@ const TokenManagement: React.FC<TokenManagementProps> = ({ onUpdate }) => {
               onClick={() => setShowAddForm(false)}
               className="btn-secondary"
             >
-              Cancelar
+              {t('common.cancel')}
             </button>
             <button 
               onClick={handleAddToken}
               className="btn-primary"
               disabled={saving}
             >
-              {saving ? 'Agregando...' : 'Agregar Token'}
+              {saving ? t('token.adding') : t('token.addButton')}
             </button>
           </div>
         </div>

@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { supabase } from '../config/supabase';
+import { useI18n } from '../i18n/I18nProvider';
 import '../css/Login.css';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -26,7 +28,7 @@ const AuthCallback = () => {
               // Verificar que el token esté realmente guardado
               const token = localStorage.getItem('token');
               if (!token) {
-                setError('Error al guardar la sesión. Por favor, intenta iniciar sesión nuevamente.');
+                setError(t('auth.callback.error.saveSession'));
                 setLoading(false);
                 return;
               }
@@ -34,17 +36,17 @@ const AuthCallback = () => {
               // Usar window.location para forzar recarga completa y asegurar que ProtectedRoute vea el token
               window.location.href = '/dashboard';
             } else {
-              setError('No se pudo completar la autenticación. Por favor, intenta iniciar sesión nuevamente.');
+              setError(t('auth.callback.error.auth'));
               setLoading(false);
             }
           } catch (err: any) {
-            const errorMessage = err.response?.data?.message || err.message || 'Error al procesar la autenticación';
+            const errorMessage = err.response?.data?.message || err.message || t('auth.callback.error.process');
             setError(errorMessage);
             setLoading(false);
           }
         }
       } else if (event === 'SIGNED_OUT') {
-        setError('Sesión cerrada. Por favor, inicia sesión nuevamente.');
+        setError(t('auth.callback.error.signedOut'));
         setLoading(false);
       }
     });
@@ -70,7 +72,7 @@ const AuthCallback = () => {
             // Verificar que el token esté realmente guardado
             const token = localStorage.getItem('token');
             if (!token) {
-              setError('Error al guardar la sesión. Por favor, intenta iniciar sesión nuevamente.');
+              setError(t('auth.callback.error.saveSession'));
               setLoading(false);
               return;
             }
@@ -78,7 +80,7 @@ const AuthCallback = () => {
             // Usar window.location para forzar recarga completa y asegurar que ProtectedRoute vea el token
             window.location.href = '/dashboard';
           } else {
-            setError('No se pudo completar la autenticación. Por favor, intenta iniciar sesión nuevamente.');
+            setError(t('auth.callback.error.auth'));
             setLoading(false);
           }
         } else {
@@ -108,8 +110,8 @@ const AuthCallback = () => {
         <div className="login-card">
           <div className="login-header">
             <div className="login-logo">ArcusX</div>
-            <h2>Completando autenticación...</h2>
-            <p>Por favor espera</p>
+            <h2>{t('auth.callback.completing')}</h2>
+            <p>{t('auth.callback.pleaseWait')}</p>
           </div>
         </div>
       </div>
@@ -122,14 +124,14 @@ const AuthCallback = () => {
         <div className="login-card">
           <div className="login-header">
             <div className="login-logo">ArcusX</div>
-            <h2>Error de autenticación</h2>
+            <h2>{t('auth.callback.errorTitle')}</h2>
             <div className="login-error">{error}</div>
             <button 
               className="login-button" 
               onClick={() => navigate('/login')}
               style={{ marginTop: '1rem' }}
             >
-              Volver al Login
+              {t('auth.callback.backToLogin')}
             </button>
           </div>
         </div>
@@ -143,8 +145,8 @@ const AuthCallback = () => {
       <div className="login-card">
         <div className="login-header">
           <div className="login-logo">ArcusX</div>
-          <h2>Completando autenticación...</h2>
-          <p>Por favor espera</p>
+          <h2>{t('auth.callback.completing')}</h2>
+          <p>{t('auth.callback.pleaseWait')}</p>
         </div>
       </div>
     </div>

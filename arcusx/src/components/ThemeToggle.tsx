@@ -1,6 +1,7 @@
 import React from 'react';
 import { FaSun, FaMoon } from 'react-icons/fa';
 import { useTheme } from '../contexts/ThemeContext';
+import { useI18n } from '../i18n/I18nProvider';
 import '../css/ThemeToggle.css';
 
 type Props = {
@@ -12,6 +13,7 @@ type Props = {
 
 const ThemeToggle: React.FC<Props> = ({ visible = true, variant = 'fab' }) => {
   const { theme, toggleTheme } = useTheme();
+  const { t } = useI18n();
 
   if (!visible) return null;
 
@@ -19,8 +21,8 @@ const ThemeToggle: React.FC<Props> = ({ visible = true, variant = 'fab' }) => {
     <button
       className={`theme-toggle ${variant === 'inline' ? 'theme-toggle-inline' : ''}`}
       onClick={toggleTheme}
-      aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-      title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+      aria-label={theme === 'dark' ? t('theme.toggle.light') : t('theme.toggle.dark')}
+      title={theme === 'dark' ? t('theme.toggle.light') : t('theme.toggle.dark')}
     >
       <div className="theme-toggle-icon-wrapper">
         {theme === 'dark' ? (

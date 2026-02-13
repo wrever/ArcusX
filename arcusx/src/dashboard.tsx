@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaUser, FaTasks, FaWallet, FaChartLine, FaBell, FaCog, FaSignOutAlt, FaPlus, FaTimes, FaExclamationTriangle, FaUsers, FaCheckCircle, FaGlobe, FaLock, FaStar, FaGraduationCap, FaExchangeAlt, FaQuestionCircle } from 'react-icons/fa';
-import { MdTranslate } from 'react-icons/md';
 import ThemeToggle from './components/ThemeToggle';
+import LanguageFab from './components/LanguageFab';
 import { FiMenu } from 'react-icons/fi';
 import './css/dashboard.css';
 import arcusLogoDark from './images/arcus-logo.png';
@@ -59,7 +59,7 @@ interface TaskData {
 }
 
 const Dashboard = () => {
-  const { t, toggle, lang } = useI18n();
+  const { t, lang } = useI18n();
   const { theme } = useTheme();
   const arcusLogo = theme === 'light' ? arcusLogoLight : arcusLogoDark;
   const [activeTab, setActiveTab] = useState('tasks');
@@ -188,7 +188,7 @@ const Dashboard = () => {
             setTotalPaid(parseFloat(earningsData.total_paid));
           }
         } catch (error: any) {
-          setTransactionsError(error.message || 'Error al cargar transacciones');
+          setTransactionsError(error.message || t('dashboard.wallet.error.load'));
           setTransactions([]);
         } finally {
           setLoadingTransactions(false);
@@ -233,11 +233,11 @@ const Dashboard = () => {
           if (Array.isArray(response.data)) {
             setFetchedTasks(response.data); // Guardar las tareas en el estado
           } else {
-            setTasksError('Formato de datos de tareas inesperado.');
+            setTasksError(t('dashboard.tasks.error.format'));
             setFetchedTasks([]); // Limpiar tareas si el formato es incorrecto
           }
         } catch (error: any) {
-          setTasksError('Error al cargar las tareas: ' + (error.response?.data?.message || error.message));
+          setTasksError(t('dashboard.tasks.error.load') + ': ' + (error.response?.data?.message || error.message));
           setFetchedTasks([]);
         } finally {
           setLoadingTasks(false);
@@ -315,11 +315,11 @@ const Dashboard = () => {
           if (Array.isArray(response.data)) {
             setUserTasks(response.data); // Guardar las tareas del usuario en el estado
           } else {
-            setUserTasksError('Formato de datos de tareas del usuario inesperado.');
+            setUserTasksError(t('dashboard.manage.tasks.error.format'));
             setUserTasks([]); // Limpiar tareas si el formato es incorrecto
           }
         } catch (error: any) {
-          setUserTasksError('Error al cargar las tareas del usuario: ' + (error.response?.data?.message || error.message));
+          setUserTasksError(t('dashboard.manage.tasks.error.load') + ': ' + (error.response?.data?.message || error.message));
           setUserTasks([]);
         } finally {
           setLoadingUserTasks(false);
@@ -343,11 +343,11 @@ const Dashboard = () => {
           if (Array.isArray(response.data)) {
             setAcceptedTasks(response.data); // Guardar las tareas aceptadas en el estado
           } else {
-            setAcceptedTasksError('Formato de datos de tareas aceptadas inesperado.');
+            setAcceptedTasksError(t('dashboard.in.progress.error.format'));
             setAcceptedTasks([]); // Limpiar tareas si el formato es incorrecto
           }
         } catch (error: any) {
-          setAcceptedTasksError('Error al cargar las tareas aceptadas: ' + (error.response?.data?.message || error.message));
+          setAcceptedTasksError(t('dashboard.in.progress.error.load') + ': ' + (error.response?.data?.message || error.message));
           setAcceptedTasks([]);
         } finally {
           setLoadingAcceptedTasks(false);
@@ -606,11 +606,11 @@ const Dashboard = () => {
     const date = new Date(timestamp);
     const now = new Date();
     const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-    
-    if (diffInMinutes < 1) return 'Ahora';
-    if (diffInMinutes < 60) return `Hace ${diffInMinutes}m`;
-    if (diffInMinutes < 1440) return `Hace ${Math.floor(diffInMinutes / 60)}h`;
-    return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+    const locale = lang === 'es' ? 'es-ES' : lang === 'pt' ? 'pt-BR' : 'en-US';
+    if (diffInMinutes < 1) return t('common.time.now');
+    if (diffInMinutes < 60) return t('common.time.ago.min').replace('{{n}}', String(diffInMinutes));
+    if (diffInMinutes < 1440) return t('common.time.ago.hour').replace('{{n}}', String(Math.floor(diffInMinutes / 60)));
+    return date.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
   };
   
   const filteredNotifications = notifications.filter(notification => {
@@ -805,16 +805,7 @@ const Dashboard = () => {
           <div className="header-actions">
             <div className="theme-language-buttons">
               <ThemeToggle variant="inline" visible={true} />
-              <button
-                type="button"
-                className="language-toggle-button"
-                onClick={toggle}
-                aria-label={t('lang.toggle')}
-                title={t('lang.toggle')}
-              >
-                <MdTranslate />
-                <span>{lang === 'es' ? 'EN' : 'ES'}</span>
-              </button>
+              <LanguageFab visible={true} variant="inline" />
             </div>
             <WalletButton />
             <div className="notification-dropdown-container" ref={notificationDropdownRef}>
@@ -988,7 +979,7 @@ const Dashboard = () => {
                 <button 
                   className="filters-toggle"
                   onClick={() => setShowFilters(!showFilters)}
-                  aria-label="Toggle filters"
+                  aria-label={t('dashboard.tasks.toggle.filters')}
                 >
                   <FiMenu />
                 </button>
@@ -1727,7 +1718,7 @@ const Dashboard = () => {
                         style={{ background: 'var(--primary-blue)', color: '#fff' }}
                       >
                         <FaGlobe />
-                        <span>Ver Perfil Público</span>
+                        <span>{t('dashboard.settings.view.public.profile')}</span>
                       </Link>
                     </div>
                     <p className="edit-hint">{t('dashboard.settings.edit.hint')}</p>
@@ -1738,19 +1729,19 @@ const Dashboard = () => {
                     <button 
                       className="settings-logout-button"
                       onClick={async () => {
-                        if (window.confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+                        if (window.confirm(t('auth.logout.confirm'))) {
                           try {
                             await logout();
                             // Redirigir al inicio después de cerrar sesión
                             window.location.href = '/';
                           } catch (error) {
-                            console.error('Error al cerrar sesión:', error);
+                            if (import.meta.env.DEV) console.error('Error al cerrar sesión:', error);
                           }
                         }
                       }}
                     >
                       <FaSignOutAlt />
-                      <span>Cerrar Sesión</span>
+                      <span>{t('dashboard.logout')}</span>
                     </button>
                   </div>
                 </>
@@ -1769,10 +1760,10 @@ const Dashboard = () => {
                   onChange={(e) => setCategoryFilter(e.target.value)}
                 >
                   <option value="all">{t('dashboard.tasks.filter.categories.all')}</option>
-                  <option value="Blockchain">Blockchain</option>
-                  <option value="Diseño">Diseño</option>
-                  <option value="Desarrollo">Desarrollo</option>
-                  <option value="Marketing">Marketing</option>
+                  <option value="Blockchain">{t('dashboard.tasks.category.blockchain')}</option>
+                  <option value="Diseño">{t('dashboard.tasks.category.design')}</option>
+                  <option value="Desarrollo">{t('dashboard.tasks.category.development')}</option>
+                  <option value="Marketing">{t('dashboard.tasks.category.marketing')}</option>
                 </select>
               </div>
               
@@ -1798,7 +1789,7 @@ const Dashboard = () => {
                       <div className="task-details">
                         {task.price && task.currency && (
                           <div className="task-detail">
-                            <span className="task-detail-label">Recompensa</span>
+                            <span className="task-detail-label">{t('dashboard.tasks.reward')}</span>
                             <span className="task-detail-value">
                               {parseFloat(task.price).toFixed(2)} {task.currency}
                             </span>
@@ -1806,7 +1797,7 @@ const Dashboard = () => {
                         )}
                         {task.creator_username && (
                           <div className="task-detail">
-                            <span className="task-detail-label">Creador</span>
+                            <span className="task-detail-label">{t('dashboard.tasks.creator')}</span>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                               <Link 
                                 to={`/profile/${task.creator_id || task.id}`}

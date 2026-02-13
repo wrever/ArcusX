@@ -110,6 +110,7 @@ const DisputeStatusNotificationComponent = ({
     task: TaskDetails | null; 
     getEscrowByContractIds?: (params: { contractIds: string[]; validateOnChain?: boolean }) => Promise<any>;
 }) => {
+    const { t } = useI18n();
     const [escrowInfo, setEscrowInfo] = useState<{
         isDisputed: boolean;
         isResolved: boolean;
@@ -165,9 +166,9 @@ const DisputeStatusNotificationComponent = ({
                 borderRadius: '5px',
                 color: '#856404'
             }}>
-                <strong> Escrow en Disputa</strong>
+                <strong> {t('supervise.escrow.dispute')}</strong>
                 <p style={{ margin: '5px 0 0 0' }}>
-                    Verificando estado de la disputa...
+                    {t('supervise.dispute.verifying')}
                 </p>
             </div>
         );
@@ -185,18 +186,18 @@ const DisputeStatusNotificationComponent = ({
             borderRadius: '5px',
             color: isRefunded ? '#155724' : '#856404'
         }}>
-            <strong>{isRefunded ? '' : ''} Escrow en Disputa</strong>
+            <strong>{isRefunded ? '' : ''} {t('supervise.escrow.dispute')}</strong>
             <p style={{ margin: '5px 0 0 0' }}>
                 {isRefunded 
-                    ? 'La disputa ha sido resuelta y el reembolso ha sido procesado. Los fondos han sido devueltos.'
+                    ? t('supervise.dispute.resolved.refund')
                     : isResolved
-                    ? 'La disputa ha sido resuelta. Los fondos están siendo procesados.'
-                    : 'Esta tarea está en disputa. Los botones de aceptar y cancelar están deshabilitados hasta que se resuelva la disputa.'
+                    ? t('supervise.dispute.resolved.processing')
+                    : t('supervise.dispute.in.dispute')
                 }
             </p>
             {escrowInfo && (
                 <p style={{ margin: '5px 0 0 0', fontSize: '14px', fontStyle: 'italic' }}>
-                    Balance del escrow: {escrowInfo.balance.toFixed(7)} USDC
+                    {t('supervise.dispute.balance')} {escrowInfo.balance.toFixed(7)} USDC
                 </p>
             )}
         </div>
@@ -344,13 +345,13 @@ const SuperviseTask = () => {
                 
                 if (taskResponse.data) {
                     if (taskResponse.data.user_id === undefined || taskResponse.data.user_id === null || typeof taskResponse.data.user_id !== 'string') {
-                         setError('Error: Los detalles de la tarea no incluyen un ID de usuario creador válido.');
+                         setError(t('supervise.error.detailsNoUserId'));
                          setLoading(false);
                          return;
                     }
                     if (taskResponse.data.client_accepted_completion === undefined || typeof taskResponse.data.client_accepted_completion !== 'number' ||
                         taskResponse.data.worker_accepted_completion === undefined || typeof taskResponse.data.worker_accepted_completion !== 'number') {
-                        setError('Error: Los detalles de la tarea no incluyen los campos de aceptación de finalización.');
+                        setError(t('supervise.error.detailsNoAcceptance'));
                         setLoading(false);
                         return;
                     }
@@ -404,7 +405,7 @@ const SuperviseTask = () => {
 
                     setTask(updatedTaskData);
                 } else {
-                    setError('No se pudieron cargar los detalles de la tarea.');
+                    setError(t('supervise.error.loadTaskFailed'));
                     setLoading(false);
                     return;
                 }
@@ -420,7 +421,7 @@ const SuperviseTask = () => {
                 
                 if (workerResponse.data) {
                     if (workerResponse.data.id === undefined || workerResponse.data.id === null) {
-                         setError('Error: Los detalles del trabajador no incluyen un ID válido.');
+                         setError(t('supervise.error.workerNoId'));
                          setLoading(false);
                          return;
                     }
@@ -430,14 +431,14 @@ const SuperviseTask = () => {
                      };
                     setWorker(workerDetails);
                 } else {
-                    setError('No se pudieron cargar los detalles del trabajador.');
+                    setError(t('supervise.error.loadWorkerFailed'));
                     setLoading(false);
                     return;
                 }
 
             } catch (err: any) {
                 const errorMessage = err.response?.data?.message || err.message;
-                setError('Error al cargar los detalles: ' + errorMessage);
+                setError(t('supervise.error.loadDetails') + ' ' + errorMessage);
                 
                 // Si el error indica que la tarea no existe, redirigir al dashboard
                 if (errorMessage && (
@@ -460,7 +461,7 @@ const SuperviseTask = () => {
         if (taskId && acceptedApplicantId) {
             fetchData();
         } else {
-            setError('IDs de tarea o trabajador faltantes en la URL.');
+            setError(t('supervise.error.missingIds'));
             setLoading(false);
         }
     }, [taskId, acceptedApplicantId]); // Dependencias del useEffect
@@ -488,7 +489,7 @@ const SuperviseTask = () => {
                  setMessages([]);
             }
         } catch (error) {
-             setError('Error al cargar mensajes.');
+             setError(t('supervise.error.load.messages'));
         } finally {
             setLoadingMessages(false);
         }
@@ -518,7 +519,7 @@ const SuperviseTask = () => {
                 // Mostrar popup automáticamente
                 setPaymentSuccessData({
                     amount: escrowAmount.toFixed(7),
-                    txHash: task.escrow_completed_at ? 'Completado anteriormente' : 'N/A',
+                    txHash: task.escrow_completed_at ? t('supervise.tx.completedPreviously') : 'N/A',
                     netAmount: workerAmount.toFixed(7)
                 });
                 
@@ -807,7 +808,7 @@ const SuperviseTask = () => {
 
         // Validar que tenemos toda la información necesaria
         if (!currentUser || !task || !worker || !taskId || !acceptedApplicantId) {
-            setError('Error: Faltan datos necesarios para enviar el mensaje.');
+            setError(t('supervise.error.sendMessageData'));
             return;
         }
 
@@ -816,7 +817,7 @@ const SuperviseTask = () => {
         try {
             const token = localStorage.getItem('token');
             if (!token) {
-                setError('No se encontró el token de autenticación.');
+                setError(t('supervise.error.noToken'));
                 setSendingMessage(false);
                 return;
             }
@@ -834,7 +835,7 @@ const SuperviseTask = () => {
             } else if (currentUser.id === worker.id) { // Si el usuario actual es el trabajador
                 actualReceiverId = parseInt(task.user_id, 10); // El receptor es el creador de la tarea
             } else {
-                setError('No autorizado para enviar mensajes en esta tarea.');
+                setError(t('supervise.error.unauthorizedSend'));
                 setSendingMessage(false);
                 return;
             }
@@ -857,10 +858,10 @@ const SuperviseTask = () => {
                 setNewMessage('');
                 fetchMessages();
             } else {
-                setError('Error: ' + (response.data.message || 'Mensaje no enviado.'));
+                setError(t('supervise.error.messageNotSent') + ' ' + (response.data.message || t('supervise.error.sendMessage')));
             }
         } catch (err: any) {
-            setError('Error al enviar mensaje: ' + (err.response?.data?.message || err.message));
+            setError(t('supervise.error.sendMessage') + ' ' + (err.response?.data?.message || err.message));
         } finally {
             setSendingMessage(false);
         }
@@ -876,12 +877,12 @@ const SuperviseTask = () => {
      * ============================================ */
     const handleAcceptWork = async () => {
         if (!task || !isConnected || !address) {
-            setError('Debes conectar tu wallet Freighter para aceptar el trabajo');
+            setError(t('supervise.error.connectFreighterAccept'));
             return;
         }
 
         if (!task.escrow_id) {
-            setError('Error: No hay escrow configurado para esta tarea.');
+            setError(t('supervise.error.noEscrow'));
             return;
         }
 
@@ -1033,7 +1034,7 @@ const SuperviseTask = () => {
                 checkAndShowRatingModal();
             }, 3000);
         } catch (err: any) {
-            setError('Error al actualizar tarea: ' + (err.response?.data?.message || err.message));
+            setError(t('supervise.error.updateTask') + ' ' + (err.response?.data?.message || err.message));
         }
     };
 
@@ -1042,7 +1043,7 @@ const SuperviseTask = () => {
     // Nueva función para cancelar tarea con reembolso
     const handleCancelTask = async () => {
         if (!task || !task.escrow_id || !isConnected || !address || !kit) {
-            setError('Debes conectar tu wallet Freighter para cancelar la tarea y recibir el reembolso');
+            setError(t('supervise.error.connectFreighterCancel'));
             return;
         }
 
@@ -1058,8 +1059,8 @@ const SuperviseTask = () => {
                 // Si requiere disputa, mostrar opción de iniciar disputa
                 if (checkResult.requiresDispute) {
         setConfirmDialogConfig({
-                        title: 'Cancelación No Permitida',
-                        message: checkResult.reason || 'No puedes cancelar esta tarea directamente. El trabajador ya ha comenzado. ¿Deseas iniciar una disputa?',
+                        title: t('supervise.confirm.cancelNotAllowed'),
+                        message: checkResult.reason || t('supervise.confirm.cancelReason'),
                         type: 'warning',
             onConfirm: () => {
                 setShowConfirmDialog(false);
@@ -1069,15 +1070,15 @@ const SuperviseTask = () => {
         });
         setShowConfirmDialog(true);
                 } else {
-                    setError(checkResult.reason || 'No puedes cancelar esta tarea');
+                    setError(checkResult.reason || t('supervise.error.cannotCancel'));
                 }
             return;
         }
 
             // 2. Si está permitida, mostrar popup de confirmación
             setConfirmDialogConfig({
-                title: 'Confirmar Cancelación',
-                message: `¿Estás seguro de que quieres cancelar esta tarea? Recibirás un reembolso completo de ${checkResult.canRefund ? (task.escrow_amount || task.price || '0') : '0'} USDC.`,
+                title: t('supervise.confirm.cancel.title'),
+                message: t('supervise.confirm.cancel.message').replace('{{amount}}', checkResult.canRefund ? String(task.escrow_amount || task.price || '0') : '0'),
                 type: 'info',
                 onConfirm: () => {
                     setShowConfirmDialog(false);
@@ -1087,7 +1088,7 @@ const SuperviseTask = () => {
             setShowConfirmDialog(true);
 
         } catch (err: any) {
-            setError('Error al verificar cancelación: ' + (err.response?.data?.message || err.message));
+            setError(t('supervise.error.verifyCancel') + ' ' + (err.response?.data?.message || err.message));
         } finally {
             setCheckingCancellation(false);
         }
@@ -1095,7 +1096,7 @@ const SuperviseTask = () => {
 
     const executeCancelTask = async () => {
         if (!task || !task.escrow_id || !isConnected || !address || !kit) {
-            setError('Debes conectar tu wallet Freighter para cancelar la tarea');
+            setError(t('supervise.error.connectFreighterCancel'));
             return;
         }
 
@@ -1211,7 +1212,7 @@ const SuperviseTask = () => {
                     }
                 }
                 
-                setRefundNotificationMessage(refundResult.message || 'Disputa iniciada exitosamente. El sistema procesará tu reembolso automáticamente. Recibirás una notificación cuando esté completo.');
+                setRefundNotificationMessage(refundResult.message || t('supervise.refund.successMessage'));
                 setShowRefundNotification(true);
                 
                 // Recargar datos del backend para sincronizar
@@ -1246,12 +1247,12 @@ const SuperviseTask = () => {
             
             // Si el error indica que el ADMIN debe procesar la resolución
             if (errorMessage.includes('ADMIN') || errorMessage.includes('disputeResolver')) {
-                setError('La cancelación se ha iniciado correctamente. El sistema procesará tu reembolso automáticamente. Recibirás una notificación cuando el reembolso esté completo.');
+                setError(t('supervise.error.cancelStarted'));
                 // Cerrar el popup de firma si está abierto
                 setShowRefundSignature(false);
                 setRefundTransaction(null);
             } else {
-                setError('Error al cancelar tarea: ' + errorMessage);
+                setError(t('supervise.error.cancelTask') + ' ' + errorMessage);
             }
             setCancellingTask(false);
         }
@@ -1260,7 +1261,7 @@ const SuperviseTask = () => {
     // Función para firmar y enviar transacción de reembolso
     const handleSignRefundTransaction = async () => {
         if (!refundTransaction || !kit || !address) {
-            setError('Error: Información de transacción no disponible');
+            setError(t('supervise.error.txInfoUnavailable'));
             return;
         }
 
@@ -1306,7 +1307,7 @@ const SuperviseTask = () => {
             alert(` Tarea cancelada exitosamente. Reembolso de ${refundTransaction.refundAmount} USDC procesado.\n\nTX Hash: ${result.txHash}\n\nLos fondos han sido transferidos a tu wallet.`);
 
         } catch (err: any) {
-            setError('Error al procesar reembolso: ' + (err.response?.data?.message || err.message));
+            setError(t('supervise.error.processRefund') + ' ' + (err.response?.data?.message || err.message));
         } finally {
             setCancellingTask(false);
         }
@@ -1318,19 +1319,19 @@ const SuperviseTask = () => {
     // El cliente debe aprobar y liberar los fondos
     const handleWithdrawFunds = async () => {
         if (!task || !task.escrow_id) {
-            setError('Error: No hay escrow configurado para esta tarea.');
+            setError(t('supervise.error.noEscrow'));
                 return;
             }
 
         // Verificar que es el trabajador
     const isWorker = currentUser?.id === worker?.id;
         if (!isWorker) {
-            setError('Error: Solo el trabajador puede retirar los fondos.');
+            setError(t('supervise.error.onlyWorkerWithdraw'));
             return;
         }
 
         if (!isConnected || !address || !kit) {
-            setError('Error: Debes conectar tu wallet Freighter para retirar fondos.');
+            setError(t('supervise.error.connectFreighterWithdraw'));
             return;
         }
 
@@ -1338,7 +1339,7 @@ const SuperviseTask = () => {
                             task.worker_accepted_completion === 1;
         
         if (!bothAccepted) {
-            setError('Error: Ambos participantes deben aceptar antes de retirar fondos.');
+            setError(t('supervise.error.bothAcceptWithdraw'));
             return;
         }
 
@@ -1348,11 +1349,11 @@ const SuperviseTask = () => {
         try {
             // En Trustless Work, el trabajador NO libera fondos directamente
             // El cliente debe aprobar el milestone primero y luego liberar los fondos
-            throw new Error('En Trustless Work, el cliente debe aprobar y liberar los fondos. El trabajador no puede retirar fondos directamente.');
+            throw new Error(t('supervise.error.clientMustRelease'));
         } catch (err: any) {
             const errorMessage = err.response?.data?.message || err.message || 'Error desconocido';
             
-            setError('Error al retirar fondos: ' + errorMessage);
+            setError(t('supervise.error.withdrawFunds') + ' ' + errorMessage);
         } finally {
             setWithdrawingFunds(false);
         }
@@ -1364,14 +1365,14 @@ const SuperviseTask = () => {
     // Trabajador marca tarea como completada usando Trustless Work
     const handleCompleteTask = async () => {
         if (!taskId) {
-            setError('Error: ID de tarea no disponible.');
+            setError(t('supervise.error.taskIdUnavailable'));
             return;
         }
 
         // Mostrar popup de confirmación en lugar de confirm()
         setConfirmDialogConfig({
-            title: 'Confirmar Completado',
-            message: '¿Estás seguro de que quieres marcar este trabajo como completado?',
+            title: t('supervise.confirm.complete.title'),
+            message: t('supervise.confirm.complete.message'),
             type: 'info',
             onConfirm: () => {
                 setShowConfirmDialog(false);
@@ -1383,7 +1384,7 @@ const SuperviseTask = () => {
 
     const executeCompleteTask = async () => {
         if (!taskId) {
-            setError('Error: ID de tarea no disponible.');
+            setError(t('supervise.error.taskIdUnavailable'));
             return;
         }
 
@@ -1392,7 +1393,7 @@ const SuperviseTask = () => {
         try {
             const token = localStorage.getItem('token');
             if (!token) {
-                setError('No se encontró el token de autenticación.');
+                setError(t('supervise.error.noToken'));
                 setLoading(false);
                 return;
             }
@@ -1461,7 +1462,7 @@ const SuperviseTask = () => {
                 };
             });
             } else {
-                throw new Error('No tienes permisos para completar esta tarea');
+                throw new Error(t('supervise.error.noPermissionComplete'));
             }
               
             // Recargar datos para actualizar la UI
@@ -1471,7 +1472,7 @@ const SuperviseTask = () => {
 
             setError(null);
         } catch (err: any) {
-            setError('Error al completar tarea: ' + (err.response?.data?.message || err.message));
+            setError(t('supervise.error.completeTask') + ' ' + (err.response?.data?.message || err.message));
         } finally {
             setLoading(false);
         }
@@ -1552,28 +1553,28 @@ const SuperviseTask = () => {
     // Función para crear una disputa
     const handleCreateDispute = async () => {
         if (!taskId || !disputeReason.trim()) {
-            setError('Por favor, ingresa una razón para la disputa (mínimo 10 caracteres).');
+            setError(t('supervise.error.disputeReasonMin'));
             return;
         }
         
         if (disputeReason.trim().length < 10) {
-            setError('La razón de la disputa debe tener al menos 10 caracteres.');
+            setError(t('supervise.error.disputeReasonLength'));
             return;
         }
         
         if (!task || !task.escrow_id) {
-            setError('Error: No hay escrow configurado para esta tarea.');
+            setError(t('supervise.error.noEscrow'));
             return;
         }
 
         if (!isConnected || !address || !kit) {
-            setError('Debes conectar tu wallet Freighter para iniciar una disputa.');
+            setError(t('supervise.error.connectFreighterDispute'));
             return;
         }
 
         //  MEJORA: Validar permisos antes de iniciar disputa
         if (!currentUser) {
-            setError('No se pudo verificar tu identidad. Por favor, recarga la página.');
+            setError(t('supervise.error.verifyIdentity'));
             return;
         }
 
@@ -1581,13 +1582,13 @@ const SuperviseTask = () => {
         const isWorker = task.accepted_applicant_id && currentUser.id === task.accepted_applicant_id;
 
         if (!isClient && !isWorker) {
-            setError('No tienes permiso para crear una disputa para esta tarea. Solo el cliente o el trabajador asignado pueden crear disputas.');
+            setError(t('supervise.error.noPermissionDispute'));
             return;
         }
 
         //  MEJORA: Verificar si ya existe una disputa activa
         if (hasExistingDispute || task.status === 'disputed' || task.escrow_status === 'disputed') {
-            setError('Ya existe una disputa activa para esta tarea. No se puede crear otra disputa.');
+            setError(t('supervise.error.existingDispute'));
             return;
         }
         
@@ -1597,7 +1598,7 @@ const SuperviseTask = () => {
         try {
             const token = localStorage.getItem('token');
             if (!token) {
-                setError('No se encontró el token de autenticación.');
+                setError(t('supervise.error.noToken'));
                 setCreatingDispute(false);
                 return;
             }
@@ -1702,7 +1703,7 @@ const SuperviseTask = () => {
             }
         } catch (err: any) {
             const errorMessage = err.response?.data?.message || err.message;
-            setError('Error al crear la disputa: ' + errorMessage);
+            setError(t('supervise.error.createDispute') + ' ' + errorMessage);
             
             // Si el error indica que la tarea no existe, redirigir al dashboard
             if (errorMessage && (
@@ -1721,12 +1722,12 @@ const SuperviseTask = () => {
     };
 
     // Componentes de carga/error (restaurados a p tags)
-    if (loading) return <div className="supervise-task-container"><p>Cargando detalles de la tarea...</p></div>;
+    if (loading) return <div className="supervise-task-container"><p>{t('supervise.loading.details')}</p></div>;
     // No hacer return temprano si el error es de retiro de fondos - se mostrará en la sección de acciones
-    if (error && !error.includes('retirar fondos')) {
-        return <div className="supervise-task-container"><p className="error-message">Error: {error}</p></div>;
+    if (error && !(error.includes('retirar') || error.includes('withdraw'))) {
+        return <div className="supervise-task-container"><p className="error-message">{t('common.error')}: {error}</p></div>;
     }
-    if (!task || !worker || !currentUser) return <div className="supervise-task-container"><p>No se encontraron los detalles de la tarea o del trabajador.</p></div>;
+    if (!task || !worker || !currentUser) return <div className="supervise-task-container"><p>{t('supervise.no.task.details')}</p></div>;
 
     // Determinar si el usuario actual es el cliente o el trabajador
     const isClient = String(currentUser?.id) === String(task?.user_id);
@@ -1751,7 +1752,7 @@ const SuperviseTask = () => {
     const canShowDisputeButton = condition1 && condition2 && condition3 && condition4 && condition5 && condition6;
 
     // Determinar el mensaje del botón y si está deshabilitado
-    let buttonText = 'Marcar como Completada';
+    let buttonText = t('supervise.button.markComplete');
     let isButtonDisabled: boolean = loading;
 
     //  CRÍTICO: Si el escrow está resuelto, no mostrar ningún botón de completado
@@ -1759,37 +1760,37 @@ const SuperviseTask = () => {
     // También verificar que el escrow_status sea 'active' para mostrar botones
     if (isResolved || task.escrow_status === 'resolved' || task.status === 'resolved' || 
         (task.escrow_id && task.escrow_status !== 'active' && task.escrow_status !== undefined)) {
-        buttonText = 'Tarea Resuelta';
+        buttonText = t('supervise.button.taskResolved');
         isButtonDisabled = true;
     } else if (task.status === 'completed') {
-        buttonText = 'Tarea Completada';
+        buttonText = t('supervise.button.taskCompleted');
         isButtonDisabled = true;
     } else if (isClient && task.client_accepted_completion === 1) {
         //  Solo mostrar este mensaje si el escrow está activo
         if (task.escrow_id && task.escrow_status === 'active') {
-        buttonText = 'Esperando confirmación del trabajador';
+        buttonText = t('supervise.button.waitingWorker');
         isButtonDisabled = true;
         } else {
-            buttonText = 'Tarea Resuelta';
+            buttonText = t('supervise.button.taskResolved');
             isButtonDisabled = true;
         }
     } else if (isWorker && task.worker_accepted_completion === 1) {
         //  Solo mostrar este mensaje si el escrow está activo
         if (task.escrow_id && task.escrow_status === 'active') {
-        buttonText = 'Esperando confirmación del cliente';
+        buttonText = t('supervise.button.waitingClient');
         isButtonDisabled = true;
         } else {
-            buttonText = 'Tarea Resuelta';
+            buttonText = t('supervise.button.taskResolved');
             isButtonDisabled = true;
         }
     } else if (isWorker && task.client_accepted_completion === 0) {
         // El trabajador puede marcar como completado para notificar al cliente
         //  Solo si el escrow está activo
         if (task.escrow_id && task.escrow_status === 'active') {
-        buttonText = 'Marcar como Completado';
+        buttonText = t('supervise.button.markCompleteShort');
         isButtonDisabled = false; // Permitir que el trabajador marque como completado
         } else {
-            buttonText = 'Tarea Resuelta';
+            buttonText = t('supervise.button.taskResolved');
             isButtonDisabled = true;
         }
     }
@@ -1831,32 +1832,32 @@ const SuperviseTask = () => {
             <div className="task-details-layout">
                 {/* Columna izquierda: Detalles de la tarea */}
             <div className="task-details-section">
-                <h2>Detalles de la Tarea</h2>
-                <p><span className="detail-label">Descripción:</span> {task.description}</p>
-                <p><span className="detail-label">Recompensa:</span> {parseFloat(task.price).toFixed(2)} {task.currency}</p>
-                <p><span className="detail-label">Categoría:</span> {task.category}</p>
-                <p><span className="detail-label">Dificultad:</span> {task.difficulty}</p>
+                <h2>{t('supervise.task.details')}</h2>
+                <p><span className="detail-label">{t('supervise.label.description')}</span> {task.description}</p>
+                <p><span className="detail-label">{t('supervise.label.reward')}</span> {parseFloat(task.price).toFixed(2)} {task.currency}</p>
+                <p><span className="detail-label">{t('supervise.label.category')}</span> {task.category}</p>
+                <p><span className="detail-label">{t('supervise.label.difficulty')}</span> {task.difficulty}</p>
             </div>
 
                 {/* Columna derecha: Estado de Blockchain */}
                 {task.escrow_id && (
                     <div className="blockchain-status">
-                        <h3>Estado de Blockchain</h3>
+                        <h3>{t('supervise.blockchain.status')}</h3>
                         
                         {/* Estado de Wallet */}
                         <div className="wallet-status">
                             <div className="wallet-status-item">
                                 <div className="blockchain-info-label">
-                                    Wallet
+                                    {t('supervise.wallet.label')}
                                 </div>
                                 <div className="blockchain-info-value">
                                     {isConnected ? (
                                         <span className="status-badge active">
-                                            Conectada ({address?.slice(0, 6)}...{address?.slice(-4)})
+                                            {t('supervise.wallet.connected')} ({address?.slice(0, 6)}...{address?.slice(-4)})
                                         </span>
                                     ) : (
                                         <span className="status-badge pending">
-                                            Desconectada
+                                            {t('supervise.wallet.disconnected')}
                                         </span>
                                     )}
                                 </div>
@@ -1864,11 +1865,11 @@ const SuperviseTask = () => {
                             
                             <div className="wallet-status-item">
                                 <div className="blockchain-info-label">
-                                    Red
+                                    {t('supervise.wallet.network')}
                                 </div>
                                 <div className="blockchain-info-value">
                                         <span className="status-badge active">
-                                        Stellar Testnet
+                                        {t('supervise.wallet.stellarTestnet')}
                                         </span>
                                 </div>
                             </div>
@@ -1877,7 +1878,7 @@ const SuperviseTask = () => {
                         <div className="blockchain-info-grid">
                             <div className="blockchain-info-item">
                                 <div className="blockchain-info-label">
-                                    Escrow ID
+                                    {t('supervise.wallet.escrowId')}
                                 </div>
                                 <div className="blockchain-info-value escrow-id">
                                     {task.escrow_id}
@@ -1886,7 +1887,7 @@ const SuperviseTask = () => {
                             
                             <div className="blockchain-info-item">
                                 <div className="blockchain-info-label">
-                                    Estado
+                                    {t('supervise.wallet.status')}
                                 </div>
                                 <div className="blockchain-info-value">
                                     <span className={`status-badge ${(() => {
@@ -1918,7 +1919,7 @@ const SuperviseTask = () => {
                             {task.escrow_created_at && (
                                 <div className="blockchain-info-item">
                                     <div className="blockchain-info-label">
-                                        Creado
+                                        {t('supervise.wallet.created')}
                                     </div>
                                     <div className="blockchain-info-value">
                                         {new Date(task.escrow_created_at).toLocaleString('es-ES', {
@@ -1936,7 +1937,7 @@ const SuperviseTask = () => {
                             {task.escrow_completed_at && (
                                 <div className="blockchain-info-item">
                                     <div className="blockchain-info-label">
-                                        Completado
+                                        {t('supervise.wallet.completed')}
                                     </div>
                                     <div className="blockchain-info-value">
                                         {new Date(task.escrow_completed_at).toLocaleString('es-ES', {
@@ -1964,8 +1965,8 @@ const SuperviseTask = () => {
                     alignItems: 'center',
                     marginBottom: '20px'
                 }}>
-                    <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem' }}><FaComments aria-hidden="true" /> Chat con {chatPartnerName}</h2>
-                    {/* Botón Denuncia - Solo visible si se puede disputar */}
+                    <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem' }}><FaComments aria-hidden="true" /> {t('supervise.chat.with')} {chatPartnerName}</h2>
+                    {/* Botón {t('supervise.dispute.button')} - Solo visible si se puede disputar */}
                     {canShowDisputeButton && (
                         <button
                             onClick={() => setShowDisputeModal(true)}
@@ -1996,15 +1997,15 @@ const SuperviseTask = () => {
                             }}
                         >
                             <FaFlag />
-                            Denuncia
+                            {t('supervise.dispute.button')}
                         </button>
                     )}
                 </div>
                 <div className="messages-area">
                     {loadingMessages ? (
-                        <p className="loading-message">Cargando mensajes...</p>
+                        <p className="loading-message">{t('supervise.loading.messages')}</p>
                     ) : messages.length === 0 ? (
-                        <p className="loading-message">Aún no hay mensajes. ¡Sé el primero en escribir!</p>
+                        <p className="loading-message">{t('supervise.no.messages')}</p>
                     ) : (
                         <>
                             {messages.map(msg => {
@@ -2078,7 +2079,7 @@ const SuperviseTask = () => {
                                 setIsTyping(false);
                             }, 2000);
                         }}
-                        placeholder="Escribe un mensaje..."
+                        placeholder={t('supervise.message.placeholder')}
                         disabled={sendingMessage}
                          onKeyPress={(e) => {
                             if (e.key === 'Enter') {
@@ -2094,7 +2095,7 @@ const SuperviseTask = () => {
                         onClick={sendMessage}
                          disabled={sendingMessage || !newMessage.trim()}
                     >
-                        {sendingMessage ? 'Enviando...' : 'Enviar'}
+                        {sendingMessage ? t('supervise.sending') : t('supervise.send')}
                     </button>
                 </div>
             </div>
@@ -2112,7 +2113,7 @@ const SuperviseTask = () => {
             {/* Mostrar sección si hay escrow y la tarea está asignada O si ambos han aceptado (para permitir retiro de fondos) */}
             {task.escrow_id && (task.status === 'assigned' || (Number(task.client_accepted_completion) === 1 && Number(task.worker_accepted_completion) === 1)) && (
                 <div className="work-actions-section">
-                    <h3>Acciones de Trabajo</h3>
+                    <h3>{t('supervise.work.actions')}</h3>
                     
                     {/* Mostrar error si existe (especialmente errores de retiro de fondos) */}
                     {error && (
@@ -2140,11 +2141,11 @@ const SuperviseTask = () => {
                             borderRadius: '5px',
                             color: '#856404'
                         }}>
-                            <strong> Transacción pendiente de firma</strong>
+                            <strong> {t('supervise.tx.pending.sign')}</strong>
                             <p style={{ margin: '5px 0 0 0' }}>
                                 {pendingTransaction.signedBy === 'client' 
-                                    ? `Has firmado la transacción. Esperando que el trabajador complete la firma para liberar los fondos.`
-                                    : `El trabajador ya firmó. Debes conectar tu wallet y firmar la transacción para completar y liberar los fondos.`
+                                    ? t('supervise.status.signedWaitingWorker')
+                                    : t('supervise.status.workerSignedConnectWallet')
                                 }
                             </p>
                         </div>
@@ -2183,7 +2184,7 @@ const SuperviseTask = () => {
                                                 onClick={handleCancelTask}
                                                 disabled={cancellingTask || checkingCancellation || !isConnected}
                                             >
-                                                    {checkingCancellation ? 'Verificando...' : cancellingTask ? 'Procesando...' : ' Cancelar Tarea (Reembolsar)'}
+                                                    {checkingCancellation ? t('supervise.verifying') : cancellingTask ? t('supervise.processing') : ' ' + t('supervise.cancel.task.refund')}
                                             </button>
                                             );
                                         }
@@ -2223,7 +2224,7 @@ const SuperviseTask = () => {
                                                 onClick={handleCancelTask}
                                                 disabled={cancellingTask || checkingCancellation || !isConnected}
                                             >
-                                                {checkingCancellation ? 'Verificando...' : cancellingTask ? 'Procesando...' : ' Cancelar Tarea (Reembolsar)'}
+                                                {checkingCancellation ? t('supervise.verifying') : cancellingTask ? t('supervise.processing') : ' ' + t('supervise.cancel.task.refund')}
                                             </button>
                                         );
                                     })()}
@@ -2245,12 +2246,12 @@ const SuperviseTask = () => {
                                                     textAlign: 'center'
                                                 }}>
                                                     <strong style={{ fontSize: '18px', display: 'block', marginBottom: '10px' }}>
-                                                         Tu dinero ha sido transferido
+                                                         {t('supervise.status.moneyTransferred')}
                                                     </strong>
                                                     <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6' }}>
-                                                        El contrato ha sido resuelto y tu reembolso ha sido transferido a tu wallet Stellar.
+                                                        {t('supervise.status.contractResolvedRefund')}
                                                         <br />
-                                                        <strong>Verifica tu wallet Freighter para confirmar la recepción.</strong>
+                                                        <strong>{t('supervise.status.verifyFreighter')}</strong>
                                                     </p>
                                                 </div>
                                             )}
@@ -2265,10 +2266,10 @@ const SuperviseTask = () => {
                                                     textAlign: 'center'
                                                 }}>
                                                     <strong style={{ fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                                                        <FaLock /> Tarea Bloqueada
+                                                        <FaLock /> {t('supervise.status.taskLocked')}
                                                     </strong>
                                                     <p style={{ margin: 0, fontSize: '14px' }}>
-                                                        Esta tarea ha sido reembolsada completamente. Los botones de aceptar y cancelar han sido deshabilitados.
+                                                        {t('supervise.status.taskRefundedDisabled')}
                                             </p>
                                         </div>
                                             )}
@@ -2281,12 +2282,12 @@ const SuperviseTask = () => {
                                     {/* Verificar si el escrow está en disputa o fue reembolsado - Ocultar botones si está en disputa o fue reembolsado */}
                                     {!(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute || isRefunded) ? (
                                 <>
-                                    <p className="info-message" style={{ marginBottom: '10px' }}> Ambos han aceptado la finalización.</p>
+                                    <p className="info-message" style={{ marginBottom: '10px' }}> {t('supervise.status.bothAcceptedCompletion')}</p>
                                     {/* Si hay transacción pendiente firmada por el trabajador, el cliente puede completarla */}
                                     {pendingTransaction?.hasPending && pendingTransaction.signedBy === 'worker' && (
                                         <>
                                             <p className="info-message" style={{ marginBottom: '10px', color: '#856404' }}>
-                                                El trabajador ya firmó la transacción. Conecta tu wallet y completa la firma para liberar los fondos.
+                                                {t('supervise.status.workerSignedCompleteSign')}
                                             </p>
                                             <button 
                                                 className="btn-success"
@@ -2298,15 +2299,15 @@ const SuperviseTask = () => {
                                                     fontWeight: 'bold'
                                                 }}
                                             >
-                                                {withdrawingFunds ? ' Procesando...' : ' Completar Firma y Liberar Fondos'}
+                                                {withdrawingFunds ? ' ' + t('supervise.processing') : ' ' + t('supervise.status.completeSignAndRelease')}
                                             </button>
                                         </>
                                     )}
                                     {pendingTransaction?.hasPending && pendingTransaction.signedBy === 'client' && (
-                                        <p className="info-message">Ya firmaste la transacción. Esperando que el trabajador complete la firma para liberar los fondos.</p>
+                                        <p className="info-message">{t('supervise.status.youSignedWaitingWorker')}</p>
                                     )}
                                     {(!pendingTransaction?.hasPending) && (
-                                        <p className="info-message">Esperando que el trabajador inicie el retiro de fondos.</p>
+                                        <p className="info-message">{t('supervise.status.waitingWorkerWithdraw')}</p>
                                     )}
                                 </>
                                     ) : (
@@ -2326,12 +2327,12 @@ const SuperviseTask = () => {
                                                     textAlign: 'center'
                                                 }}>
                                                     <strong style={{ fontSize: '18px', display: 'block', marginBottom: '10px' }}>
-                                                         Tu dinero ha sido transferido
+                                                         {t('supervise.status.moneyTransferred')}
                                                     </strong>
                                                     <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6' }}>
-                                                        El contrato ha sido resuelto y tu reembolso ha sido transferido a tu wallet Stellar.
+                                                        {t('supervise.status.contractResolvedRefund')}
                                                         <br />
-                                                        <strong>Verifica tu wallet Freighter para confirmar la recepción.</strong>
+                                                        <strong>{t('supervise.status.verifyFreighter')}</strong>
                                                     </p>
                                                 </div>
                                             )}
@@ -2345,12 +2346,12 @@ const SuperviseTask = () => {
                                                     color: '#155724',
                                                     textAlign: 'center'
                                                 }}>
-                                                    <strong style={{ fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                                                        <FaLock /> Tarea Bloqueada
+<strong style={{ fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                                        <FaLock /> {t('supervise.status.taskLocked')}
                                                     </strong>
                                                     <p style={{ margin: 0, fontSize: '14px' }}>
-                                                        Esta tarea ha sido reembolsada completamente. Los botones de aceptar y cancelar han sido deshabilitados.
-                                                    </p>
+                                                        {t('supervise.status.taskRefundedDisabled')}
+                                            </p>
                                                 </div>
                                             )}
                                         </>
@@ -2363,7 +2364,7 @@ const SuperviseTask = () => {
                              !isResolved &&
                              task.escrow_status !== 'resolved' &&
                              task.status !== 'resolved' && (
-                                <p className="info-message"> Has aceptado este trabajo. Esperando confirmación del trabajador.</p>
+                                <p className="info-message"> {t('supervise.status.youAcceptedWaitingWorker')}</p>
                             )}
                         </div>
                     )}
@@ -2382,12 +2383,10 @@ const SuperviseTask = () => {
                                     textAlign: 'center'
                                 }}>
                                     <strong style={{ fontSize: '18px', display: 'block', marginBottom: '10px' }}>
-                                         Tarea Cancelada
+                                         {t('supervise.status.taskCancelled')}
                                     </strong>
                                     <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6' }}>
-                                        Esta tarea ha sido cancelada y el contrato ha sido resuelto.
-                                        <br />
-                                        El cliente ha recibido el reembolso de los fondos.
+                                        {t('supervise.status.taskCancelledRefund')}
                                     </p>
                                 </div>
                             )}
@@ -2405,9 +2404,9 @@ const SuperviseTask = () => {
                                     borderRadius: '8px',
                                     border: '2px solid #10dd88'
                                 }}>
-                                    <h3 style={{ marginTop: 0, marginBottom: '10px', color: '#28a745', fontSize: '18px' }}> Retirar Fondos</h3>
+                                    <h3 style={{ marginTop: 0, marginBottom: '10px', color: '#28a745', fontSize: '18px' }}> {t('supervise.withdraw.funds')}</h3>
                                     <p style={{ marginBottom: '15px', color: '#666', fontSize: '14px' }}>
-                                        Ambos participantes han aceptado y firmado. Haz clic para retirar los fondos.
+                                        {t('supervise.status.bothAcceptedClickWithdraw')}
                                     </p>
                                     <button 
                                         className="btn-success"
@@ -2421,11 +2420,11 @@ const SuperviseTask = () => {
                                             maxWidth: '400px'
                                         }}
                                     >
-                                        {withdrawingFunds ? ' Procesando...' : ' Retirar Dinero'}
+                                        {withdrawingFunds ? t('supervise.processing') : t('supervise.withdraw.funds')}
                                     </button>
                                     {!isConnected && (
                                         <p style={{ marginTop: '10px', color: '#dc3545', fontSize: '14px' }}>
-                                             Debes conectar tu wallet Freighter para retirar fondos.
+                                             {t('supervise.error.connectFreighterWithdraw')}
                                         </p>
                                     )}
                                 </div>
@@ -2447,12 +2446,12 @@ const SuperviseTask = () => {
                                         }}>
                                             {pendingTransaction.signedBy === 'client' && (
                                                 <p style={{ margin: 0, color: '#856404', fontSize: '14px' }}>
-                                                     El cliente ya firmó la transacción. Haz clic en "Retirar Dinero" para completar tu firma y liberar los fondos.
+                                                     {t('supervise.status.clientSignedClickWithdraw')}
                                                 </p>
                                             )}
                                             {pendingTransaction.signedBy === 'worker' && (
                                                 <p style={{ margin: 0, color: '#856404', fontSize: '14px' }}>
-                                                     Ya firmaste. Esperando que el cliente complete la firma para liberar los fondos.
+                                                     {t('supervise.status.youSignedWaitingClient')}
                                                 </p>
                                             )}
                                         </div>
@@ -2466,7 +2465,7 @@ const SuperviseTask = () => {
                                             border: '2px solid rgba(16, 221, 136, 0.5)'
                                         }}>
                                             <p style={{ margin: 0, color: '#10dd88', fontSize: '14px' }}>
-                                                 Ambos han aceptado. Haz clic en "Retirar Dinero" para iniciar el proceso de firmas.
+                                                 {t('supervise.status.bothAcceptedClickStart')}
                                             </p>
                                         </div>
                                     )}
@@ -2485,12 +2484,10 @@ const SuperviseTask = () => {
                                     textAlign: 'center'
                                 }}>
                                     <strong style={{ fontSize: '18px', display: 'block', marginBottom: '10px' }}>
-                                         Tarea Cancelada
+                                         {t('supervise.status.taskCancelled')}
                                     </strong>
                                     <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6' }}>
-                                        Esta tarea ha sido cancelada y el contrato ha sido resuelto.
-                                        <br />
-                                        El cliente ha recibido el reembolso de los fondos.
+                                        {t('supervise.status.taskCancelledRefund')}
                                     </p>
                                 </div>
                             )}
@@ -2510,7 +2507,7 @@ const SuperviseTask = () => {
                                     {task.client_accepted_completion === 0 ? (
                                         <div style={{ textAlign: 'center' }}>
                                             <p className="info-message" style={{ color: '#856404', marginBottom: '15px' }}>
-                                                 Puedes marcar el trabajo como completado para notificar al cliente.
+                                                 {t('supervise.status.youCanMarkComplete')}
                                             </p>
                                             <button 
                                                 className="btn-primary"
@@ -2530,19 +2527,19 @@ const SuperviseTask = () => {
                                             border: '2px solid #10dd88'
                                         }}>
                                             <p style={{ margin: 0, color: '#155724', fontSize: '14px', fontWeight: 'bold' }}>
-                                                 ¡Pago recibido! El cliente ha liberado los fondos y ya has recibido tu pago.
+                                                 {t('supervise.status.paymentReceived')}
                                             </p>
                                             <p style={{ margin: '10px 0 0 0', color: '#155724', fontSize: '13px' }}>
-                                                La tarea ha sido completada exitosamente. Revisa tu wallet para confirmar la recepción.
+                                                {t('supervise.status.taskCompletedCheckWallet')}
                                             </p>
                                         </div>
                                     ) : !pendingTransaction?.hasPending || pendingTransaction.signedBy !== 'client' ? (
                                         <div>
                                             <p className="info-message" style={{ color: '#856404', marginBottom: '15px' }}>
-                                                 Esperando que el cliente libere los fondos...
+                                                 {t('supervise.status.waitingClientRelease')}
                                         </p>
                                             <p className="info-message" style={{ color: '#856404', fontSize: '13px' }}>
-                                                 Ya marcaste el trabajo como completado. El cliente será notificado.
+                                                 {t('supervise.status.youMarkedCompleteClientNotified')}
                                             </p>
                                         </div>
                                     ) : (
@@ -2573,7 +2570,7 @@ const SuperviseTask = () => {
                              !isResolved &&
                              task.escrow_status !== 'resolved' &&
                              task.status !== 'resolved' && (
-                                <p className="info-message"> Has marcado el trabajo como completado. Esperando confirmación del cliente.</p>
+                                <p className="info-message"> {t('supervise.status.youMarkedCompleteWaitingClient')}</p>
                             )}
                         </div>
                     )}
@@ -2669,7 +2666,7 @@ const SuperviseTask = () => {
                                 gap: '12px'
                             }}>
                                 <FaExclamationTriangle style={{ color: '#dc2626' }} />
-                                Denuncia
+                                {t('supervise.dispute.button')}
                             </h2>
                             <button
                                 onClick={() => {
@@ -2759,7 +2756,7 @@ const SuperviseTask = () => {
                                     setDisputeReason(e.target.value);
                                     setError(null);
                                 }}
-                                placeholder="Ej: El trabajador no cumplió con los requisitos acordados..."
+                                placeholder={t('supervise.dispute.reason.placeholder')}
                                 disabled={creatingDispute}
                                 style={{
                                     width: '100%',
@@ -2828,7 +2825,7 @@ const SuperviseTask = () => {
                                     e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
                                 }}
                             >
-                                Cancelar
+                                {t('common.cancel')}
                             </button>
                             <button
                                 onClick={handleCreateDispute}
@@ -2866,7 +2863,7 @@ const SuperviseTask = () => {
                                 ) : (
                                     <>
                                         <FaExclamationTriangle />
-                                        Iniciar Disputa
+                                        {t('supervise.dispute.start')}
                                     </>
                                 )}
                             </button>
@@ -2930,7 +2927,7 @@ const SuperviseTask = () => {
                                 fontWeight: '500',
                                 color: 'rgba(255, 255, 255, 0.8)'
                             }}>
-                                Has pagado al trabajador y todo está bien
+                                {t('supervise.popup.paidWorkerAllGood')}
                             </p>
                             <div style={{
                                 background: 'linear-gradient(135deg, rgba(16, 221, 136, 0.1) 0%, rgba(10, 184, 106, 0.1) 100%)',
@@ -2941,16 +2938,16 @@ const SuperviseTask = () => {
                                 border: '1px solid rgba(16, 221, 136, 0.2)'
                             }}>
                                 <p style={{ margin: '8px 0', fontSize: '16px', color: '#fff' }}>
-                                    <strong style={{ color: '#10dd88' }}> Total pagado:</strong> {paymentSuccessData.amount} USDC
+                                    <strong style={{ color: '#10dd88' }}> {t('supervise.popup.totalPaid')}</strong> {paymentSuccessData.amount} USDC
                                 </p>
                                 <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
-                                    <strong style={{ color: '#10dd88', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><FaDollarSign /> Trabajador recibirá:</strong> {paymentSuccessData.netAmount} USDC
+                                    <strong style={{ color: '#10dd88', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><FaDollarSign /> {t('supervise.popup.workerReceives')}</strong> {paymentSuccessData.netAmount} USDC
                                 </p>
                                 <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
-                                    <strong style={{ color: '#10dd88' }}> Comisión de plataforma:</strong> {(parseFloat(paymentSuccessData.amount) - parseFloat(paymentSuccessData.netAmount || '0')).toFixed(7)} USDC
+                                    <strong style={{ color: '#10dd88' }}> {t('supervise.popup.platformCommission')}</strong> {(parseFloat(paymentSuccessData.amount) - parseFloat(paymentSuccessData.netAmount || '0')).toFixed(7)} USDC
                                 </p>
                                 <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
-                                    <strong style={{ color: '#10dd88' }}> Hash de transacción:</strong>
+                                    <strong style={{ color: '#10dd88' }}> {t('supervise.popup.txHash')}</strong>
                                 </p>
                                 <code style={{
                                     display: 'block',
@@ -2966,7 +2963,7 @@ const SuperviseTask = () => {
                                     {paymentSuccessData.txHash}
                                 </code>
                                 <p style={{ margin: '15px 0 0 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic' }}>
-                                    ⏰ Esta tarea será eliminada automáticamente en 24 horas
+                                    ⏰ {t('supervise.popup.taskDeleted24h')}
                                 </p>
                             </div>
                         </div>
@@ -3000,7 +2997,7 @@ const SuperviseTask = () => {
                                     e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 221, 136, 0.3)';
                                 }}
                             >
-                                Volver a Tarea
+                                {t('supervise.popup.backToTask')}
                             </button>
                             <button 
                                 onClick={() => {
@@ -3028,7 +3025,7 @@ const SuperviseTask = () => {
                                     e.currentTarget.style.transform = 'translateY(0)';
                                 }}
                             >
-                                Ir al Dashboard
+                                {t('supervise.popup.goToDashboard')}
                             </button>
                         </div>
                     </div>
@@ -3077,7 +3074,7 @@ const SuperviseTask = () => {
                             marginBottom: '20px',
                             marginTop: 0
                         }}>
-                            ¡Pago Recibido Exitosamente!
+                            {t('supervise.popup.paymentReceivedTitle')}
                         </h3>
                         <div style={{
                             marginBottom: '30px',
@@ -3090,7 +3087,7 @@ const SuperviseTask = () => {
                                 fontWeight: '500',
                                 color: 'rgba(255, 255, 255, 0.8)'
                             }}>
-                                ¡Has recibido tu pago correctamente!
+                                {t('supervise.popup.receivedCorrectly')}
                             </p>
                             <div style={{
                                 background: 'linear-gradient(135deg, rgba(16, 221, 136, 0.1) 0%, rgba(10, 184, 106, 0.1) 100%)',
@@ -3101,15 +3098,15 @@ const SuperviseTask = () => {
                                 border: '1px solid rgba(16, 221, 136, 0.2)'
                             }}>
                                 <p style={{ margin: '8px 0', fontSize: '16px', color: '#fff' }}>
-                                    <strong style={{ color: '#10dd88' }}> Monto recibido:</strong> {paymentSuccessData.netAmount || paymentSuccessData.amount} USDC
+                                    <strong style={{ color: '#10dd88' }}> {t('supervise.popup.amountReceived')}</strong> {paymentSuccessData.netAmount || paymentSuccessData.amount} USDC
                                 </p>
                                 {paymentSuccessData.netAmount && (
                                     <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
-                                        <strong style={{ color: '#10dd88' }}> Monto total:</strong> {paymentSuccessData.amount} USDC (después de comisión)
+                                        <strong style={{ color: '#10dd88' }}> {t('supervise.popup.totalAmountAfterCommission')}</strong> {paymentSuccessData.amount} USDC ({t('supervise.afterCommission')})
                                     </p>
                                 )}
                                 <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
-                                    <strong style={{ color: '#10dd88' }}> Hash de transacción:</strong>
+                                    <strong style={{ color: '#10dd88' }}> {t('supervise.popup.txHash')}</strong>
                                 </p>
                                 <code style={{
                                     display: 'block',
@@ -3125,7 +3122,7 @@ const SuperviseTask = () => {
                                     {paymentSuccessData.txHash}
                                 </code>
                                 <p style={{ margin: '15px 0 0 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic' }}>
-                                    ⏰ Esta tarea será eliminada automáticamente en 24 horas
+                                    ⏰ {t('supervise.popup.taskDeleted24h')}
                                 </p>
                             </div>
                         </div>
@@ -3260,13 +3257,13 @@ const SuperviseTask = () => {
                                 border: '1px solid rgba(16, 221, 136, 0.2)'
                             }}>
                                 <p style={{ margin: '8px 0', fontSize: '16px', color: '#fff' }}>
-                                    <strong style={{ color: '#10dd88' }}> Monto a reembolsar:</strong> {refundTransaction.refundAmount.toFixed(7)} USDC
+                                    <strong style={{ color: '#10dd88' }}> {t('supervise.popup.refundAmount')}</strong> {refundTransaction.refundAmount.toFixed(7)} USDC
                                 </p>
                                 <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
-                                    <strong style={{ color: '#10dd88', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><FaMapMarkerAlt aria-hidden="true" /> Tu dirección:</strong> {address?.slice(0, 6)}...{address?.slice(-4)}
+                                    <strong style={{ color: '#10dd88', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><FaMapMarkerAlt aria-hidden="true" /> {t('supervise.popup.yourAddress')}</strong> {address?.slice(0, 6)}...{address?.slice(-4)}
                                 </p>
                                 <p style={{ margin: '8px 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic' }}>
-                                     Sin firmar esta transacción, NO recibirás el reembolso
+                                     {t('supervise.popup.signRefundNote')}
                                 </p>
                             </div>
                         </div>
@@ -3305,7 +3302,7 @@ const SuperviseTask = () => {
                                     opacity: cancellingTask ? 0.5 : 1
                                 }}
                             >
-                                Cancelar
+                                {t('supervise.popup.cancel')}
                             </button>
                             <button 
                                 onClick={handleSignRefundTransaction}
@@ -3345,11 +3342,11 @@ const SuperviseTask = () => {
                                 {cancellingTask ? (
                                     <>
                                         <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}></span>
-                                        Firmando y Enviando...
+                                        {t('supervise.popup.signingAndSending')}
                                     </>
                                 ) : (
                                     <>
-                                         Firmar con Freighter
+                                         {t('supervise.popup.signWithFreighter')}
                                     </>
                                 )}
                             </button>
@@ -3400,7 +3397,7 @@ const SuperviseTask = () => {
                             marginBottom: '20px',
                             marginTop: 0
                         }}>
-                            Cancelación Procesada
+                            {t('supervise.popup.cancellationProcessed')}
                         </h3>
                         <div style={{
                             marginBottom: '30px',
@@ -3424,7 +3421,7 @@ const SuperviseTask = () => {
                                 border: '1px solid rgba(16, 221, 136, 0.2)'
                             }}>
                                 <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.8)' }}>
-                                    <strong style={{ color: '#10dd88' }}> Próximos pasos:</strong>
+                                    <strong style={{ color: '#10dd88' }}> {t('supervise.popup.nextSteps')}</strong>
                                 </p>
                                 <ul style={{ 
                                     margin: '10px 0', 
@@ -3433,9 +3430,9 @@ const SuperviseTask = () => {
                                     color: 'rgba(255, 255, 255, 0.7)',
                                     lineHeight: '1.8'
                                 }}>
-                                    <li>El administrador procesará tu reembolso automáticamente</li>
-                                    <li>Recibirás una notificación cuando el reembolso esté completo</li>
-                                    <li>Los fondos serán transferidos a tu wallet</li>
+                                    <li>{t('supervise.refund.bullet1')}</li>
+                                    <li>{t('supervise.refund.bullet2')}</li>
+                                    <li>{t('supervise.refund.bullet3')}</li>
                                 </ul>
                             </div>
                         </div>
@@ -3469,7 +3466,7 @@ const SuperviseTask = () => {
                                     e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 221, 136, 0.3)';
                                 }}
                             >
-                                Entendido
+                                {t('supervise.popup.understood')}
                             </button>
                         </div>
                     </div>
@@ -3518,7 +3515,7 @@ const SuperviseTask = () => {
                             marginBottom: '20px',
                             marginTop: 0
                         }}>
-                            ¡Disputa Iniciada Exitosamente!
+                            {t('supervise.popup.disputeStartedTitle')}
                         </h3>
                         <div style={{
                             marginBottom: '30px',
@@ -3531,7 +3528,7 @@ const SuperviseTask = () => {
                                 fontWeight: '500',
                                 color: 'rgba(255, 255, 255, 0.8)'
                             }}>
-                                Tu disputa ha sido registrada en el contrato inteligente. Un administrador revisará tu caso.
+                                {t('supervise.popup.disputeRegistered')}
                             </p>
                             {disputeTxHash && (
                                 <div style={{
@@ -3543,7 +3540,7 @@ const SuperviseTask = () => {
                                     border: '1px solid rgba(16, 221, 136, 0.2)'
                                 }}>
                                     <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
-                                        <strong style={{ color: '#10dd88' }}> Hash de transacción:</strong>
+                                        <strong style={{ color: '#10dd88' }}> {t('supervise.popup.txHash')}</strong>
                                     </p>
                                     <code style={{
                                         display: 'block',
@@ -3639,7 +3636,7 @@ const SuperviseTask = () => {
                                 color: '#333',
                                 fontSize: '24px'
                             }}>
-                                Calificar Experiencia
+                                {t('supervise.rating.title')}
                             </h2>
                             {hasRated && (
                                 <button
@@ -3686,8 +3683,8 @@ const SuperviseTask = () => {
                     title={confirmDialogConfig.title}
                     message={confirmDialogConfig.message}
                     type={confirmDialogConfig.type || 'warning'}
-                    confirmText="Confirmar"
-                    cancelText="Cancelar"
+                    confirmText={t('common.confirm')}
+                    cancelText={t('common.cancel')}
                     onConfirm={confirmDialogConfig.onConfirm}
                     onCancel={() => {
                         setShowConfirmDialog(false);
