@@ -15,7 +15,7 @@
 
 /* Ocultar botones flotantes cuando hay un modal abierto (usando clase en body) */
 body.wallet-modal-open .theme-toggle:not(.theme-toggle-inline),
-body.wallet-modal-open .lang-fab {
+body.wallet-modal-open .lang-select--fab {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
@@ -25,7 +25,7 @@ body.wallet-modal-open .lang-fab {
 
 /* También usar :has() como respaldo si el navegador lo soporta */
 body:has(.wallet-popup-overlay) .theme-toggle:not(.theme-toggle-inline),
-body:has(.wallet-popup-overlay) .lang-fab {
+body:has(.wallet-popup-overlay) .lang-select--fab {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;

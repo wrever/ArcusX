@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { FaCheckCircle, FaSpinner, FaTimes, FaHandshake, FaCoins, FaDollarSign, FaStar } from 'react-icons/fa';
 import { usePlatformFee } from '../hooks/usePlatformFee';
+import { useI18n } from '../i18n/I18nProvider';
 import { createRating, CreateRatingPayload } from '../services/ratingService';
+import { devLog, devWarn } from '../utils/logger';
 import '../css/ProposalReview.css';
 import '../css/ReviewForm.css';
 
@@ -46,6 +48,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
   onVerifyMilestone
 }) => {
   const { platformFee } = usePlatformFee();
+  const { t } = useI18n();
   
   // Estados para rating
   const [rating, setRating] = useState<number>(0);
@@ -69,29 +72,29 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
   const [steps, setSteps] = useState<ProcessStep[]>([
     {
       id: 'rating',
-      title: 'Calificar Trabajador',
-      description: workerName ? `Califica a ${workerName}` : 'Califica al trabajador',
+      title: t('complete.step.rating.title'),
+      description: workerName ? t('complete.step.rating.description').replace('{{name}}', workerName) : t('complete.step.rating.descriptionFallback'),
       icon: <FaStar />,
       status: 'pending',
-      buttonText: 'Confirmar Calificación',
+      buttonText: t('complete.rating.confirm'),
       disabled: false
     },
     {
       id: 'approve',
-      title: 'Aprobar Milestone',
-      description: 'Confirma que el trabajo está completado correctamente',
+      title: t('complete.step.approve.title'),
+      description: t('complete.step.approve.description'),
       icon: <FaHandshake />,
       status: 'pending',
-      buttonText: 'Aprobar Milestone',
+      buttonText: t('complete.step.approve.button'),
       disabled: true // Bloqueado hasta que se califique
     },
     {
       id: 'release',
-      title: 'Liberar Fondos',
-      description: `Libera ${formattedWorkerAmount} USDC al trabajador`,
+      title: t('complete.step.release.title'),
+      description: t('complete.step.release.description').replace('{{amount}}', formattedWorkerAmount),
       icon: <FaCoins />,
       status: 'pending',
-      buttonText: 'Liberar Fondos',
+      buttonText: t('complete.step.release.button'),
       disabled: true // Inicialmente bloqueado
     }
   ]);
@@ -172,7 +175,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
 
   const handleSubmitRating = async () => {
     if (rating === 0) {
-      setRatingError('Por favor, selecciona una calificación (1-5 estrellas)');
+      setRatingError(t('complete.rating.required'));
       return;
     }
 
@@ -187,7 +190,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
   // Función para enviar el rating al servidor (solo después de liberar fondos exitosamente)
   const submitRatingToServer = async () => {
     if (!taskId || !workerId || rating === 0) {
-      console.warn('No se puede enviar rating: datos faltantes', { taskId, workerId, rating });
+      devWarn('No se puede enviar rating: datos faltantes', { taskId, workerId, rating });
       return; // No hay rating para enviar
     }
 
@@ -202,14 +205,14 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
         review: undefined // Solo rating, sin review opcional por ahora
       };
 
-      console.log('Enviando rating al servidor...', payload);
+      devLog('Enviando rating al servidor...', payload);
       const result = await createRating(payload);
-      console.log('Rating enviado exitosamente:', result);
+      devLog('Rating enviado exitosamente:', result);
       
       setRatingError(null);
     } catch (err: any) {
       console.error('Error al enviar rating:', err);
-      setRatingError(`Error al enviar calificación: ${err.message || 'Error desconocido'}`);
+      setRatingError(`${t('complete.rating.error')}: ${err.message || ''}`);
     } finally {
       setSubmittingRating(false);
     }
@@ -234,7 +237,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
           
           // IMPORTANTE: Enviar el rating al servidor tan pronto como se apruebe el milestone
           if (rating > 0 && ratingSubmitted) {
-            console.log('Milestone aprobado. Enviando rating al servidor...');
+            devLog('Milestone aprobado. Enviando rating al servidor...');
             // Enviar rating en background (no bloquear la UI)
             submitRatingToServer().catch(err => {
               console.error('Error crítico al enviar rating:', err);
@@ -331,17 +334,17 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
 
         {/* Task Info */}
         <div className="escrow-task-info">
-          <h3>Detalles de la Tarea</h3>
+          <h3>{t('escrow.task.details')}</h3>
           <div className="escrow-task-details">
-            <p><strong>Dirección del cliente:</strong> {clientAddress.slice(0, 6)}...{clientAddress.slice(-4)}</p>
-            <p><strong>Monto de la tarea:</strong> {taskPrice} USDC</p>
-            <p><strong>Contract ID:</strong> {escrowId.slice(0, 8)}...{escrowId.slice(-8)}</p>
+            <p><strong>{t('complete.popup.label.clientAddress')}</strong> {clientAddress.slice(0, 6)}...{clientAddress.slice(-4)}</p>
+            <p><strong>{t('complete.popup.label.taskAmount')}</strong> {taskPrice} USDC</p>
+            <p><strong>{t('complete.popup.label.contractId')}</strong> {escrowId.slice(0, 8)}...{escrowId.slice(-8)}</p>
             <p style={{ color: '#ffa500', marginTop: '0.5rem' }}>
-              <strong> Nota:</strong> Este proceso requiere 2 firmas:
+              <strong>{t('common.nota')}</strong> {t('complete.popup.note.twoSignatures')}
             </p>
             <ul style={{ marginLeft: '20px', marginTop: '0.5rem' }}>
-              <li>1. Aprobar el milestone (confirmar que el trabajo está completo)</li>
-              <li>2. Liberar los fondos al trabajador</li>
+              <li>1. {t('complete.popup.bullet1.approve')}</li>
+              <li>2. {t('complete.popup.bullet2.release')}</li>
             </ul>
           </div>
         </div>
@@ -364,7 +367,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                       fontWeight: 'bold',
                       color: 'var(--text-primary)'
                     }}>
-                      Califica al trabajador
+                      {t('complete.popup.rateWorker')}
                     </h3>
                     <div className="rating-step-content" style={{ 
                       display: 'flex',
@@ -438,7 +441,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                             minWidth: '200px'
                           }}
                         >
-                          {submittingRating ? 'Enviando...' : 'Confirmar Calificación'}
+                          {submittingRating ? t('complete.rating.sending') : t('complete.rating.confirm')}
                         </button>
                       )}
                       {ratingSubmitted && !submittingRating && !ratingError && (
@@ -450,7 +453,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                           alignItems: 'center',
                           gap: '8px'
                         }}>
-                          <FaCheckCircle /> Calificación seleccionada
+                          <FaCheckCircle /> {t('complete.popup.ratingSelected')}
                         </div>
                       )}
                       {submittingRating && (
@@ -462,7 +465,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                           alignItems: 'center',
                           gap: '8px'
                         }}>
-                          <FaSpinner className="animate-spin" /> Enviando calificación...
+                          <FaSpinner className="animate-spin" /> {t('complete.popup.sendingRating')}
                         </div>
                       )}
                       {ratingError && (
@@ -507,19 +510,19 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                         className="escrow-step-button"
                         style={{ opacity: 0.5, cursor: 'not-allowed' }}
                       >
-                        {step.buttonText} (Bloqueado)
+                        {step.buttonText} {t('complete.popup.blocked')}
                       </button>
                     )}
                     
                     {step.status === 'in_progress' && (
                       <div className="escrow-step-status">
-                        Procesando...
+                        {t('escrow.status.processing')}
                       </div>
                     )}
                     
                     {step.status === 'completed' && (
                       <div className="escrow-step-status">
-                        Completado
+                        {t('escrow.status.completed')}
                       </div>
                     )}
                     
@@ -528,7 +531,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                         onClick={() => handleStepAction(index)}
                         className="escrow-step-button error"
                       >
-                        Reintentar
+                        {t('escrow.retry')}
                       </button>
                     )}
                   </div>
@@ -542,7 +545,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
         {/* Progress Indicator */}
         <div className="escrow-progress">
           <div className="escrow-progress-header">
-            <span>Progreso</span>
+            <span>{t('common.progress')}</span>
             <span>
               {(() => {
                 const completedSteps = steps.filter(step => step.status === 'completed').length;
@@ -570,10 +573,10 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
 
         {/* Info */}
         <div className="escrow-process-note">
-          <p> <strong>Nota:</strong> Este proceso requiere 3 pasos:</p>
-          <p>1. Calificar al trabajador (obligatorio)</p>
-          <p>2. Aprobar el milestone (confirmar que el trabajo está completo)</p>
-          <p>3. Liberar los fondos al trabajador</p>
+          <p><strong>{t('common.nota')}</strong> {t('complete.popup.note.threeSteps')}</p>
+          <p>1. {t('complete.popup.step1.rate')}</p>
+          <p>2. {t('complete.popup.step2.approve')}</p>
+          <p>3. {t('complete.popup.step3.release')}</p>
           <div style={{ 
             marginTop: '0.5rem', 
             padding: '16px', 
@@ -603,7 +606,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                 borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
               }}>
                 <span style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.8)' }}>
-                  Pago al trabajador:
+                  {t('complete.popup.workerPaymentLabel')}
                 </span>
                 <strong style={{ fontSize: '14px', color: '#fff' }}>
                   {formattedWorkerAmount} USDC
@@ -617,7 +620,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                 borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
               }}>
                 <span style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.8)' }}>
-                  Comisión de plataforma ({platformFeePercent}%):
+                  {t('complete.popup.platformCommissionLabel').replace('{{percent}}', String(platformFeePercent))}
                 </span>
                 <strong style={{ fontSize: '14px', color: '#fff' }}>
                   {formattedCommission} USDC
@@ -729,7 +732,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                 fontWeight: '500',
                 color: 'rgba(255, 255, 255, 0.8)'
               }}>
-                El milestone ha sido aprobado y los fondos han sido liberados al trabajador
+                {t('complete.success.milestoneMessage')}
               </p>
               
               <div style={{
@@ -750,7 +753,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                 }}>
                   <span style={{ fontSize: '18px' }}></span>
                   <strong style={{ fontSize: '15px', color: '#fff' }}>
-                    Milestone aprobado
+                    {t('complete.success.milestoneTitle')}
                   </strong>
                 </div>
                 <div style={{ 
@@ -761,7 +764,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                 }}>
                   <span style={{ fontSize: '18px' }}></span>
                   <strong style={{ fontSize: '15px', color: '#fff' }}>
-                    Fondos liberados: {formattedWorkerAmount} USDC
+                    {t('complete.success.fundsReleased').replace('{{amount}}', formattedWorkerAmount)}
                   </strong>
                 </div>
                 {releaseTxHash && (
@@ -775,7 +778,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                       color: 'rgba(255, 255, 255, 0.6)',
                       margin: 0
                     }}>
-                      <strong style={{ color: '#10dd88' }}>Transaction Hash:</strong>{' '}
+                      <strong style={{ color: '#10dd88' }}>{t('complete.popup.txHash')}</strong>{' '}
                       <code style={{ 
                         color: '#10dd88',
                         background: 'rgba(40, 192, 240, 0.1)',
@@ -818,7 +821,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                   e.currentTarget.style.boxShadow = '0 4px 12px rgba(40, 192, 240, 0.3)';
                 }}
               >
-                 Aceptar
+                 {t('common.accept')}
               </button>
             </div>
           </div>

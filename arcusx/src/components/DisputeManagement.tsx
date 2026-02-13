@@ -12,6 +12,7 @@ import DisputeTimelineView from './DisputeTimelineView';
 import DisputeCaseView from './DisputeCaseView';
 import Popup from './Popup';
 import WalletButton from './WalletButton';
+import { useI18n } from '../i18n/I18nProvider';
 import '../css/AdminPanel.css';
 
 interface DisputeManagementProps {
@@ -19,6 +20,7 @@ interface DisputeManagementProps {
 }
 
 const DisputeManagement: React.FC<DisputeManagementProps> = () => {
+  const { t } = useI18n();
   const [disputes, setDisputes] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -129,7 +131,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
       setTotalPages(data.pagination.total_pages);
       setTotal(allDisputes.length);
     } catch (err: any) {
-      setError(err.message || 'Error al cargar disputas');
+      setError(err.message || t('admin.disputes.error.load'));
     } finally {
       setLoading(false);
     }
@@ -491,7 +493,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
       if (typeof disputeId === 'string' && disputeId.startsWith('virtual-')) {
         const dispute = disputes.find(d => d.id === disputeId);
         if (!dispute) {
-          setError('Disputa no encontrada');
+          setError(t('admin.disputes.notFound'));
           return;
         }
       setSelectedDispute(dispute);
@@ -528,7 +530,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Error al cargar detalles de la disputa');
+      setError(err.message || t('admin.disputes.error.details'));
     } finally {
       setLoadingDetails(false);
     }
@@ -920,7 +922,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
             
             fetchDisputes();
           } else {
-            let errorMessage = `Error al resolver disputa: ${resolveResult.error}`;
+            let errorMessage = t('admin.disputes.error.resolve') + ': ' + resolveResult.error;
             if (resolveResult.error?.includes('trustline')) {
               errorMessage += `\n\n El cliente debe configurar un trustline para USDC antes de recibir el dinero.`;
               errorMessage += `\n   Issuer de USDC: ${USDC_ISSUER}`;
@@ -1020,7 +1022,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
             
             fetchDisputes();
           } else {
-            let errorMessage = `Error al resolver disputa: ${resolveResult.error}`;
+            let errorMessage = t('admin.disputes.error.resolve') + ': ' + resolveResult.error;
             if (resolveResult.error?.includes('trustline')) {
               errorMessage += `\n\n El trabajador debe configurar un trustline para USDC antes de recibir el dinero.`;
               errorMessage += `\n   Issuer de USDC: ${USDC_ISSUER}`;
@@ -1167,7 +1169,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
             
       fetchDisputes();
           } else {
-            setError(`Error al resolver disputa: ${errorMessages.join('. ')}`);
+            setError(t('admin.disputes.error.resolve') + ': ' + errorMessages.join('. '));
           }
         } else {
           // Este caso no debería ocurrir si las validaciones anteriores funcionan correctamente
@@ -1208,12 +1210,12 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
       throw new Error('Error: La disputa tiene escrow_id pero no fue procesada correctamente. Por favor, recarga la página e intenta nuevamente.');
     } catch (err: any) {
       
-      const errorMessage = err.message || 'Error al resolver disputa';
+      const errorMessage = err.message || t('admin.disputes.error.resolve');
       setError(errorMessage);
       
       // Si el error es sobre wallet o firma, mostrar mensaje más específico
       if (errorMessage.includes('wallet') || errorMessage.includes('firmar') || errorMessage.includes('sign')) {
-        setError(` ${errorMessage}\n\nPor favor, verifica que:\n- Tu wallet (Freighter) esté conectada\n- La wallet conectada sea el disputeResolver del escrow\n- Freighter esté abierto y funcionando`);
+        setError(errorMessage + '\n\n' + t('admin.disputes.error.walletHint'));
       }
     } finally {
       setResolving(false);
@@ -1255,10 +1257,9 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
         <div style={{ flex: 1 }}>
         <h2>
           <FaGavel />
-          Gestión de Disputas / Arbitraje
+          {t('admin.disputes.title')}
         </h2>
-        <p>Revisa y resuelve disputas entre clientes y trabajadores</p>
-          {/*  MEJORA: Mensaje informativo sobre disputas por cancelación */}
+        <p>{t('admin.disputes.subtitle')}</p>
           <div style={{
             marginTop: '12px',
             padding: '10px 15px',
@@ -1273,8 +1274,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
           }}>
             <FaExclamationTriangle style={{ color: '#ff9800', marginTop: '2px', flexShrink: 0 }} />
             <div>
-              <strong style={{ color: '#ff9800' }}>Nota:</strong> Las disputas por cancelación aparecen automáticamente cuando un cliente cancela una tarea. 
-              Estas disputas requieren resolución del administrador para procesar el reembolso.
+              <strong style={{ color: '#ff9800' }}>{t('common.nota')}</strong> {t('admin.disputes.note')}
             </div>
           </div>
         </div>
@@ -1286,7 +1286,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
       {/* Filtros */}
       <div className="admin-filters">
         <div className="filter-group">
-          <label>Filtrar por estado:</label>
+          <label>{t('admin.disputes.filter.label')}</label>
           <select
             value={statusFilter}
             onChange={(e) => {
@@ -1295,14 +1295,14 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
             }}
             className="admin-select"
           >
-            <option value="">Todas</option>
-            <option value="pending">Pendientes</option>
-            <option value="resolved">Resueltas</option>
-            <option value="cancelled">Canceladas</option>
+            <option value="">{t('admin.disputes.filter.all')}</option>
+            <option value="pending">{t('admin.disputes.filter.pending')}</option>
+            <option value="resolved">{t('admin.disputes.filter.resolved')}</option>
+            <option value="cancelled">{t('admin.disputes.filter.cancelled')}</option>
           </select>
         </div>
         <div className="filter-info">
-          <span>Total: {total} disputas</span>
+          <span>{t('admin.disputes.total').replace('{{n}}', String(total))}</span>
         </div>
       </div>
 
@@ -1324,12 +1324,12 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
       {loading ? (
         <div className="admin-loading">
           <div className="loading-spinner"></div>
-          <p>Cargando disputas...</p>
+          <p>{t('admin.disputes.loading')}</p>
         </div>
       ) : disputes.length === 0 ? (
         <div className="admin-empty">
           <FaGavel />
-          <p>No hay disputas {statusFilter ? `con estado "${statusFilter}"` : ''}</p>
+          <p>{t('admin.disputes.empty')}{statusFilter ? ` ${statusFilter}` : ''}</p>
         </div>
       ) : (
         <>
@@ -1337,12 +1337,12 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Tarea</th>
-                  <th>Creada por</th>
-                  <th>Estado</th>
-                  <th>Fecha</th>
-                  <th>Acciones</th>
+                  <th>{t('admin.disputes.th.id')}</th>
+                  <th>{t('admin.disputes.th.task')}</th>
+                  <th>{t('admin.disputes.th.createdBy')}</th>
+                  <th>{t('admin.disputes.th.status')}</th>
+                  <th>{t('admin.disputes.th.date')}</th>
+                  <th>{t('admin.disputes.th.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1393,10 +1393,10 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                             borderRadius: '4px',
                             color: '#ff9800'
                           }}>
-                             Desde Trustless Work
+                             {t('admin.disputes.fromTrustless')}
                           </span>
                         )}
-                        <div className="text-muted">{dispute.task_title || 'Sin título'}</div>
+                        <div className="text-muted">{dispute.task_title || t('admin.disputes.noTitle')}</div>
                         {dispute.task_price && (
                           <small>{parseFloat(dispute.task_price).toFixed(2)} USDC</small>
                         )}
@@ -1420,14 +1420,14 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                             borderRadius: '4px',
                             display: 'inline-block'
                           }}>
-                            <FaTimesCircle aria-hidden="true" /> Disputa por Cancelación
+                            <FaTimesCircle aria-hidden="true" /> {t('admin.disputes.cancellationDispute')}
                           </div>
                         )}
                       </div>
                     </td>
                     <td>
                       <div>
-                        <div>{dispute.created_by_username || 'Usuario #' + dispute.created_by}</div>
+                        <div>{dispute.created_by_username || t('admin.disputes.userId').replace('{{id}}', String(dispute.created_by))}</div>
                         <small className="text-muted">{dispute.created_by_email}</small>
                       </div>
                     </td>
@@ -1449,10 +1449,10 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                       <button
                         onClick={() => handleViewDetails(dispute.id)}
                         className="admin-button small"
-                        title="Ver detalles"
+                        title={t('admin.disputes.viewDetails')}
                       >
                         <FaEye />
-                        Ver
+                        {t('admin.disputes.view')}
                       </button>
                     </td>
                   </tr>
@@ -1708,7 +1708,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
             setShowResolveForm(false);
           }}
           type="success"
-          title={successPopupData?.alreadyResolved ? " Disputa Ya Resuelta" : "¡Disputa Resuelta Exitosamente!"}
+          title={successPopupData?.alreadyResolved ? t('dispute.resolved.already') : t('dispute.resolved.success')}
           message={
             successPopupData
               ? successPopupData.alreadyResolved

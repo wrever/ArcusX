@@ -26,12 +26,13 @@ export const PLATFORM_FEE_BPS = 0.3;
 // Verificar que las variables estén configuradas (solo en desarrollo)
 if (import.meta.env.DEV) {
   if (!TRUSTLESS_WORK_API_KEY) {
+    console.warn('ArcusX: VITE_TRUSTLESS_WORK_API_KEY no está configurada.');
   }
-
   if (!PLATFORM_WALLET) {
+    console.warn('ArcusX: VITE_PLATFORM_WALLET no está configurada.');
   }
-
   if (!ADMIN_WALLET) {
+    console.warn('ArcusX: VITE_ADMIN_WALLET no está configurada.');
   }
 }
 

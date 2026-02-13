@@ -1,16 +1,24 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://atgsesbstjleabesclzs.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0Z3Nlc2JzdGpsZWFiZXNjbHpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NTY3NzgsImV4cCI6MjA3ODAzMjc3OH0.RjwwgXaHHQ-Pz69qeZfXKRc0AuuNdAm3wjecY0xB-YY';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    flowType: 'pkce',
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-    storage: window.localStorage,
-    storageKey: 'supabase.auth.token'
+// Si faltan las variables, se usa un client "dummy" para que la app no rompa al cargar.
+// Auth/Supabase no funcionarán hasta que definas VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en .env
+const hasSupabase = Boolean(supabaseUrl && supabaseAnonKey && !supabaseUrl.includes('your-project'));
+
+export const supabase: SupabaseClient = createClient(
+  hasSupabase ? supabaseUrl : 'https://placeholder.supabase.co',
+  hasSupabase ? supabaseAnonKey : 'placeholder-anon-key',
+  {
+    auth: {
+      flowType: 'pkce',
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      storage: window.localStorage,
+      storageKey: 'supabase.auth.token'
+    }
   }
-});
+);
 

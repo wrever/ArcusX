@@ -4,6 +4,7 @@ import { FaArrowLeft, FaUser, FaEnvelope, FaLock, FaSave, FaTimes, FaUpload, FaG
 import { getUserProfile, updateUserProfile, updateUserBasicData, uploadAvatar } from '../services/profileService';
 import type { UserProfile, Skill } from '../types/profile';
 import { getAvatarUrl } from '../utils/avatarUtils';
+import { useI18n } from '../i18n/I18nProvider';
 import '../css/EditProfile.css';
 
 interface StoredUser {
@@ -15,6 +16,7 @@ interface StoredUser {
 
 const EditProfile: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [user, setUser] = useState<StoredUser | null>(null);
@@ -136,7 +138,7 @@ const EditProfile: React.FC = () => {
       setSuccess('Avatar actualizado correctamente');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(err.message || 'Error al subir avatar');
+      setError(err.message || t('edit.error.avatar'));
     } finally {
       setUploadingAvatar(false);
       if (fileInputRef.current) {
@@ -205,7 +207,7 @@ const EditProfile: React.FC = () => {
       const message =
         err?.response?.data?.message ||
         err?.message ||
-        'Error al guardar los cambios.';
+        t('edit.error.save');
       setError(message);
     } finally {
       setSaving(false);
@@ -248,7 +250,7 @@ const EditProfile: React.FC = () => {
       <div className="edit-profile-page">
         <div className="edit-profile-loading">
           <div className="spinner" />
-          <p>Cargando perfil...</p>
+          <p>{t('common.loading.profile')}</p>
         </div>
       </div>
     );
@@ -263,7 +265,7 @@ const EditProfile: React.FC = () => {
           type="button"
         >
           <FaArrowLeft />
-          <span>Volver al Dashboard</span>
+          <span>{t('edit.back')}</span>
         </button>
       </div>
 
@@ -304,12 +306,12 @@ const EditProfile: React.FC = () => {
               disabled={uploadingAvatar}
             >
               <FaUpload />
-              {uploadingAvatar ? 'Subiendo...' : 'Cambiar foto'}
+              {uploadingAvatar ? t('edit.uploading') : t('profile.upload.avatar')}
             </button>
           </div>
           <div className="title-block">
-            <h1>Editar perfil</h1>
-            <p>Actualiza tu información básica, perfil público y habilidades.</p>
+            <h1>{t('edit.title')}</h1>
+            <p>{t('edit.description')}</p>
           </div>
         </div>
 
@@ -319,7 +321,7 @@ const EditProfile: React.FC = () => {
         <form className="edit-profile-form" onSubmit={handleSubmit}>
           {/* Sección 1: Información básica */}
           <div className="form-section">
-            <h2>Información básica</h2>
+            <h2>{t('edit.section.basic')}</h2>
 
             <div className="form-group">
               <label htmlFor="name">
@@ -352,34 +354,34 @@ const EditProfile: React.FC = () => {
 
           {/* Sección 2: Perfil público */}
           <div className="form-section">
-            <h2>Perfil público</h2>
+            <h2>{t('edit.section.public')}</h2>
             <p className="section-help">
               Esta información será visible para otros usuarios si tu perfil es público.
             </p>
 
             <div className="form-group">
-              <label htmlFor="bio">Biografía</label>
+              <label htmlFor="bio">{t('edit.label.bio')}</label>
               <textarea
                 id="bio"
                 value={bio}
                 onChange={e => setBio(e.target.value)}
                 rows={4}
                 maxLength={1000}
-                placeholder="Cuéntanos sobre ti..."
+                placeholder={t('edit.bio.placeholder')}
               />
               <span className="char-count">{bio.length}/1000</span>
             </div>
 
             <div className="form-group">
               <label htmlFor="portfolioUrl">
-                <FaGlobe /> URL de Portfolio
+                <FaGlobe /> {t('edit.label.portfolio')}
               </label>
               <input
                 id="portfolioUrl"
                 type="url"
                 value={portfolioUrl}
                 onChange={e => setPortfolioUrl(e.target.value)}
-                placeholder="https://tu-portfolio.com"
+                placeholder={t('edit.portfolio.placeholder')}
               />
             </div>
 
@@ -389,13 +391,13 @@ const EditProfile: React.FC = () => {
                   type="button"
                   className={`checkbox-custom ${publicProfile ? 'public' : 'private'}`}
                   onClick={() => setPublicProfile(!publicProfile)}
-                  aria-label={publicProfile ? "Hacer perfil privado" : "Hacer perfil público"}
+                  aria-label={publicProfile ? t('edit.profile.makePrivate') : t('edit.profile.makePublic')}
                 >
                   {publicProfile ? <FaUnlock /> : <FaLockIcon />}
                 </button>
                 <div className="checkbox-text">
-                  <strong>Perfil Público</strong>
-                  <p>Permitir que otros usuarios vean tu perfil y estadísticas</p>
+                  <strong>{t('edit.public.label')}</strong>
+                  <p>{t('edit.public.desc')}</p>
                 </div>
               </div>
             </div>
@@ -403,9 +405,9 @@ const EditProfile: React.FC = () => {
 
           {/* Sección 3: Habilidades */}
           <div className="form-section">
-            <h2>Habilidades</h2>
+            <h2>{t('edit.section.skills')}</h2>
             <p className="section-help">
-              Selecciona las habilidades que dominas. Puedes ajustar el nivel de cada una.
+              {t('edit.skills.help')}
             </p>
 
             <div className="skills-selection">
@@ -431,10 +433,10 @@ const EditProfile: React.FC = () => {
                           onChange={(e) => handleSkillLevelChange(skill, e.target.value as Skill['level'])}
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <option value="beginner">Principiante</option>
-                          <option value="intermediate">Intermedio</option>
-                          <option value="advanced">Avanzado</option>
-                          <option value="expert">Experto</option>
+                          <option value="beginner">{t('edit.skill.beginner')}</option>
+                          <option value="intermediate">{t('edit.skill.intermediate')}</option>
+                          <option value="advanced">{t('edit.skill.advanced')}</option>
+                          <option value="expert">{t('edit.skill.expert')}</option>
                         </select>
                       )}
                     </div>
@@ -444,7 +446,7 @@ const EditProfile: React.FC = () => {
               
               {selectedSkills.length > 0 && (
                 <div className="selected-skills-summary">
-                  <h3>Habilidades seleccionadas ({selectedSkills.length})</h3>
+                  <h3>{t('edit.selected.skills')} ({selectedSkills.length})</h3>
                   <div className="selected-skills-list">
                     {selectedSkills.map((skill, index) => (
                       <div key={index} className="selected-skill-badge">
@@ -454,7 +456,7 @@ const EditProfile: React.FC = () => {
                           type="button"
                           className="remove-skill-btn"
                           onClick={() => handleToggleSkill(skill.name)}
-                          title="Eliminar habilidad"
+                          title={t('edit.remove.skill')}
                         >
                           <FaTimes />
                         </button>
@@ -468,48 +470,48 @@ const EditProfile: React.FC = () => {
 
           {/* Sección 4: Seguridad */}
           <div className="form-section">
-            <h2>Seguridad</h2>
+            <h2>{t('edit.section.security')}</h2>
             <p className="section-help">
-              Solo necesitas rellenar estos campos si quieres cambiar tu contraseña.
+              {t('edit.security.help')}
             </p>
 
             <div className="form-group">
               <label htmlFor="currentPassword">
-                <FaLock /> Contraseña actual
+                <FaLock /> {t('edit.password.current.label')}
               </label>
               <input
                 id="currentPassword"
                 type="password"
                 value={currentPassword}
                 onChange={e => setCurrentPassword(e.target.value)}
-                placeholder="Introduce tu contraseña actual"
+                placeholder={t('edit.password.current')}
               />
             </div>
 
             <div className="form-row">
               <div className="form-group">
                 <label htmlFor="newPassword">
-                  <FaLock /> Nueva contraseña
+                  <FaLock /> {t('edit.password.new.label')}
                 </label>
                 <input
                   id="newPassword"
                   type="password"
                   value={newPassword}
                   onChange={e => setNewPassword(e.target.value)}
-                  placeholder="Dejar vacío si no quieres cambiarla"
+                  placeholder={t('edit.password.leave.empty')}
                 />
               </div>
 
               <div className="form-group">
                 <label htmlFor="confirmPassword">
-                  <FaLock /> Confirmar nueva contraseña
+                  <FaLock /> {t('edit.password.confirm.label')}
                 </label>
                 <input
                   id="confirmPassword"
                   type="password"
                   value={confirmPassword}
                   onChange={e => setConfirmPassword(e.target.value)}
-                  placeholder="Repite la nueva contraseña"
+                  placeholder={t('edit.password.repeat')}
                 />
               </div>
             </div>
@@ -522,7 +524,7 @@ const EditProfile: React.FC = () => {
               onClick={() => navigate('/dashboard')}
             >
               <FaTimes />
-              Cancelar
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
@@ -530,7 +532,7 @@ const EditProfile: React.FC = () => {
               disabled={saving}
             >
               <FaSave />
-              {saving ? 'Guardando...' : 'Guardar cambios'}
+              {saving ? t('edit.saving') : t('edit.save')}
             </button>
           </div>
         </form>

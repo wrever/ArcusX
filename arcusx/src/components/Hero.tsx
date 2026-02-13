@@ -1,18 +1,93 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
-import { FaRocket, FaUsers, FaLaptopCode, FaMoneyBillWave, FaArrowRight, FaLock, FaBolt, FaCheck, FaMapMarkedAlt, FaChevronDown } from 'react-icons/fa';
+import { useState, useEffect, useRef } from 'react';
+import { FaRocket, FaUsers, FaLaptopCode, FaMoneyBillWave, FaArrowRight, FaLock, FaBolt, FaCheck, FaMapMarkedAlt, FaChevronDown, FaSearch } from 'react-icons/fa';
+import axios from 'axios';
+import { API_URL } from '../config/database';
 import '../css/Hero.css';
 import { useI18n } from '../i18n/I18nProvider';
 import Footer from './Footer';
 import SEO from './SEO';
+
+interface TaskResult {
+  id: number;
+  title: string;
+  description?: string;
+  price: string;
+  currency: string;
+  category?: string;
+  difficulty?: string;
+  creator_username?: string;
+  created_at?: string;
+  proposal_count?: number;
+}
 
 const viewportScroll = { once: true, amount: 0.2 };
 const viewportScrollSoft = { once: true, amount: 0.15 };
 
 const Hero = () => {
   const { t, lang } = useI18n();
+  const navigate = useNavigate();
   const [expandedRoadmap, setExpandedRoadmap] = useState<Set<number>>(() => new Set([2, 3, 4]));
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<TaskResult[]>([]);
+  const [loadingSearch, setLoadingSearch] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  /* Mockup stats para la landing (sin fetch) */
+  const heroStats = { openTasks: 10, totalUsers: 40, totalVolumeUsdc: 500 };
+
+  useEffect(() => {
+    if (searchQuery.trim().length < 2) {
+      setSearchResults([]);
+      setShowResults(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      const fetchTasks = async () => {
+        setLoadingSearch(true);
+        try {
+          const params = new URLSearchParams();
+          params.append('search', searchQuery.trim());
+          params.append('sort_by', 'date_desc');
+          const url = `${API_URL}/auth/get_tasks.php?${params.toString()}`;
+          const response = await axios.get(url);
+          const data = Array.isArray(response.data) ? response.data : [];
+          setSearchResults(data.slice(0, 8));
+          setShowResults(true);
+        } catch {
+          setSearchResults([]);
+          setShowResults(true);
+        } finally {
+          setLoadingSearch(false);
+        }
+      };
+      fetchTasks();
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowResults(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleApplyClick = (taskId: number) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      navigate(`/apply-task/${taskId}`);
+    } else {
+      navigate(`/login?redirect=${encodeURIComponent(`/apply-task/${taskId}`)}`);
+    }
+    setShowResults(false);
+    setSearchQuery('');
+    setSearchResults([]);
+  };
 
   const toggleRoadmap = (index: number) => {
     setExpandedRoadmap((prev) => {
@@ -73,8 +148,8 @@ const Hero = () => {
   return (
     <>
       <SEO
-        title="Trabajos Online en Stellar | ArcusX - Plataforma de Freelancing Web3 para LATAM"
-        description="Encuentra trabajos online en Stellar blockchain. Plataforma de freelancing Web3 con pagos instantáneos en USDC. Rápida y segura."
+        title={t('hero.seo.title')}
+        description={t('hero.seo.description')}
         url="/"
         locale={lang}
         structuredData={combinedStructuredData}
@@ -100,25 +175,85 @@ const Hero = () => {
               {t('hero.title.latam')}
             </h1>
             <p className="landing-hero-desc">{t('hero.desc')}</p>
-            <div className="landing-hero-actions">
-              <Link to="/register" className="landing-hero-cta primary">
-                {t('hero.button.start')} <FaArrowRight />
-              </Link>
-              <Link to="/login" className="landing-hero-cta secondary">{t('hero.button.demo')}</Link>
+            <div className="landing-hero-job-search" ref={searchRef}>
+              <div className="landing-hero-search-bar">
+                <FaSearch className="landing-hero-search-icon" aria-hidden />
+                <input
+                  type="search"
+                  className="landing-hero-search-input"
+                  placeholder={t('hero.search.placeholder')}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => searchQuery.trim().length >= 2 && setShowResults(true)}
+                  autoComplete="off"
+                  aria-label={t('hero.search.placeholder')}
+                />
+                {loadingSearch && (
+                  <span className="landing-hero-search-loading" aria-live="polite">
+                    {t('hero.search.searching')}
+                  </span>
+                )}
+              </div>
+              {showResults && searchQuery.trim().length >= 2 && (
+                <div className="landing-hero-search-results">
+                  {loadingSearch && searchResults.length === 0 ? (
+                    <p className="landing-hero-search-results-loading">{t('hero.search.searching')}</p>
+                  ) : searchResults.length === 0 ? (
+                    <p className="landing-hero-search-results-empty">{t('hero.search.noResults')}</p>
+                  ) : (
+                    <>
+                      <p className="landing-hero-search-results-heading">
+                        {t('hero.search.resultsCount').replace('{{count}}', String(searchResults.length))}
+                      </p>
+                      <ul className="landing-hero-search-results-list" role="list">
+                        {searchResults.map((task) => (
+                          <li key={task.id} className="landing-hero-search-card">
+                            <div className="landing-hero-search-card-content">
+                              <h3 className="landing-hero-search-card-title">{task.title}</h3>
+                              {(task.category || task.difficulty) && (
+                                <span className="landing-hero-search-card-meta">
+                                  {[task.category, task.difficulty].filter(Boolean).join(' · ')}
+                                </span>
+                              )}
+                              {task.description && (
+                                <p className="landing-hero-search-card-desc">
+                                  {task.description.slice(0, 100)}{task.description.length > 100 ? '…' : ''}
+                                </p>
+                              )}
+                              <div className="landing-hero-search-card-footer">
+                                <span className="landing-hero-search-card-price">
+                                  {parseFloat(task.price).toFixed(2)} {task.currency}
+                                </span>
+                                <button
+                                  type="button"
+                                  className="landing-hero-search-card-apply"
+                                  onClick={() => handleApplyClick(task.id)}
+                                >
+                                  {t('hero.search.apply')} <FaArrowRight />
+                                </button>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
             <div className="landing-hero-trust" role="list" aria-label={t('hero.stats.aria')}>
               <span className="landing-hero-stat-item" role="listitem">
-                <span className="landing-hero-stat">10+</span>
+                <span className="landing-hero-stat">+{heroStats.openTasks}</span>
                 <span className="landing-hero-stat-desc">{t('hero.stats.tasks')}</span>
               </span>
               <span className="landing-hero-stat-sep" aria-hidden="true">·</span>
               <span className="landing-hero-stat-item" role="listitem">
-                <span className="landing-hero-stat">50+</span>
+                <span className="landing-hero-stat">+{heroStats.totalUsers}</span>
                 <span className="landing-hero-stat-desc">{t('hero.stats.users')}</span>
               </span>
               <span className="landing-hero-stat-sep" aria-hidden="true">·</span>
               <span className="landing-hero-stat-item" role="listitem">
-                <span className="landing-hero-stat">$1K+</span>
+                <span className="landing-hero-stat">+${heroStats.totalVolumeUsdc}</span>
                 <span className="landing-hero-stat-desc">{t('hero.stats.payments.processed')}</span>
               </span>
             </div>
@@ -126,7 +261,7 @@ const Hero = () => {
         </header>
 
         {/* — Trust strip: rápido y seguro — */}
-        <section className="landing-trust-strip" aria-label="Tecnología y seguridad">
+        <section className="landing-trust-strip" aria-label={t('landing.trust.aria')}>
           <div className="landing-trust-strip-inner">
             <span className="landing-trust-text">{t('landing.trust.line')}</span>
           </div>

@@ -3725,44 +3725,31 @@ input[type="search"]::placeholder {
   gap: 0.5rem;
 }
 
-.language-toggle-button {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+/* Inline language dropdown (selector de idioma en header) */
+.theme-language-buttons .lang-select--inline .lang-select-trigger {
   padding: 0.75rem 1.25rem;
-  border: none;
   border-radius: 8px;
   font-size: 0.9rem;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
+  min-width: 100px;
+  justify-content: center;
   background: linear-gradient(135deg, rgba(16, 221, 136, 0.2) 0%, rgba(17, 128, 179, 0.2) 100%);
   color: var(--text-primary, #ffffff);
   box-shadow: 0 2px 8px rgba(16, 221, 136, 0.2);
-  min-width: 100px;
-  justify-content: center;
   border: 1px solid rgba(16, 221, 136, 0.3);
 }
-
-.language-toggle-button:hover {
+.theme-language-buttons .lang-select--inline .lang-select-trigger:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(16, 221, 136, 0.3);
   background: linear-gradient(135deg, rgba(16, 221, 136, 0.3) 0%, rgba(17, 128, 179, 0.3) 100%);
   border-color: rgba(16, 221, 136, 0.5);
 }
-
-.language-toggle-button:active {
-  transform: translateY(0);
-}
-
-.language-toggle-button svg {
-  font-size: 1rem;
+.theme-language-buttons .lang-select--inline .lang-select-trigger svg {
   color: var(--text-primary, #ffffff);
 }
-
-.language-toggle-button span {
-  font-weight: 600;
-  letter-spacing: 0.05em;
+.theme-language-buttons .lang-select--inline .lang-select-dropdown {
+  top: 100%;
+  margin-top: 0.5rem;
 }
 
 .wallet-button-container {

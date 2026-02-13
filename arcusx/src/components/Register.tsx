@@ -100,8 +100,8 @@ const Register = () => {
   return (
     <>
       <SEO
-        title="Registrarse | ArcusX - Trabajos Freelance Stellar"
-        description="Únete a ArcusX. Plataforma de trabajos online en Stellar. Freelancing Web3, microtareas, pagos en USDC. Trabajos remotos para LATAM. Registro gratuito. Arcus, Arcu."
+        title={t('register.seo.title')}
+        description={t('register.seo.description')}
         url="/register"
         locale={lang}
       />

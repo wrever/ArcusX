@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { FaArrowLeft, FaGoogle, FaGithub, FaEnvelope, FaLock } from 'react-icons/fa';
 import '../css/Login.css';
 import { useAuth } from '../hooks/useAuth';
@@ -15,15 +15,17 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '/dashboard';
   const { isAuthenticated, login } = useAuth();
 
   // Verificar si el usuario ya está autenticado al cargar el componente
   useEffect(() => {
     if (isAuthenticated) {
-      // Si ya está autenticado, redirigir al dashboard
-      navigate('/dashboard');
+      const path = redirectTo.startsWith('/') ? redirectTo : `/${redirectTo}`;
+      navigate(path, { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, redirectTo]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,9 +39,8 @@ const Login = () => {
       }
 
       await login(email, password);
-      
-      // Redirigir directamente al dashboard (sin verificación Human ID)
-      navigate('/dashboard', { replace: true });
+      const path = redirectTo.startsWith('/') ? redirectTo : `/${redirectTo}`;
+      navigate(path, { replace: true });
     } catch (error: any) {
       setError(error.response?.data?.message || t('login.error'));
     } finally {
@@ -88,8 +89,8 @@ const Login = () => {
   return (
     <>
       <SEO
-        title="Iniciar Sesión | ArcusX - Trabajos Online en Stellar"
-        description="Accede a tu cuenta de ArcusX. Trabajos online, freelancing en Stellar, pagos instantáneos en USDC. Plataforma de trabajos remotos Web3 para LATAM. Arcus, Arcu."
+        title={t('login.seo.title')}
+        description={t('login.seo.description')}
         url="/login"
         locale={lang}
       />

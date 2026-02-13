@@ -18,11 +18,9 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    // Si no hay idioma guardado o es inválido, usar español por defecto
-    if (saved === 'es' || saved === 'en') {
+    if (saved === 'es' || saved === 'en' || saved === 'pt') {
       setLangState(saved);
     } else {
-      // Forzar español como idioma nativo si no hay preferencia guardada
       setLangState('es');
       localStorage.setItem(STORAGE_KEY, 'es');
     }
@@ -34,10 +32,13 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.lang = next;
   };
 
-  const toggle = () => setLang(lang === 'es' ? 'en' : 'es');
+  const toggle = () => setLang(lang === 'es' ? 'en' : lang === 'en' ? 'pt' : 'es');
 
   const t = (key: string, fallback?: string) => {
-    return translations[lang]?.[key] ?? fallback ?? key;
+    const value = translations[lang]?.[key];
+    if (value) return value;
+    if (lang === 'pt' && translations.en?.[key]) return translations.en[key];
+    return fallback ?? key;
   };
 
   const value = useMemo(() => ({ lang, setLang, t, toggle }), [lang]);

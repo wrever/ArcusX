@@ -1,6 +1,7 @@
 import { ReactNode, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useI18n } from '../i18n/I18nProvider';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -9,6 +10,7 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
+  const { t } = useI18n();
 
   // Si el usuario cierra sesión, redirigir inmediatamente
   useEffect(() => {
@@ -33,7 +35,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
           borderRadius: '12px',
           textAlign: 'center'
         }}>
-          <h3>Verificando autenticación...</h3>
+          <h3>{t('auth.verifying')}</h3>
         </div>
       </div>
     );
