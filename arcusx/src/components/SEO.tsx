@@ -8,7 +8,7 @@ interface SEOProps {
   type?: 'website' | 'article' | 'profile';
   noindex?: boolean;
   canonical?: string;
-  locale?: 'es' | 'en';
+  locale?: 'es' | 'en' | 'pt';
   structuredData?: object;
 }
 
@@ -29,9 +29,11 @@ const SEO: React.FC<SEOProps> = ({
   const finalImage = image.startsWith('http') ? image : `${siteUrl}${image}`;
   const finalTitle = title.includes('ArcusX') || title.includes('Arcus') || title.includes('Arcu') ? title : `${title} | ArcusX`;
   
-  const alternateLocales = locale === 'es' 
-    ? ['en', 'es']
-    : ['es', 'en'];
+  const alternateLocales = locale === 'es'
+    ? ['en', 'es', 'pt']
+    : locale === 'pt'
+      ? ['es', 'en', 'pt']
+      : ['es', 'en', 'pt'];
 
   // Keywords dinámicas basadas en la página
   const getKeywords = () => {

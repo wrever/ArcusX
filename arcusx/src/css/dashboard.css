@@ -873,7 +873,7 @@
   border-radius: 8px;
   color: var(--text-primary, #fff);
   padding: 0.75rem 1rem;
-  min-width: 180px;
+  min-width: 220px;
   flex: 1;
   transition: all 0.3s ease;
   font-size: 0.95rem;
@@ -883,6 +883,7 @@
   background-position: right 1rem center;
   background-size: 16px;
   padding-right: 2.5rem;
+  max-width: 100%;
 }
 
 .filter-select:hover {
@@ -2637,7 +2638,7 @@ input[type="search"]::placeholder {
   color: var(--text-primary, #fff);
   font-size: 0.95rem;
   transition: all 0.3s ease;
-  min-width: 180px;
+  min-width: 220px;
   flex: 1;
 }
 

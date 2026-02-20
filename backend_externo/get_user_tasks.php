@@ -1,11 +1,19 @@
 <?php
-require_once 'config.php'; // Incluye la configuración de la base de datos
+require_once __DIR__ . '/config.php';
 
-// Required headers for CORS (assuming you need them here too)
-header("Access-Control-Allow-Origin: *"); // Permite solicitudes desde cualquier origen
+// Corregir mojibake (tildes y ñ)
+function fix_utf8_mojibake($str) {
+    if (!is_string($str) || $str === '') return $str;
+    $bytes = @mb_convert_encoding($str, 'ISO-8859-1', 'UTF-8');
+    if ($bytes === false) return $str;
+    if (!mb_check_encoding($bytes, 'UTF-8')) return $str;
+    return $bytes;
+}
+
+header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS"); // Incluye OPTIONS para pre-flight requests
-header("Access-Control-Max-Age: 3600"); // Cachea las opciones por 1 hora
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Max-Age: 3600");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
 
@@ -70,20 +78,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     }
 
     $tasks = [];
+    $textKeys = ['title', 'subtitle', 'category', 'difficulty', 'currency', 'creator_username'];
     if ($result->num_rows > 0) {
-        // Recorrer los resultados y almacenarlos en un array
-        while($row = $result->fetch_assoc()) {
-             // Convert has_accepted_proposal from 0/1 to boolean true/false
+        while ($row = $result->fetch_assoc()) {
             $row['has_accepted_proposal'] = (bool)$row['has_accepted_proposal'];
+            foreach ($textKeys as $k) {
+                if (isset($row[$k]) && is_string($row[$k])) $row[$k] = fix_utf8_mojibake($row[$k]);
+            }
             $tasks[] = $row;
         }
     }
 
-    // Devolver las tareas en formato JSON
-    http_response_code(200); // OK
-    echo json_encode($tasks);
+    $json = json_encode($tasks, JSON_UNESCAPED_UNICODE);
+    if ($json === false) {
+        $json = '[]';
+        if (function_exists('error_log')) {
+            error_log('get_user_tasks.php json_encode error: ' . json_last_error_msg());
+        }
+    }
+    http_response_code(200);
+    header('Content-Length: ' . strlen($json));
+    echo $json;
 
-    // Cerrar la conexión a la base de datos
     $conn->close();
 
 } else {

@@ -22,9 +22,11 @@ if ($conn->connect_error) {
     throw new Exception('Error de conexión a la base de datos: ' . $conn->connect_error);
 }
 
+// PHP 8.1: charset UTF-8 para tildes y ñ correctos. Si aún ves mal las tildes, revisa que la tabla/columna usen utf8mb4.
+$conn->set_charset('utf8mb4');
+
 // Configuración JWT
 $jwt_secret = "SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY"; // Cambiar por una clave segura
 
 // NOTA: La clase JWT simulada fue removida - ahora se usa Firebase\JWT\JWT de la librería real
 // Si algún archivo antiguo necesita la clase simulada, debe actualizarse para usar Firebase\JWT\JWT
-?>

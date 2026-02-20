@@ -662,20 +662,34 @@
   color: #475569 !important;
 }
 
-/* Habilidades */
+/* Habilidades agrupadas por categoría */
 .skills-selection {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
+.skills-category-block {
+  margin-bottom: 1.5rem;
+}
+
+.skills-category-block:last-of-type {
+  margin-bottom: 0;
+}
+
+.skills-category-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.75rem 0;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
 .skills-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 0.75rem;
-  max-height: 400px;
-  overflow-y: auto;
-  overflow-x: hidden;
   padding: 0.5rem;
   border-radius: 12px;
   background: var(--bg-card);
