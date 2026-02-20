@@ -1,21 +1,22 @@
 import React from 'react';
 import { FaPlay, FaYoutube } from 'react-icons/fa';
 import { useI18n } from '../i18n/I18nProvider';
+import type { Lang } from '../i18n/translations';
 import '../css/TutorialsTab.css';
 
 interface Tutorial {
   id: number;
-  title: {
-    es: string;
-    en: string;
-  };
-  description: {
-    es: string;
-    en: string;
-  };
+  title: { es: string; en: string };
+  description: { es: string; en: string };
   thumbnail: string;
   youtubeUrl: string;
   duration?: string;
+}
+
+/** Devuelve el texto en el idioma indicado; si es 'pt' usa 'es' como fallback (los tutoriales solo tienen es/en). */
+function getTutorialText(text: { es: string; en: string }, lang: Lang): string {
+  if (lang === 'pt') return text.es;
+  return text[lang];
 }
 
 const TutorialsTab: React.FC = () => {
@@ -154,7 +155,7 @@ const TutorialsTab: React.FC = () => {
             <div className="tutorial-thumbnail">
               <img
                 src={tutorial.thumbnail}
-                alt={tutorial.title[lang]}
+                alt={getTutorialText(tutorial.title, lang)}
                 loading="lazy"
                 onError={(e) => {
                   // Si falla la imagen, usar un placeholder genérico
@@ -168,8 +169,8 @@ const TutorialsTab: React.FC = () => {
             </div>
 
             <div className="tutorial-content">
-              <h3 className="tutorial-title">{tutorial.title[lang]}</h3>
-              <p className="tutorial-description">{tutorial.description[lang]}</p>
+              <h3 className="tutorial-title">{getTutorialText(tutorial.title, lang)}</h3>
+              <p className="tutorial-description">{getTutorialText(tutorial.description, lang)}</p>
 
               {tutorial.duration && (
                 <div className="tutorial-meta">
@@ -180,7 +181,7 @@ const TutorialsTab: React.FC = () => {
               <button
                 className="tutorial-watch-btn"
                 onClick={() => handleWatchTutorial(tutorial.youtubeUrl)}
-                aria-label={`${t('tutorials.watch')}: ${tutorial.title[lang]}`}
+                aria-label={`${t('tutorials.watch')}: ${getTutorialText(tutorial.title, lang)}`}
               >
                 <FaPlay />
                 <span>{t('tutorials.watch')}</span>

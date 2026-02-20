@@ -6,7 +6,15 @@
  * Headers: Authorization: Bearer {JWT_TOKEN} (opcional)
  */
 
-require_once 'config.php';
+require_once __DIR__ . '/config.php';
+
+function fix_utf8_mojibake($str) {
+    if (!is_string($str) || $str === '') return $str;
+    $bytes = @mb_convert_encoding($str, 'ISO-8859-1', 'UTF-8');
+    if ($bytes === false) return $str;
+    if (!mb_check_encoding($bytes, 'UTF-8')) return $str;
+    return $bytes;
+}
 
 $autoload_path = __DIR__ . '/vendor/autoload.php';
 if (!file_exists($autoload_path)) {
@@ -224,12 +232,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
         $freelancers = [];
         while ($row = $result->fetch_assoc()) {
-            // Formatear datos
             $freelancer = [
                 'id' => (int)$row['id'],
-                'username' => $row['username'],
+                'username' => fix_utf8_mojibake($row['username'] ?? ''),
                 'avatar_url' => $row['avatar_url'] ? $row['avatar_url'] : null,
-                'bio' => $row['bio'] ? $row['bio'] : null,
+                'bio' => isset($row['bio']) && $row['bio'] ? fix_utf8_mojibake($row['bio']) : null,
                 'average_rating' => round((float)$row['average_rating'], 2),
                 'total_ratings' => (int)$row['total_ratings'],
                 'tasks_completed' => (int)$row['tasks_completed'],

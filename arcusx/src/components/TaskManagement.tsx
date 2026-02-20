@@ -316,7 +316,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                           {formatEscrowId(task.escrow_id)}
                         </span>
                       ) : (
-                        {t('admin.tasks.noEscrow')}
+                        t('admin.tasks.noEscrow')
                       )}
                     </td>
                     <td>{getEscrowStatusBadge(task.escrow_status)}</td>

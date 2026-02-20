@@ -28,7 +28,7 @@
     radial-gradient(ellipse 50% 35% at 50% 80%, rgba(16, 180, 220, 0.06), transparent 45%);
   background-size: 100% 100%;
   background-repeat: no-repeat;
-  padding: 5rem 1rem 3rem;
+  padding: 7rem 1rem 4rem;
   box-sizing: border-box;
 }
 
@@ -204,7 +204,7 @@
   max-width: 640px;
   margin: 0 auto;
   padding: 0 1rem;
-  padding-top: 2rem;
+  padding-top: 3.5rem;
   box-sizing: border-box;
 }
 
@@ -214,7 +214,7 @@
   font-weight: 800;
   line-height: 1.1;
   color: var(--text-primary);
-  margin-bottom: 1.25rem;
+  margin-bottom: 2.25rem;
   letter-spacing: -0.04em;
 }
 
@@ -239,10 +239,11 @@
 
 @media (max-width: 480px) {
   .landing-hero {
-    padding: 1.5rem 0.75rem 2.5rem;
+    padding: 5rem 0.75rem 3rem;
   }
   .landing-hero-inner {
     padding: 0 0.75rem;
+    padding-top: 2rem;
   }
   .landing-hero-actions {
     flex-direction: column;
@@ -313,33 +314,33 @@
   transform: translateY(-2px);
 }
 
-/* — Job search bar (hero) — */
+/* — Buscador discreto; único elemento pegado al carrusel — */
 .landing-hero-job-search {
   position: relative;
   width: 100%;
-  max-width: 560px;
-  margin: 0 auto 0.5rem;
+  max-width: 360px;
+  margin: 2rem auto 0;
 }
 
 .landing-hero-search-bar {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  background: rgba(10, 14, 22, 0.85);
-  border: 2px solid rgba(16, 221, 136, 0.35);
-  border-radius: 14px;
-  padding: 0 1rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 0.45rem 0.65rem;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .landing-hero-search-bar:focus-within {
-  border-color: rgba(16, 221, 136, 0.8);
-  box-shadow: 0 0 0 3px rgba(16, 221, 136, 0.15);
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .landing-hero-search-icon {
-  color: rgba(16, 221, 136, 0.9);
-  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.9rem;
   flex-shrink: 0;
 }
 
@@ -349,8 +350,8 @@
   background: transparent;
   border: none;
   color: var(--text-primary);
-  font-size: 1rem;
-  padding: 1rem 0;
+  font-size: 0.9rem;
+  padding: 0.25rem 0;
   outline: none;
 }
 
@@ -493,8 +494,8 @@
   align-items: baseline;
   justify-content: center;
   gap: 0.25rem 0;
-  margin-top: 2rem;
-  margin-bottom: 0.5rem;
+  margin-top: 1.25rem;
+  margin-bottom: 1.75rem;
 }
 
 .landing-hero-stat-item {
@@ -557,6 +558,206 @@
 :root:not([data-theme]) .landing-trust-text {
   color: var(--primary-blue);
   opacity: 0.95;
+}
+
+/* — Carrusel de tareas en el Hero (justo debajo de Explorar trabajos) — */
+.hero-carousel-section {
+  padding: 2.5rem 1rem;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Carrusel pegado solo al buscador; resto del hero con espacio */
+.hero-carousel-in-hero {
+  margin-top: 0.5rem;
+  padding-top: 0;
+  padding-bottom: 1.5rem;
+  background: transparent;
+  border-bottom: none;
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  box-sizing: border-box;
+}
+
+.hero-carousel-in-hero .hero-carousel-wrap {
+  max-width: 100%;
+  width: 100%;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  box-sizing: border-box;
+}
+
+/* Movimiento automático continuo: sin snap para que no se corte el flujo */
+.hero-carousel-in-hero .hero-carousel-viewport {
+  scroll-snap-type: none;
+  min-width: 0;
+  flex: 1;
+}
+
+.hero-carousel-wrap {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.hero-carousel-title {
+  display: none;
+}
+
+.hero-carousel-loading,
+.hero-carousel-empty {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.hero-carousel-nav-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 100%;
+}
+
+.hero-carousel-btn {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.hero-carousel-btn:hover {
+  background: var(--primary-green, #10dd88);
+  color: var(--bg-primary);
+  border-color: var(--primary-green);
+}
+
+.hero-carousel-viewport {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.hero-carousel-viewport::-webkit-scrollbar {
+  display: none;
+  height: 0;
+}
+
+.hero-carousel-viewport::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+.hero-carousel-track {
+  display: flex;
+  gap: 1rem;
+  padding: 0.5rem 0.25rem;
+  width: max-content;
+}
+
+.hero-carousel-card {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+  width: 280px;
+  min-height: 180px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.25s ease;
+}
+
+.hero-carousel-card:hover {
+  border-color: var(--primary-green, rgba(16, 221, 136, 0.5));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.hero-carousel-card-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  line-height: 1.35;
+}
+
+.hero-carousel-card-meta {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.hero-carousel-card-desc {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  flex: 1;
+  margin-bottom: 1rem;
+}
+
+.hero-carousel-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: auto;
+}
+
+.hero-carousel-card-price {
+  font-weight: 600;
+  color: var(--primary-green, #10dd88);
+  font-size: 1rem;
+}
+
+.hero-carousel-card-apply {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: var(--primary-green, #10dd88);
+  color: var(--bg-primary);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.hero-carousel-card-apply:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+  .hero-carousel-section {
+    padding: 1.5rem 0.75rem;
+  }
+
+  .hero-carousel-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .hero-carousel-card {
+    width: 260px;
+    min-height: 160px;
+  }
 }
 
 /* — Value: trabajo real, pago real — */

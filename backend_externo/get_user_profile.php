@@ -6,7 +6,15 @@
  * Headers: Authorization: Bearer {JWT_TOKEN} (opcional, para saber si es el dueño)
  */
 
-require_once 'config.php';
+require_once __DIR__ . '/config.php';
+
+function fix_utf8_mojibake($str) {
+    if (!is_string($str) || $str === '') return $str;
+    $bytes = @mb_convert_encoding($str, 'ISO-8859-1', 'UTF-8');
+    if ($bytes === false) return $str;
+    if (!mb_check_encoding($bytes, 'UTF-8')) return $str;
+    return $bytes;
+}
 
 $autoload_path = __DIR__ . '/vendor/autoload.php';
 if (!file_exists($autoload_path)) {
@@ -133,6 +141,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $user = $res->fetch_assoc();
         $stmt->close();
 
+        foreach (['username', 'bio'] as $k) {
+            if (isset($user[$k]) && is_string($user[$k])) $user[$k] = fix_utf8_mojibake($user[$k]);
+        }
+
         $isOwner = $currentUserId && $currentUserId === (int)$user['id'];
         $isPublic = isset($user['public_profile']) ? (int)$user['public_profile'] === 1 : true;
 
@@ -159,6 +171,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 $stmtP->execute();
                 $resP = $stmtP->get_result();
                 while ($row = $resP->fetch_assoc()) {
+                    foreach (['title', 'description', 'category'] as $k) {
+                        if (isset($row[$k]) && is_string($row[$k])) $row[$k] = fix_utf8_mojibake($row[$k]);
+                    }
                     $portfolio[] = $row;
                 }
                 $stmtP->close();
@@ -208,7 +223,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         echo json_encode([
             'success' => true,
             'profile' => $profile
-        ]);
+        ], JSON_UNESCAPED_UNICODE);
 
     } catch (Exception $e) {
         error_log("Error en get_user_profile.php: " . $e->getMessage());

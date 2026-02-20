@@ -46,6 +46,15 @@ ini_set('error_log', __DIR__ . '/php-error.log');
 
 require_once __DIR__ . '/config.php';
 
+// Corregir mojibake (UTF-8 leído como Latin-1): tildes y ñ correctos en el frontend
+function fix_utf8_mojibake($str) {
+    if (!is_string($str) || $str === '') return $str;
+    $bytes = @mb_convert_encoding($str, 'ISO-8859-1', 'UTF-8');
+    if ($bytes === false) return $str;
+    if (!mb_check_encoding($bytes, 'UTF-8')) return $str;
+    return $bytes;
+}
+
 try {
     // Verificar métodos permitidos
     if (!in_array($_SERVER['REQUEST_METHOD'], ['GET', 'POST', 'DELETE'])) {
@@ -159,6 +168,14 @@ function handleGetTaskDetails($task_id) {
         
         $task = $result->fetch_assoc();
         $stmt->close();
+
+        // Corregir tildes/mojibake en campos de texto
+        $textKeys = ['title', 'subtitle', 'description', 'category', 'difficulty', 'currency', 'creator_username'];
+        foreach ($textKeys as $k) {
+            if (isset($task[$k]) && is_string($task[$k])) {
+                $task[$k] = fix_utf8_mojibake($task[$k]);
+            }
+        }
         
         // Verificar que user_id no sea null
         if ($task['user_id'] === null || $task['user_id'] === '') {
@@ -211,7 +228,7 @@ function handleGetTaskDetails($task_id) {
                     if ($result_user->num_rows > 0) {
                         $user_data = $result_user->fetch_assoc();
                         $worker_wallet_address = $user_data['wallet_address'] ?? null;
-                        $worker_username = $user_data['username'] ?? null;
+                        $worker_username = isset($user_data['username']) ? fix_utf8_mojibake($user_data['username']) : null;
                     }
                     $stmt_user->close();
                 }
@@ -226,7 +243,7 @@ function handleGetTaskDetails($task_id) {
                     
                     if ($result_username->num_rows > 0) {
                         $username_data = $result_username->fetch_assoc();
-                        $worker_username = $username_data['username'] ?? null;
+                        $worker_username = isset($username_data['username']) ? fix_utf8_mojibake($username_data['username']) : null;
                     }
                     $stmt_username->close();
                 }
@@ -262,7 +279,7 @@ function handleGetTaskDetails($task_id) {
         ];
 
         http_response_code(200);
-        echo json_encode($response);
+        echo json_encode($response, JSON_UNESCAPED_UNICODE);
 
         $conn->close();
 

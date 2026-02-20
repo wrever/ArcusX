@@ -36,18 +36,38 @@ const EditProfile: React.FC = () => {
   const [publicProfile, setPublicProfile] = useState(true);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   
-  // Habilidades
+  // Habilidades agrupadas por categoría
   const [selectedSkills, setSelectedSkills] = useState<Skill[]>([]);
   
-  // Lista de habilidades disponibles
-  const availableSkills = [
-    'JavaScript', 'TypeScript', 'Python', 'PHP', 'Java', 'C++', 'C#', 'Go', 'Rust',
-    'Ruby', 'Swift', 'Kotlin', 'Dart', 'HTML', 'CSS', 'SCSS', 'SASS', 'React',
-    'Vue.js', 'Angular', 'Next.js', 'Node.js', 'Express', 'Django', 'Flask',
-    'Laravel', 'Spring', 'MongoDB', 'PostgreSQL', 'MySQL', 'Redis', 'GraphQL',
-    'REST API', 'Docker', 'Kubernetes', 'AWS', 'Azure', 'GCP', 'Git', 'Linux',
-    'UI/UX Design', 'Figma', 'Adobe XD', 'Photoshop', 'Illustrator', 'Blockchain',
-    'Solidity', 'Web3', 'Smart Contracts', 'Stellar', 'Ethereum', 'Bitcoin'
+  const skillsByCategory: { categoryKey: string; skills: string[] }[] = [
+    {
+      categoryKey: 'edit.skills.category.development',
+      skills: [
+        'JavaScript', 'TypeScript', 'Python', 'PHP', 'Java', 'C++', 'C#', 'Go', 'Rust',
+        'Ruby', 'Swift', 'Kotlin', 'Dart', 'Node.js', 'Express', 'Django', 'Flask',
+        'Laravel', 'Spring', 'GraphQL', 'REST API', 'Git', 'Linux'
+      ]
+    },
+    {
+      categoryKey: 'edit.skills.category.frontend',
+      skills: ['HTML', 'CSS', 'SCSS', 'SASS', 'React', 'Vue.js', 'Angular', 'Next.js']
+    },
+    {
+      categoryKey: 'edit.skills.category.databases',
+      skills: ['MongoDB', 'PostgreSQL', 'MySQL', 'Redis']
+    },
+    {
+      categoryKey: 'edit.skills.category.devops',
+      skills: ['Docker', 'Kubernetes', 'AWS', 'Azure', 'GCP']
+    },
+    {
+      categoryKey: 'edit.skills.category.design',
+      skills: ['UI/UX Design', 'Figma', 'Adobe XD', 'Photoshop', 'Illustrator']
+    },
+    {
+      categoryKey: 'edit.skills.category.blockchain',
+      skills: ['Blockchain', 'Solidity', 'Web3', 'Smart Contracts', 'Stellar', 'Ethereum', 'Bitcoin']
+    }
   ];
 
   const [saving, setSaving] = useState(false);
@@ -411,38 +431,42 @@ const EditProfile: React.FC = () => {
             </p>
 
             <div className="skills-selection">
-              <div className="skills-grid">
-                {availableSkills.map((skill) => {
-                  const isSelected = isSkillSelected(skill);
-                  const level = getSkillLevel(skill);
-                  
-                  return (
-                    <div key={skill} className={`skill-select-item ${isSelected ? 'selected' : ''}`}>
-                      <label className="skill-checkbox">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => handleToggleSkill(skill)}
-                        />
-                        <span className="skill-name">{skill}</span>
-                      </label>
-                      {isSelected && (
-                        <select
-                          className="skill-level-select"
-                          value={level}
-                          onChange={(e) => handleSkillLevelChange(skill, e.target.value as Skill['level'])}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <option value="beginner">{t('edit.skill.beginner')}</option>
-                          <option value="intermediate">{t('edit.skill.intermediate')}</option>
-                          <option value="advanced">{t('edit.skill.advanced')}</option>
-                          <option value="expert">{t('edit.skill.expert')}</option>
-                        </select>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+              {skillsByCategory.map((group) => (
+                <div key={group.categoryKey} className="skills-category-block">
+                  <h3 className="skills-category-title">{t(group.categoryKey)}</h3>
+                  <div className="skills-grid">
+                    {group.skills.map((skill) => {
+                      const isSelected = isSkillSelected(skill);
+                      const level = getSkillLevel(skill);
+                      return (
+                        <div key={skill} className={`skill-select-item ${isSelected ? 'selected' : ''}`}>
+                          <label className="skill-checkbox">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleSkill(skill)}
+                            />
+                            <span className="skill-name">{skill}</span>
+                          </label>
+                          {isSelected && (
+                            <select
+                              className="skill-level-select"
+                              value={level}
+                              onChange={(e) => handleSkillLevelChange(skill, e.target.value as Skill['level'])}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <option value="beginner">{t('edit.skill.beginner')}</option>
+                              <option value="intermediate">{t('edit.skill.intermediate')}</option>
+                              <option value="advanced">{t('edit.skill.advanced')}</option>
+                              <option value="expert">{t('edit.skill.expert')}</option>
+                            </select>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
               
               {selectedSkills.length > 0 && (
                 <div className="selected-skills-summary">

@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
-import { FaRocket, FaUsers, FaLaptopCode, FaMoneyBillWave, FaArrowRight, FaLock, FaBolt, FaCheck, FaMapMarkedAlt, FaChevronDown, FaSearch } from 'react-icons/fa';
+import { FaRocket, FaUsers, FaLaptopCode, FaMoneyBillWave, FaArrowRight, FaLock, FaBolt, FaCheck, FaMapMarkedAlt, FaChevronDown, FaSearch, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import axios from 'axios';
 import { API_URL } from '../config/database';
 import '../css/Hero.css';
@@ -34,8 +34,37 @@ const Hero = () => {
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const carouselTrackRef = useRef<HTMLDivElement>(null);
+  const [carouselTasks, setCarouselTasks] = useState<TaskResult[]>([]);
+  const [loadingCarousel, setLoadingCarousel] = useState(true);
   /* Mockup stats para la landing (sin fetch) */
   const heroStats = { openTasks: 10, totalUsers: 40, totalVolumeUsdc: 500 };
+
+  // Carrusel infinito: muchas copias de la lista para sensación de “millones de opciones”; el scroll avanza y al pasar un bloque se reubica sin que se note
+  const REPEAT_COPIES = 8;
+  const infiniteCarouselTasks = carouselTasks.length > 0
+    ? Array.from({ length: REPEAT_COPIES }, () => carouselTasks).flat()
+    : [];
+  const oneSetWidthRef = useRef(0);
+  const autoScrollRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const fetchCarouselTasks = async () => {
+      setLoadingCarousel(true);
+      try {
+        const url = `${API_URL}/auth/get_tasks.php?sort_by=date_desc`;
+        const response = await axios.get(url);
+        const data = Array.isArray(response.data) ? response.data : (response.data?.tasks ?? []);
+        setCarouselTasks(Array.isArray(data) ? data.slice(0, 12) : []);
+      } catch {
+        setCarouselTasks([]);
+      } finally {
+        setLoadingCarousel(false);
+      }
+    };
+    fetchCarouselTasks();
+  }, []);
 
   useEffect(() => {
     if (searchQuery.trim().length < 2) {
@@ -52,8 +81,8 @@ const Hero = () => {
           params.append('sort_by', 'date_desc');
           const url = `${API_URL}/auth/get_tasks.php?${params.toString()}`;
           const response = await axios.get(url);
-          const data = Array.isArray(response.data) ? response.data : [];
-          setSearchResults(data.slice(0, 8));
+          const data = Array.isArray(response.data) ? response.data : (response.data?.tasks ?? []);
+          setSearchResults(Array.isArray(data) ? data.slice(0, 8) : []);
           setShowResults(true);
         } catch {
           setSearchResults([]);
@@ -88,6 +117,43 @@ const Hero = () => {
     setSearchQuery('');
     setSearchResults([]);
   };
+
+  const scrollCarousel = (dir: 'left' | 'right') => {
+    const el = carouselRef.current;
+    if (!el) return;
+    const step = el.clientWidth * 0.85;
+    el.scrollBy({ left: dir === 'left' ? -step : step, behavior: 'smooth' });
+  };
+
+  // Movimiento automático continuo; se reinicia cuando el carrusel se muestra de nuevo (p. ej. al borrar la búsqueda)
+  const showCarousel = searchQuery.trim().length < 2;
+  useEffect(() => {
+    if (!showCarousel || carouselTasks.length === 0) return;
+    const viewport = carouselRef.current;
+    const track = carouselTrackRef.current;
+    if (!viewport || !track) return;
+
+    const setWidth = track.scrollWidth / REPEAT_COPIES;
+    if (setWidth <= 0) return;
+    oneSetWidthRef.current = setWidth;
+
+    const SPEED_PX = 0.85;
+    const loop = () => {
+      const setW = oneSetWidthRef.current;
+      if (setW <= 0) {
+        autoScrollRef.current = requestAnimationFrame(loop);
+        return;
+      }
+      const next = viewport.scrollLeft + SPEED_PX;
+      viewport.scrollLeft = next >= setW ? next - setW : next;
+      autoScrollRef.current = requestAnimationFrame(loop);
+    };
+
+    autoScrollRef.current = requestAnimationFrame(loop);
+    return () => {
+      if (autoScrollRef.current != null) cancelAnimationFrame(autoScrollRef.current);
+    };
+  }, [carouselTasks.length, showCarousel]);
 
   const toggleRoadmap = (index: number) => {
     setExpandedRoadmap((prev) => {
@@ -175,6 +241,23 @@ const Hero = () => {
               {t('hero.title.latam')}
             </h1>
             <p className="landing-hero-desc">{t('hero.desc')}</p>
+            {/* Stats arriba del buscador (lupa) */}
+            <div className="landing-hero-trust" role="list" aria-label={t('hero.stats.aria')}>
+              <span className="landing-hero-stat-item" role="listitem">
+                <span className="landing-hero-stat">+{heroStats.openTasks}</span>
+                <span className="landing-hero-stat-desc">{t('hero.stats.tasks')}</span>
+              </span>
+              <span className="landing-hero-stat-sep" aria-hidden="true">·</span>
+              <span className="landing-hero-stat-item" role="listitem">
+                <span className="landing-hero-stat">+{heroStats.totalUsers}</span>
+                <span className="landing-hero-stat-desc">{t('hero.stats.users')}</span>
+              </span>
+              <span className="landing-hero-stat-sep" aria-hidden="true">·</span>
+              <span className="landing-hero-stat-item" role="listitem">
+                <span className="landing-hero-stat">+${heroStats.totalVolumeUsdc}</span>
+                <span className="landing-hero-stat-desc">{t('hero.stats.payments.processed')}</span>
+              </span>
+            </div>
             <div className="landing-hero-job-search" ref={searchRef}>
               <div className="landing-hero-search-bar">
                 <FaSearch className="landing-hero-search-icon" aria-hidden />
@@ -241,22 +324,55 @@ const Hero = () => {
                 </div>
               )}
             </div>
-            <div className="landing-hero-trust" role="list" aria-label={t('hero.stats.aria')}>
-              <span className="landing-hero-stat-item" role="listitem">
-                <span className="landing-hero-stat">+{heroStats.openTasks}</span>
-                <span className="landing-hero-stat-desc">{t('hero.stats.tasks')}</span>
-              </span>
-              <span className="landing-hero-stat-sep" aria-hidden="true">·</span>
-              <span className="landing-hero-stat-item" role="listitem">
-                <span className="landing-hero-stat">+{heroStats.totalUsers}</span>
-                <span className="landing-hero-stat-desc">{t('hero.stats.users')}</span>
-              </span>
-              <span className="landing-hero-stat-sep" aria-hidden="true">·</span>
-              <span className="landing-hero-stat-item" role="listitem">
-                <span className="landing-hero-stat">+${heroStats.totalVolumeUsdc}</span>
-                <span className="landing-hero-stat-desc">{t('hero.stats.payments.processed')}</span>
-              </span>
-            </div>
+
+            {/* — Carrusel justo debajo del buscador; se oculta si hay búsqueda activa — */}
+            {searchQuery.trim().length < 2 && (
+              <section className="hero-carousel-section hero-carousel-in-hero" aria-label={t('hero.carousel.aria')}>
+                <div className="hero-carousel-wrap">
+                  {loadingCarousel ? (
+                    <p className="hero-carousel-loading">{t('hero.carousel.loading')}</p>
+                  ) : carouselTasks.length === 0 ? (
+                    <p className="hero-carousel-empty">{t('hero.carousel.empty')}</p>
+                  ) : (
+                    <div className="hero-carousel-nav-wrap">
+                      <button type="button" className="hero-carousel-btn hero-carousel-btn-prev" onClick={() => scrollCarousel('left')} aria-label={t('hero.carousel.prev')}>
+                        <FaChevronLeft />
+                      </button>
+                      <div className="hero-carousel-viewport" ref={carouselRef}>
+                        <div className="hero-carousel-track" ref={carouselTrackRef}>
+                          {infiniteCarouselTasks.map((task, idx) => (
+                            <article key={`${task.id}-${idx}`} className="hero-carousel-card">
+                              <h3 className="hero-carousel-card-title">{task.title}</h3>
+                              {(task.category || task.difficulty) && (
+                                <span className="hero-carousel-card-meta">
+                                  {[task.category, task.difficulty].filter(Boolean).join(' · ')}
+                                </span>
+                              )}
+                              {task.description && (
+                                <p className="hero-carousel-card-desc">
+                                  {task.description.slice(0, 120)}{task.description.length > 120 ? '…' : ''}
+                                </p>
+                              )}
+                              <div className="hero-carousel-card-footer">
+                                <span className="hero-carousel-card-price">
+                                  {task.price && parseFloat(task.price).toFixed(2)} {task.currency || 'USDC'}
+                                </span>
+                                <button type="button" className="hero-carousel-card-apply" onClick={() => handleApplyClick(task.id)}>
+                                  {t('hero.search.apply')} <FaArrowRight />
+                                </button>
+                              </div>
+                            </article>
+                          ))}
+                        </div>
+                      </div>
+                      <button type="button" className="hero-carousel-btn hero-carousel-btn-next" onClick={() => scrollCarousel('right')} aria-label={t('hero.carousel.next')}>
+                        <FaChevronRight />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
           </div>
         </header>
 
