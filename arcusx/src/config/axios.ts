@@ -28,18 +28,16 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      // Token expirado o inválido - cerrar sesión completamente
       try {
-        const { supabase } = await import('../config/supabase');
-        await supabase.auth.signOut();
-      } catch (err) {
+        const { supabase, hasSupabase } = await import('../config/supabase');
+        if (hasSupabase) await supabase.auth.signOut();
+      } catch {
+        // Ignorar
       }
-      
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       localStorage.removeItem('supabase_access_token');
-      
-      // Redirigir al login
+      localStorage.removeItem('supabase.auth.token');
       window.location.href = '/login';
     }
     return Promise.reject(error);

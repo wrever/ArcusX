@@ -291,7 +291,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 'chat_files_count' => count($files['chat_files']),
                 'delivery_files_count' => count($files['delivery_files'])
             ]
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        ]);
         
         $conn->close();
     } catch (Exception $e) {

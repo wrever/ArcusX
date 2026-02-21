@@ -59,7 +59,7 @@ try {
     require_once __DIR__ . '/config.php';
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['message' => 'Error de conexión a la base de datos']);
+    echo json_encode(['message' => 'Error de conexión a la base de datos'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -204,7 +204,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             }
         } else {
             http_response_code(500);
-            echo json_encode(['message' => 'Error al preparar consulta: ' . $conn->error, 'sql_error' => $conn->error]);
+            echo json_encode(['message' => 'Error al preparar consulta: ' . $conn->error, 'sql_error' => $conn->error], JSON_UNESCAPED_UNICODE);
             if (isset($stmt)) {
                 $stmt->close();
             }
@@ -215,7 +215,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $result = $conn->query($sql);
         if ($result === false) {
             http_response_code(500);
-            echo json_encode(['message' => 'Error en consulta: ' . $conn->error, 'sql_error' => $conn->error]);
+            echo json_encode(['message' => 'Error en consulta: ' . $conn->error, 'sql_error' => $conn->error], JSON_UNESCAPED_UNICODE);
             $conn->close();
             exit;
         }
@@ -299,6 +299,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 } else {
     // Si la solicitud no es GET, devolver método no permitido
     http_response_code(405); // Method Not Allowed
-    echo json_encode(['message' => 'Método no permitido']);
+    echo json_encode(['message' => 'Método no permitido'], JSON_UNESCAPED_UNICODE);
 }
 ?>

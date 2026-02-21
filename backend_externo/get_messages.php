@@ -8,6 +8,14 @@ header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers
 
 require_once 'config.php';
 
+function fix_utf8_mojibake($str) {
+    if (!is_string($str) || $str === '') return $str;
+    $bytes = @mb_convert_encoding($str, 'ISO-8859-1', 'UTF-8');
+    if ($bytes === false) return $str;
+    if (!mb_check_encoding($bytes, 'UTF-8')) return $str;
+    return $bytes;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if (!isset($_GET['task_id'])) {
         http_response_code(400);
@@ -34,6 +42,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     $messages = [];
     while ($row = $result->fetch_assoc()) {
+        foreach ($row as $k => $v) {
+            if (isset($row[$k]) && is_string($row[$k])) {
+                $row[$k] = fix_utf8_mojibake($row[$k]);
+            }
+        }
         $messages[] = $row;
     }
 

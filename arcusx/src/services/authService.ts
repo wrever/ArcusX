@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { API_URL } from '../config/database';
-import { supabase } from '../config/supabase';
+import { supabase, hasSupabase } from '../config/supabase';
 
 interface LoginData {
   email: string;
@@ -48,18 +48,19 @@ export const authService = {
   },
 
   async logout() {
-    // Cerrar sesión de Supabase si existe
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
+      if (hasSupabase) {
+        await supabase.auth.signOut();
       }
-    } catch (error) {
+    } catch {
+      // Ignorar errores de Supabase (ej. sin red o no configurado)
+    } finally {
+      // Siempre limpiar todo para que la sesión quede cerrada
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('supabase_access_token');
+      localStorage.removeItem('supabase.auth.token');
     }
-    
-    // Limpiar localStorage
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('supabase_access_token');
   },
 
   isAuthenticated() {
@@ -94,6 +95,9 @@ export const authService = {
 
   // Funciones para autenticación con Supabase OAuth
   async signInWithGoogle() {
+    if (!hasSupabase) {
+      throw new Error('Login con Google no está configurado. Configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.');
+    }
     try {
       // Detectar si estamos en desarrollo o producción
       const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -141,6 +145,9 @@ export const authService = {
   },
 
   async signInWithGitHub() {
+    if (!hasSupabase) {
+      throw new Error('Login con GitHub no está configurado. Configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.');
+    }
     try {
       // Detectar si estamos en desarrollo o producción
       const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -191,9 +198,8 @@ export const authService = {
   },
 
   async handleSupabaseCallback() {
+    if (!hasSupabase) return null;
     try {
-      // Sincronizar usuario con backend PHP para obtener token JWT
-      // La sesión ya fue obtenida en AuthCallback.tsx
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error) {

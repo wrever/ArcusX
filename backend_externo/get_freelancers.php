@@ -278,7 +278,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 'limit' => $limit,
                 'total_pages' => $totalPages
             ]
-        ], JSON_UNESCAPED_UNICODE);
+        ]);
 
     } catch (Exception $e) {
         error_log("Error en get_freelancers.php: " . $e->getMessage());
@@ -286,7 +286,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         echo json_encode([
             'success' => false,
             'message' => 'Error al obtener freelancers: ' . $e->getMessage()
-        ], JSON_UNESCAPED_UNICODE);
+        ]);
     } finally {
         if (isset($conn)) {
             $conn->close();
@@ -297,6 +297,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     echo json_encode([
         'success' => false,
         'message' => 'Método no permitido'
-    ], JSON_UNESCAPED_UNICODE);
+    ]);
 }
 

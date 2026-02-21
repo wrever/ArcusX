@@ -155,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             'total_pages' => ceil($total / $limit)
         ],
         'unread_count' => $unread
-    ], JSON_UNESCAPED_UNICODE);
+    ]);
     
     $conn->close();
 } else {

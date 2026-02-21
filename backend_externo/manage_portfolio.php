@@ -10,14 +10,30 @@
  * Headers: Authorization: Bearer {JWT_TOKEN}
  */
 
-require_once 'config.php';
+ini_set('log_errors', 1);
+$log_file = __DIR__ . '/error.log';
+ini_set('error_log', $log_file);
 
-$autoload_path = __DIR__ . '/vendor/autoload.php';
-if (file_exists($autoload_path)) {
-    require $autoload_path;
-    use Firebase\JWT\JWT;
-    use Firebase\JWT\Key;
+function _manage_portfolio_log($msg) {
+    global $log_file;
+    $line = date('Y-m-d H:i:s') . ' [manage_portfolio] ' . $msg . "\n";
+    error_log('[manage_portfolio] ' . $msg);
+    @file_put_contents($log_file, $line, FILE_APPEND | LOCK_EX);
 }
+
+register_shutdown_function(function () use ($log_file) {
+    $err = error_get_last();
+    if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+        $msg = 'FATAL: ' . $err['message'] . ' in ' . $err['file'] . ':' . $err['line'];
+        error_log('[manage_portfolio] ' . $msg);
+        @file_put_contents($log_file, date('Y-m-d H:i:s') . ' [manage_portfolio] ' . $msg . "\n", FILE_APPEND | LOCK_EX);
+        if (!headers_sent()) {
+            header('Content-Type: application/json; charset=UTF-8');
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Error interno del servidor.'], JSON_UNESCAPED_UNICODE);
+        }
+    }
+});
 
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
@@ -27,6 +43,33 @@ header("Content-Type: application/json; charset=UTF-8");
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
+}
+
+try {
+    require_once __DIR__ . '/config.php';
+    if (!isset($conn) || !$conn) {
+        throw new Exception('No database connection');
+    }
+} catch (Throwable $e) {
+    _manage_portfolio_log('Error de configuración: ' . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Error de configuración del servidor.'], JSON_UNESCAPED_UNICODE);
+    exit();
+}
+
+function fix_utf8_mojibake($str) {
+    if (!is_string($str) || $str === '') return $str;
+    $bytes = @mb_convert_encoding($str, 'ISO-8859-1', 'UTF-8');
+    if ($bytes === false) return $str;
+    if (!mb_check_encoding($bytes, 'UTF-8')) return $str;
+    return $bytes;
+}
+
+$autoload_path = __DIR__ . '/vendor/autoload.php';
+if (file_exists($autoload_path)) {
+    require $autoload_path;
+    use Firebase\JWT\JWT;
+    use Firebase\JWT\Key;
 }
 
 $jwt_secret = "SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY";
@@ -60,16 +103,18 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 // GET puede ser público si el perfil es público; el resto requiere dueño
 if ($method === 'GET') {
+    _manage_portfolio_log('GET inicio, user_id=' . (isset($_GET['user_id']) ? $_GET['user_id'] : 'no'));
     $targetUserId = isset($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
     if ($targetUserId <= 0) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'user_id es requerido']);
+        echo json_encode(['success' => false, 'message' => 'user_id es requerido'], JSON_UNESCAPED_UNICODE);
         $conn->close();
         exit();
     }
 
     try {
         // Verificar que el usuario exista y si su perfil es público
+        _manage_portfolio_log('GET consultando usuario id=' . $targetUserId);
         $stmtU = $conn->prepare("SELECT id, public_profile FROM users WHERE id = ?");
         if ($stmtU === false) {
             throw new Exception('Error al preparar consulta de usuario: ' . $conn->error);
@@ -79,7 +124,7 @@ if ($method === 'GET') {
         $resU = $stmtU->get_result();
         if ($resU->num_rows === 0) {
             http_response_code(404);
-            echo json_encode(['success' => false, 'message' => 'Usuario no encontrado']);
+            echo json_encode(['success' => false, 'message' => 'Usuario no encontrado'], JSON_UNESCAPED_UNICODE);
             $stmtU->close();
             $conn->close();
             exit();
@@ -94,17 +139,18 @@ if ($method === 'GET') {
             $currentUserId = getLoggedInUserIdPortfolio($jwt_secret);
             if (!$currentUserId || $currentUserId !== $targetUserId) {
                 http_response_code(403);
-                echo json_encode(['success' => false, 'message' => 'Este perfil es privado']);
+                echo json_encode(['success' => false, 'message' => 'Este perfil es privado'], JSON_UNESCAPED_UNICODE);
                 $conn->close();
                 exit();
             }
         }
 
         // Verificar que tabla user_portfolio exista
+        _manage_portfolio_log('GET verificando tabla user_portfolio');
         $check = $conn->query("SHOW TABLES LIKE 'user_portfolio'");
         if (!$check || $check->num_rows === 0) {
             http_response_code(200);
-            echo json_encode(['success' => true, 'portfolio' => []]);
+            echo json_encode(['success' => true, 'portfolio' => []], JSON_UNESCAPED_UNICODE);
             $conn->close();
             exit();
         }
@@ -122,20 +168,26 @@ if ($method === 'GET') {
         $stmt->execute();
         $res = $stmt->get_result();
         $portfolio = [];
+        $textKeys = ['title', 'description', 'image_url', 'project_url', 'category'];
         while ($row = $res->fetch_assoc()) {
+            foreach ($textKeys as $k) {
+                if (isset($row[$k]) && is_string($row[$k])) {
+                    $row[$k] = fix_utf8_mojibake($row[$k]);
+                }
+            }
             $portfolio[] = $row;
         }
         $stmt->close();
 
         http_response_code(200);
-        echo json_encode(['success' => true, 'portfolio' => $portfolio]);
-    } catch (Exception $e) {
-        error_log("Error en manage_portfolio.php (GET): " . $e->getMessage());
+        echo json_encode(['success' => true, 'portfolio' => $portfolio], JSON_UNESCAPED_UNICODE);
+    } catch (Throwable $e) {
+        _manage_portfolio_log('GET error: ' . $e->getMessage() . ' en ' . $e->getFile() . ':' . $e->getLine());
         http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Error al obtener portfolio']);
+        echo json_encode(['success' => false, 'message' => 'Error al obtener portfolio'], JSON_UNESCAPED_UNICODE);
     }
 
-    $conn->close();
+    if (isset($conn) && $conn) $conn->close();
     exit();
 }
 
@@ -143,7 +195,7 @@ if ($method === 'GET') {
 $userId = getLoggedInUserIdPortfolio($jwt_secret);
 if (!$userId) {
     http_response_code(401);
-    echo json_encode(['success' => false, 'message' => 'Acceso no autorizado: Token requerido']);
+    echo json_encode(['success' => false, 'message' => 'Acceso no autorizado: Token requerido'], JSON_UNESCAPED_UNICODE);
     $conn->close();
     exit();
 }
@@ -185,7 +237,7 @@ try {
         // Crear nuevo item
         if (empty($data['title'])) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'El título es requerido']);
+            echo json_encode(['success' => false, 'message' => 'El título es requerido'], JSON_UNESCAPED_UNICODE);
             $conn->close();
             exit();
         }
@@ -197,13 +249,13 @@ try {
 
         if ($imageUrl !== null && $imageUrl !== '' && !filter_var($imageUrl, FILTER_VALIDATE_URL)) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'URL de imagen inválida']);
+            echo json_encode(['success' => false, 'message' => 'URL de imagen inválida'], JSON_UNESCAPED_UNICODE);
             $conn->close();
             exit();
         }
         if ($projectUrl !== null && $projectUrl !== '' && !filter_var($projectUrl, FILTER_VALIDATE_URL)) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'URL de proyecto inválida']);
+            echo json_encode(['success' => false, 'message' => 'URL de proyecto inválida'], JSON_UNESCAPED_UNICODE);
             $conn->close();
             exit();
         }
@@ -221,12 +273,12 @@ try {
         $stmt->close();
 
         http_response_code(201);
-        echo json_encode(['success' => true, 'id' => $newId]);
+        echo json_encode(['success' => true, 'id' => $newId], JSON_UNESCAPED_UNICODE);
     } elseif ($method === 'PUT') {
         // Actualizar item existente
         if (!isset($data['id'])) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'id es requerido']);
+            echo json_encode(['success' => false, 'message' => 'id es requerido'], JSON_UNESCAPED_UNICODE);
             $conn->close();
             exit();
         }
@@ -242,7 +294,7 @@ try {
         $resC = $stmtC->get_result();
         if ($resC->num_rows === 0) {
             http_response_code(404);
-            echo json_encode(['success' => false, 'message' => 'Item de portfolio no encontrado']);
+            echo json_encode(['success' => false, 'message' => 'Item de portfolio no encontrado'], JSON_UNESCAPED_UNICODE);
             $stmtC->close();
             $conn->close();
             exit();
@@ -251,7 +303,7 @@ try {
         $stmtC->close();
         if ((int)$rowC['user_id'] !== $userId) {
             http_response_code(403);
-            echo json_encode(['success' => false, 'message' => 'No tienes permiso para modificar este item']);
+            echo json_encode(['success' => false, 'message' => 'No tienes permiso para modificar este item'], JSON_UNESCAPED_UNICODE);
             $conn->close();
             exit();
         }
@@ -274,7 +326,7 @@ try {
             $imageUrl = trim($data['image_url']);
             if ($imageUrl !== '' && !filter_var($imageUrl, FILTER_VALIDATE_URL)) {
                 http_response_code(400);
-                echo json_encode(['success' => false, 'message' => 'URL de imagen inválida']);
+                echo json_encode(['success' => false, 'message' => 'URL de imagen inválida'], JSON_UNESCAPED_UNICODE);
                 $conn->close();
                 exit();
             }
@@ -286,7 +338,7 @@ try {
             $projectUrl = trim($data['project_url']);
             if ($projectUrl !== '' && !filter_var($projectUrl, FILTER_VALIDATE_URL)) {
                 http_response_code(400);
-                echo json_encode(['success' => false, 'message' => 'URL de proyecto inválida']);
+                echo json_encode(['success' => false, 'message' => 'URL de proyecto inválida'], JSON_UNESCAPED_UNICODE);
                 $conn->close();
                 exit();
             }
@@ -302,7 +354,7 @@ try {
 
         if (empty($fields)) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'No hay campos para actualizar']);
+            echo json_encode(['success' => false, 'message' => 'No hay campos para actualizar'], JSON_UNESCAPED_UNICODE);
             $conn->close();
             exit();
         }
@@ -320,13 +372,13 @@ try {
         $stmt->close();
 
         http_response_code(200);
-        echo json_encode(['success' => true]);
+        echo json_encode(['success' => true], JSON_UNESCAPED_UNICODE);
     } elseif ($method === 'DELETE') {
         // Eliminar item
         $itemId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
         if ($itemId <= 0) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'id es requerido']);
+            echo json_encode(['success' => false, 'message' => 'id es requerido'], JSON_UNESCAPED_UNICODE);
             $conn->close();
             exit();
         }
@@ -341,7 +393,7 @@ try {
         $resC = $stmtC->get_result();
         if ($resC->num_rows === 0) {
             http_response_code(404);
-            echo json_encode(['success' => false, 'message' => 'Item de portfolio no encontrado']);
+            echo json_encode(['success' => false, 'message' => 'Item de portfolio no encontrado'], JSON_UNESCAPED_UNICODE);
             $stmtC->close();
             $conn->close();
             exit();
@@ -350,7 +402,7 @@ try {
         $stmtC->close();
         if ((int)$rowC['user_id'] !== $userId) {
             http_response_code(403);
-            echo json_encode(['success' => false, 'message' => 'No tienes permiso para eliminar este item']);
+            echo json_encode(['success' => false, 'message' => 'No tienes permiso para eliminar este item'], JSON_UNESCAPED_UNICODE);
             $conn->close();
             exit();
         }
@@ -364,15 +416,15 @@ try {
         $stmt->close();
 
         http_response_code(200);
-        echo json_encode(['success' => true]);
+        echo json_encode(['success' => true], JSON_UNESCAPED_UNICODE);
     } else {
         http_response_code(405);
-        echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+        echo json_encode(['success' => false, 'message' => 'Método no permitido'], JSON_UNESCAPED_UNICODE);
     }
 } catch (Exception $e) {
     error_log("Error en manage_portfolio.php: " . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Error interno en portfolio']);
+    echo json_encode(['success' => false, 'message' => 'Error interno en portfolio'], JSON_UNESCAPED_UNICODE);
 }
 
 $conn->close();

@@ -48,8 +48,15 @@ header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-W
 header("Access-Control-Max-Age: 3600");
 header("Content-Type: application/json; charset=UTF-8");
 
-require_once 'config.php';
-require __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/config.php';
+$autoload_path = __DIR__ . '/vendor/autoload.php';
+if (!file_exists($autoload_path)) {
+    http_response_code(500);
+    header('Content-Type: application/json; charset=UTF-8');
+    echo json_encode(['success' => false, 'message' => 'Error en el servidor: dependencias no encontradas.']);
+    exit;
+}
+require $autoload_path;
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
@@ -57,7 +64,7 @@ use Firebase\JWT\Key;
 $secret_key = "SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY";
 
 function getLoggedInUserId($conn, $secret_key) {
-    $headers = getallheaders();
+    $headers = function_exists('getallheaders') ? getallheaders() : [];
     if (!isset($headers['Authorization'])) {
         return null;
     }
@@ -93,28 +100,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'success' => false,
         'message' => 'Este endpoint está deprecado. El sistema ahora usa exclusivamente Trustless Work, que maneja las transacciones directamente a través de su API.'
     ]);
+    if (isset($conn) && $conn) $conn->close();
     exit;
-
-    } catch (Exception $e) {
-        $conn->rollback();
-        error_log('Error en save_pending_transaction.php: ' . $e->getMessage());
-        
-        // Asegurar que los headers CORS se envíen incluso en caso de error
-        if (!headers_sent()) {
-            if (in_array($origin, $allowed_origins)) {
-                header("Access-Control-Allow-Origin: $origin");
-                header("Access-Control-Allow-Credentials: true");
-            }
-            header("Content-Type: application/json; charset=UTF-8");
-        }
-        
-        http_response_code(500);
-        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-    }
-
-    if (isset($conn) && $conn) {
-        $conn->close();
-    }
 } else {
     // Asegurar que los headers CORS se envíen incluso para métodos no permitidos
     if (!headers_sent()) {

@@ -19,8 +19,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-require_once 'config.php';
-require_once 'vendor/autoload.php';
+require_once __DIR__ . '/config.php';
+$autoload_path = __DIR__ . '/vendor/autoload.php';
+if (!file_exists($autoload_path)) {
+    http_response_code(500);
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Error en el servidor: dependencias no encontradas.']);
+    exit;
+}
+require_once $autoload_path;
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
@@ -28,7 +35,7 @@ use Firebase\JWT\Key;
 $secret_key = "SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY";
 
 function getLoggedInUserId($conn, $secret_key) {
-    $headers = getallheaders();
+    $headers = function_exists('getallheaders') ? getallheaders() : [];
     if (!isset($headers['Authorization'])) {
         return null;
     }
@@ -73,15 +80,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         'success' => false, 
         'message' => 'Este endpoint está deprecado. El sistema ahora usa exclusivamente Trustless Work, que no requiere secret keys.'
     ]);
-    exit;
-
-    } catch (Exception $e) {
-        error_log('Error en get_escrow_secret.php: ' . $e->getMessage());
-        http_response_code(500);
-        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-    }
-
     $conn->close();
+    exit;
 } else {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Método no permitido']);

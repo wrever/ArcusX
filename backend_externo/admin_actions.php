@@ -1616,7 +1616,7 @@ function handleResolveDispute($conn, $user, $data) {
     }
     
     // Convertir a JSON
-    $resolutionJson = json_encode($resolutionData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    $resolutionJson = json_encode($resolutionData);
     
     // Actualizar disputa con resolución completa en JSON
     $updateStmt = $conn->prepare("UPDATE disputes SET status = 'resolved', resolution = ?, resolved_by = ?, resolved_at = NOW() WHERE id = ?");
