@@ -50,7 +50,7 @@ try {
     // Verificar que el método sea GET
     if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
         http_response_code(405);
-        echo json_encode(['success' => false, 'message' => 'Método no permitido. Solo se permite GET.']);
+        echo json_encode(['success' => false, 'message' => 'Método no permitido. Solo se permite GET.'], JSON_UNESCAPED_UNICODE);
         exit();
     }
 
@@ -59,7 +59,7 @@ try {
 
     if (!$user_id) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'user_id requerido']);
+        echo json_encode(['success' => false, 'error' => 'user_id requerido'], JSON_UNESCAPED_UNICODE);
         exit();
     }
 
@@ -80,10 +80,10 @@ try {
                 'tasks_today' => 0,
                 'tasks_this_week' => 0,
                 'cooldown_until' => null
-            ]);
+            ], JSON_UNESCAPED_UNICODE);
         } else {
             http_response_code(500);
-            echo json_encode(['success' => false, 'error' => 'Error al resetear límites: ' . $conn->error]);
+            echo json_encode(['success' => false, 'error' => 'Error al resetear límites: ' . $conn->error], JSON_UNESCAPED_UNICODE);
         }
         exit();
     }
@@ -95,7 +95,7 @@ try {
         // Validar rango (30 segundos a 2 horas)
         if ($cooldown_seconds < 30 || $cooldown_seconds > 7200) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'error' => 'Cooldown debe estar entre 30 segundos y 7200 segundos (2 horas)']);
+            echo json_encode(['success' => false, 'error' => 'Cooldown debe estar entre 30 segundos y 7200 segundos (2 horas)'], JSON_UNESCAPED_UNICODE);
             exit();
         }
         
@@ -119,10 +119,10 @@ try {
                 'user_id' => $user_id,
                 'cooldown_seconds' => $cooldown_seconds,
                 'cooldown_until' => $cooldown_until
-            ]);
+            ], JSON_UNESCAPED_UNICODE);
         } else {
             http_response_code(500);
-            echo json_encode(['success' => false, 'error' => 'Error al configurar cooldown: ' . $conn->error]);
+            echo json_encode(['success' => false, 'error' => 'Error al configurar cooldown: ' . $conn->error], JSON_UNESCAPED_UNICODE);
         }
         exit();
     }
@@ -136,7 +136,7 @@ try {
         // Validar que al menos un parámetro esté presente
         if ($tasks_today === null && $tasks_this_week === null && $cooldown_until === null) {
             http_response_code(400);
-            echo json_encode(['success' => false, 'error' => 'Debe proporcionar al menos un parámetro: tasks_today, tasks_this_week o cooldown_until']);
+            echo json_encode(['success' => false, 'error' => 'Debe proporcionar al menos un parámetro: tasks_today, tasks_this_week o cooldown_until'], JSON_UNESCAPED_UNICODE);
             exit();
         }
         
@@ -188,10 +188,10 @@ try {
                     'tasks_this_week' => $tasks_this_week,
                     'cooldown_until' => $cooldown_until
                 ]
-            ]);
+            ], JSON_UNESCAPED_UNICODE);
         } else {
             http_response_code(500);
-            echo json_encode(['success' => false, 'error' => 'Error al actualizar información: ' . $conn->error]);
+            echo json_encode(['success' => false, 'error' => 'Error al actualizar información: ' . $conn->error], JSON_UNESCAPED_UNICODE);
         }
         exit();
     }
@@ -310,7 +310,7 @@ try {
     ];
 
     http_response_code(200);
-    echo json_encode($response_data);
+    echo json_encode($response_data, JSON_UNESCAPED_UNICODE);
 
 } catch (Exception $e) {
     error_log('Error en task_stats.php: ' . $e->getMessage());
@@ -331,7 +331,7 @@ try {
         'success' => false,
         'error' => 'Error al procesar solicitud',
         'message' => $e->getMessage()
-    ]);
+    ], JSON_UNESCAPED_UNICODE);
 }
 
 $conn->close();

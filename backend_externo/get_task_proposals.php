@@ -70,7 +70,7 @@ try {
     $stmt->close();
     
     http_response_code(200);
-    echo json_encode($proposals, JSON_UNESCAPED_UNICODE);
+    echo json_encode($proposals);
     
 } catch (Exception $e) {
     http_response_code(500);

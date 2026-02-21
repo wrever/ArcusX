@@ -345,7 +345,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         echo json_encode([
             'success' => true,
             'timeline' => $timeline
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        ]);
         
         $conn->close();
     } catch (Exception $e) {

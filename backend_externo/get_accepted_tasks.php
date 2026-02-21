@@ -90,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     }
 
     http_response_code(200);
-    echo json_encode($tasks, JSON_UNESCAPED_UNICODE);
+    echo json_encode($tasks);
 
     // Cerrar la conexión a la base de datos (si tu config.php no lo cierra automáticamente)
     // $conn->close(); // Descomenta si necesitas cerrar explícitamente

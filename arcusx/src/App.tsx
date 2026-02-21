@@ -31,8 +31,15 @@ const SupportChatButton = lazy(() => import('./components/SupportChatButton'));
 
 function AppContent({ isLoading }: { isLoading: boolean }) {
   const location = useLocation();
-  const showFloatingButtons = ['/', '/swap', '/tutoriales'].includes(location.pathname);
-  const showSupportButton = location.pathname === '/';
+  // Normalizar path (en cPanel a veces la URL puede ser /index.html o con trailing slash)
+  const path = location.pathname.replace(/\/index\.html$/i, '').replace(/\/$/, '') || '/';
+  const isRoot = path === '/' || path === '';
+  // Páginas donde va el FAB de idioma/tema (flotante). Robusto para cPanel: considerar raíz cualquier path vacío o "/"
+  const isPublicLanding = isRoot || path === '/swap' || path === '/tutoriales' || path === '/login' || path === '/register';
+  // Si no estamos en una ruta de app (dashboard, profile, etc.), mostrar FAB por si cPanel devuelve un path distinto
+  const isAppRoute = path.startsWith('/dashboard') || path.startsWith('/admin') || path.startsWith('/profile') || path.startsWith('/create-task') || path.startsWith('/apply-task') || path.startsWith('/proposals') || path.startsWith('/supervise-task') || path.startsWith('/auth');
+  const showFloatingButtons = isPublicLanding || (!isAppRoute && path.length <= 20);
+  const showSupportButton = isRoot;
 
   return (
     <>

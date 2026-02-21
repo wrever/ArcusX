@@ -223,7 +223,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         echo json_encode([
             'success' => true,
             'profile' => $profile
-        ], JSON_UNESCAPED_UNICODE);
+        ]);
 
     } catch (Exception $e) {
         error_log("Error en get_user_profile.php: " . $e->getMessage());

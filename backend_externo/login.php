@@ -162,7 +162,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Opcional: devolver info básica del user si es necesaria inmediatamente después del login
                 'user' => [
                     'id' => $user['id'],
-                    'username' => $user['username']
+                    'username' => $user['username'],
+                    'email' => $user['email']
                 ]
             ]);
 

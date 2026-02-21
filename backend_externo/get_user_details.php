@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $user['username'] = fix_utf8_mojibake($user['username']);
         }
         http_response_code(200);
-        echo json_encode($user, JSON_UNESCAPED_UNICODE);
+        echo json_encode($user);
     } else {
         // Usuario no encontrado
         http_response_code(404); // Not Found

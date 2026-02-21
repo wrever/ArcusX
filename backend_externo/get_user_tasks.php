@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     // Obtener el user_id de la solicitud GET
     if (!isset($_GET['user_id'])) {
         http_response_code(400); // Bad Request
-        echo json_encode(['message' => 'Falta el ID del usuario.']);
+        echo json_encode(['message' => 'Falta el ID del usuario.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -32,12 +32,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $check_user = $conn->query("SELECT id FROM users WHERE id = $userId");
     if ($check_user === false) { // Check for query errors
          http_response_code(500);
-         echo json_encode(['message' => 'Error al verificar usuario: ' . $conn->error]);
+         echo json_encode(['message' => 'Error al verificar usuario: ' . $conn->error], JSON_UNESCAPED_UNICODE);
          exit;
     }
     if ($check_user->num_rows === 0) {
         http_response_code(404); // Not Found
-        echo json_encode(['message' => 'Usuario no encontrado.']);
+        echo json_encode(['message' => 'Usuario no encontrado.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -73,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     if ($result === false) { // Check for query errors
          http_response_code(500);
-         echo json_encode(['message' => 'Error al obtener tareas del usuario: ' . $conn->error]);
+         echo json_encode(['message' => 'Error al obtener tareas del usuario: ' . $conn->error], JSON_UNESCAPED_UNICODE);
          exit;
     }
 
@@ -105,6 +105,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 } else {
     // Si la solicitud no es GET, devolver método no permitido
     http_response_code(405); // Method Not Allowed
-    echo json_encode(['message' => 'Método no permitido']);
+    echo json_encode(['message' => 'Método no permitido'], JSON_UNESCAPED_UNICODE);
 }
 ?>

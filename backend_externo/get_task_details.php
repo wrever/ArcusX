@@ -59,7 +59,7 @@ try {
     // Verificar métodos permitidos
     if (!in_array($_SERVER['REQUEST_METHOD'], ['GET', 'POST', 'DELETE'])) {
         http_response_code(405);
-        echo json_encode(['success' => false, 'message' => 'Método no permitido. Solo se permite GET, POST, DELETE.']);
+        echo json_encode(['success' => false, 'message' => 'Método no permitido. Solo se permite GET, POST, DELETE.'], JSON_UNESCAPED_UNICODE);
         exit();
     }
 
@@ -68,7 +68,7 @@ try {
 
     if (!$task_id) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'task_id es requerido']);
+        echo json_encode(['success' => false, 'message' => 'task_id es requerido'], JSON_UNESCAPED_UNICODE);
         exit();
     }
 
@@ -108,7 +108,7 @@ try {
         'success' => false,
         'error' => 'Error al procesar solicitud',
         'message' => $e->getMessage()
-    ]);
+    ], JSON_UNESCAPED_UNICODE);
 }
 
 /**
@@ -160,7 +160,7 @@ function handleGetTaskDetails($task_id) {
         
         if ($result->num_rows === 0) {
             http_response_code(404);
-            echo json_encode(['success' => false, 'message' => 'Tarea no encontrada']);
+            echo json_encode(['success' => false, 'message' => 'Tarea no encontrada'], JSON_UNESCAPED_UNICODE);
             $stmt->close();
             $conn->close();
             return;
@@ -180,7 +180,7 @@ function handleGetTaskDetails($task_id) {
         // Verificar que user_id no sea null
         if ($task['user_id'] === null || $task['user_id'] === '') {
             http_response_code(500);
-            echo json_encode(['success' => false, 'message' => 'Error: user_id no encontrado en la tarea']);
+            echo json_encode(['success' => false, 'message' => 'Error: user_id no encontrado en la tarea'], JSON_UNESCAPED_UNICODE);
             $conn->close();
             return;
         }
@@ -286,7 +286,7 @@ function handleGetTaskDetails($task_id) {
     } catch (Exception $e) {
         error_log('Error en handleGetTaskDetails: ' . $e->getMessage());
         http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Error interno del servidor: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => 'Error interno del servidor: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
     }
 }
 
@@ -299,7 +299,7 @@ function handleFileUpload($task_id) {
     // Verificar que se envió un archivo
     if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'No se envió archivo válido']);
+        echo json_encode(['success' => false, 'message' => 'No se envió archivo válido'], JSON_UNESCAPED_UNICODE);
         return;
     }
     
@@ -309,7 +309,7 @@ function handleFileUpload($task_id) {
     $max_size = 10 * 1024 * 1024; // 10MB
     if ($file['size'] > $max_size) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'El archivo es demasiado grande. Máximo 10MB']);
+        echo json_encode(['success' => false, 'message' => 'El archivo es demasiado grande. Máximo 10MB'], JSON_UNESCAPED_UNICODE);
         return;
     }
     
@@ -380,7 +380,7 @@ function handleFileUpload($task_id) {
             'success' => true,
             'message' => 'Archivo subido exitosamente',
             'file' => $new_file
-        ]);
+        ], JSON_UNESCAPED_UNICODE);
         
         $stmt->close();
         $conn->close();
@@ -393,7 +393,7 @@ function handleFileUpload($task_id) {
         
         error_log('Error en handleFileUpload: ' . $e->getMessage());
         http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
     }
 }
 
@@ -408,7 +408,7 @@ function handleFileDelete($task_id) {
     
     if (!isset($input['file_id'])) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'file_id es requerido']);
+        echo json_encode(['success' => false, 'message' => 'file_id es requerido'], JSON_UNESCAPED_UNICODE);
         return;
     }
     
@@ -433,7 +433,7 @@ function handleFileDelete($task_id) {
         
         if (!$task) {
             http_response_code(404);
-            echo json_encode(['success' => false, 'message' => 'Tarea no encontrada']);
+            echo json_encode(['success' => false, 'message' => 'Tarea no encontrada'], JSON_UNESCAPED_UNICODE);
             $stmt->close();
             $conn->close();
             return;
@@ -458,7 +458,7 @@ function handleFileDelete($task_id) {
         
         if (!$file_found) {
             http_response_code(404);
-            echo json_encode(['success' => false, 'message' => 'Archivo no encontrado']);
+            echo json_encode(['success' => false, 'message' => 'Archivo no encontrado'], JSON_UNESCAPED_UNICODE);
             $stmt->close();
             $conn->close();
             return;
@@ -483,7 +483,7 @@ function handleFileDelete($task_id) {
         echo json_encode([
             'success' => true,
             'message' => 'Archivo eliminado exitosamente'
-        ]);
+        ], JSON_UNESCAPED_UNICODE);
         
         $stmt->close();
         $conn->close();
@@ -491,7 +491,7 @@ function handleFileDelete($task_id) {
     } catch (Exception $e) {
         error_log('Error en handleFileDelete: ' . $e->getMessage());
         http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
     }
 }
 
@@ -512,7 +512,7 @@ function handleFileDownload($task_id, $allowed_origins, $origin) {
         header("Content-Type: application/json; charset=UTF-8");
         
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'file_id es requerido']);
+        echo json_encode(['success' => false, 'message' => 'file_id es requerido'], JSON_UNESCAPED_UNICODE);
         return;
     }
     
@@ -542,7 +542,7 @@ function handleFileDownload($task_id, $allowed_origins, $origin) {
             header("Content-Type: application/json; charset=UTF-8");
             
             http_response_code(404);
-            echo json_encode(['success' => false, 'message' => 'Tarea no encontrada']);
+            echo json_encode(['success' => false, 'message' => 'Tarea no encontrada'], JSON_UNESCAPED_UNICODE);
             $stmt->close();
             $conn->close();
             return;
@@ -571,7 +571,7 @@ function handleFileDownload($task_id, $allowed_origins, $origin) {
             header("Content-Type: application/json; charset=UTF-8");
             
             http_response_code(404);
-            echo json_encode(['success' => false, 'message' => 'Archivo no encontrado']);
+            echo json_encode(['success' => false, 'message' => 'Archivo no encontrado'], JSON_UNESCAPED_UNICODE);
             $stmt->close();
             $conn->close();
             return;
@@ -588,7 +588,7 @@ function handleFileDownload($task_id, $allowed_origins, $origin) {
             header("Content-Type: application/json; charset=UTF-8");
             
             http_response_code(404);
-            echo json_encode(['success' => false, 'message' => 'Archivo no encontrado en el servidor']);
+            echo json_encode(['success' => false, 'message' => 'Archivo no encontrado en el servidor'], JSON_UNESCAPED_UNICODE);
             $stmt->close();
             $conn->close();
             return;
@@ -624,7 +624,7 @@ function handleFileDownload($task_id, $allowed_origins, $origin) {
         header("Content-Type: application/json; charset=UTF-8");
         
         http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
     }
 }
 

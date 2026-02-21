@@ -307,7 +307,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 'worker_messages' => $workerMessages,
                 'files_shared' => $filesCount
             ]
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        ]);
         
         $conn->close();
     } catch (Exception $e) {

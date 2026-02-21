@@ -191,6 +191,8 @@ const copyHtaccess = () => {
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Cargar .env siempre desde esta carpeta (arcusx), aunque el build se ejecute desde otra ruta
+  envDir: join(__dirname),
   plugins: [
     react(), 
     copyHtaccess(),
@@ -290,6 +292,18 @@ export default defineConfig({
             /^loading/,
             /^error/,
             /^success/,
+            // Botón de idioma (LanguageFab) - evita que PurgeCSS lo elimine en producción
+            /^lang-select/,
+            'lang-select',
+            'lang-select--fab',
+            'lang-select--inline',
+            'lang-select-trigger',
+            'lang-select-dropdown',
+            'lang-select-option',
+            'lang-select-icon',
+            'lang-select-label',
+            'lang-select-chevron',
+            'theme-language-buttons',
             // Mantener todas las clases que contengan estas palabras clave
             /active/,
             /hover/,
