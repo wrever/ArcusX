@@ -2,7 +2,7 @@
 
 ### Overview
 
-ArcusX is a decentralized freelancing platform that connects clients with workers through smart contract-based escrow on the Stellar blockchain. The platform uses Trustless Work to create 2-of-2 multisig escrow contracts, ensuring secure and transparent USDC payments. It provides a full workflow: task creation, proposals, worker selection, escrow funding, milestone approval and fund release, plus integrated XLM and USDC swap via Soroswap. The platform offers a REST API for all business operations and a React-based front end for user interaction.
+ArcusX is a decentralized freelancing platform that connects clients with workers through smart contract-based escrow on the Stellar blockchain. The platform uses Trustless Work to create 2-of-2 multisig escrow contracts, ensuring secure and transparent USDC payments. It provides a full workflow: task creation, proposals, worker selection, escrow funding, milestone approval and fund release, plus integrated XLM and USDC swap via Soroswap. The **landing page** includes a hero with a **task carousel** (infinite marquee loading tasks from the backend) and a **keyword search** ("Buscar tareas") that filters tasks client-side and hides the carousel while the user is searching. The platform offers a REST API for all business operations and a React-based front end for user interaction.
 
 ### Components
 
@@ -19,86 +19,83 @@ ArcusX is a decentralized freelancing platform that connects clients with worker
 
 The frontend is responsible for rendering the user interface and coordinating user actions with the backend API and the Stellar network. It displays dashboards, task lists, proposals, escrow flows, messages, disputes, ratings, user profiles and the swap experience. Data is sourced from the backend via REST calls with JWT, and blockchain operations are performed by building and signing Stellar transactions in the browser via Freighter.
 
-- **Technologies**: React 19, TypeScript, Vite, React Router, Axios, Supabase Auth (client), Stellar SDK, @creit.tech/stellar-wallets-kit
+- **Technologies**: React 19, TypeScript, Vite, React Router, Axios, Supabase Auth (client), Stellar SDK, @creit.tech/stellar-wallets-kit (Freighter primary; additional Stellar wallets e.g. Albedo in scope)
 - **Responsibilities**:
-    - Render UI for dashboard, tasks, proposals, supervise task, disputes, ratings, profile, swap and admin.
-    - Manage client-side state (auth, wallet, platform fee, notifications).
-    - Call backend REST endpoints with JWT and handle responses.
-    - Build and sign Stellar transactions (escrow create/fund/approve/release, swap) via Freighter.
-    - Internationalization (i18n) for Spanish, English and Portuguese (live on the website).
+  - Render UI for **landing (hero with task carousel and search)**, dashboard, tasks, proposals, supervise task, disputes, ratings, profile, swap and admin.
+  - Manage client-side state (auth, wallet, platform fee, notifications).
+  - Call backend REST endpoints with JWT and handle responses.
+  - Build and sign Stellar transactions (escrow create/fund/approve/release, swap) via Freighter.
+  - Internationalization (i18n) for Spanish, English and Portuguese (live on the website).
 
 ### Key Processes
 
 1. **Task and Proposal Flow**: Users create tasks with title, description, price, category, and difficulty; the frontend enforces daily and weekly limits before calling the backend. Workers apply with a message, portfolio URL, and wallet address; proposals are listed per task. When the client selects a proposal, the frontend coordinates with the backend to update task and application status, then drives the escrow creation and funding flow.
 2. **Escrow Flow (Trustless Work)**: The frontend obtains task and proposal data (worker wallet, amount, platform fee) from the backend, then uses the Trustless Work integration to create the escrow contract, fund it with USDC, and later approve the milestone and release funds. Transaction building and signing are done in the browser; the backend only stores metadata and escrow identifiers.
-    - **Escrow creation**:
-        
-        The service calls the Trustless Work API to create a single-release escrow with platform and client as signers and worker as beneficiary; the backend persists the returned contract ID and status.
-        
-        ```tsx
-        const result = await createTrustlessEscrow({
-          platformAddress: PLATFORM_WALLET,
-          clientAddress: clientWallet,
-          workerAddress: workerWallet,
-          amount: workerAmount,
-          platformFee: platformFee,
-          tokenContractId: USDC_CONTRACT_ID,
-        });
-        if (result.success && result.contractId) {
-          await saveEscrowToBackend(taskId, result.contractId, amount, platformFee);
-        }
-        ```
-        
-    - **Escrow funding**:
-        
-        The frontend builds the fund transaction (USDC, amount, trustline), the user signs with Freighter, and the transaction is submitted to the network; the backend is then updated with the transaction hash and escrow status.
-        
-        ```tsx
-        const fundResult = await fundTrustlessEscrow(contractId, amountString, signWithFreighter);
-        if (fundResult.success && fundResult.txHash) {
-          await selectWorkerInBackend(taskId, applicantId, contractId, fundResult.txHash);
-        }
-        ```
-        
-    - **Milestone approval and release**:
-        
-        When the client approves the completed work, the frontend builds the release transaction; the client signs with Freighter; funds are transferred to the worker. The backend records task completion and optionally stores the release tx hash.
-        
-3. **Swap Flow (Soroswap)**: The user enters amount and direction (XLM y USDC) on the swap page. The frontend fetches a quote from the Soroswap API, displays expected output and slippage, builds the swap transaction when the user confirms, and submits the signed transaction to Stellar.
-    - **Quote request**:
-        
-        Request a quote for the given pair and amount; display amount out and slippage tolerance.
-        
-        ```tsx
-        const quote = await soroswapService.getQuote(
-          fromToken,
-          toToken,
-          amountInStroops,
-          slippageBps
-        );
-        setAmountOut(quote.amountOut);
-        setPriceImpact(quote.priceImpact);
-        ```
-        
-    - **Execute swap**:
-        
-        Build the swap transaction, prompt the user to sign with Freighter, and submit to the network.
-        
-        ```tsx
-        const unsignedXdr = await soroswapService.buildSwapTransaction(quote, userAddress);
-        const signedXdr = await signWithFreighter(unsignedXdr);
-        const result = await soroswapService.submitTransaction(signedXdr);
-        ```
-        
-4. **Session and Auth**: Supabase handles OAuth (Google, GitHub) and email/password login; the backend issues a JWT for API access. The frontend stores the token and user in localStorage and sends the Authorization header on each request.
-    
+  - **Escrow creation**:
+    The service calls the Trustless Work API to create a single-release escrow with platform and client as signers and worker as beneficiary; the backend persists the returned contract ID and status.
     ```tsx
-    const response = await authService.login({ email, password });
-    localStorage.setItem('token', response.token);
-    localStorage.setItem('user', JSON.stringify(response.user));
-    axios.defaults.headers.common['Authorization'] = `Bearer ${response.token}`;
+    const result = await createTrustlessEscrow({
+      platformAddress: PLATFORM_WALLET,
+      clientAddress: clientWallet,
+      workerAddress: workerWallet,
+      amount: workerAmount,
+      platformFee: platformFee,
+      tokenContractId: USDC_CONTRACT_ID,
+    });
+    if (result.success && result.contractId) {
+      await saveEscrowToBackend(taskId, result.contractId, amount, platformFee);
+    }
+
     ```
-    
+  - **Escrow funding**:
+    The frontend builds the fund transaction (USDC, amount, trustline), the user signs with Freighter, and the transaction is submitted to the network; the backend is then updated with the transaction hash and escrow status.
+    ```tsx
+    const fundResult = await fundTrustlessEscrow(contractId, amountString, signWithFreighter);
+    if (fundResult.success && fundResult.txHash) {
+      await selectWorkerInBackend(taskId, applicantId, contractId, fundResult.txHash);
+    }
+
+    ```
+  - **Milestone approval and release**:
+    When the client approves the completed work, the frontend builds the release transaction; the client signs with Freighter; funds are transferred to the worker. The backend records task completion and optionally stores the release tx hash.
+3. **Swap Flow (Soroswap)**: The user enters amount and direction (XLM y USDC) on the swap page. The frontend fetches a quote from the Soroswap API, displays expected output and slippage, builds the swap transaction when the user confirms, and submits the signed transaction to Stellar.
+  - **Quote request**:
+    Request a quote for the given pair and amount; display amount out and slippage tolerance.
+    ```tsx
+    const quote = await soroswapService.getQuote(
+      fromToken,
+      toToken,
+      amountInStroops,
+      slippageBps
+    );
+    setAmountOut(quote.amountOut);
+    setPriceImpact(quote.priceImpact);
+
+    ```
+  - **Execute swap**:
+    Build the swap transaction, prompt the user to sign with Freighter, and submit to the network.
+    ```tsx
+    const unsignedXdr = await soroswapService.buildSwapTransaction(quote, userAddress);
+    const signedXdr = await signWithFreighter(unsignedXdr);
+    const result = await soroswapService.submitTransaction(signedXdr);
+
+    ```
+4. **Session and Auth**: Supabase handles OAuth (Google, GitHub) and email/password login; the backend issues a JWT for API access. The frontend stores the token and user in localStorage and sends the Authorization header on each request.
+  ```tsx
+  const response = await authService.login({ email, password });
+  localStorage.setItem('token', response.token);
+  localStorage.setItem('user', JSON.stringify(response.user));
+  axios.defaults.headers.common['Authorization'] = `Bearer ${response.token}`;
+
+  ```
+5. **Landing and Hero (Task Carousel and Search)**:
+  - **Hero layout**: The landing page hero shows a title, description, trust strip (stats: tasks available, active users, payments processed), and below that a **task carousel** with a **search** input.
+  - **Task carousel**: Tasks are loaded from the backend via `GET /get_tasks.php`. The carousel uses an infinite CSS marquee: two duplicated blocks of task cards scroll horizontally (e.g. `translateX(0)` → `translateX(-50%)`), with animation paused on hover/focus so the user can interact. A vertical separator is shown after the last task in each block. Cards display title, category/difficulty, description (line-clamped), price and an "Aplicar" (Apply) link that leads to login or the apply-task flow.
+  - **Search**: A search input is placed above/left of the carousel (e.g. "Buscar tareas" placeholder; i18n in ES/EN/PT). Search is **keyword-based**: the query is split into words and matched client-side against task title, description, category, and difficulty. When the user has typed something:
+    - The **carousel is hidden** and a **results list** is shown (same task data filtered by keywords).
+    - If there are no results, a short message and a "Ver todos" (or similar) link can be shown.
+    - When the user clears the search, the carousel is shown again.
+  - **Data**: The hero fetches tasks once (e.g. on mount); the carousel and the search results both use this data (carousel shows all or a subset; search filters it by keywords). No extra backend endpoint is required for search; the frontend filters the list returned by `get_tasks.php`.
 
 ---
 
@@ -110,11 +107,11 @@ The backend API provides REST endpoints for authentication, tasks, proposals, es
 
 - **Technologies**: PHP 7.4+, MySQL/MariaDB, JWT (Firebase JWT), Supabase (OAuth sync)
 - **Responsibilities**:
-    - Validate JWT and authorize requests.
-    - CRUD for users, tasks, applications, messages, disputes, ratings, notifications.
-    - Persist escrow metadata (contract_id, status, amounts, platform fee) after frontend creates, funds, or releases escrows.
-    - Serve platform fee and configuration to the frontend.
-    - Admin: statistics, dispute resolution, release of dispute funds, user management.
+  - Validate JWT and authorize requests.
+  - CRUD for users, tasks, applications, messages, disputes, ratings, notifications.
+  - Persist escrow metadata (contract_id, status, amounts, platform fee) after frontend creates, funds, or releases escrows.
+  - Serve platform fee and configuration to the frontend.
+  - Admin: statistics, dispute resolution, release of dispute funds, user management.
 
 ### Endpoints
 
@@ -136,16 +133,15 @@ The backend API provides REST endpoints for authentication, tasks, proposals, es
 2. **Task and Proposal Lifecycle**: Create task with user limits and cooldown checks; list tasks with filters and pagination; get task details. Apply to task (create application); get proposals for a task; select proposal (backend updates task and application status; frontend performs escrow creation and funding).
 3. **Escrow Coordination**: Endpoints save or retrieve escrow secret, get escrow status, save pending transaction XDR, and submit complete transaction (task completion). These support the frontend's Trustless Work flow without handling private keys.
 4. **Platform Fee and Limits**: The platform fee is configurable (e.g. 0.5%); the backend serves it to the frontend for escrow amount calculation. Task creation respects daily and weekly limits per user; limits are checked before creating a task.
-    
-    ```php
-    $platformFee = getPlatformFeeFromConfig(); // e.g. 0.005 for 0.5%
-    $escrowAmount = $workerAmount / (1 - $platformFee);
-    $limitCheck = checkUserLimits($userId);
-    if (!$limitCheck->canCreate) {
-        return json_encode(['success' => false, 'message' => 'Daily or weekly limit reached']);
-    }
-    ```
-    
+  ```php
+  $platformFee = getPlatformFeeFromConfig(); // e.g. 0.005 for 0.5%
+  $escrowAmount = $workerAmount / (1 - $platformFee);
+  $limitCheck = checkUserLimits($userId);
+  if (!$limitCheck->canCreate) {
+      return json_encode(['success' => false, 'message' => 'Daily or weekly limit reached']);
+  }
+
+  ```
 5. **Disputes and Admin**: Create dispute; get dispute chat, timeline, and files. Admin can release dispute funds (backend validates admin and records the action; frontend or admin tool may trigger the on-chain distribution transaction).
 
 ---
@@ -156,137 +152,123 @@ MySQL stores users, tasks, applications, messages, disputes, ratings, notificati
 
 - **Technologies**: MySQL / MariaDB
 - **Responsibilities**:
-    - Store and manage relational data for the platform.
-    - Provide efficient query mechanisms for listing, filtering, and joining (tasks, proposals, user stats, disputes).
+  - Store and manage relational data for the platform.
+  - Provide efficient query mechanisms for listing, filtering, and joining (tasks, proposals, user stats, disputes).
 
 ### Data Structures
 
-1. **User (users)**:
-Stores user accounts, authentication linkage (Supabase), wallet, profile, and verification state.
-    
-    ```tsx
-    interface UserRecord {
-      id: number;
-      username: string;
-      email: string;
-      password?: string; // hashed
-      wallet_address: string | null;
-      wallet_verified: boolean;
-      avatar_url: string | null;
-      bio: string | null;
-      portfolio_url: string | null;
-      public_profile: boolean;
-      skills: string | null;
-      supabase_user_id: string | null;
-      verified: boolean;
-      created_at: string;
-      updated_at?: string;
-    }
-    ```
-    
-2. **Task (tasks)**:
-Stores task definition, status, accepted applicant, and escrow metadata.
-    
-    ```tsx
-    interface TaskRecord {
-      id: number;
-      user_id: number;
-      title: string;
-      description: string;
-      price: string;
-      currency: string;
-      category: string;
-      difficulty: string;
-      status: 'open' | 'in_progress' | 'completed' | 'disputed' | 'cancelled';
-      accepted_applicant_id: number | null;
-      escrow_id: string | null;
-      escrow_status: string | null;
-      escrow_amount: string | null;
-      escrow_platform_fee: string | null;
-      escrow_secret: string | null;
-      escrow_created_at: string | null;
-      pending_transaction_xdr: string | null;
-      completed_date: string | null;
-      worker_started_at: string | null;
-      created_at: string;
-    }
-    ```
-    
-3. **Application (applications)**:
-Stores worker proposals for a task.
-    
-    ```tsx
-    interface ApplicationRecord {
-      id: number;
-      task_id: number;
-      applicant_id: number;
-      message: string;
-      portfolio_url: string | null;
-      worker_wallet_address: string;
-      status: 'pending' | 'accepted' | 'rejected';
-      created_at: string;
-    }
-    ```
-    
-4. **Message (messages)**:
-Stores in-task messaging between client and worker.
-    
-    ```tsx
-    interface MessageRecord {
-      id: number;
-      task_id: number;
-      sender_id: number;
-      receiver_id: number;
-      content: string;
-      created_at: string;
-    }
-    ```
-    
-5. **Dispute (disputes)**:
-Stores dispute metadata, status, and resolution.
-    
-    ```tsx
-    interface DisputeRecord {
-      id: number;
-      task_id: number;
-      creator_id: number;
-      status: string;
-      resolution: string | null;
-      tx_hash: string | null;
-      created_at: string;
-      updated_at?: string;
-    }
-    ```
-    
-6. **Rating (ratings)**:
-Stores 1-5 star ratings and optional review.
-    
-    ```tsx
-    interface RatingRecord {
-      id: number;
-      task_id: number;
-      rater_id: number;
-      rated_id: number;
-      rating: number;
-      review: string | null;
-      created_at: string;
-    }
-    ```
-    
-7. **Notification (notifications)**:
-Stores in-app notifications for users.
-    
-    ```tsx
-    interface NotificationRecord {
-      id: number;
-      user_id: number;
-      type: string;
-      read: boolean;
-      payload: string | null; // JSON
-      created_at: string;
-    }
-    ```
-    
+1. **User (users)**: Stores user accounts, authentication linkage (Supabase), wallet, profile, and verification state.
+  ```tsx
+  interface UserRecord {
+    id: number;
+    username: string;
+    email: string;
+    password?: string; // hashed
+    wallet_address: string | null;
+    wallet_verified: boolean;
+    avatar_url: string | null;
+    bio: string | null;
+    portfolio_url: string | null;
+    public_profile: boolean;
+    skills: string | null;
+    supabase_user_id: string | null;
+    verified: boolean;
+    created_at: string;
+    updated_at?: string;
+  }
+
+  ```
+2. **Task (tasks)**: Stores task definition, status, accepted applicant, and escrow metadata.
+  ```tsx
+  interface TaskRecord {
+    id: number;
+    user_id: number;
+    title: string;
+    description: string;
+    price: string;
+    currency: string;
+    category: string;
+    difficulty: string;
+    status: 'open' | 'in_progress' | 'completed' | 'disputed' | 'cancelled';
+    accepted_applicant_id: number | null;
+    escrow_id: string | null;
+    escrow_status: string | null;
+    escrow_amount: string | null;
+    escrow_platform_fee: string | null;
+    escrow_secret: string | null;
+    escrow_created_at: string | null;
+    pending_transaction_xdr: string | null;
+    completed_date: string | null;
+    worker_started_at: string | null;
+    created_at: string;
+  }
+
+  ```
+3. **Application (applications)**: Stores worker proposals for a task.
+  ```tsx
+  interface ApplicationRecord {
+    id: number;
+    task_id: number;
+    applicant_id: number;
+    message: string;
+    portfolio_url: string | null;
+    worker_wallet_address: string;
+    status: 'pending' | 'accepted' | 'rejected';
+    created_at: string;
+  }
+
+  ```
+4. **Message (messages)**: Stores in-task messaging between client and worker.
+  ```tsx
+  interface MessageRecord {
+    id: number;
+    task_id: number;
+    sender_id: number;
+    receiver_id: number;
+    content: string;
+    created_at: string;
+  }
+
+  ```
+5. **Dispute (disputes)**: Stores dispute metadata, status, and resolution.
+  ```tsx
+  interface DisputeRecord {
+    id: number;
+    task_id: number;
+    creator_id: number;
+    status: string;
+    resolution: string | null;
+    tx_hash: string | null;
+    created_at: string;
+    updated_at?: string;
+  }
+
+  ```
+6. **Rating (ratings)**: Stores 1-5 star ratings and optional review.
+  ```tsx
+  interface RatingRecord {
+    id: number;
+    task_id: number;
+    rater_id: number;
+    rated_id: number;
+    rating: number;
+    review: string | null;
+    created_at: string;
+  }
+
+  ```
+7. **Notification (notifications)**: Stores in-app notifications for users.
+  ```tsx
+  interface NotificationRecord {
+    id: number;
+    user_id: number;
+    type: string;
+    read: boolean;
+    payload: string | null; // JSON
+    created_at: string;
+  }
+
+  ```
 
 ### Relationships
 
@@ -305,10 +287,10 @@ The escrow and payment flows are implemented using Trustless Work (single-releas
 
 - **Technologies**: Stellar Network (Testnet / Mainnet), Trustless Work API & contracts, USDC on Stellar, Freighter (user signing)
 - **Responsibilities**:
-    - Create escrow contract (platform + client as signers; worker as beneficiary).
-    - Fund escrow with USDC (amount = workerAmount / (1 - platformFee)); platform fee is retained on release.
-    - Approve milestone and release funds to worker.
-    - Support cancellation/refund and dispute-driven distribution where applicable.
+  - Create escrow contract (platform + client as signers; worker as beneficiary).
+  - Fund escrow with USDC (amount = workerAmount / (1 - platformFee)); platform fee is retained on release.
+  - Approve milestone and release funds to worker.
+  - Support cancellation/refund and dispute-driven distribution where applicable.
 
 ### Components
 
@@ -335,16 +317,16 @@ When a dispute is resolved, an admin (or designated wallet) signs the distributi
 ### Workflow
 
 1. **Escrow creation**:
-    - The frontend calls Trustless Work to create the escrow contract with platform, client, and worker addresses and amount/fee.
-    - The backend stores the contract ID and escrow metadata and updates the task and application.
+  - The frontend calls Trustless Work to create the escrow contract with platform, client, and worker addresses and amount/fee.
+  - The backend stores the contract ID and escrow metadata and updates the task and application.
 2. **User interaction via frontend**:
-    - The client connects Freighter and signs the create and fund transactions in the browser.
-    - The frontend submits signed transactions to the network and updates the backend after each step.
+  - The client connects Freighter and signs the create and fund transactions in the browser.
+  - The frontend submits signed transactions to the network and updates the backend after each step.
 3. **Escrow contract operations**:
-    - **Fund**: Client funds the escrow with USDC (amount = workerAmount / (1 - platformFee)).
-    - **Approve**: Client approves the milestone after the worker marks work complete.
-    - **Release**: Client (and platform if required) sign the release; USDC is transferred to the worker.
-    - **Dispute**: Admin signs a distribution transaction to split or assign funds according to the resolution.
+  - **Fund**: Client funds the escrow with USDC (amount = workerAmount / (1 - platformFee)).
+  - **Approve**: Client approves the milestone after the worker marks work complete.
+  - **Release**: Client (and platform if required) sign the release; USDC is transferred to the worker.
+  - **Dispute**: Admin signs a distribution transaction to split or assign funds according to the resolution.
 
 ### Front-End Facilitation
 
@@ -388,7 +370,10 @@ sequenceDiagram
     TrustlessWork-->>Frontend: Success
     Frontend->>+Backend: Complete task, optional rating
     Backend-->>Frontend: OK
+
 ```
+
+
 
 ### Future Expansions
 
@@ -404,39 +389,35 @@ The platform includes a native swap experience so users can convert XLM to USDC 
 
 - **Technologies**: Soroswap API, Stellar SDK, Freighter (signing)
 - **Responsibilities**:
-    - Fetch swap quotes (amount in, amount out, route, slippage).
-    - Build swap transaction compatible with Soroswap.
-    - Submit signed transaction to Stellar and confirm execution.
+  - Fetch swap quotes (amount in, amount out, route, slippage).
+  - Build swap transaction compatible with Soroswap.
+  - Submit signed transaction to Stellar and confirm execution.
 
 ### Key Processes:
 
-1. **Quote**:
-The frontend calls the Soroswap API with from/to tokens and amount; the API returns expected amount out and metadata. The frontend displays the quote and slippage tolerance (e.g. 3%).
-    
-    ```tsx
-    const quote = await soroswapService.getQuote(
-      fromToken,
-      toToken,
-      amountInStroops,
-      slippageBps
-    );
-    setAmountOut(quote.amountOut);
-    setPriceImpact(quote.priceImpact);
-    setNetworkFee(quote.networkFee);
-    ```
-    
-2. **Execute**:
-The user confirms the swap; the frontend builds the transaction using the quote, the user signs with Freighter, and the transaction is submitted to the network. The UI shows success or error (e.g. no liquidity, slippage exceeded).
-    
-    ```tsx
-    const unsignedXdr = await soroswapService.buildSwapTransaction(quote, userAddress);
-    const signedXdr = await signWithFreighter(unsignedXdr);
-    const result = await soroswapService.submitTransaction(signedXdr);
-    if (result.success) {
-      setTxHash(result.txHash);
-    }
-    ```
-    
+1. **Quote**: The frontend calls the Soroswap API with from/to tokens and amount; the API returns expected amount out and metadata. The frontend displays the quote and slippage tolerance (e.g. 3%).
+  ```tsx
+  const quote = await soroswapService.getQuote(
+    fromToken,
+    toToken,
+    amountInStroops,
+    slippageBps
+  );
+  setAmountOut(quote.amountOut);
+  setPriceImpact(quote.priceImpact);
+  setNetworkFee(quote.networkFee);
+
+  ```
+2. **Execute**: The user confirms the swap; the frontend builds the transaction using the quote, the user signs with Freighter, and the transaction is submitted to the network. The UI shows success or error (e.g. no liquidity, slippage exceeded).
+  ```tsx
+  const unsignedXdr = await soroswapService.buildSwapTransaction(quote, userAddress);
+  const signedXdr = await signWithFreighter(unsignedXdr);
+  const result = await soroswapService.submitTransaction(signedXdr);
+  if (result.success) {
+    setTxHash(result.txHash);
+  }
+
+  ```
 
 ### Practical Considerations:
 
@@ -473,6 +454,7 @@ $authHeader = $headers['Authorization'] ?? '';
 $jwt = str_replace('Bearer ', '', $authHeader);
 $decoded = JWT::decode($jwt, new Key($secret_key, 'HS256'));
 $userId = $decoded->user_id;
+
 ```
 
 ### Benefits
@@ -549,7 +531,10 @@ sequenceDiagram
     Database-->>Backend: OK
     Backend-->>Frontend: OK
     Frontend-->>User: Success
+
 ```
+
+
 
 ---
 
@@ -583,8 +568,6 @@ The current architecture supports the full freelancing flow with escrow, swap, a
 
 ---
 
-ArcusX was built with ❤️ for stellar
-
-**Version**: 1.0
-
+**Document version**: 1.1  
 **Last updated**: February 2026
+
