@@ -16,6 +16,11 @@
   opacity: 0.98;
 }
 
+:root[data-theme="light"] .navbar.scrolled {
+  background: var(--bg-glass);
+  opacity: 0.98;
+}
+
 .navbar.menu-open {
   height: 80px;
 }

@@ -79,11 +79,12 @@
   --text-muted: #64748b;
   --text-light: #1e293b;
   
-  /* Brand Colors - Azules más vibrantes pero suaves */
+  /* Brand Colors - Azules más vibrantes pero suaves (--primary-green = azul en light para compatibilidad) */
   --primary-blue: #3b82f6;
   --secondary-blue: #2563eb;
   --primary-blue-hover: #2563eb;
   --secondary-blue-hover: #1d4ed8;
+  --primary-green: #3b82f6;
   
   /* Borders - Visibles pero sutiles */
   --border-color: rgba(100, 116, 139, 0.2);
