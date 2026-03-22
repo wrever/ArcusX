@@ -2,12 +2,15 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { FaArrowLeft, FaGoogle, FaGithub, FaEnvelope, FaLock } from 'react-icons/fa';
 import '../css/Login.css';
+import '../css/Login.enterprise.css';
 import { useAuth } from '../hooks/useAuth';
+import { useEnterpriseMode } from '../hooks/useEnterpriseMode';
 import { authService } from '../services/authService';
 import { useI18n } from '../i18n/I18nProvider';
 import SEO from './SEO';
 
 const Login = () => {
+  const enterprise = useEnterpriseMode();
   const { t, lang } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -75,7 +78,7 @@ const Login = () => {
   // Mostrar loading mientras se verifica la autenticación
   if (isAuthenticated === null) {
     return (
-      <div className="login-container">
+      <div className={`login-container${enterprise ? ' login-container--enterprise' : ''}`}>
         <div className="login-card">
           <div className="login-header">
             <div className="login-logo">ArcusX</div>
@@ -94,7 +97,7 @@ const Login = () => {
         url="/login"
         locale={lang}
       />
-      <div className="login-container">
+      <div className={`login-container${enterprise ? ' login-container--enterprise' : ''}`}>
         <Link to="/" className="back-button">
           <FaArrowLeft />
           <span>{t('login.back')}</span>

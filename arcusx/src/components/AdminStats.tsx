@@ -206,7 +206,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
       ) : escrowsStats.disputedCount,
       icon: <FaGavel />,
       color: '#ef4444',
-      description: 'Escrows en disputa (desde Trustless Work)',
+      description: 'Escrows en disputa (on-chain)',
       trend: escrowsStats.inconsistencies > 0 
         ? ` ${escrowsStats.inconsistencies} inconsistencias detectadas` 
         : null
@@ -305,7 +305,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
         </div>
       </div>
 
-      {/* Escrows Status from Trustless Work */}
+      {/* Estado de escrows (indexador) */}
       {!escrowsStats.loading && (
         <div className="escrows-status-section" style={{
           marginTop: '30px',
@@ -316,7 +316,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
         }}>
           <h3 style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <FaCheckCircle style={{ color: '#10b981' }} />
-            Estado de Escrows (Trustless Work)
+            Estado de escrows (indexador)
           </h3>
           <div style={{
             display: 'grid',
@@ -434,7 +434,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
           </div>
           <div className="status-item">
             <FaCheckCircle className={`status-icon ${TRUSTLESS_WORK_BASE_URL ? 'success' : 'warning'}`} />
-            <span>Trustless Work {TRUSTLESS_WORK_BASE_URL ? 'Conectado' : 'No Configurado'}</span>
+            <span>Servicio de escrow {TRUSTLESS_WORK_BASE_URL ? 'conectado' : 'no configurado'}</span>
           </div>
         </div>
       </div>
@@ -501,9 +501,9 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
         </div>
       </div>
 
-      {/* Trustless Work Configuration */}
+      {/* Configuración API escrow */}
       <div className="trustless-work-config">
-        <h3>Configuración Trustless Work</h3>
+        <h3>Configuración del escrow</h3>
         <div className="config-grid">
           <div className="config-item">
             <div className="config-icon">
@@ -512,7 +512,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
             <div className="config-content">
               <h4>Entorno</h4>
               <p className="config-value">{TRUSTLESS_WORK_BASE_URL === 'https://api.trustlesswork.com' ? 'Mainnet' : 'Development'}</p>
-              <p className="config-description">Entorno de Trustless Work</p>
+              <p className="config-description">Entorno del API de escrow</p>
             </div>
           </div>
           <div className="config-item">

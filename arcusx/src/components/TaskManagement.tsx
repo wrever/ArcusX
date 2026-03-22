@@ -437,18 +437,18 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                   </div>
                 </div>
 
-                {/* Información del Escrow (Trustless Work) */}
+                {/* Información del escrow (indexador) */}
                 {selectedTask.escrow_id && selectedTask.escrow_id.startsWith('C') && (
                   <div className="dispute-details-section">
                     <h4>
                       <FaWallet style={{ marginRight: '8px' }} />
-                      Información del Escrow (Trustless Work)
+                      Información del escrow
                     </h4>
                     {loadingEscrowInfo ? (
                       <div style={{ padding: '20px', textAlign: 'center' }}>
                         <FaSpinner className="spinning" style={{ fontSize: '24px', margin: '0 auto', display: 'block' }} />
                         <p style={{ marginTop: '10px', color: 'rgba(255, 255, 255, 0.6)' }}>
-                          Cargando información del escrow desde Trustless Work...
+                          Cargando información del escrow...
                         </p>
                       </div>
                     ) : escrowInfo ? (

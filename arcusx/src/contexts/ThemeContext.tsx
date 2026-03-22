@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useLayoutEffect, ReactNode } from 'react';
+import { isEnterpriseLandingHost } from '../config/enterpriseSite';
 
 type Theme = 'dark' | 'light';
 
@@ -23,11 +24,23 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  // Cargar tema desde localStorage o usar 'dark' por defecto
+  // Empresas (subdominio): localStorage propio del origen; por defecto modo claro. Público: oscuro.
   const [theme, setThemeState] = useState<Theme>(() => {
     const savedTheme = localStorage.getItem('arcusx-theme') as Theme | null;
+    if (typeof window !== 'undefined' && isEnterpriseLandingHost()) {
+      return savedTheme || 'light';
+    }
     return savedTheme || 'dark';
   });
+
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    if (isEnterpriseLandingHost()) {
+      root.setAttribute('data-app-variant', 'enterprise');
+    } else {
+      root.removeAttribute('data-app-variant');
+    }
+  }, []);
 
   // Aplicar tema al documento
   useEffect(() => {

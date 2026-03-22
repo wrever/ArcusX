@@ -1,3 +1,8 @@
+# ArcusX SPA (Vite/React) — copiar este archivo a la raíz de public_html Y a la raíz del subdominio (mismo dist/).
+# Si ves 404 en empresas.*: en cPanel → Subdominios → comprobar que la carpeta contiene index.html, assets/ y este .htaccess
+
+DirectoryIndex index.html
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteBase /

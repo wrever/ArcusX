@@ -112,9 +112,9 @@ export function clearPlatformFeeCache(): void {
 }
 
 /**
- * Obtiene el platform fee para Trustless Work
- * Trustless Work espera el fee como decimal (ej: 0.005 para 0.5%)
- * @returns El platform fee en formato para Trustless Work
+ * Obtiene el platform fee para el servicio de escrow
+ * El API espera el fee como decimal (ej: 0.005 para 0.5%)
+ * @returns El platform fee en el formato que exige el contrato
  */
 export async function getPlatformFeeForTrustlessWork(): Promise<number> {
   return await getPlatformFee();

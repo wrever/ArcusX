@@ -1,0 +1,50 @@
+/**
+ * ArcusX Empresas — registro (misma lógica, layout B2B).
+ */
+
+.register-container.register-container--enterprise {
+  min-height: 100vh;
+  padding-top: 6rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2f7 50%, #f1f5f9 100%);
+}
+
+.register-container.register-container--enterprise .register-content {
+  border-radius: 0;
+}
+
+.register-container.register-container--enterprise .register-left {
+  background: linear-gradient(165deg, #0f172a 0%, #1e293b 55%, #0f172a 100%);
+  color: #f8fafc;
+}
+
+.register-container.register-container--enterprise .register-left .highlight-text {
+  color: #5eead4;
+}
+
+.register-container.register-container--enterprise .register-right {
+  background: #ffffff;
+  border-left: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.register-container.register-container--enterprise .register-form h2 {
+  color: #0f172a;
+}
+
+.register-container.register-container--enterprise .back-button {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+:root[data-theme="dark"] .register-container.register-container--enterprise {
+  background: linear-gradient(135deg, #0a0a0a 0%, #0f172a 100%);
+}
+
+:root[data-theme="dark"] .register-container.register-container--enterprise .register-right {
+  background: rgba(15, 23, 42, 0.85);
+  border-left-color: rgba(148, 163, 184, 0.12);
+}
+
+:root[data-theme="dark"] .register-container.register-container--enterprise .register-form h2 {
+  color: #f1f5f9;
+}

@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { TrustlessWorkConfig } from '@trustless-work/escrow';
 import { TRUSTLESS_WORK_API_KEY, TRUSTLESS_WORK_BASE_URL } from './config/trustlessWork';
 import Navbar from './components/Navbar';
+import EmpresasNavbar from './components/EmpresasNavbar';
+import { isEnterpriseLandingHost } from './config/enterpriseSite';
 import LanguageFab from './components/LanguageFab';
 import ThemeToggle from './components/ThemeToggle';
 import Hero from './components/Hero';
@@ -26,8 +28,37 @@ const AdminPanel = lazy(() => import('./components/AdminPanel'));
 const EditProfile = lazy(() => import('./components/EditProfile'));
 const SwapPage = lazy(() => import('./pages/SwapPage'));
 const TutorialsPage = lazy(() => import('./pages/TutorialsPage'));
+const EmpresasPage = lazy(() => import('./pages/EmpresasPage'));
 const SupportChatButton = lazy(() => import('./components/SupportChatButton'));
 
+function HomeRoute() {
+  if (isEnterpriseLandingHost()) {
+    return (
+      <>
+        <EmpresasNavbar />
+        <EmpresasPage />
+      </>
+    );
+  }
+  return (
+    <>
+      <Navbar />
+      <Hero />
+    </>
+  );
+}
+
+function EmpresasRoute() {
+  if (isEnterpriseLandingHost()) {
+    return <Navigate to="/" replace />;
+  }
+  return (
+    <>
+      <Navbar />
+      <EmpresasPage />
+    </>
+  );
+}
 
 function AppContent({ isLoading }: { isLoading: boolean }) {
   const location = useLocation();
@@ -35,11 +66,17 @@ function AppContent({ isLoading }: { isLoading: boolean }) {
   const path = location.pathname.replace(/\/index\.html$/i, '').replace(/\/$/, '') || '/';
   const isRoot = path === '/' || path === '';
   // Páginas donde va el FAB de idioma/tema (flotante). Robusto para cPanel: considerar raíz cualquier path vacío o "/"
-  const isPublicLanding = isRoot || path === '/swap' || path === '/tutoriales' || path === '/login' || path === '/register';
+  const isPublicLanding =
+    isRoot ||
+    path === '/swap' ||
+    path === '/tutoriales' ||
+    path === '/login' ||
+    path === '/register' ||
+    path === '/empresas';
   // Si no estamos en una ruta de app (dashboard, profile, etc.), mostrar FAB por si cPanel devuelve un path distinto
   const isAppRoute = path.startsWith('/dashboard') || path.startsWith('/admin') || path.startsWith('/profile') || path.startsWith('/create-task') || path.startsWith('/apply-task') || path.startsWith('/proposals') || path.startsWith('/supervise-task') || path.startsWith('/auth');
   const showFloatingButtons = isPublicLanding || (!isAppRoute && path.length <= 20);
-  const showSupportButton = isRoot;
+  const showSupportButton = isRoot && !isEnterpriseLandingHost();
 
   return (
     <>
@@ -57,14 +94,33 @@ function AppContent({ isLoading }: { isLoading: boolean }) {
         <div className="app">
           <Suspense fallback={<Preloader />}>
             <Routes>
-              <Route path="/" element={
-                <>
-                  <Navbar />
-                  <Hero />
-                </>
-              } />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+              <Route path="/" element={<HomeRoute />} />
+              <Route
+                path="/login"
+                element={
+                  isEnterpriseLandingHost() ? (
+                    <>
+                      <EmpresasNavbar />
+                      <Login />
+                    </>
+                  ) : (
+                    <Login />
+                  )
+                }
+              />
+              <Route
+                path="/register"
+                element={
+                  isEnterpriseLandingHost() ? (
+                    <>
+                      <EmpresasNavbar />
+                      <Register />
+                    </>
+                  ) : (
+                    <Register />
+                  )
+                }
+              />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/create-task" element={<ProtectedRoute><CreateTask /></ProtectedRoute>} />
@@ -75,6 +131,8 @@ function AppContent({ isLoading }: { isLoading: boolean }) {
               <Route path="/dashboard/settings/profile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
               <Route path="/swap" element={<><Navbar /><SwapPage /></>} />
               <Route path="/tutoriales" element={<><Navbar /><TutorialsPage /></>} />
+              <Route path="/empresas" element={<EmpresasRoute />} />
+              <Route path="/landing" element={<Navigate to="/empresas" replace />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin/dashboard" element={<AdminRoute><AdminPanel isAdmin={true} /></AdminRoute>} />
               <Route path="/admin" element={<Navigate to="/admin/login" replace />} />

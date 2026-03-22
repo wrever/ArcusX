@@ -1,0 +1,86 @@
+/**
+ * ArcusX Empresas — dashboard (misma lógica, shell B2B).
+ * Activo con .dashboard--enterprise (host empresas.*).
+ */
+
+/* —— Modo claro (predeterminado en empresas) —— */
+:root[data-theme="light"] .dashboard.dashboard--enterprise {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+:root[data-theme="light"] .dashboard.dashboard--enterprise .dashboard-sidebar {
+  background: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  box-shadow: 4px 0 24px rgba(15, 23, 42, 0.04);
+}
+
+:root[data-theme="light"] .dashboard.dashboard--enterprise .sidebar-header {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+:root[data-theme="light"] .dashboard.dashboard--enterprise .sidebar-logo img {
+  filter: none;
+}
+
+:root[data-theme="light"] .dashboard.dashboard--enterprise .sidebar-user {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+:root[data-theme="light"] .dashboard.dashboard--enterprise .sidebar-nav ul li {
+  color: #334155;
+  border-radius: 0.5rem;
+  margin: 0.15rem 0.5rem;
+}
+
+:root[data-theme="light"] .dashboard.dashboard--enterprise .sidebar-nav ul li:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+:root[data-theme="light"] .dashboard.dashboard--enterprise .sidebar-nav ul li.active {
+  background: linear-gradient(90deg, rgba(13, 148, 136, 0.12), rgba(13, 148, 136, 0.04));
+  color: #0f766e;
+  font-weight: 600;
+  border-left: 3px solid #0d9488;
+}
+
+:root[data-theme="light"] .dashboard.dashboard--enterprise .dashboard-main {
+  background: #f8fafc;
+  border-left: none;
+}
+
+:root[data-theme="light"] .dashboard.dashboard--enterprise .dashboard-header h1 {
+  color: #0f172a;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+:root[data-theme="light"] .dashboard.dashboard--enterprise .logout-button {
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+:root[data-theme="light"] .dashboard.dashboard--enterprise .logout-button:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+/* Stats / tarjetas: borde fino tipo producto SaaS */
+:root[data-theme="light"] .dashboard.dashboard--enterprise .stat-card {
+  border: 1px solid #e2e8f0 !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06) !important;
+}
+
+/* —— Modo oscuro en empresas (si el usuario lo activa): sidebar más sobrio —— */
+:root[data-theme="dark"] .dashboard.dashboard--enterprise .dashboard-sidebar {
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+  border-right: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+:root[data-theme="dark"] .dashboard.dashboard--enterprise .dashboard-main {
+  background: linear-gradient(165deg, #0c1016 0%, #0f172a 40%, #0a0a0a 100%);
+}

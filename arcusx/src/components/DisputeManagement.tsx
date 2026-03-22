@@ -229,7 +229,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                 created_by_email: escrowInfo?.client_username ? `${escrowInfo.client_username}@arcusx.pro` : '',
                 reason: escrowInfo?.task_id 
                   ? 'Disputa iniciada por cancelación de tarea - Reembolso solicitado'
-                  : 'Disputa detectada en Trustless Work - Requiere resolución manual',
+                  : 'Disputa detectada en el escrow - Requiere resolución manual',
                 status: isResolved ? 'resolved' : 'pending',
                 created_at: escrowInfo?.escrow_created_at || escrowInfo?.task_created_at || escrow.createdAt || new Date().toISOString(),
                 // Información de Trustless Work
@@ -598,7 +598,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
         
         const escrow = Array.isArray(escrowData) ? escrowData[0] : (escrowData as any)?.escrows?.[0];
         if (!escrow) {
-          throw new Error('No se pudo obtener información del escrow desde Trustless Work');
+          throw new Error('No se pudo obtener información del escrow');
         }
         
         //  CRÍTICO: Verificar si el escrow ya está resuelto ANTES de intentar resolverlo
@@ -692,7 +692,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
               `- El escrow nunca fue fondeado\n` +
               `- Los fondos ya fueron liberados previamente\n` +
               `- Hay un problema con la sincronización del indexer\n\n` +
-              `Verifica el estado del escrow en Trustless Work antes de resolver la disputa.`
+              `Verifica el estado del escrow en cadena antes de resolver la disputa.`
             );
           }
         }
@@ -819,10 +819,10 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                 ` ERROR CRÍTICO: La transacción fue enviada pero el escrow NO está resuelto en la blockchain después de ${maxVerificationAttempts} intentos.\n\n` +
                 `Esto puede significar que:\n` +
                 `1. La transacción no se procesó correctamente\n` +
-                `2. Hay un problema con el indexer de Trustless Work\n` +
+                `2. Hay un problema con el indexer de escrow\n` +
                 `3. La transacción necesita más tiempo para procesarse\n\n` +
                 `NO se actualizará el estado en la base de datos hasta que el escrow esté resuelto en la blockchain.\n` +
-                `Por favor, verifica manualmente el estado del escrow en Trustless Work.\n\n` +
+                `Por favor, verifica manualmente el estado del escrow en cadena.\n\n` +
                 `Hash de transacción: ${resolveResult.txHash}`
               );
             }
@@ -986,10 +986,10 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                 ` ERROR CRÍTICO: La transacción fue enviada pero el escrow NO está resuelto en la blockchain después de ${maxVerificationAttempts} intentos.\n\n` +
                 `Esto puede significar que:\n` +
                 `1. La transacción no se procesó correctamente\n` +
-                `2. Hay un problema con el indexer de Trustless Work\n` +
+                `2. Hay un problema con el indexer de escrow\n` +
                 `3. La transacción necesita más tiempo para procesarse\n\n` +
                 `NO se actualizará el estado en la base de datos hasta que el escrow esté resuelto en la blockchain.\n` +
-                `Por favor, verifica manualmente el estado del escrow en Trustless Work.\n\n` +
+                `Por favor, verifica manualmente el estado del escrow en cadena.\n\n` +
                 `Hash de transacción: ${resolveResult.txHash}`
               );
             }
@@ -1133,10 +1133,10 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                 ` ERROR CRÍTICO: La transacción fue enviada pero el escrow NO está resuelto en la blockchain después de ${maxVerificationAttempts} intentos.\n\n` +
                 `Esto puede significar que:\n` +
                 `1. La transacción no se procesó correctamente\n` +
-                `2. Hay un problema con el indexer de Trustless Work\n` +
+                `2. Hay un problema con el indexer de escrow\n` +
                 `3. La transacción necesita más tiempo para procesarse\n\n` +
                 `NO se actualizará el estado en la base de datos hasta que el escrow esté resuelto en la blockchain.\n` +
-                `Por favor, verifica manualmente el estado del escrow en Trustless Work.\n\n` +
+                `Por favor, verifica manualmente el estado del escrow en cadena.\n\n` +
                 `Hash de transacción: ${lastTxHash || 'N/A'}`
               );
             }
@@ -1374,7 +1374,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                   <tr key={dispute.id}>
                     <td>
                       {dispute.isVirtualDispute ? (
-                        <span style={{ fontSize: '0.85em', color: '#ff9800', display: 'flex', alignItems: 'center', gap: '0.25rem' }} title="Disputa detectada desde Trustless Work">
+                        <span style={{ fontSize: '0.85em', color: '#ff9800', display: 'flex', alignItems: 'center', gap: '0.25rem' }} title="Disputa detectada desde el escrow en cadena">
                           <FaBolt /> {dispute.id.replace('virtual-', '').substring(0, 8)}...
                         </span>
                       ) : (
