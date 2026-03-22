@@ -1229,7 +1229,7 @@ const SuperviseTask = () => {
 
             // 4. Si hay transacción para firmar (esto no debería pasar con el flujo actual)
             if (!refundResult.unsignedTransaction) {
-                throw new Error('No se recibió transacción de reembolso de Trustless Work');
+                throw new Error('No se recibió transacción de reembolso del servicio de escrow');
             }
 
             // 5. Mostrar popup de firma (solo si hay transacción para firmar)
@@ -1614,7 +1614,7 @@ const SuperviseTask = () => {
             );
 
             if (!trustlessResult.success) {
-                throw new Error(trustlessResult.error || 'Error al iniciar disputa en Trustless Work');
+                throw new Error(trustlessResult.error || 'Error al iniciar disputa en el escrow');
             }
 
             

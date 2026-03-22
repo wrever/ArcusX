@@ -5,6 +5,7 @@ import ThemeToggle from './components/ThemeToggle';
 import LanguageFab from './components/LanguageFab';
 import { FiMenu } from 'react-icons/fi';
 import './css/dashboard.css';
+import './css/dashboard.enterprise.css';
 import arcusLogoDark from './images/arcus-logo.png';
 import arcusLogoLight from './images/arcusxlogoclaro.png';
 import axios from 'axios';
@@ -29,6 +30,7 @@ import SwapPage from './pages/SwapPage';
 import SupportPage from './pages/SupportPage';
 import { getAvatarUrl } from './utils/avatarUtils';
 import { useTheme } from './contexts/ThemeContext';
+import { useEnterpriseMode } from './hooks/useEnterpriseMode';
 
 interface UserData {
   id: number;
@@ -660,7 +662,7 @@ const Dashboard = () => {
   ];
   
   return (
-    <div className="dashboard">
+    <div className={`dashboard${enterprise ? ' dashboard--enterprise' : ''}`}>
       <div className="dashboard-wrapper">
       {/* Sidebar */}
       <div className="dashboard-sidebar">

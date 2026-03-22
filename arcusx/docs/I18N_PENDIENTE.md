@@ -79,7 +79,7 @@ Resumen de lo que **aún falta traducir** (ES/EN/PT) en la app. Las claves se de
 - UI: "Cargando ratings..."
 
 ### 15. **AdminStats**
-- Títulos y labels: "Resumen del Sistema", "Configuración Actual", "Estado del Sistema", "Sistema Activo", "API Funcionando", "Base de Datos Conectada", "Red Stellar", "Ganancias y Treasury", "Comisiones Totales", "Esta semana / Este mes", "No configurado", "Configuración Trustless Work", "Wallet de la plataforma", "Wallet del administrador", "Acciones Rápidas", "Configurar Fees", "Gestionar Tokens", "Ver Disputas"
+- Títulos y labels: "Resumen del Sistema", "Configuración Actual", "Estado del Sistema", "Sistema Activo", "API Funcionando", "Base de Datos Conectada", "Red Stellar", "Ganancias y Treasury", "Comisiones Totales", "Esta semana / Este mes", "No configurado", "Configuración del escrow", "Wallet de la plataforma", "Wallet del administrador", "Acciones Rápidas", "Configurar Fees", "Gestionar Tokens", "Ver Disputas"
 
 ### 16. **TaskManagement** (labels en detalle)
 - "Contract ID:", "Balance Actual:", "Monto Total:", "Estado Real:", "Estado en BD:", "Inconsistencias Detectadas:", "Escrow ID:", "Fecha de creación del escrow", "Fecha de finalización" (si salen en EscrowManagement/TaskManagement)

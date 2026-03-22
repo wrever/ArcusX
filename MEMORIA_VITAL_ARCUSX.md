@@ -1,9 +1,9 @@
 # 🧠 MEMORIA VITAL - ARCUSX
 ## Documento de Referencia Completa del Proyecto
 
-**Última Actualización:** Enero 2025  
-**Versión del Proyecto:** 1.0  
-**Estado:** Producción
+**Última Actualización:** Marzo 2026  
+**Versión del Proyecto:** 1.3  
+**Estado:** Testnet operativo (preparación de production readiness)
 
 ---
 
@@ -323,7 +323,7 @@ arcusx/
 - `register(userData)` - Función de registro
 
 #### `useWallet.ts`
-**Propósito:** Hook para integración con wallets Stellar (Freighter).
+**Propósito:** Hook para integración con wallets Stellar.
 
 **Retorna:**
 - `address` - Dirección del wallet
@@ -335,6 +335,8 @@ arcusx/
 - `kit` - Instancia de Stellar Wallets Kit
 
 **Notas:**
+- Freighter es el wallet principal actualmente en producción
+- Hay soporte planificado para wallet adicional (scope de readiness del mes)
 - Recarga la página solo en primera conexión
 - Almacena estado en localStorage
 
@@ -346,7 +348,7 @@ arcusx/
 - `fromAmount`, `toAmount` - Cantidades
 - `balances` - Balances de XLM y USDC
 - `quote` - Cotización actual
-- `slippage` - Slippage configurado (default 1.5%)
+- `slippage` - Slippage configurado (default 3% / `slippageBps: 300`)
 - `error` - Errores
 
 **Funciones:**
@@ -898,7 +900,7 @@ arcusx/
        ├─> Fondear escrow
        │   └─> fundTrustlessEscrow()
        └─> Seleccionar trabajador en backend
-           └─> POST /api/auth/accept_proposal.php
+           └─> POST /api/auth/select_proposal.php
 
 5. Trabajador completa trabajo
    └─> SuperviseTask.tsx
@@ -1063,7 +1065,8 @@ arcusx/
 **Librería:** `@creit.tech/stellar-wallets-kit`
 
 **Wallets soportados:**
-- Freighter (principal)
+- Freighter (principal actual)
+- Wallet adicional en curso según plan de readiness (vía el mismo kit)
 
 **Funcionalidades:**
 - Conexión de wallet
@@ -1217,6 +1220,7 @@ VITE_SUPABASE_ANON_KEY=tu_supabase_key
 **Idiomas soportados:**
 - Español (ES) - Default
 - Inglés (EN)
+- Portugués (PT)
 
 **Estructura:**
 ```typescript
@@ -1386,17 +1390,17 @@ VITE_SUPABASE_ANON_KEY=tu_supabase_key
 - ✅ Swap de tokens (XLM ↔ USDC)
 - ✅ Panel de administración
 - ✅ Sistema de notificaciones
-- ✅ Internacionalización (ES/EN)
+- ✅ Internacionalización (ES/EN/PT)
 - ✅ Temas (Dark/Light)
 - ✅ SEO optimizado
 - ✅ Sistema de Tutoriales (videos educativos grabados)
 
 ### Pendientes / Mejoras 🔄
 
-- 🔄 Optimización de performance
+- 🔄 Cierre del plan de production readiness (seguridad, CORS/JWT, consistencia API)
+- 🔄 Soporte operativo de wallet adicional (además de Freighter)
+- 🔄 Light theme y responsividad en archivos de alcance del plan mensual
 - 🔄 Tests unitarios e integración
-- 🔄 Mejora de UX en algunos flujos
-- 🔄 Documentación de API backend
 - 🔄 Monitoreo y analytics
 
 ---
@@ -1471,9 +1475,9 @@ En lugar de migrar 60-70 archivos PHP individuales, se consolidarán endpoints r
 
 ---
 
-**Última actualización:** Enero 2026 (Actualizado con estimación de endpoints y estrategia de migración)
+**Última actualización:** Marzo 2026 (alineado con plan mensual de revisores y estado actual del repo)
 **Mantenido por:** Equipo ArcusX  
-**Versión del documento:** 1.2
+**Versión del documento:** 1.3
 
 ---
 

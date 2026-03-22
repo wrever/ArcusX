@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useMemo } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import '../css/Navbar.css';
 import logoDark from '../images/arcus-logo.png';
 import logoLight from '../images/arcusxlogoclaro.png';
@@ -7,13 +7,29 @@ import { useAuth } from '../hooks/useAuth';
 import { useI18n } from '../i18n/I18nProvider';
 import { useTheme } from '../contexts/ThemeContext';
 
+function normalizePath(p: string) {
+  return p.replace(/\/index\.html$/i, '').replace(/\/$/, '') || '/';
+}
+
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { pathname } = useLocation();
   const { isAuthenticated, logout } = useAuth();
   const { t } = useI18n();
   const { theme } = useTheme();
   const logo = theme === 'light' ? logoLight : logoDark;
+
+  const path = useMemo(() => normalizePath(pathname), [pathname]);
+
+  const navLinkCls = (to: string, extra = '') => {
+    const target = normalizePath(to);
+    const active =
+      (to === '/' && path === '/') ||
+      (to !== '/' && path === target) ||
+      (to === '/dashboard' && path.startsWith('/dashboard'));
+    return ['nav-link', extra, active ? 'nav-link--active' : ''].filter(Boolean).join(' ');
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -63,44 +79,68 @@ const Navbar = () => {
         </div>
         
         <div className={`navbar-links ${isMenuOpen ? 'open' : ''}`}>
-          <Link to="/" className="nav-link" onClick={closeMenu}>
-            {t('nav.home')}
-          </Link>
-          <Link to="/swap" className="nav-link" onClick={closeMenu}>
-            {t('nav.swap')}
-          </Link>
-          <Link to="/tutoriales" className="nav-link" onClick={closeMenu}>
-            {t('nav.tutorials')}
-          </Link>
-          <a 
-            href="https://docs.arcusx.pro" 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            className="nav-link"
-            onClick={closeMenu}
-          >
-            {t('nav.docs')}
-          </a>
-          
-          {isAuthenticated ? (
-            <>
-              <Link to="/dashboard" className="nav-button login" onClick={closeMenu}>
-                {t('nav.dashboard')}
+          <div className="navbar-links__section navbar-links__section--nav">
+            <Link to="/" className={navLinkCls('/')} onClick={closeMenu} aria-current={path === '/' ? 'page' : undefined}>
+              {t('nav.home')}
+            </Link>
+            <Link to="/swap" className={navLinkCls('/swap')} onClick={closeMenu} aria-current={path === '/swap' ? 'page' : undefined}>
+              {t('nav.swap')}
+            </Link>
+            <Link to="/tutoriales" className={navLinkCls('/tutoriales')} onClick={closeMenu} aria-current={path === '/tutoriales' ? 'page' : undefined}>
+              {t('nav.tutorials')}
+            </Link>
+            <a
+              href="https://docs.arcusx.pro"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="nav-link nav-link--external"
+              onClick={closeMenu}
+            >
+              {t('nav.docs')}
+            </a>
+          </div>
+
+          <div className="navbar-links__section navbar-links__section--cta">
+            <div className="navbar-cta-shell">
+              <Link
+                to="/empresas"
+                className={navLinkCls('/empresas', 'nav-link--empresas')}
+                onClick={closeMenu}
+                aria-current={path === '/empresas' ? 'page' : undefined}
+              >
+                {t('nav.empresas')}
               </Link>
-              <button onClick={handleLogout} className="nav-button register">
-                {t('nav.logout')}
-              </button>
-            </>
-          ) : (
-            <>
-              <Link to="/login" className="nav-button login" onClick={closeMenu}>
-                {t('nav.login')}
-              </Link>
-              <Link to="/register" className="nav-button register" onClick={closeMenu}>
-                {t('nav.register')}
-              </Link>
-            </>
-          )}
+              {isAuthenticated ? (
+                <>
+                  <Link
+                    to="/dashboard"
+                    className={`nav-button login${path.startsWith('/dashboard') ? ' nav-button--active' : ''}`}
+                    onClick={closeMenu}
+                    aria-current={path.startsWith('/dashboard') ? 'page' : undefined}
+                  >
+                    {t('nav.dashboard')}
+                  </Link>
+                  <button type="button" onClick={handleLogout} className="nav-button register">
+                    {t('nav.logout')}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    className={`nav-button login${path === '/login' ? ' nav-button--active' : ''}`}
+                    onClick={closeMenu}
+                    aria-current={path === '/login' ? 'page' : undefined}
+                  >
+                    {t('nav.login')}
+                  </Link>
+                  <Link to="/register" className="nav-button register" onClick={closeMenu}>
+                    {t('nav.register')}
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </nav>

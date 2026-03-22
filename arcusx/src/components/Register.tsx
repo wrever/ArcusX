@@ -2,12 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaEye, FaEyeSlash, FaArrowLeft, FaGoogle, FaGithub, FaGem, FaGlobe, FaTasks } from 'react-icons/fa';
 import '../css/Register.css';
+import '../css/Register.enterprise.css';
 import { authService } from '../services/authService';
+import { useEnterpriseMode } from '../hooks/useEnterpriseMode';
 import { useAuth } from '../hooks/useAuth';
 import { useI18n } from '../i18n/I18nProvider';
 import SEO from './SEO';
 
 const Register = () => {
+  const enterprise = useEnterpriseMode();
   const { t, lang } = useI18n();
   const [formData, setFormData] = useState({
     username: '',
@@ -105,7 +108,7 @@ const Register = () => {
         url="/register"
         locale={lang}
       />
-      <div className="register-container">
+      <div className={`register-container${enterprise ? ' register-container--enterprise' : ''}`}>
       <Link to="/" className="back-button">
         <FaArrowLeft />
         <span>{t('register.back')}</span>

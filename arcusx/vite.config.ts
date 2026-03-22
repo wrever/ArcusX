@@ -158,7 +158,9 @@ const copyHtaccess = () => {
           copyFileSync(backendHtaccess, dest)
           console.log('✅ .htaccess copiado desde backend_externo/ a dist/')
         } else {
-          const htaccessContent = `<IfModule mod_rewrite.c>
+          const htaccessContent = `DirectoryIndex index.html
+
+<IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
   RewriteCond %{REQUEST_URI} !^/api/
@@ -278,6 +280,12 @@ export default defineConfig({
         ...(purgecssPlugin ? [purgecssPlugin({
           content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
           safelist: [
+            // Página /empresas (prefijo ax-empresas__)
+            /^ax-empresas/,
+            /^empresas-navbar/,
+            'login-container--enterprise',
+            'register-container--enterprise',
+            'dashboard--enterprise',
             // Clases de tema
             'dark',
             'light',

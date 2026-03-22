@@ -1,0 +1,90 @@
+/**
+ * ArcusX Empresas — login (misma lógica, piel B2B).
+ * Activo con .login-container--enterprise (host empresas.*).
+ */
+
+.login-container.login-container--enterprise {
+  min-height: 100vh;
+  padding: 6.5rem 1.5rem 2rem;
+  align-items: flex-start;
+  background: linear-gradient(165deg, #f8fafc 0%, #e8eef5 45%, #f1f5f9 100%);
+  background-image:
+    radial-gradient(ellipse 90% 50% at 100% -10%, rgba(30, 64, 175, 0.07), transparent 55%),
+    radial-gradient(ellipse 70% 40% at 0% 100%, rgba(16, 185, 129, 0.05), transparent 50%);
+}
+
+.login-container.login-container--enterprise::before {
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.35), transparent 60%);
+}
+
+.login-container.login-container--enterprise .login-card {
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow:
+    0 4px 6px -1px rgba(15, 23, 42, 0.06),
+    0 20px 50px -12px rgba(15, 23, 42, 0.12);
+  border-radius: 0.75rem;
+}
+
+.login-container.login-container--enterprise .login-card::before {
+  height: 3px;
+  background: linear-gradient(90deg, #0f172a 0%, #1e293b 35%, #0d9488 100%);
+  box-shadow: none;
+}
+
+.login-container.login-container--enterprise .login-card::after {
+  display: none;
+}
+
+.login-container.login-container--enterprise .login-header .login-logo {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+}
+
+.login-container.login-container--enterprise .login-header h2 {
+  color: #0f172a;
+}
+
+.login-container.login-container--enterprise .login-header p {
+  color: #475569;
+}
+
+.login-container.login-container--enterprise .back-button {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.login-container.login-container--enterprise .back-button:hover {
+  background: #ffffff;
+  border-color: #94a3b8;
+}
+
+/* Modo oscuro en empresas: mismo layout, tonos más sobrios */
+:root[data-theme="dark"] .login-container.login-container--enterprise {
+  background: linear-gradient(165deg, #0a0a0a 0%, #0f172a 50%, #0c1016 100%);
+  background-image:
+    radial-gradient(ellipse 90% 50% at 100% -10%, rgba(59, 130, 246, 0.08), transparent 55%),
+    radial-gradient(ellipse 70% 40% at 0% 100%, rgba(16, 185, 129, 0.05), transparent 50%);
+}
+
+:root[data-theme="dark"] .login-container.login-container--enterprise .login-card {
+  background: rgba(15, 23, 42, 0.75);
+  border-color: rgba(148, 163, 184, 0.12);
+}
+
+:root[data-theme="dark"] .login-container.login-container--enterprise .login-header .login-logo,
+:root[data-theme="dark"] .login-container.login-container--enterprise .login-header h2 {
+  color: #f1f5f9;
+}
+
+:root[data-theme="dark"] .login-container.login-container--enterprise .login-header p {
+  color: #94a3b8;
+}
+
+/* Badge opcional vía texto en logo — sin cambiar JSX */
+.login-container.login-container--enterprise .login-card .login-header {
+  position: relative;
+}

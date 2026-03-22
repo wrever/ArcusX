@@ -1,8 +1,8 @@
 /**
- * Servicio para operaciones de escrow con Trustless Work
+ * Servicio de operaciones de escrow (API externa)
  * 
  * ACTUALIZACIÓN IMPORTANTE (Diciembre 2024):
- * Trustless Work ha cambiado el sistema y ahora SOLO acepta issuer tradicional de Stellar
+ * El proveedor de escrow ha cambiado el sistema y ahora SOLO acepta issuer tradicional de Stellar
  * (direcciones que empiezan con "G"). NO usar Contract ID de Soroban (direcciones que empiezan con "C").
  * 
  * INCONSISTENCIAS CON DOCUMENTACIÓN MCP (documentadas y manejadas):
@@ -179,7 +179,7 @@ const validateInitResponse = (response: EscrowRequestResponse): string => {
     throw new Error(`Error al crear escrow: ${errorMsg}`);
   }
   if (!response.unsignedTransaction) {
-    throw new Error('No se recibió transacción no firmada de Trustless Work');
+    throw new Error('No se recibió transacción no firmada del servicio de escrow');
   }
   return response.unsignedTransaction;
 };
@@ -402,7 +402,7 @@ export const createAndSendTransaction = async (
       console.warn('No se pudo extraer hash de la transacción:', hashError?.message);
     }
     
-    console.log('Enviando transacción firmada a Trustless Work...');
+    console.log('Enviando transacción firmada al servicio de escrow...');
     console.log(`   XDR length: ${signedXdr.length}`);
     console.log(`   XDR preview: ${signedXdr.substring(0, 100)}...`);
     if (txHash) {
@@ -413,13 +413,13 @@ export const createAndSendTransaction = async (
     try {
       response = await sendTransaction(signedXdr);
       
-      console.log('Respuesta de Trustless Work:', {
+      console.log('Respuesta del servicio de escrow:', {
         status: response?.status,
         hasContractId: 'contractId' in (response || {}),
         fullResponse: response
       });
     } catch (sendError: any) {
-      console.error('Error al enviar transacción a Trustless Work:');
+      console.error('Error al enviar transacción al servicio de escrow:');
       console.error('   Error completo:', sendError);
       console.error('   Error message:', sendError?.message);
       console.error('   Error code:', sendError?.code);
@@ -430,7 +430,7 @@ export const createAndSendTransaction = async (
       console.error('   Error response headers:', sendError?.response?.headers);
       
       // MEJORA CRÍTICA: Si recibimos un 400, verificar si la transacción ya fue exitosa en Horizon
-      // Esto maneja el caso donde Trustless Work rechaza la transacción porque ya fue enviada
+      // Esto maneja el caso donde el servicio de escrow rechaza la transacción porque ya fue enviada
       if (sendError?.response?.status === 400 && txHash) {
         console.log('Error 400 recibido. Verificando si la transacción ya fue exitosa en Horizon...');
         try {
@@ -459,7 +459,7 @@ export const createAndSendTransaction = async (
       }
       
       // Intentar extraer mensaje de error más específico
-      let errorMessage = 'Error al enviar transacción a Trustless Work';
+      let errorMessage = 'Error al enviar transacción al servicio de escrow';
       let errorDetails: any = {};
       
       if (sendError?.response?.data) {
@@ -618,14 +618,14 @@ const getErrorRecommendations = (error: any, context: any): string => {
   if (isNormalizeError(error)) {
     const timeSinceCreation = context.timeSinceCreation || 'N/A';
     return `
-BUG CONOCIDO DEL SERVIDOR DE TRUSTLESS WORK
+BUG CONOCIDO DEL SERVIDOR DE ESCROW
 
 Este error ocurre cuando el servidor intenta normalizar el trustline pero algo está undefined.
 
 SOLUCIONES:
 1. Espera 20-30 minutos desde la creación del escrow (actualmente: ${timeSinceCreation})
 2. El sistema reintentará automáticamente cada 2 minutos
-3. Si persiste después de 30 minutos, contacta al soporte de Trustless Work
+3. Si persiste después de 30 minutos, contacta al soporte de ArcusX
 
 Contract ID: ${context.contractId || 'N/A'}
 Timestamp: ${new Date().toISOString()}
@@ -659,7 +659,7 @@ const handleCreateError = (error: any): EscrowResult => {
 // ============================================================================
 
 /**
- * Crear escrow con Trustless Work
+ * Crear escrow (API externa)
  * Basado en documentación MCP: deploy_single_release_escrow.json
  */
 export const createTrustlessEscrow = async (
@@ -733,7 +733,7 @@ export const createTrustlessEscrow = async (
     
     return {
       success: false,
-      error: 'No se pudo obtener el contractId. Verifica la respuesta de Trustless Work.'
+      error: 'No se pudo obtener el contractId. Verifica la respuesta del servicio de escrow.'
     };
     
   } catch (error: any) {
@@ -742,7 +742,7 @@ export const createTrustlessEscrow = async (
 };
 
 /**
- * Fondear escrow con Trustless Work
+ * Fondear escrow (API externa)
  * Basado en documentación MCP: fund_escrow.json
  */
 export const fundTrustlessEscrow = async (
@@ -1370,7 +1370,7 @@ export const resolveDisputeTrustlessEscrow = async (
     };
 
     console.log('Enviando payload a resolveDispute:', JSON.stringify(payload, null, 2));
-    console.log('Llamando a resolveDispute API de Trustless Work...');
+    console.log('Llamando a resolveDispute (API de escrow)...');
     
     const response = await resolveDispute(payload, 'single-release');
     
@@ -1391,7 +1391,7 @@ export const resolveDisputeTrustlessEscrow = async (
     // NO usar createAndSendTransaction porque puede intentar firmar múltiples veces
     const signedXdr = await signWithFreighter(response.unsignedTransaction, kit, disputeResolver);
     
-    console.log('Transacción firmada. Enviando directamente a Trustless Work...');
+    console.log('Transacción firmada. Enviando directamente al servicio de escrow...');
     
     // Extraer txHash antes de enviar
     let txHash: string | undefined;
@@ -1404,11 +1404,11 @@ export const resolveDisputeTrustlessEscrow = async (
       console.warn('No se pudo extraer txHash:', hashError.message);
     }
     
-    // Enviar transacción firmada DIRECTAMENTE a Trustless Work
+    // Enviar transacción firmada DIRECTAMENTE al servicio de escrow
     try {
       const response_send = await sendTransaction(signedXdr);
       
-      console.log('Respuesta completa de Trustless Work:', response_send);
+      console.log('Respuesta completa del servicio de escrow:', response_send);
 
       if (response_send.status === 'SUCCESS') {
         console.log('Resolución de disputa procesada exitosamente');
@@ -1458,7 +1458,7 @@ export const resolveDisputeTrustlessEscrow = async (
       }
     } catch (sendError: any) {
       // Capturar errores específicos del envío
-      console.error('Error al enviar transacción a Trustless Work:');
+      console.error('Error al enviar transacción al servicio de escrow:');
       console.error('   Tipo de error:', sendError.constructor.name);
       console.error('   Mensaje:', sendError.message);
       console.error('   Response data:', sendError.response?.data);
@@ -1967,7 +1967,7 @@ export const cancelTaskTrustlessEscrow = async (
  * Firmar y enviar transacción de reembolso
  * Esta función se llama después de que el cliente firma la transacción
  * 
- * IMPORTANTE: Esta función solo firma UNA vez y envía directamente a Trustless Work
+ * IMPORTANTE: Esta función solo firma UNA vez y envía directamente al servicio de escrow
  * NO usa createAndSendTransaction porque esa función también intenta firmar
  */
 export const signAndSendRefundTransaction = async (
@@ -1983,14 +1983,14 @@ export const signAndSendRefundTransaction = async (
     // Firmar transacción UNA SOLA VEZ
     const signedXdr = await signWithFreighter(unsignedXdr, kit, clientAddress);
     
-    console.log('Transacción firmada. Enviando directamente a Trustless Work...');
+    console.log('Transacción firmada. Enviando directamente al servicio de escrow...');
     
-    // Enviar transacción firmada DIRECTAMENTE a Trustless Work
+    // Enviar transacción firmada DIRECTAMENTE al servicio de escrow
     // NO usar createAndSendTransaction porque intentaría firmar nuevamente
     try {
       const response = await sendTransaction(signedXdr);
       
-      console.log('Respuesta completa de Trustless Work:', response);
+      console.log('Respuesta completa del servicio de escrow:', response);
 
       if (response.status === 'SUCCESS') {
         // Extraer txHash de la transacción firmada
@@ -2015,7 +2015,7 @@ export const signAndSendRefundTransaction = async (
       }
     } catch (sendError: any) {
       // Capturar errores específicos del envío
-      console.error('Error al enviar transacción a Trustless Work:');
+      console.error('Error al enviar transacción al servicio de escrow:');
       console.error('   Tipo de error:', sendError.constructor.name);
       console.error('   Mensaje:', sendError.message);
       console.error('   Response data:', sendError.response?.data);
