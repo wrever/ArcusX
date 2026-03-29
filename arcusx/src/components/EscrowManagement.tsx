@@ -670,7 +670,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
                         {getStatusBadge(escrow.escrow_status)}
                         {escrow.hasInconsistency && (
                           <div className="text-muted" style={{ fontSize: '0.75em', marginTop: '2px', color: '#ff9800' }}>
-                             BD: {escrow.db_escrow_status} → TW: {escrow.trustlessWorkStatus || escrow.escrow_status}
+                             BD: {escrow.db_escrow_status} → On-chain: {escrow.trustlessWorkStatus || escrow.escrow_status}
                           </div>
                         )}
                         {escrow.trustlessWorkBalance !== undefined && (

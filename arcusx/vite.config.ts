@@ -347,6 +347,7 @@ export default defineConfig({
     },
   },
   server: {
+    allowedHosts: ['arcusx.local', 'empresas.arcusx.local'],
     fs: {
       allow: ['..']
     }

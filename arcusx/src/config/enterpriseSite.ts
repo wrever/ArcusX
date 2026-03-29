@@ -32,7 +32,8 @@ export function isEnterpriseLandingHost(): boolean {
 }
 
 /**
- * Destino del botón principal (login / entrada al producto en el subdominio o URL fija).
+ * Login / app en el host empresas (o URL fija con `VITE_ENTERPRISE_APP_URL`).
+ * Desde el sitio público, el hero B2B enlaza primero a {@link PORTAL_ENTERPRISE_URL}.
  */
 export function getEnterprisePortalUrl(): string {
   const fromEnv = (import.meta.env.VITE_ENTERPRISE_APP_URL as string | undefined)?.trim();

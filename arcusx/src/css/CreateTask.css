@@ -135,6 +135,20 @@
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* Variante integrada para usar dentro del dashboard */
+.create-task-container.create-task-container--embedded {
+  min-height: auto;
+  padding: 0;
+  align-items: stretch;
+  background: transparent;
+}
+
+.create-task-container.create-task-container--embedded .create-task-form-card {
+  margin-top: 0;
+  max-width: none;
+  width: 100%;
+}
+
 .back-button {
   position: absolute;
   top: 1rem;
@@ -525,10 +539,22 @@
 
 .form-group input[type="text"],
 .form-group input[type="number"],
-.form-group textarea,
-.form-group select {
+.form-group textarea {
   width: 100%;
   padding: 1rem 1.25rem;
+  border: 2px solid var(--input-border);
+  border-radius: 12px;
+  background: var(--input-background);
+  color: var(--text-primary) !important;
+  font-size: 1rem;
+  transition: var(--transition);
+  appearance: none;
+}
+
+/* Solo los <select>: chevron único (antes el mismo background en inputs repetía/rompía el aspecto) */
+.form-group select {
+  width: 100%;
+  padding: 1rem 2.5rem 1rem 1.25rem;
   border: 2px solid var(--input-border);
   border-radius: 12px;
   background: var(--input-background);
@@ -540,17 +566,25 @@
   background-repeat: no-repeat;
   background-position: right 1rem center;
   background-size: 16px;
-  padding-right: 2.5rem;
 }
 
-/* Fondo blanco siempre en modo claro para todos los inputs */
+/* Fondo blanco en modo claro (select: no usar shorthand background o se pierde el chevron) */
 :root[data-theme="light"] .form-group input[type="text"],
 :root[data-theme="light"] .form-group input[type="number"],
-:root[data-theme="light"] .form-group textarea,
-:root[data-theme="light"] .form-group select {
+:root[data-theme="light"] .form-group textarea {
   background: #ffffff !important;
   color: var(--text-primary) !important;
   border-color: rgba(100, 116, 139, 0.25) !important;
+}
+
+:root[data-theme="light"] .form-group select {
+  background-color: #ffffff !important;
+  color: var(--text-primary) !important;
+  border-color: rgba(100, 116, 139, 0.25) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2310dd88' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 16px;
 }
 
 .form-group select {
@@ -571,11 +605,20 @@
 /* Mantener fondo blanco en focus en modo claro */
 :root[data-theme="light"] .form-group input[type="text"]:focus,
 :root[data-theme="light"] .form-group input[type="number"]:focus,
-:root[data-theme="light"] .form-group textarea:focus,
-:root[data-theme="light"] .form-group select:focus {
+:root[data-theme="light"] .form-group textarea:focus {
   background: #ffffff !important;
   border-color: var(--primary-blue) !important;
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2) !important;
+}
+
+:root[data-theme="light"] .form-group select:focus {
+  background-color: #ffffff !important;
+  border-color: var(--primary-blue) !important;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2310dd88' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 16px;
 }
 
 /* Estilos para las opciones del select */

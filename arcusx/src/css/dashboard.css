@@ -3252,12 +3252,20 @@ input[type="search"]::placeholder {
 }
 
 .proposal-count {
-  font-size: 0.95rem;
+  margin-top: 0.9rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid rgba(16, 221, 136, 0.3);
+  background: rgba(16, 221, 136, 0.08);
+  font-size: 0.92rem;
   color: var(--primary-blue);
   font-weight: 700;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  line-height: 1.2;
 }
 
 /* Estilos para el botón de crear tarea en esta sección */
@@ -3413,9 +3421,9 @@ input[type="search"]::placeholder {
   }
 
   .proposal-count {
-    font-size: 0.9rem;
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
+    font-size: 0.88rem;
+    min-height: 40px;
+    padding: 0.55rem 0.7rem;
   }
 
   .task-actions {
@@ -3467,9 +3475,9 @@ input[type="search"]::placeholder {
   }
 
   .proposal-count {
-    font-size: 0.85rem;
-    margin-top: 0.5rem;
-    padding-top: 0.5rem;
+    font-size: 0.82rem;
+    min-height: 38px;
+    padding: 0.5rem 0.6rem;
   }
 
   .task-actions {

@@ -1436,7 +1436,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                       {dispute.trustlessWorkStatus && (
                         <div className="text-muted" style={{ fontSize: '0.85em', marginTop: '4px' }}>
                           <small>
-                             TW: <strong>{dispute.trustlessWorkStatus}</strong>
+                             On-chain: <strong>{dispute.trustlessWorkStatus}</strong>
                             {dispute.trustlessWorkBalance !== undefined && (
                               <> | {dispute.trustlessWorkBalance.toFixed(7)} USDC</>
                             )}
