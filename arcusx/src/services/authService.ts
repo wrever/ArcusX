@@ -99,12 +99,7 @@ export const authService = {
       throw new Error('Login con Google no está configurado. Configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.');
     }
     try {
-      // Detectar si estamos en desarrollo o producción
-      const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      const redirectUrl = isDevelopment 
-        ? `${window.location.origin}/auth/callback`
-        : 'https://arcusx.pro/auth/callback';
-      
+      const redirectUrl = `${window.location.origin}/auth/callback`;
       
       // Usar skipBrowserRedirect para interceptar la URL
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -119,23 +114,8 @@ export const authService = {
         throw error;
       }
       
-      // Interceptar y corregir la URL antes de redirigir
       if (data?.url) {
-        let finalUrl = data.url;
-        
-        // Reemplazar cualquier referencia a localhost con arcusx.pro
-        finalUrl = finalUrl.replace(/http:\/\/localhost:\d+/g, 'https://arcusx.pro');
-        finalUrl = finalUrl.replace(/https?:\/\/localhost:\d+/g, 'https://arcusx.pro');
-        
-        // Asegurar que el redirect_uri en los query params también sea correcto
-        const urlObj = new URL(finalUrl);
-        const redirectUri = urlObj.searchParams.get('redirect_uri');
-        if (redirectUri && redirectUri.includes('localhost')) {
-          urlObj.searchParams.set('redirect_uri', redirectUrl);
-          finalUrl = urlObj.toString();
-        }
-        
-        window.location.href = finalUrl;
+        window.location.href = data.url;
       }
       
       return data;
@@ -149,12 +129,7 @@ export const authService = {
       throw new Error('Login con GitHub no está configurado. Configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.');
     }
     try {
-      // Detectar si estamos en desarrollo o producción
-      const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      const redirectUrl = isDevelopment 
-        ? `${window.location.origin}/auth/callback`
-        : 'https://arcusx.pro/auth/callback';
-      
+      const redirectUrl = `${window.location.origin}/auth/callback`;
       
       // Usar skipBrowserRedirect para interceptar la URL
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -169,26 +144,8 @@ export const authService = {
         throw error;
       }
       
-      // Interceptar y corregir la URL antes de redirigir
       if (data?.url) {
-        let finalUrl = data.url;
-        
-        // Solo corregir si estamos en producción
-        if (!isDevelopment) {
-          // Reemplazar cualquier referencia a localhost con arcusx.pro
-          finalUrl = finalUrl.replace(/http:\/\/localhost:\d+/g, 'https://arcusx.pro');
-          finalUrl = finalUrl.replace(/https?:\/\/localhost:\d+/g, 'https://arcusx.pro');
-          
-          // Asegurar que el redirect_uri en los query params también sea correcto
-          const urlObj = new URL(finalUrl);
-          const redirectUri = urlObj.searchParams.get('redirect_uri');
-          if (redirectUri && redirectUri.includes('localhost')) {
-            urlObj.searchParams.set('redirect_uri', redirectUrl);
-            finalUrl = urlObj.toString();
-          }
-        }
-        
-        window.location.href = finalUrl;
+        window.location.href = data.url;
       }
       
       return data;

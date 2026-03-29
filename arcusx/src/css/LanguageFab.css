@@ -88,6 +88,12 @@
   z-index: 9998;
 }
 
+/* Landing Empresas (subdominio o /empresas): idioma alineado a la izquierda del viewport */
+.lang-select--fab.lang-select--fab--enterprise-left {
+  left: 18px;
+  right: auto;
+}
+
 .lang-select--fab .lang-select-trigger {
   padding: 12px 14px;
   border-radius: 999px;

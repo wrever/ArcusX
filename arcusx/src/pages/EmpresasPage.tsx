@@ -1,8 +1,17 @@
-import type { ReactNode } from "react";
+import { useLayoutEffect, type ReactNode } from "react";
 import { Helmet } from "react-helmet-async";
 import { useI18n } from "../i18n/I18nProvider";
-import { getEnterprisePortalUrl, MAIN_SITE_URL, isEnterpriseLandingHost } from "../config/enterpriseSite";
+import {
+  getEnterprisePortalUrl,
+  MAIN_SITE_URL,
+  PORTAL_ENTERPRISE_URL,
+  isEnterpriseLandingHost,
+} from "../config/enterpriseSite";
+import stellarPartnerLogo from "../images/stellar.png";
+import soroswapPartnerLogo from "../images/soroswap.png";
+import trustlessPartnerLogo from "../images/trustless.png";
 import "../css/EmpresasPage.css";
+import "../css/EmpresasPage.subdomain.css";
 
 function IconSupply() {
   return (
@@ -72,16 +81,74 @@ function IconPillar({ children }: { children: ReactNode }) {
 export default function EmpresasPage() {
   const { t } = useI18n();
   const year = new Date().getFullYear();
-  const portalUrl = getEnterprisePortalUrl();
   const onEnterpriseHost = isEnterpriseLandingHost();
+  /** En el sitio público, el CTA lleva primero al landing B2B (subdominio); ya en empresas.*, al login. */
+  const enterprisePrimaryHref = onEnterpriseHost
+    ? getEnterprisePortalUrl()
+    : PORTAL_ENTERPRISE_URL;
   const mainPrivacy = `${MAIN_SITE_URL}/privacy`;
   const mainTerms = `${MAIN_SITE_URL}/terms`;
 
+  useLayoutEffect(() => {
+    if (!onEnterpriseHost || typeof window === "undefined") return;
+    const nodes = [...document.querySelectorAll<HTMLElement>(".ax-empresas--subdomain [data-sub-reveal]")];
+    if (!nodes.length) return;
+
+    const reveal = (el: HTMLElement) => {
+      el.classList.add("ax-empresas__sub-reveal--in");
+    };
+
+    if (!("IntersectionObserver" in window)) {
+      nodes.forEach(reveal);
+      return;
+    }
+
+    nodes.forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.top < window.innerHeight * 0.92 && r.bottom > -24) reveal(el);
+    });
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            reveal(entry.target as HTMLElement);
+            io.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.08, rootMargin: "0px 0px -7% 0px" }
+    );
+
+    nodes.forEach((el) => {
+      if (!el.classList.contains("ax-empresas__sub-reveal--in")) io.observe(el);
+    });
+
+    return () => io.disconnect();
+  }, [onEnterpriseHost]);
+
+  const subReveal = onEnterpriseHost ? ({ "data-sub-reveal": "" } as const) : {};
+
   return (
     <div className={`ax-empresas ${onEnterpriseHost ? "ax-empresas--subdomain" : ""}`}>
+      {onEnterpriseHost && (
+        <noscript>
+          <style>
+            {
+              ".ax-empresas--subdomain [data-sub-reveal]{opacity:1!important;transform:none!important;transition:none!important}"
+            }
+          </style>
+        </noscript>
+      )}
       <div className="ax-empresas__bg" aria-hidden />
       <div className="ax-empresas__bg-accent" aria-hidden />
       <div className="ax-empresas__grid-bg" aria-hidden />
+      {onEnterpriseHost && (
+        <>
+          <div className="ax-empresas__aurora" aria-hidden />
+          <div className="ax-empresas__grain" aria-hidden />
+        </>
+      )}
 
       <Helmet>
         <title>{t("empresa.meta.title")}</title>
@@ -98,8 +165,12 @@ export default function EmpresasPage() {
 
       <div className="ax-empresas__shell">
         <section className="ax-empresas__hero" aria-labelledby="empresa-hero-title">
-          <div className="ax-empresas__hero-grid">
-            <div className="ax-empresas__hero-copy">
+          <div
+            className={`ax-empresas__hero-grid${onEnterpriseHost ? " ax-empresas__hero-grid--enterprise-landing" : ""}`}
+          >
+            <div
+              className={`ax-empresas__hero-copy${onEnterpriseHost ? " ax-empresas__hero-copy--subdomain-centered" : ""}`}
+            >
               <span className="ax-empresas__eyebrow">{t("empresa.hero.pill")}</span>
               <h1 id="empresa-hero-title" className="ax-empresas__title">
                 {t("empresa.hero.title")}
@@ -107,7 +178,11 @@ export default function EmpresasPage() {
               <p className="ax-empresas__lead">{t("empresa.hero.subtitle")}</p>
 
               <div className="ax-empresas__hero-actions">
-                <a href={portalUrl} className="ax-empresas__btn ax-empresas__btn--primary" rel="noopener noreferrer">
+                <a
+                  href={enterprisePrimaryHref}
+                  className="ax-empresas__btn ax-empresas__btn--primary"
+                  rel="noopener noreferrer"
+                >
                   {t("empresa.hero.access")}
                 </a>
                 <a href="#empresa-how" className="ax-empresas__btn ax-empresas__btn--ghost">
@@ -141,32 +216,129 @@ export default function EmpresasPage() {
               </div>
             </div>
 
+            {onEnterpriseHost && (
+              <div
+                className="ax-empresas__hero-powered ax-empresas__hero-powered--page"
+                role="region"
+                aria-labelledby="empresa-powered-label"
+              >
+                <p id="empresa-powered-label" className="ax-empresas__hero-powered-label">
+                  {t("empresa.partners.powered_by")}
+                </p>
+                <ul className="ax-empresas__hero-powered-logos">
+                  <li className="ax-empresas__hero-powered-item ax-empresas__hero-powered-item--left">
+                    <a
+                      href="https://soroswap.finance/"
+                      className="ax-empresas__hero-powered-link"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <img
+                        src={soroswapPartnerLogo}
+                        alt={t("empresa.partners.soroswap.alt")}
+                        className="ax-empresas__hero-powered-img"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    </a>
+                  </li>
+                  <li className="ax-empresas__hero-powered-item ax-empresas__hero-powered-item--center">
+                    <a
+                      href="https://stellar.org"
+                      className="ax-empresas__hero-powered-link"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <img
+                        src={stellarPartnerLogo}
+                        alt={t("empresa.partners.stellar.alt")}
+                        className="ax-empresas__hero-powered-img ax-empresas__hero-powered-img--stellar"
+                        width={200}
+                        height={52}
+                        loading="eager"
+                        fetchPriority="high"
+                        decoding="async"
+                      />
+                    </a>
+                  </li>
+                  <li className="ax-empresas__hero-powered-item ax-empresas__hero-powered-item--right">
+                    <a
+                      href="https://www.trustlesswork.com/"
+                      className="ax-empresas__hero-powered-link"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <img
+                        src={trustlessPartnerLogo}
+                        alt={t("empresa.partners.trustless.alt")}
+                        className="ax-empresas__hero-powered-img"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            )}
+
+            {onEnterpriseHost && <div className="ax-empresas__hero-section-split" aria-hidden />}
+
             <div className="ax-empresas__hero-visual">
-              <div className="ax-empresas__board ax-empresas__board--elevated">
-                <div className="ax-empresas__board-headbar">
-                  <span className="ax-empresas__board-title">{t("empresa.board.title")}</span>
-                  <span className="ax-empresas__board-pill">USDC</span>
-                </div>
-                <div className="ax-empresas__board-table" role="presentation">
-                  <div className="ax-empresas__board-row ax-empresas__board-row--th">
-                    <span>{t("empresa.board.th.task")}</span>
-                    <span>{t("empresa.board.th.status")}</span>
+              <div
+                className="ax-empresas__board-block"
+                aria-labelledby={
+                  onEnterpriseHost ? "empresa-board-preview-title" : "empresa-board-main-heading"
+                }
+              >
+                {onEnterpriseHost && (
+                  <div className="ax-empresas__board-intro">
+                    <h3 id="empresa-board-preview-title" className="ax-empresas__board-intro-title">
+                      {t("empresa.board.context_title")}
+                    </h3>
+                    <p className="ax-empresas__board-intro-body">{t("empresa.board.context_body")}</p>
                   </div>
-                  <div className="ax-empresas__board-row">
-                    <span className="ax-empresas__board-cell-main">{t("empresa.board.r1.task")}</span>
-                    <span className="ax-empresas__board-tag ax-empresas__board-tag--active">
-                      {t("empresa.board.r1.state")}
+                )}
+                <div className="ax-empresas__board ax-empresas__board--elevated">
+                  <div className="ax-empresas__board-headbar">
+                    <span
+                      id={onEnterpriseHost ? undefined : "empresa-board-main-heading"}
+                      className="ax-empresas__board-title"
+                    >
+                      {t("empresa.board.title")}
                     </span>
+                    <span className="ax-empresas__board-pill">{t("empresa.board.pill_count")}</span>
                   </div>
-                  <div className="ax-empresas__board-row">
-                    <span className="ax-empresas__board-cell-main">{t("empresa.board.r2.task")}</span>
-                    <span className="ax-empresas__board-tag">{t("empresa.board.r2.state")}</span>
-                  </div>
-                  <div className="ax-empresas__board-row">
-                    <span className="ax-empresas__board-cell-main">{t("empresa.board.r3.task")}</span>
-                    <span className="ax-empresas__board-tag ax-empresas__board-tag--wait">
-                      {t("empresa.board.r3.state")}
-                    </span>
+                  <div className="ax-empresas__board-table-wrap">
+                    <div className="ax-empresas__board-table ax-empresas__board-table--rich" role="presentation">
+                      <div className="ax-empresas__board-row ax-empresas__board-row--th ax-empresas__board-row--cols4">
+                        <span>{t("empresa.board.th.task")}</span>
+                        <span>{t("empresa.board.th.contractor")}</span>
+                        <span>{t("empresa.board.th.amount")}</span>
+                        <span>{t("empresa.board.th.status")}</span>
+                      </div>
+                      <div className="ax-empresas__board-row ax-empresas__board-row--cols4">
+                        <span className="ax-empresas__board-cell-main">{t("empresa.board.r1.task")}</span>
+                        <span className="ax-empresas__board-cell-muted">{t("empresa.board.r1.contractor")}</span>
+                        <span className="ax-empresas__board-cell-numeric">{t("empresa.board.r1.amount")}</span>
+                        <span className="ax-empresas__board-tag ax-empresas__board-tag--active">
+                          {t("empresa.board.r1.state")}
+                        </span>
+                      </div>
+                      <div className="ax-empresas__board-row ax-empresas__board-row--cols4">
+                        <span className="ax-empresas__board-cell-main">{t("empresa.board.r2.task")}</span>
+                        <span className="ax-empresas__board-cell-muted">{t("empresa.board.r2.contractor")}</span>
+                        <span className="ax-empresas__board-cell-numeric">{t("empresa.board.r2.amount")}</span>
+                        <span className="ax-empresas__board-tag">{t("empresa.board.r2.state")}</span>
+                      </div>
+                      <div className="ax-empresas__board-row ax-empresas__board-row--cols4">
+                        <span className="ax-empresas__board-cell-main">{t("empresa.board.r3.task")}</span>
+                        <span className="ax-empresas__board-cell-muted">{t("empresa.board.r3.contractor")}</span>
+                        <span className="ax-empresas__board-cell-numeric">{t("empresa.board.r3.amount")}</span>
+                        <span className="ax-empresas__board-tag ax-empresas__board-tag--wait">
+                          {t("empresa.board.r3.state")}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -176,11 +348,18 @@ export default function EmpresasPage() {
 
         <hr className="ax-empresas__divider" aria-hidden />
 
-        <section className="ax-empresas__section ax-empresas__section--pillars" aria-labelledby="empresa-pillars-title">
+        <section
+          className="ax-empresas__section ax-empresas__section--pillars"
+          aria-labelledby="empresa-pillars-title"
+          {...subReveal}
+        >
           <div className="ax-empresas__section-head">
             <h2 id="empresa-pillars-title" className="ax-empresas__section-title">
               {t("empresa.section.pillars.title")}
             </h2>
+            {onEnterpriseHost && (
+              <p className="ax-empresas__section-sub">{t("empresa.section.pillars.sub")}</p>
+            )}
           </div>
           <ul className="ax-empresas__pillars">
             <li className="ax-empresas__pillar">
@@ -229,7 +408,7 @@ export default function EmpresasPage() {
           </ul>
         </section>
 
-        <section className="ax-empresas__section" aria-labelledby="emp-usecases">
+        <section className="ax-empresas__section" aria-labelledby="emp-usecases" {...subReveal}>
           <div className="ax-empresas__section-head">
             <h2 id="emp-usecases" className="ax-empresas__section-title">
               {t("empresa.section.usecases.title")}
@@ -259,7 +438,7 @@ export default function EmpresasPage() {
           </ul>
         </section>
 
-        <section className="ax-empresas__section" id="empresa-how" aria-labelledby="emp-how">
+        <section className="ax-empresas__section" id="empresa-how" aria-labelledby="emp-how" {...subReveal}>
           <div className="ax-empresas__section-head">
             <h2 id="emp-how" className="ax-empresas__section-title">
               {t("empresa.section.how.title")}
@@ -296,21 +475,29 @@ export default function EmpresasPage() {
           </ol>
         </section>
 
-        <section className="ax-empresas__section ax-empresas__section--security" aria-labelledby="emp-sec">
+        <section
+          className="ax-empresas__section ax-empresas__section--security"
+          aria-labelledby="emp-sec"
+          {...subReveal}
+        >
           <h2 id="emp-sec" className="ax-empresas__section-title ax-empresas__section-title--inset">
             {t("empresa.section.security.title")}
           </h2>
           <p className="ax-empresas__security-body">{t("empresa.security.body")}</p>
         </section>
 
-        <section className="ax-empresas__final" aria-labelledby="emp-cta">
+        <section className="ax-empresas__final" aria-labelledby="emp-cta" {...subReveal}>
           <h2 id="emp-cta" className="ax-empresas__final-title">
             {t("empresa.final.title")}
           </h2>
           <p className="ax-empresas__final-lead">{t("empresa.final.lead")}</p>
 
           <div className="ax-empresas__cta">
-            <a href={portalUrl} className="ax-empresas__btn ax-empresas__btn--primary" rel="noopener noreferrer">
+            <a
+              href={enterprisePrimaryHref}
+              className="ax-empresas__btn ax-empresas__btn--primary"
+              rel="noopener noreferrer"
+            >
               {t("empresa.cta.primary")}
             </a>
             <a href={MAIN_SITE_URL} className="ax-empresas__btn ax-empresas__btn--ghost">

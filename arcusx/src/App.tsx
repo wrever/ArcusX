@@ -17,6 +17,7 @@ import AdminRoute from './components/AdminRoute';
 import ProtectedRoute from './components/ProtectedRoute';
 import UserProfile from './components/UserProfile';
 import './App.css';
+import './css/enterprise-professional.css';
 
 // Code splitting - Lazy load de componentes pesados
 const Dashboard = lazy(() => import('./dashboard'));
@@ -65,6 +66,10 @@ function AppContent({ isLoading }: { isLoading: boolean }) {
   // Normalizar path (en cPanel a veces la URL puede ser /index.html o con trailing slash)
   const path = location.pathname.replace(/\/index\.html$/i, '').replace(/\/$/, '') || '/';
   const isRoot = path === '/' || path === '';
+  /** FAB idioma a la izquierda solo en landing empresas.* (/) y login/registro ahí. En /empresas del sitio público va posición por defecto (hueco para tema). */
+  const isEnterpriseLangFabLeft =
+    (isEnterpriseLandingHost() && isRoot) ||
+    (isEnterpriseLandingHost() && (path === '/login' || path === '/register'));
   // Páginas donde va el FAB de idioma/tema (flotante). Robusto para cPanel: considerar raíz cualquier path vacío o "/"
   const isPublicLanding =
     isRoot ||
@@ -80,8 +85,11 @@ function AppContent({ isLoading }: { isLoading: boolean }) {
 
   return (
     <>
-      <LanguageFab visible={showFloatingButtons} />
-      <ThemeToggle visible={showFloatingButtons} />
+      <LanguageFab
+        visible={showFloatingButtons}
+        fabAlign={isEnterpriseLangFabLeft ? 'enterprise-left' : 'default'}
+      />
+      <ThemeToggle visible={showFloatingButtons && !isEnterpriseLandingHost()} />
       {/* Botón flotante de soporte - visible solo en la página principal */}
       {showSupportButton && (
         <Suspense fallback={null}>

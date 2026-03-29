@@ -15,9 +15,15 @@ type Props = {
   visible?: boolean;
   /** 'fab' = floating button (fixed position), 'inline' = for header/toolbar */
   variant?: 'fab' | 'inline';
+  /** Solo landing B2B: FAB pegado a la izquierda (el sitio general mantiene la posición por defecto) */
+  fabAlign?: 'default' | 'enterprise-left';
 };
 
-export default function LanguageFab({ visible = true, variant = 'fab' }: Props) {
+export default function LanguageFab({
+  visible = true,
+  variant = 'fab',
+  fabAlign = 'default',
+}: Props) {
   const { lang, setLang, t } = useI18n();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -44,7 +50,7 @@ export default function LanguageFab({ visible = true, variant = 'fab' }: Props) 
   return (
     <div
       ref={containerRef}
-      className={`lang-select lang-select--${variant}`}
+      className={`lang-select lang-select--${variant}${fabAlign === 'enterprise-left' && variant === 'fab' ? ' lang-select--fab--enterprise-left' : ''}`}
       role="combobox"
       aria-expanded={open}
       aria-haspopup="listbox"

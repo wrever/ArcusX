@@ -5,12 +5,14 @@
 
 .login-container.login-container--enterprise {
   min-height: 100vh;
-  padding: 6.5rem 1.5rem 2rem;
+  padding: 6.5rem 1.5rem max(2rem, env(safe-area-inset-bottom, 0px));
+  padding-left: max(1rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1rem, env(safe-area-inset-right, 0px));
   align-items: flex-start;
   background: linear-gradient(165deg, #f8fafc 0%, #e8eef5 45%, #f1f5f9 100%);
   background-image:
-    radial-gradient(ellipse 90% 50% at 100% -10%, rgba(30, 64, 175, 0.07), transparent 55%),
-    radial-gradient(ellipse 70% 40% at 0% 100%, rgba(16, 185, 129, 0.05), transparent 50%);
+    radial-gradient(ellipse 90% 50% at 100% -10%, rgba(30, 64, 175, 0.08), transparent 55%),
+    radial-gradient(ellipse 70% 40% at 0% 100%, rgba(15, 106, 180, 0.06), transparent 50%);
 }
 
 .login-container.login-container--enterprise::before {
@@ -28,7 +30,7 @@
 
 .login-container.login-container--enterprise .login-card::before {
   height: 3px;
-  background: linear-gradient(90deg, #0f172a 0%, #1e293b 35%, #0d9488 100%);
+  background: linear-gradient(90deg, #0f6ab4, #0a4e86);
   box-shadow: none;
 }
 
@@ -50,11 +52,16 @@
   color: #475569;
 }
 
+/* Debajo del EmpresasNavbar fijo (72px), visible y por encima del fondo */
 .login-container.login-container--enterprise .back-button {
+  position: fixed;
+  top: calc(72px + 0.75rem);
+  left: 1.25rem;
+  z-index: 1001;
   color: #0f172a;
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(148, 163, 184, 0.45);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
 }
 
 .login-container.login-container--enterprise .back-button:hover {
@@ -62,26 +69,110 @@
   border-color: #94a3b8;
 }
 
-/* Modo oscuro en empresas: mismo layout, tonos más sobrios */
-:root[data-theme="dark"] .login-container.login-container--enterprise {
-  background: linear-gradient(165deg, #0a0a0a 0%, #0f172a 50%, #0c1016 100%);
-  background-image:
-    radial-gradient(ellipse 90% 50% at 100% -10%, rgba(59, 130, 246, 0.08), transparent 55%),
-    radial-gradient(ellipse 70% 40% at 0% 100%, rgba(16, 185, 129, 0.05), transparent 50%);
+.login-container.login-container--enterprise .back-button span,
+.login-container.login-container--enterprise .back-button svg {
+  color: #0f172a;
 }
 
-:root[data-theme="dark"] .login-container.login-container--enterprise .login-card {
-  background: rgba(15, 23, 42, 0.75);
-  border-color: rgba(148, 163, 184, 0.12);
+@media (max-width: 768px) {
+  .login-container.login-container--enterprise .back-button {
+    top: calc(72px + 0.5rem);
+    left: 1rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
 }
 
-:root[data-theme="dark"] .login-container.login-container--enterprise .login-header .login-logo,
-:root[data-theme="dark"] .login-container.login-container--enterprise .login-header h2 {
-  color: #f1f5f9;
+/* Card blanca: quitar “piel” oscura de Login.css (OAuth, divisor, inputs) */
+.login-container.login-container--enterprise .oauth-divider {
+  color: #64748b !important;
 }
 
-:root[data-theme="dark"] .login-container.login-container--enterprise .login-header p {
-  color: #94a3b8;
+.login-container.login-container--enterprise .oauth-divider::before,
+.login-container.login-container--enterprise .oauth-divider::after {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.45) !important;
+  box-shadow: none !important;
+}
+
+.login-container.login-container--enterprise .oauth-divider span {
+  background: #ffffff !important;
+  color: #64748b !important;
+  text-shadow: none !important;
+}
+
+.login-container.login-container--enterprise .oauth-button {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 2px solid rgba(148, 163, 184, 0.5) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06) !important;
+}
+
+.login-container.login-container--enterprise .oauth-button:hover:not(:disabled) {
+  border-color: #0f6ab4 !important;
+  background: #f8fafc !important;
+}
+
+/* Login.css fuerza fill:#fff en .oauth-google svg — sobre fondo blanco los iconos desaparecen */
+.login-container.login-container--enterprise .oauth-button svg,
+.login-container.login-container--enterprise .oauth-button .fa-google,
+.login-container.login-container--enterprise .oauth-button .fa-github {
+  color: #0f172a !important;
+  fill: currentColor !important;
+}
+
+.login-container.login-container--enterprise .oauth-google svg,
+.login-container.login-container--enterprise .oauth-github svg {
+  color: #0f172a !important;
+  fill: currentColor !important;
+}
+
+.login-container.login-container--enterprise .oauth-button svg path {
+  fill: currentColor !important;
+}
+
+.login-container.login-container--enterprise .oauth-button span {
+  color: #0f172a !important;
+}
+
+.login-container.login-container--enterprise .login-form .form-group input {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-color: rgba(148, 163, 184, 0.45) !important;
+}
+
+.login-container.login-container--enterprise .login-form .form-group input:focus {
+  border-color: #0f6ab4 !important;
+  box-shadow: 0 0 0 4px rgba(15, 106, 180, 0.12) !important;
+  background: #ffffff !important;
+}
+
+.login-container.login-container--enterprise .login-form .form-group input::placeholder {
+  color: #64748b !important;
+}
+
+.login-container.login-container--enterprise .login-form .form-group label h4 {
+  color: #334155 !important;
+}
+
+.login-container.login-container--enterprise .login-button {
+  color: #ffffff !important;
+  background: linear-gradient(90deg, #0f6ab4, #0a4e86) !important;
+  box-shadow: 0 4px 16px rgba(15, 106, 180, 0.35) !important;
+}
+
+.login-container.login-container--enterprise .login-button:hover:not(:disabled) {
+  filter: none !important;
+  color: #ffffff !important;
+  background: linear-gradient(90deg, #0a4e86, #072f52) !important;
+  box-shadow: 0 6px 22px rgba(15, 106, 180, 0.4) !important;
+}
+
+.login-container.login-container--enterprise .remember-me label {
+  color: #475569 !important;
+}
+
+.login-container.login-container--enterprise .login-footer p {
+  color: #64748b !important;
 }
 
 /* Badge opcional vía texto en logo — sin cambiar JSX */

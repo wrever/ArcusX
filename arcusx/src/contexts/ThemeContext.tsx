@@ -45,8 +45,12 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   // Aplicar tema al documento
   useEffect(() => {
     const root = document.documentElement;
-    root.setAttribute('data-theme', theme);
-    localStorage.setItem('arcusx-theme', theme);
+    const resolvedTheme = isEnterpriseLandingHost() ? 'light' : theme;
+    if (isEnterpriseLandingHost() && theme !== 'light') {
+      setThemeState('light');
+    }
+    root.setAttribute('data-theme', resolvedTheme);
+    localStorage.setItem('arcusx-theme', resolvedTheme);
   }, [theme]);
 
   const toggleTheme = () => {

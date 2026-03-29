@@ -77,7 +77,11 @@ export default function EmpresasNavbar() {
           >
             {t("nav.docs")}
           </a>
-          <a href={MAIN_SITE_URL} className="empresas-navbar__link empresas-navbar__link--muted" onClick={close}>
+          <a
+            href={MAIN_SITE_URL}
+            className="empresas-navbar__link empresas-navbar__link--pill-accent"
+            onClick={close}
+          >
             {t("empresa.nav.public_site")}
           </a>
           <Link to="/login" className="empresas-navbar__btn empresas-navbar__btn--ghost" onClick={close}>

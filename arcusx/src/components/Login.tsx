@@ -79,6 +79,12 @@ const Login = () => {
   if (isAuthenticated === null) {
     return (
       <div className={`login-container${enterprise ? ' login-container--enterprise' : ''}`}>
+        {enterprise && (
+          <Link to="/" className="back-button">
+            <FaArrowLeft />
+            <span>{t('login.back')}</span>
+          </Link>
+        )}
         <div className="login-card">
           <div className="login-header">
             <div className="login-logo">ArcusX</div>

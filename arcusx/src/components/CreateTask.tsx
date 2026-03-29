@@ -16,7 +16,11 @@ interface UserLimits {
   next_task_time: string;
 }
 
-const CreateTask = () => {
+interface CreateTaskProps {
+  embedded?: boolean;
+}
+
+const CreateTask = ({ embedded = false }: CreateTaskProps) => {
   const navigate = useNavigate();
   const { t } = useI18n();
   const [formData, setFormData] = useState({
@@ -175,7 +179,6 @@ const CreateTask = () => {
   // Función para manejar el botón del popup
   const handlePopupButton = () => {
     if (popupType === 'success') {
-      // Redirigir al dashboard si es éxito
       navigate('/dashboard');
     } else {
       // Solo cerrar el popup si es error
@@ -277,11 +280,13 @@ const CreateTask = () => {
   };
 
   return (
-    <div className="create-task-container">
-      <Link to="/dashboard" className="back-button">
-        <FaArrowLeft />
-        <span>{t('create.back')}</span>
-      </Link>
+    <div className={`create-task-container ${embedded ? 'create-task-container--embedded' : ''}`}>
+      {!embedded && (
+        <Link to="/dashboard" className="back-button">
+          <FaArrowLeft />
+          <span>{t('create.back')}</span>
+        </Link>
+      )}
 
       <div className="create-task-form-card">
         <h2>{t('create.title')}</h2>

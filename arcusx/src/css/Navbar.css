@@ -230,6 +230,7 @@
 .nav-link--external {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.3rem;
 }
 
@@ -467,6 +468,10 @@ button.nav-button.register:hover {
     opacity: 1;
     pointer-events: auto;
     justify-content: flex-start;
+    /* Fondo opaco: el vidrio (--bg-glass) deja ver el contenido detrás y los enlaces se pierden */
+    background: var(--bg-primary);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
   .navbar-links.open .navbar-links__section--nav {

@@ -268,7 +268,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
             <p><strong>{t('escrow.task.worker')}:</strong> {contributorName}</p>
             <p><strong>{t('escrow.task.address')}:</strong> {contributorAddress.slice(0, 6)}...{contributorAddress.slice(-4)}</p>
             <p><strong>{t('escrow.task.amount')}:</strong> {taskPrice} USDC</p>
-            <p style={{ color: '#ffa500', marginTop: '0.5rem' }}>
+            <p className="escrow-task-xlm-note">
               <strong>{t('escrow.task.xlm.note')}</strong>
             </p>
           </div>
@@ -365,97 +365,28 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
           <p><strong>{t('common.nota')}</strong> {t('escrow.popup.note.twoTx')}</p>
           <p>1. {t('escrow.popup.step1.create')}</p>
           <p>2. {t('escrow.popup.step2.fund')}</p>
-          <div style={{ 
-            marginTop: '0.5rem', 
-            padding: '16px', 
-            background: 'linear-gradient(135deg, rgba(40, 192, 240, 0.1) 0%, rgba(17, 128, 179, 0.1) 100%)',
-            borderRadius: '12px', 
-            border: '1px solid rgba(40, 192, 240, 0.3)'
-          }}>
-            <p style={{ 
-              fontWeight: 'bold', 
-              marginBottom: '12px',
-              color: '#10dd88',
-              fontSize: '15px'
-            }}>
-               {t('escrow.popup.breakdown')}
-            </p>
-            <div style={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              gap: '8px',
-              marginBottom: '12px'
-            }}>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '8px 0',
-                borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
-              }}>
-                <span style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.8)' }}>
-                  {t('escrow.popup.workerPayment')}
-                </span>
-                <strong style={{ fontSize: '14px', color: '#fff' }}>
-                  {formattedWorkerAmount} USDC
-                </strong>
+          <div className="escrow-breakdown-box">
+            <p className="escrow-breakdown-title">{t('escrow.popup.breakdown')}</p>
+            <div className="escrow-breakdown-rows">
+              <div className="escrow-breakdown-row">
+                <span>{t('escrow.popup.workerPayment')}</span>
+                <strong>{formattedWorkerAmount} USDC</strong>
               </div>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '8px 0',
-                borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
-              }}>
-                <span style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.8)' }}>
+              <div className="escrow-breakdown-row">
+                <span>
                   {t('escrow.popup.commission')} ({platformFeePercent}%):
                 </span>
-                <strong style={{ fontSize: '14px', color: '#fff' }}>
-                  {formattedCommission} USDC
-                </strong>
+                <strong>{formattedCommission} USDC</strong>
               </div>
             </div>
-            <div style={{ 
-              padding: '12px',
-              background: 'linear-gradient(90deg, rgba(40, 192, 240, 0.2) 0%, rgba(17, 128, 179, 0.2) 100%)',
-              borderRadius: '8px',
-              border: '1px solid rgba(40, 192, 240, 0.4)',
-              marginTop: '8px'
-            }}>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <span style={{ 
-                  fontWeight: 'bold', 
-                  color: '#10dd88', 
-                  fontSize: '16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}>
+            <div className="escrow-breakdown-total">
+              <div className="escrow-breakdown-total-row">
+                <span className="escrow-breakdown-total-label">
                   <FaDollarSign /> Total a enviar:
                 </span>
-                <strong style={{ 
-                  fontSize: '18px', 
-                  background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text'
-                }}>
-                  {formattedTotal} USDC
-                </strong>
+                <strong className="escrow-breakdown-total-amount">{formattedTotal} USDC</strong>
               </div>
-              <p style={{ 
-                margin: '8px 0 0 0', 
-                fontSize: '12px', 
-                color: 'rgba(255, 255, 255, 0.6)', 
-                fontStyle: 'italic',
-                textAlign: 'center'
-              }}>
-                + fees de XLM (~0.0001 XLM)
-              </p>
+              <p className="escrow-breakdown-fee-note">+ fees de XLM (~0.0001 XLM)</p>
             </div>
           </div>
         </div>

@@ -36,8 +36,9 @@ import WalletButton from './WalletButton';
 import ConfirmDialog from './ConfirmDialog';
 import RatingSystem from './RatingSystem';
 import CompleteTaskPopup from './CompleteTaskPopup';
-import { FaExclamationTriangle, FaTimes, FaFlag, FaLock, FaHome, FaDollarSign, FaComments, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaExclamationTriangle, FaTimes, FaFlag, FaLock, FaHome, FaDollarSign, FaComments, FaMapMarkerAlt, FaArrowLeft } from 'react-icons/fa';
 import { useI18n } from '../i18n/I18nProvider';
+import { useEnterpriseMode } from '../hooks/useEnterpriseMode';
 import '../css/ConfirmDialog.css';
 
 interface TaskDetails {
@@ -208,6 +209,7 @@ const SuperviseTask = () => {
     const { taskId, acceptedApplicantId } = useParams<{ taskId: string, acceptedApplicantId: string }>();
     const navigate = useNavigate();
     const { t } = useI18n();
+    const enterprise = useEnterpriseMode();
     const [task, setTask] = useState<TaskDetails | null>(null);
     const [withdrawingFunds, setWithdrawingFunds] = useState(false);
     const [worker, setWorker] = useState<UserDetails | null>(null);
@@ -869,12 +871,7 @@ const SuperviseTask = () => {
 
 
     // Función para aceptar trabajo (cliente) - Actualiza BD y firma transacción
-    /* ============================================
-     * SISTEMA ANTIGUO: MULTISIG 2-DE-2 (RESTAURADO)
-     * ============================================
-     * Función para aceptar trabajo (cliente) - actualiza BD y firma transacción
-     * Sistema restaurado: 2025-11-22
-     * ============================================ */
+    /* Cliente: aprobar hito y liberar fondos (Trustless Work; firma del creador / cliente) */
     const handleAcceptWork = async () => {
         if (!task || !isConnected || !address) {
             setError(t('supervise.error.connectFreighterAccept'));
@@ -1482,14 +1479,14 @@ const SuperviseTask = () => {
     // SISTEMA TRUSTLESS WORK - ELIMINADO
     // ============================================
     // Todo el código de Trustless Work ha sido eliminado
-    // Sistema restaurado: Multisig 2-de-2 (sistema antiguo)
+    // Trustless Work: aprobación y liberación firmadas por el cliente (ver trustlessWorkEscrowService)
     // ============================================
     
     // ============================================
     // SISTEMA TRUSTLESS WORK - ELIMINADO
     // ============================================
     // Las funciones de Trustless Work han sido eliminadas
-    // Sistema restaurado: Multisig 2-de-2 (sistema antiguo)
+    // Trustless Work: aprobación y liberación firmadas por el cliente (ver trustlessWorkEscrowService)
     // ============================================
 
     // Función para verificar si ya existe una disputa
@@ -1799,6 +1796,14 @@ const SuperviseTask = () => {
         <div className="supervise-task-container">
             {/* Encabezado restaurado a la estructura original */}
             <div className="supervise-task-header">
+                {enterprise && (
+                  <div className="supervise-task-header__back">
+                    <Link to="/dashboard" className="supervise-back-dashboard-btn">
+                      <FaArrowLeft aria-hidden />
+                      <span>{t('supervise.back.dashboard')}</span>
+                    </Link>
+                  </div>
+                )}
                 <div className="header-content">
                     <div className="header-text">
                 <h1>{isClient ? t('supervise.task.title.client') : t('supervise.task.title.worker')}: {task.title}</h1>
@@ -2391,7 +2396,7 @@ const SuperviseTask = () => {
                                 </div>
                             )}
                             
-                            {/* Botón "Retirar Dinero" - SOLO para trabajador cuando ambas partes aceptaron */}
+                            {/* Retirar: trabajador cuando cliente y trabajador confirmaron entrega en la app y el flujo on-chain permite retiro */}
                             {isWorker &&
                              Number(task.client_accepted_completion) === 1 && 
                              Number(task.worker_accepted_completion) === 1 && 

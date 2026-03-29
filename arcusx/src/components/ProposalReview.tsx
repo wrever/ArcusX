@@ -4,7 +4,7 @@ import { FaArrowLeft, FaUser, FaCalendarAlt, FaWallet, FaExternalLinkAlt, FaChec
 import axios from 'axios';
 import { API_URL } from '../config/database';
 import { useWallet } from '../hooks/useWallet';
-// Sistema antiguo de multisig eliminado - ahora usamos Trustless Work
+// Escrow Trustless Work (cliente aprueba y firma liberación; ver trustlessWorkEscrowService)
 
 // ============================================
 // SISTEMA TRUSTLESS WORK - IMPLEMENTADO
@@ -843,15 +843,9 @@ El proyecto está activo y el trabajador puede comenzar.`);
           <div className="proposals-header">
             <h2>{t('proposals.title')} ({proposals.length})</h2>
             <p>{t('proposals.subtitle')}</p>
-            <div className="cost-info-box" style={{
-              background: 'rgba(255, 165, 0, 0.1)',
-              border: '1px solid rgba(255, 165, 0, 0.3)',
-              borderRadius: '8px',
-              padding: '1rem',
-              marginTop: '1rem'
-            }}>
-              <p style={{ margin: 0, color: '#4ade80', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <FaCheckCircle style={{ fontSize: '14px' }} /> <strong>{t('proposals.escrow.multisig')}</strong>
+            <div className="cost-info-box">
+              <p>
+                <FaCheckCircle className="cost-info-icon" /> <strong>{t('proposals.escrow.trustless')}</strong>
               </p>
             </div>
           </div>

@@ -14,6 +14,7 @@ import { useAuth } from './hooks/useAuth';
 import WalletButton from './components/WalletButton';
 import { useScheduledTaskDeletion } from './hooks/useScheduledTaskDeletion';
 import DashboardFooter from './components/DashboardFooter';
+import CreateTask from './components/CreateTask';
 // import PendingNotificationsPopup from './components/PendingNotificationsPopup'; // Popup eliminado
 import { getUserNotifications, Notification, markNotificationAsRead as markNotificationAsReadService } from './services/notificationService';
 import { getUserDisputes, UserDispute } from './services/disputeService';
@@ -62,9 +63,10 @@ interface TaskData {
 
 const Dashboard = () => {
   const { t, lang } = useI18n();
+  const enterprise = useEnterpriseMode();
   const { theme } = useTheme();
   const arcusLogo = theme === 'light' ? arcusLogoLight : arcusLogoDark;
-  const [activeTab, setActiveTab] = useState('tasks');
+  const [activeTab, setActiveTab] = useState(enterprise ? 'manage-tasks' : 'tasks');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [difficultyFilter, setDifficultyFilter] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
@@ -146,6 +148,26 @@ const Dashboard = () => {
   // Estado para rating del usuario (para mostrar en sidebar)
   const [userRating, setUserRating] = useState<{ average_rating: number; total_ratings: number } | null>(null);
   const [loadingRating, setLoadingRating] = useState(false);
+
+  // Tabs permitidas por modo (empresas = crear/supervisar + operación)
+  const allowedEnterpriseTabs = [
+    'create-task',
+    'manage-tasks',
+    'freelancers',
+    'swap',
+    'tutorials',
+    'notifications',
+    'settings',
+    'support'
+  ];
+  const showEnterpriseTab = (tab: string) => !enterprise || allowedEnterpriseTabs.includes(tab);
+
+  // Si cambian condiciones de modo, mantener al usuario en un tab permitido
+  useEffect(() => {
+    if (enterprise && !allowedEnterpriseTabs.includes(activeTab)) {
+      setActiveTab('manage-tasks');
+    }
+  }, [enterprise, activeTab]);
   
   // Las tareas ya vienen filtradas del backend, solo excluir asignadas
   const filteredTasks = fetchedTasks.filter(task => task.status !== 'assigned');
@@ -428,6 +450,10 @@ const Dashboard = () => {
   
   // Función para navegar a la página de creación de tarea
   const handleCreateTaskClick = () => {
+    if (enterprise) {
+      setActiveTab('create-task');
+      return;
+    }
     navigate('/create-task');
   };
 
@@ -660,6 +686,7 @@ const Dashboard = () => {
     { id: 3, title: t('dashboard.stats.earnings'), value: `$${totalEarnings.toFixed(2)}`, icon: <FaWallet /> },
     { id: 4, title: t('dashboard.stats.level'), value: userData.level, icon: <FaChartLine /> }
   ];
+  const statsToRender = enterprise ? stats.slice(0, 2) : stats;
   
   return (
     <div className={`dashboard${enterprise ? ' dashboard--enterprise' : ''}`}>
@@ -744,28 +771,45 @@ const Dashboard = () => {
         
         <nav className="sidebar-nav">
           <ul>
-            <li className={activeTab === 'tasks' ? 'active' : ''} onClick={() => setActiveTab('tasks')}>
-              <FaTasks /> <span>{t('dashboard.tabs.tasks')}</span>
-            </li>
-            <li className={activeTab === 'in-progress' ? 'active' : ''} onClick={() => setActiveTab('in-progress')}>
-              <FaTasks /> <span>{t('dashboard.tabs.in.progress')}</span>
-            </li>
+            {enterprise && (
+              <li className={`enterprise-create-nav ${activeTab === 'create-task' ? 'active' : ''}`} onClick={handleCreateTaskClick}>
+                <FaPlus /> <span>{t('dashboard.create.task')}</span>
+              </li>
+            )}
+            {showEnterpriseTab('tasks') && (
+              <li className={activeTab === 'tasks' ? 'active' : ''} onClick={() => setActiveTab('tasks')}>
+                <FaTasks /> <span>{t('dashboard.tabs.tasks')}</span>
+              </li>
+            )}
+            {showEnterpriseTab('in-progress') && (
+              <li className={activeTab === 'in-progress' ? 'active' : ''} onClick={() => setActiveTab('in-progress')}>
+                <FaTasks /> <span>{t('dashboard.tabs.in.progress')}</span>
+              </li>
+            )}
              <li className={activeTab === 'manage-tasks' ? 'active' : ''} onClick={() => setActiveTab('manage-tasks')}>
               <FaTasks />
               <span>{t('dashboard.tabs.manage.tasks')}</span>
             </li>
-            <li className={activeTab === 'freelancers' ? 'active' : ''} onClick={() => setActiveTab('freelancers')}>
-              <FaUsers /> <span>{t('dashboard.tabs.freelancers')}</span>
-            </li>
-            <li className={activeTab === 'wallet' ? 'active' : ''} onClick={() => setActiveTab('wallet')}>
-              <FaWallet /> <span>{t('dashboard.tabs.wallet')}</span>
-            </li>
-            <li className={activeTab === 'swap' ? 'active' : ''} onClick={() => setActiveTab('swap')}>
-              <FaExchangeAlt /> <span>{t('dashboard.tabs.swap')}</span>
-            </li>
-            <li className={activeTab === 'tutorials' ? 'active' : ''} onClick={() => setActiveTab('tutorials')}>
-              <FaGraduationCap /> <span>{t('dashboard.tabs.tutorials')}</span>
-            </li>
+            {showEnterpriseTab('freelancers') && (
+              <li className={activeTab === 'freelancers' ? 'active' : ''} onClick={() => setActiveTab('freelancers')}>
+                <FaUsers /> <span>{t('dashboard.tabs.freelancers')}</span>
+              </li>
+            )}
+            {showEnterpriseTab('wallet') && (
+              <li className={activeTab === 'wallet' ? 'active' : ''} onClick={() => setActiveTab('wallet')}>
+                <FaWallet /> <span>{t('dashboard.tabs.wallet')}</span>
+              </li>
+            )}
+            {showEnterpriseTab('swap') && (
+              <li className={activeTab === 'swap' ? 'active' : ''} onClick={() => setActiveTab('swap')}>
+                <FaExchangeAlt /> <span>{t('dashboard.tabs.swap')}</span>
+              </li>
+            )}
+            {showEnterpriseTab('tutorials') && (
+              <li className={activeTab === 'tutorials' ? 'active' : ''} onClick={() => setActiveTab('tutorials')}>
+                <FaGraduationCap /> <span>{t('dashboard.tabs.tutorials')}</span>
+              </li>
+            )}
             <li className={activeTab === 'notifications' ? 'active' : ''} onClick={() => setActiveTab('notifications')}>
               <FaBell /> <span>{t('dashboard.tabs.notifications')}</span>
               {unreadCount > 0 && (
@@ -803,10 +847,11 @@ const Dashboard = () => {
             {activeTab === 'tutorials' && t('dashboard.title.tutorials')}
             {activeTab === 'swap' && t('dashboard.title.swap')}
             {activeTab === 'support' && t('dashboard.title.support')}
+            {activeTab === 'create-task' && t('dashboard.create.task')}
           </h1>
           <div className="header-actions">
             <div className="theme-language-buttons">
-              <ThemeToggle variant="inline" visible={true} />
+              <ThemeToggle variant="inline" visible={!enterprise} />
               <LanguageFab visible={true} variant="inline" />
             </div>
             <WalletButton />
@@ -911,19 +956,25 @@ const Dashboard = () => {
           </div>
         </header>
         
-        <div className="dashboard-content">
+        <div className={`dashboard-content ${enterprise ? 'dashboard-content--enterprise' : ''}`}>
+          {enterprise && activeTab === 'create-task' && (
+            <CreateTask embedded />
+          )}
+
           {/* Stats Cards */}
-          <div className="stats-cards">
-            {stats.map(stat => (
-              <div key={stat.id} className="stat-card">
-                <div className="stat-icon">{stat.icon}</div>
-                <div className="stat-info">
-                  <h3>{stat.title}</h3>
-                  <p>{stat.value}</p>
+          {(!enterprise || activeTab !== 'create-task') && (
+            <div className={`stats-cards ${enterprise ? 'stats-cards--enterprise' : ''}`}>
+              {statsToRender.map(stat => (
+                <div key={stat.id} className="stat-card">
+                  <div className="stat-icon">{stat.icon}</div>
+                  <div className="stat-info">
+                    <h3>{stat.title}</h3>
+                    <p>{stat.value}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
           
           {/* Tasks Tab */}
           {/* Sección de Disputas Pendientes de Firma */}
@@ -974,7 +1025,7 @@ const Dashboard = () => {
             </div>
           )}
 
-          {activeTab === 'tasks' && (
+          {!enterprise && activeTab === 'tasks' && (
             <div className="tasks-container">
               <div className="tasks-header">
                 <h2>{t('dashboard.tasks.title')}</h2>
@@ -1852,10 +1903,6 @@ const Dashboard = () => {
             <div className="manage-tasks-container">
               <div className="section-header">
                 <h2>{t('dashboard.manage.tasks.title')}</h2>
-                <button className="create-task-button" onClick={handleCreateTaskClick}>
-                  <FaPlus />
-                  <h3>{t('dashboard.manage.tasks.create.new')}</h3>
-                </button>
               </div>
 
               {/* Aquí se listarán las tareas creadas por el usuario */}
@@ -1890,7 +1937,9 @@ const Dashboard = () => {
                                  className="btn-secondary"
                                  onClick={() => navigate(`/proposals/${task.id}`)}
                              >
-                                 {t('dashboard.manage.tasks.view.proposals')} ({task.proposal_count !== undefined ? task.proposal_count : 0})
+                                 {enterprise
+                                   ? t('dashboard.manage.tasks.view.proposals')
+                                   : `${t('dashboard.manage.tasks.view.proposals')} (${task.proposal_count !== undefined ? task.proposal_count : 0})`}
                              </button>
                          )}
                          {/* Botón de Editar Tarea (opcional, para más tarde) */}
@@ -1906,7 +1955,7 @@ const Dashboard = () => {
         </div>
         
         {/* Botón flotante para crear tarea (solo en la pestaña Tareas) */}
-        {activeTab === 'tasks' && (
+        {!enterprise && activeTab === 'tasks' && (
           <button className="create-task-button" onClick={handleCreateTaskClick}>
             <FaPlus className="create-task-icon" />
             <span className="create-task-text">{t('dashboard.create.task')}</span>
