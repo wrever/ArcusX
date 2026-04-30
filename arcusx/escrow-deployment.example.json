@@ -1,0 +1,8 @@
+{
+  "escrowPublicKey": "G..._PUBLIC_STELLAR_ADDRESS",
+  "escrowSecretKey": "S..._NEVER_COMMIT_REAL_SECRET",
+  "network": "testnet",
+  "horizonUrl": "https://horizon-testnet.stellar.org",
+  "createdAt": "ISO-8601",
+  "deployer": "G..._DEPLOYER_PUBLIC"
+}

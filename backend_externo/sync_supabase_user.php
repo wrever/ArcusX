@@ -44,7 +44,7 @@ $name = $data['name'] ?? $email;
 $avatar_url = $data['avatar_url'] ?? null;
 
 // Configuración JWT (igual que en login.php)
-$secret_key = "SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY";
+$secret_key = $jwt_secret;
 $issuedAt = time();
 $expirationTime = $issuedAt + (3600 * 24); // 1 día
 $issuer = "arcusx.pro";

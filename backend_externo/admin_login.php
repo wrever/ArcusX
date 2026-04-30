@@ -40,7 +40,7 @@ use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
 // Usar el mismo secret key que config.php
-$secret_key = isset($jwt_secret) && !empty($jwt_secret) ? $jwt_secret : "SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY";
+$secret_key = $jwt_secret;
 
 // Configuración del token - 7 días de expiración
 $issuedAt = time();

@@ -24,7 +24,7 @@ require __DIR__ . '/vendor/autoload.php';
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
-$secret_key = "SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY";
+$secret_key = $jwt_secret;
 
 // Función para obtener usuario del JWT (igual que en select_proposal.php)
 function getLoggedInUserId($conn, $secret_key) {

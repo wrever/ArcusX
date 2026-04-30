@@ -3,10 +3,27 @@
 // Los headers CORS los maneja .htaccess
 // OPTIONS lo maneja cada archivo PHP individualmente
 
+// Credenciales leídas desde variables de entorno del servidor.
+// En cPanel: Configuración PHP → Variables de entorno, o .htaccess con SetEnv.
+// Variables requeridas: ARCUSX_DB_PASSWORD, ARCUSX_JWT_SECRET
+$db_password = getenv('ARCUSX_DB_PASSWORD');
+$jwt_secret  = getenv('ARCUSX_JWT_SECRET');
+
+if ($db_password === false || $db_password === '') {
+    http_response_code(500);
+    echo json_encode(['message' => 'Error de configuración del servidor: ARCUSX_DB_PASSWORD no definida.']);
+    exit;
+}
+if ($jwt_secret === false || $jwt_secret === '') {
+    http_response_code(500);
+    echo json_encode(['message' => 'Error de configuración del servidor: ARCUSX_JWT_SECRET no definida.']);
+    exit;
+}
+
 $db_config = [
-    'host' => 'localhost',
-    'user' => 'arcusxon_owner',
-    'password' => 'Brn08a33!',
+    'host'     => 'localhost',
+    'user'     => 'arcusxon_owner',
+    'password' => $db_password,
     'database' => 'arcusxon_users'
 ];
 
@@ -22,11 +39,5 @@ if ($conn->connect_error) {
     throw new Exception('Error de conexión a la base de datos: ' . $conn->connect_error);
 }
 
-// PHP 8.1: charset UTF-8 para tildes y ñ correctos. Si aún ves mal las tildes, revisa que la tabla/columna usen utf8mb4.
+// PHP 8.1: charset UTF-8 para tildes y ñ correctos.
 $conn->set_charset('utf8mb4');
-
-// Configuración JWT
-$jwt_secret = "SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY"; // Cambiar por una clave segura
-
-// NOTA: La clase JWT simulada fue removida - ahora se usa Firebase\JWT\JWT de la librería real
-// Si algún archivo antiguo necesita la clase simulada, debe actualizarse para usar Firebase\JWT\JWT

@@ -107,7 +107,7 @@
 | #   | Deliverable                                           | Suggested verification                                                                                   |
 | --- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | 1   | Utility endpoints disabled or protected in production | `create_test_dispute.php`, `reset_human_id_action_id.php`, `reset_user_limits.php`: 404 or auth in prod. |
-| 2   | CORS unified across all endpoints                     | Same allowlist; no `Access-Control-Allow-Origin: *` on update_user.                                      |
+| 2   | CORS unified across all endpoints                     | Same allowlist; no `Access-Control-Allow-Origin: `* on update_user.                                      |
 | 3   | JWT centralized                                       | Single source (config/env) for secret; login and sync_supabase_user (and any others) use it.             |
 | 4   | Wallet flow                                           | register_wallet/verify_wallet calls integrated in profile/wallet flow or status documented in README.    |
 | 5   | Critical-flow testing                                 | Register, login, create task, apply, escrow, complete, dispute; issues logged for Week 4.                |

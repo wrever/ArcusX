@@ -19,9 +19,9 @@ export const TRUSTLESS_WORK_BASE_URL = import.meta.env.VITE_TRUSTLESS_WORK_BASE_
 export const PLATFORM_WALLET = import.meta.env.VITE_PLATFORM_WALLET || '';
 export const ADMIN_WALLET = import.meta.env.VITE_ADMIN_WALLET || '';
 
-// Platform fee: 0.3% = 30 basis points (1 basis point = 0.01%, entonces 0.3% = 30 basis points)
-// CRÍTICO: el API de escrow multiplica el valor por 100; enviar 0.3 para obtener 0.3% (30 basis points)
-export const PLATFORM_FEE_BPS = 0.3;
+// Platform fee: 1% = 100 basis points
+// CRÍTICO: el API de escrow multiplica el valor por 100; enviar 1.0 para obtener 1% (100 basis points)
+export const PLATFORM_FEE_BPS = 1.0;
 
 // Verificar que las variables estén configuradas (solo en desarrollo)
 if (import.meta.env.DEV) {
