@@ -72,9 +72,7 @@ require $autoload_path; // Ahora requerimos el archivo si existe
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
-// Definir una clave secreta fuerte para firmar tus tokens
-// ¡Cambia esto por una cadena aleatoria y segura en producción!
-$secret_key = "SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY"; // !! IMPORTANTE: CAMBIA ESTO !!
+// $jwt_secret se lee de la variable de entorno ARCUSX_JWT_SECRET vía config.php
 
 // Configuración del token (opcional, ajusta según necesites)
 $issuedAt = time(); // Tiempo en que el token fue emitido
@@ -147,12 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Generar el token JWT
             // Asegúrate de usar 'HS256' o el algoritmo que prefieras y soporta tu librería
             // Asegúrate de que $secret_key es accesible aquí
-            if (!isset($secret_key)) {
-                 http_response_code(500);
-                 echo json_encode(['message' => 'Error interno: Clave secreta JWT no definida.']);
-                 exit();
-            }
-            $jwt = JWT::encode($payload, $secret_key, 'HS256');
+            $jwt = JWT::encode($payload, $jwt_secret, 'HS256');
 
             // Devolver el token JWT y la información básica del usuario en la respuesta
             http_response_code(200);

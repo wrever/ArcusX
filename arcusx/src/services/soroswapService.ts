@@ -17,7 +17,8 @@ import axios, { AxiosInstance } from 'axios';
 // ============================================================================
 
 const SOROSWAP_API_BASE = import.meta.env.VITE_SOROSWAP_API_BASE || 'https://api.soroswap.finance';
-const SOROSWAP_API_KEY = import.meta.env.VITE_SOROSWAP_API_KEY || 'sk_00054a0c7e989dce1a2ad7060b888bf7718cc4440a11ff7cd480463f1a4dd833';
+/** Solo desde env; nunca hardcodear — VITE_* va al bundle y cualquier fallback queda expuesto en el cliente. */
+const SOROSWAP_API_KEY = import.meta.env.VITE_SOROSWAP_API_KEY ?? '';
 
 // Siempre usar testnet
 const getNetwork = (): 'testnet' | 'mainnet' => {

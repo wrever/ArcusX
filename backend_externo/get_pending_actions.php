@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-$secret_key = "SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY";
+$secret_key = $jwt_secret;
 
 function getLoggedInUserId($conn, $secret_key) {
     $headers = getallheaders();

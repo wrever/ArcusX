@@ -32,7 +32,7 @@ require_once $autoload_path;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
-$secret_key = "SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY";
+$secret_key = $jwt_secret;
 
 function getLoggedInUserId($conn, $secret_key) {
     $headers = function_exists('getallheaders') ? getallheaders() : [];

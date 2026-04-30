@@ -72,7 +72,6 @@ if (file_exists($autoload_path)) {
     use Firebase\JWT\Key;
 }
 
-$jwt_secret = "SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY";
 
 function getLoggedInUserIdPortfolio($secret_key) {
     if (!class_exists('Firebase\\JWT\\JWT')) {

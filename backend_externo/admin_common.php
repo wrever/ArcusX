@@ -388,24 +388,7 @@ try {
         sendErrorResponse('Error de configuración: JWT secret no definido', 500);
     }
     
-    // Asegurarse de que el secret key sea exactamente el esperado
-    $expected_secret = "SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY";
     $jwt_secret = trim($jwt_secret);
-    
-    // Hacer $expected_secret disponible globalmente para debugging
-    if (!isset($GLOBALS['expected_jwt_secret'])) {
-        $GLOBALS['expected_jwt_secret'] = $expected_secret;
-    }
-    
-    if ($jwt_secret !== $expected_secret) {
-        error_log('WARNING: JWT secret in config.php does not match expected value!');
-        error_log('Expected: ' . $expected_secret);
-        error_log('Got from config: ' . $jwt_secret);
-        // Usar el valor esperado para asegurar consistencia
-        $jwt_secret = $expected_secret;
-    }
-    
-    error_log('admin_common.php - Using JWT secret: ' . $jwt_secret . ' (length: ' . strlen($jwt_secret) . ')');
     
     $user = getLoggedInUser($conn, $jwt_secret);
     

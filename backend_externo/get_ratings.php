@@ -64,7 +64,7 @@ use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
 // Definir la clave secreta (debe coincidir con la de login.php)
-$secret_key = "SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY";
+$secret_key = $jwt_secret;
 
 // Función para obtener el ID del usuario logeado desde el token JWT
 function getLoggedInUserId($conn, $secret_key) {
