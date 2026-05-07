@@ -249,48 +249,48 @@ const verifyEscrowState = (escrowFromIndexer: any, contractId: string): void => 
   }
 };
 
-export const signWithFreighter = async (
+export const signWithWallet = async (
   unsignedXdr: string,
   kit: any,
   address: string
 ): Promise<string> => {
-  console.log('signWithFreighter: Iniciando firma...');
-  console.log('   Kit disponible:', !!kit);
-  console.log('   Address:', address);
-  console.log('   XDR length:', unsignedXdr.length);
-  
   if (!kit || !address) {
     throw new Error('Kit o dirección no disponible');
   }
-  
+
+  // Alinear Freighter / xBull (u otra del kit) con la sesión guardada; si no, el kit podría firmar con el módulo equivocado
+  if (typeof kit.setWallet === 'function' && typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem('stellar_wallet');
+      if (raw) {
+        const w = JSON.parse(raw) as { address?: string; walletId?: string; connected?: boolean };
+        if (w.connected && w.address === address && w.walletId) {
+          kit.setWallet(w.walletId);
+        }
+      }
+    } catch {
+      /* ignore JSON/localStorage */
+    }
+  }
+
   try {
-    console.log('Configurando wallet a Freighter...');
-    kit.setWallet('freighter');
-    
-    console.log('Llamando a kit.signTransaction...');
-    console.log('   Esto debería abrir el popup de Freighter para firmar');
-    
     const { signedTxXdr } = await kit.signTransaction(unsignedXdr, {
       address: address,
-      networkPassphrase: 'Test SDF Network ; September 2015'
+      networkPassphrase: Networks.TESTNET
     });
-    
-    console.log('Transacción firmada. XDR recibido, length:', signedTxXdr?.length || 0);
+
     return signedTxXdr;
   } catch (error: any) {
-    console.error('Error en signWithFreighter:', error);
-    console.error('   Error message:', error.message);
-    console.error('   Error code:', error.code);
-    console.error('   Error name:', error.name);
-    
-    // Si el usuario rechazó la firma
     if (error.message?.includes('rejected') || error.message?.includes('denied') || error.code === 'USER_REJECTED') {
       throw new Error('El usuario rechazó la firma de la transacción');
     }
-    
+
     throw error;
   }
 };
+
+/** @deprecated use signWithWallet */
+export const signWithFreighter = signWithWallet;
 
 export const createAndSendTransaction = async (
   unsignedXdr: string,
@@ -321,12 +321,7 @@ export const createAndSendTransaction = async (
       console.warn('No se pudo inspeccionar la transacción:', inspectError.message);
     }
     
-    console.log('Firmando transacción con Freighter...');
-    console.log('   Address (signer):', address);
-    console.log('   Kit disponible:', !!kit);
-    console.log('   XDR length:', unsignedXdr.length);
-    
-    const signedXdr = await signWithFreighter(unsignedXdr, kit, address);
+    const signedXdr = await signWithWallet(unsignedXdr, kit, address);
     console.log('Transacción firmada exitosamente. XDR length:', signedXdr.length);
     
     // MEJORA: Validar el XDR firmado antes de enviarlo
@@ -1384,12 +1379,7 @@ export const resolveDisputeTrustlessEscrow = async (
     }
 
     console.log('Transacción no firmada recibida. Procediendo a firmar y enviar...');
-    console.log('Firmando transacción de resolución de disputa con Freighter...');
-    console.log('Dispute Resolver (signer):', disputeResolver);
-    
-    // MEJORA CRÍTICA: Firmar UNA SOLA VEZ y enviar directamente (igual que signAndSendRefundTransaction)
-    // NO usar createAndSendTransaction porque puede intentar firmar múltiples veces
-    const signedXdr = await signWithFreighter(response.unsignedTransaction, kit, disputeResolver);
+    const signedXdr = await signWithWallet(response.unsignedTransaction, kit, disputeResolver);
     
     console.log('Transacción firmada. Enviando directamente al servicio de escrow...');
     
@@ -1977,11 +1967,7 @@ export const signAndSendRefundTransaction = async (
   sendTransaction: (signedXdr: string) => Promise<SendTransactionResponse>
 ): Promise<{ success: boolean; txHash?: string; error?: string }> => {
   try {
-    console.log('Firmando transacción de reembolso con Freighter...');
-    console.log('Cliente (signer):', clientAddress);
-    
-    // Firmar transacción UNA SOLA VEZ
-    const signedXdr = await signWithFreighter(unsignedXdr, kit, clientAddress);
+    const signedXdr = await signWithWallet(unsignedXdr, kit, clientAddress);
     
     console.log('Transacción firmada. Enviando directamente al servicio de escrow...');
     

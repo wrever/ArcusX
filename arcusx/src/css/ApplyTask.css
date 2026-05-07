@@ -410,4 +410,32 @@
   .popup h3 {
     font-size: 1.1rem;
   }
-} 
+}
+
+.apply-wallet-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.apply-wallet-row input[type='text'] {
+  flex: 1;
+  min-width: 200px;
+}
+
+.apply-wallet-paste-btn {
+  flex-shrink: 0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(16, 221, 136, 0.45);
+  background: rgba(16, 221, 136, 0.12);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.apply-wallet-paste-btn:hover {
+  background: rgba(16, 221, 136, 0.22);
+}

@@ -2,17 +2,6 @@ import axios from 'axios';
 import { API_URL } from '../config/database';
 import { supabase, hasSupabase } from '../config/supabase';
 
-interface LoginData {
-  email: string;
-  password: string;
-}
-
-interface RegisterData {
-  username: string;
-  email: string;
-  password: string;
-}
-
 // Función para verificar si un token JWT ha expirado
 const isTokenExpired = (token: string): boolean => {
   try {
@@ -25,28 +14,6 @@ const isTokenExpired = (token: string): boolean => {
 };
 
 export const authService = {
-  async login(data: LoginData) {
-    try {
-      const response = await axios.post(`${API_URL}/auth/login.php`, data);
-      if (response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-      }
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  },
-
-  async register(data: RegisterData) {
-    try {
-      const response = await axios.post(`${API_URL}/auth/register.php`, data);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  },
-
   async logout() {
     try {
       if (hasSupabase) {
@@ -198,5 +165,23 @@ export const authService = {
     } catch (error) {
       return null;
     }
+  },
+
+  async registerWallet(walletAddress: string): Promise<{ success: boolean; wallet_address?: string; already_registered?: boolean; message?: string }> {
+    const token = localStorage.getItem('token');
+    const response = await axios.post(
+      `${API_URL}/register_wallet.php`,
+      { wallet_address: walletAddress },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return response.data;
+  },
+
+  async verifyWallet(): Promise<{ success: boolean; has_wallet: boolean; wallet_address?: string | null }> {
+    const token = localStorage.getItem('token');
+    const response = await axios.get(`${API_URL}/verify_wallet.php`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   }
 }; 

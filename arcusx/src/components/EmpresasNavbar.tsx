@@ -8,7 +8,7 @@ import logoLight from "../images/arcusxlogoclaro.png";
 import "../css/EmpresasNavbar.css";
 
 /**
- * Navbar corporativa: documentación, sitio público, login/registro.
+ * Navbar corporativa: documentación, sitio público, acceso OAuth (Google/GitHub).
  * Menú hamburguesa en viewport estrecho.
  */
 export default function EmpresasNavbar() {
@@ -84,11 +84,8 @@ export default function EmpresasNavbar() {
           >
             {t("empresa.nav.public_site")}
           </a>
-          <Link to="/login" className="empresas-navbar__btn empresas-navbar__btn--ghost" onClick={close}>
-            {t("nav.login")}
-          </Link>
-          <Link to="/register" className="empresas-navbar__btn empresas-navbar__btn--solid" onClick={close}>
-            {t("nav.register")}
+          <Link to="/login" className="empresas-navbar__btn empresas-navbar__btn--solid" onClick={close}>
+            {t("empresa.nav.access_oauth")}
           </Link>
         </div>
       </div>

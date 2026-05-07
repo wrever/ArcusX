@@ -41,7 +41,7 @@ if (in_array($origin, $allowed_origins)) {
     header("Access-Control-Allow-Origin: $origin");
     header("Access-Control-Allow-Credentials: true");
 } else {
-    header("Access-Control-Allow-Origin: *");
+    $_cors_origin = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header("Access-Control-Allow-Origin: ".$_cors_origin);
 }
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
@@ -61,7 +61,7 @@ require_once 'vendor/autoload.php';
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
-// Definir la clave secreta (debe coincidir con la de login.php)
+// Definir la clave secreta (debe coincidir con ARCUSX_JWT_SECRET en config.php)
 $secret_key = $jwt_secret;
 
 // Función para obtener el ID del usuario logeado desde el token JWT

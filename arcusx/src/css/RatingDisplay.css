@@ -54,6 +54,15 @@
   font-size: 0.9rem;
 }
 
+.rating-small .rating-stars {
+  flex-shrink: 0;
+}
+
+.rating-small .rating-info {
+  min-width: 0;
+  flex-shrink: 1;
+}
+
 .rating-medium .rating-stars .star {
   font-size: 1rem;
 }

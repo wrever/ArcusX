@@ -1,5 +1,13 @@
 # ArcusX SPA (Vite/React) — copiar este archivo a la raíz de public_html Y a la raíz del subdominio (mismo dist/).
 # Si ves 404 en empresas.*: en cPanel → Subdominios → comprobar que la carpeta contiene index.html, assets/ y este .htaccess
+#
+# secretos backend (solo en servidor; editar estos valores en cPanel/File Manager, NO subirlos al repo público).
+# Requiere mod_env. Si getenv() sigue vacío, el host puede usar PHP-FPM sin pasar vars: usa entorno desde cPanel o contacta soporte.
+
+<IfModule mod_env.c>
+    SetEnv ARCUSX_DB_PASSWORD "REEMPLAZA_CON_PASSWORD_REAL"
+    SetEnv ARCUSX_JWT_SECRET "REEMPLAZA_CON_JWT_SECRET_REAL"
+</IfModule>
 
 DirectoryIndex index.html
 

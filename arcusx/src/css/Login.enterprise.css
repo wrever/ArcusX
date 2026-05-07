@@ -175,6 +175,15 @@
   color: #64748b !important;
 }
 
+.login-container.login-container--enterprise .login-footer.login-footer--enterprise-note {
+  margin-top: 1rem;
+  margin-bottom: 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  text-align: center;
+  color: #64748b !important;
+}
+
 /* Badge opcional vía texto en logo — sin cambiar JSX */
 .login-container.login-container--enterprise .login-card .login-header {
   position: relative;

@@ -854,9 +854,16 @@
   margin-bottom: 2rem;
 }
 
-.filter-container {
+.search-bar {
+  margin-bottom: 1rem;
   display: flex;
-  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.filter-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 1rem;
   padding: 1.25rem;
   background: var(--bg-card, rgba(255, 255, 255, 0.05));
@@ -865,6 +872,7 @@
   border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
   transition: all 0.3s ease;
   box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.1));
+  align-items: stretch;
 }
 
 .filter-select {
@@ -873,8 +881,8 @@
   border-radius: 8px;
   color: var(--text-primary, #fff);
   padding: 0.75rem 1rem;
-  min-width: 220px;
-  flex: 1;
+  min-width: 0;
+  width: 100%;
   transition: all 0.3s ease;
   font-size: 0.95rem;
   appearance: none;
@@ -956,7 +964,7 @@
   }
   
   .filter-container {
-    flex-direction: column;
+    grid-template-columns: 1fr;
     padding: 1rem;
   }
   
@@ -978,7 +986,8 @@
 .search-input,
 input[type="text"].search-input,
 input[type="search"] {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   padding: 0.75rem 1rem;
   background: var(--input-background, rgba(7, 35, 60, 0.95));
   border: 1px solid var(--input-border, rgba(16, 221, 136, 0.3));
@@ -1024,14 +1033,8 @@ input[type="search"]::placeholder {
   
   .task-details {
     padding: 0.5rem;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-  
-  .task-detail {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
   }
 }
 
@@ -1155,6 +1158,8 @@ input[type="search"]::placeholder {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .task-detail-label {
@@ -1168,6 +1173,44 @@ input[type="search"]::placeholder {
   font-size: 1.1rem;
   color: var(--text-primary, #ffffff);
   font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-creator-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.task-creator-wrap .rating-display {
+  max-width: 100%;
+  flex-wrap: nowrap;
+}
+
+/* Hide review count in card context — not enough horizontal space */
+.task-creator-wrap .rating-count {
+  display: none;
+}
+
+.task-creator-link {
+  color: var(--primary-blue);
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: block;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task-creator-link:hover {
+  text-decoration: underline;
 }
 
 .task-button {
@@ -2412,7 +2455,7 @@ input[type="search"]::placeholder {
   }
   
   .filter-container {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
   
   .filter-select {
@@ -2463,7 +2506,7 @@ input[type="search"]::placeholder {
   }
 
   .filter-container {
-    flex-direction: column;
+    grid-template-columns: 1fr;
     padding: 1rem;
   }
 
@@ -2557,6 +2600,7 @@ input[type="search"]::placeholder {
   }
 
   .filter-container {
+    grid-template-columns: 1fr;
     padding: 0.875rem;
   }
 
@@ -2578,6 +2622,7 @@ input[type="search"]::placeholder {
 /*2CODE OWNER: BRUNO MIRANDA*/
   .filter-container {
     justify-content: space-between;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   }
   
   .filter-select {
@@ -2638,8 +2683,8 @@ input[type="search"]::placeholder {
   color: var(--text-primary, #fff);
   font-size: 0.95rem;
   transition: all 0.3s ease;
-  min-width: 220px;
-  flex: 1;
+  min-width: 0;
+  width: 100%;
 }
 
 .filter-price-input:focus {

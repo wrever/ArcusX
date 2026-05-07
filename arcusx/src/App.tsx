@@ -68,8 +68,7 @@ function AppContent({ isLoading }: { isLoading: boolean }) {
   const isRoot = path === '/' || path === '';
   /** FAB idioma a la izquierda solo en landing empresas.* (/) y login/registro ahí. En /empresas del sitio público va posición por defecto (hueco para tema). */
   const isEnterpriseLangFabLeft =
-    (isEnterpriseLandingHost() && isRoot) ||
-    (isEnterpriseLandingHost() && (path === '/login' || path === '/register'));
+    (isEnterpriseLandingHost() && isRoot) || (isEnterpriseLandingHost() && path === '/login');
   // Páginas donde va el FAB de idioma/tema (flotante). Robusto para cPanel: considerar raíz cualquier path vacío o "/"
   const isPublicLanding =
     isRoot ||
@@ -118,16 +117,7 @@ function AppContent({ isLoading }: { isLoading: boolean }) {
               />
               <Route
                 path="/register"
-                element={
-                  isEnterpriseLandingHost() ? (
-                    <>
-                      <EmpresasNavbar />
-                      <Register />
-                    </>
-                  ) : (
-                    <Register />
-                  )
-                }
+                element={isEnterpriseLandingHost() ? <Navigate to="/login" replace /> : <Register />}
               />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

@@ -6,12 +6,13 @@ import { useI18n } from '../i18n/I18nProvider';
 
 const WalletButtonInner: React.FC = () => {
   const { t } = useI18n();
-  const { 
-    isConnected, 
-    address, 
-    loading, 
+  const {
+    isConnected,
+    address,
+    loading,
     connectFreighter,
-    disconnectWallet 
+    connectXBull,
+    disconnectWallet
   } = useWallet();
   
   const [showWalletPopup, setShowWalletPopup] = useState(false);
@@ -34,6 +35,11 @@ const WalletButtonInner: React.FC = () => {
   const handleConnectFreighter = async () => {
     setShowWalletPopup(false);
     await connectFreighter();
+  };
+
+  const handleConnectXBull = async () => {
+    setShowWalletPopup(false);
+    await connectXBull();
   };
 
   return (
@@ -72,6 +78,7 @@ const WalletButtonInner: React.FC = () => {
         isOpen={showWalletPopup}
         onClose={() => setShowWalletPopup(false)}
         onConnectFreighter={handleConnectFreighter}
+        onConnectXBull={handleConnectXBull}
       />
     </>
   );

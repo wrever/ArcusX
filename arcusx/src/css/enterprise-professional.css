@@ -908,6 +908,13 @@
   background: var(--ax-ent-bg) !important;
 }
 
+:root[data-app-variant="enterprise"] .chat-send-btn svg,
+:root[data-app-variant="enterprise"] .chat-send-btn .chat-send-btn__icon {
+  color: #ffffff !important;
+  fill: currentColor !important;
+  opacity: 1 !important;
+}
+
 :root[data-app-variant="enterprise"] .form-group label,
 :root[data-app-variant="enterprise"] .task-description h3,
 :root[data-app-variant="enterprise"] .task-details-section h2 {

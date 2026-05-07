@@ -86,7 +86,7 @@ const ProposalReview = () => {
     address,
     loading: walletLoading,
     isConnected,
-    connectFreighter,
+    connectWallet,
     kit
   } = useWallet();
 
@@ -190,14 +190,14 @@ const ProposalReview = () => {
     if (!selectedProposal) return;
     
     if (!user || !user.id) {
-      setPopupMessage('Debes estar logeado para realizar esta acción.');
+      setPopupMessage('Debes estar logueado para realizar esta acción.');
       setShowErrorPopup(true);
       return;
     }
 
     // Verificar wallet Stellar
       if (!isConnected) {
-        setPopupMessage('Debes conectar tu wallet Freighter para continuar.');
+        setPopupMessage('Debes conectar tu wallet Stellar para continuar.');
         setShowErrorPopup(true);
         return;
       }
@@ -225,7 +225,7 @@ const ProposalReview = () => {
       }
 
       if (!isConnected || !address) {
-        return { success: false, error: 'Debes conectar tu wallet Freighter primero' };
+        return { success: false, error: 'Debes conectar tu wallet Stellar primero' };
       }
 
       if (!kit) {
@@ -413,7 +413,7 @@ const ProposalReview = () => {
       }
 
       if (!isConnected || !address) {
-        return { success: false, error: 'Debes conectar tu wallet Freighter primero' };
+        return { success: false, error: 'Debes conectar tu wallet Stellar primero' };
       }
       
       if (!task) {
@@ -698,8 +698,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
             return { success: true };
       }
 
-      // Conectar Freighter
-      await connectFreighter();
+      await connectWallet();
       
       // Esperar a que se conecte
       let attempts = 0;
@@ -719,7 +718,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
       }
       
       if (!connectedAddress) {
-        return { success: false, error: 'No se pudo conectar con Freighter' };
+        return { success: false, error: 'No se pudo conectar con la wallet Stellar' };
       }
 
       return { success: true };
@@ -859,7 +858,8 @@ El proyecto está activo y el trabajador puede comenzar.`);
             ) : (
                 <div className="proposals-list">
               {proposals.map((proposal) => (
-                <div key={proposal.id} className={`proposal-card ${proposal.status}`}>
+                <div key={proposal.id} className="proposal-list-item">
+                <div className={`proposal-card ${proposal.status}`}>
                   <div className="proposal-header">
                     <div className="applicant-info">
                       <div className="applicant-avatar">
@@ -917,14 +917,13 @@ El proyecto está activo y el trabajador puede comenzar.`);
                   </div>
 
                   <div className="proposal-footer">
-                    <Link 
+                    <Link
                       to={`/profile/${proposal.applicant_id}`}
+                      state={{ from: `/proposals/${taskId}` }}
                       className="view-profile-button"
-                      target="_blank"
-                      rel="noopener noreferrer"
                     >
                       <FaUserCircle />
-                      Ver Perfil Público
+                      {t('proposals.view.publicProfile')}
                     </Link>
                   </div>
 
@@ -936,18 +935,17 @@ El proyecto está activo y el trabajador puede comenzar.`);
                         disabled={actionLoading}
                       >
                         <FaCheck />
-                        Seleccionar
+                        {t('proposals.select.button')}
                                 </button>
                     </div>
                             )}
                         </div>
-                    ))}
-                </div>
-            )}
 
-          {/* Panel de confirmación de selección - Ocultar si ya hay escrow completado */}
-          {!(task?.escrow_id && task?.accepted_applicant_id) && selectingProposal && selectedProposal && (
-            <div className="selection-confirmation">
+          {!(task?.escrow_id && task?.accepted_applicant_id) &&
+            selectingProposal &&
+            selectedProposal &&
+            Number(selectedProposal.id) === Number(proposal.id) && (
+            <div className="selection-confirmation selection-confirmation--below-card">
               <div className="confirmation-header">
                 <h3>{t('proposals.confirm.selection')}</h3>
                 <p>{t('proposals.confirm.selection.message')} <strong>{selectedProposal.applicant_username}</strong></p>
@@ -1003,6 +1001,11 @@ El proyecto está activo y el trabajador puede comenzar.`);
               </div>
             </div>
           )}
+                </div>
+                    ))}
+                </div>
+            )}
+
         </div>
         )}
 

@@ -233,6 +233,12 @@ body:has(.wallet-popup-overlay) .lang-select--fab {
   box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
 }
 
+.xbull-icon {
+  background: linear-gradient(135deg, #0ea5e9, #0284c7);
+  color: white;
+  box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);
+}
+
 .wallet-option:hover .wallet-icon {
   transform: scale(1.1);
 }

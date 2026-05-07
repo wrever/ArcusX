@@ -47,17 +47,6 @@ export const useAuth = () => {
     };
   }, [checkAuth]);
 
-  const login = async (email: string, password: string) => {
-    try {
-      const response = await authService.login({ email, password });
-      setIsAuthenticated(true);
-      setUser(response.user);
-      return response;
-    } catch (error) {
-      throw error;
-    }
-  };
-
   const logout = async () => {
     await authService.logout();
     setIsAuthenticated(false);
@@ -70,7 +59,6 @@ export const useAuth = () => {
     isAuthenticated,
     user,
     loading,
-    login,
     logout
   };
 }; 

@@ -1,6 +1,6 @@
 <?php
 // Required headers for CORS
-header("Access-Control-Allow-Origin: *"); // Permite solicitudes desde cualquier origen
+$_cors_origin = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header("Access-Control-Allow-Origin: ".$_cors_origin); // Permite solicitudes desde cualquier origen
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS"); // Incluye OPTIONS para pre-flight requests
 header("Access-Control-Max-Age: 3600"); // Cachea las opciones por 1 hora
