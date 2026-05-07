@@ -46,9 +46,8 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   
-  // Formulario de resolución
-  const [showResolveForm, setShowResolveForm] = useState(false);
-  const [, setResolving] = useState(false);
+  // Resolución on-chain / BD
+  const [resolving, setResolving] = useState(false);
   const [resolution, setResolution] = useState({
     decision: 'client' as 'client' | 'worker' | 'split',
     reason: '',
@@ -66,7 +65,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
   const [, setLoadingEscrowInfo] = useState(false);
   
   // Estado para disputeResolver requerido (para mostrar en el formulario)
-  const [, setRequiredDisputeResolver] = useState<string | null>(null);
+  const [requiredDisputeResolver, setRequiredDisputeResolver] = useState<string | null>(null);
   
   // Estado para tabs del modal de detalles
   const [activeTab, setActiveTab] = useState<'summary' | 'chat' | 'files' | 'timeline'>('summary');
@@ -75,14 +74,18 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
     fetchDisputes();
   }, [statusFilter, page]);
 
-  //  MEJORA: Cargar disputeResolver requerido cuando se muestra el formulario de resolución
   useEffect(() => {
     const loadRequiredDisputeResolver = async () => {
-      if (showResolveForm && selectedDispute?.escrow_id && selectedDispute.escrow_id.startsWith('C')) {
+      if (
+        showDetails &&
+        activeTab === 'summary' &&
+        selectedDispute?.escrow_id &&
+        selectedDispute.escrow_id.startsWith('C')
+      ) {
         try {
-          const escrowData = await getEscrowByContractIds({ 
+          const escrowData = await getEscrowByContractIds({
             contractIds: [selectedDispute.escrow_id],
-            validateOnChain: true 
+            validateOnChain: true
           });
           const escrow = Array.isArray(escrowData) ? escrowData[0] : (escrowData as any)?.escrows?.[0];
           if (escrow?.roles?.disputeResolver) {
@@ -90,16 +93,16 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
           } else {
             setRequiredDisputeResolver(null);
           }
-        } catch (err) {
+        } catch {
           setRequiredDisputeResolver(null);
         }
       } else {
         setRequiredDisputeResolver(null);
       }
     };
-    
+
     loadRequiredDisputeResolver();
-  }, [showResolveForm, selectedDispute?.escrow_id, getEscrowByContractIds]);
+  }, [showDetails, activeTab, selectedDispute?.escrow_id, getEscrowByContractIds]);
 
   const fetchDisputes = async () => {
     setLoading(true);
@@ -498,7 +501,6 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
         }
       setSelectedDispute(dispute);
       setShowDetails(true);
-      setShowResolveForm(false);
         
         // Obtener información del escrow desde Trustless Work y el disputeResolver requerido
         if (dispute.escrow_id && dispute.escrow_id.startsWith('C')) {
@@ -522,7 +524,6 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
         const dispute = await getAdminDisputeDetails(disputeId as number);
         setSelectedDispute(dispute);
         setShowDetails(true);
-        setShowResolveForm(false);
         
         // Si hay escrow_id, obtener información del escrow desde Trustless Work
         if (dispute.escrow_id && dispute.escrow_id.startsWith('C')) {
@@ -573,20 +574,15 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
         resolutionData.refund_percentage = resolution.refund_percentage;
       }
 
-      // Verificar que la wallet esté conectada antes de resolver
-      if (!isConnected || !walletAddress) {
-        throw new Error('Debes conectar tu wallet (Freighter) para resolver disputas y liberar fondos. Por favor, conecta tu wallet e intenta nuevamente.');
-      }
-      
-      //  MEJORA: Verificar que kit esté disponible
-      if (!kit) {
-        throw new Error('Kit de Stellar no está disponible. Por favor, recarga la página e intenta nuevamente.');
-      }
-      
-
       //  CRÍTICO: TODAS las disputas con escrow_id de Trustless Work deben usar el flujo nuevo
       // No solo las virtuales, sino también las que tienen registro en BD pero usan Trustless Work
       if (selectedDispute.escrow_id && selectedDispute.escrow_id.startsWith('C')) {
+        if (!isConnected || !walletAddress) {
+          throw new Error('Debes conectar tu wallet (Freighter) para resolver disputas y liberar fondos. Por favor, conecta tu wallet e intenta nuevamente.');
+        }
+        if (!kit) {
+          throw new Error('Kit de Stellar no está disponible. Por favor, recarga la página e intenta nuevamente.');
+        }
         // Resolver directamente desde Trustless Work sin crear registro en BD
         const contractId = selectedDispute.escrow_id;
         
@@ -1222,9 +1218,17 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
     }
   };
 
-  // Kept for form submit when resolve form is shown (e.g. from DisputeCaseView or modal)
   const resolveHandlerRef = useRef(handleResolve);
   resolveHandlerRef.current = handleResolve;
+
+  const disputeIsPending = (d: any): boolean => {
+    if (!d) return false;
+    const st = String(d.displayStatus || d.status || '').toLowerCase();
+    if (st === 'resolved' || st === 'cancelled') return false;
+    if (d.resolved_at) return false;
+    if (d.trustlessWorkIsResolved === true) return false;
+    return true;
+  };
 
   const getStatusBadge = (status: string) => {
     const badges: any = {
@@ -1469,17 +1473,17 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                 disabled={page === 1}
                 className="admin-button secondary"
               >
-                Anterior
+                {t('freelancers.pagination.previous')}
               </button>
               <span>
-                Página {page} de {totalPages}
+                {t('admin.disputes.page').replace('{{page}}', String(page)).replace('{{total}}', String(totalPages))}
               </span>
               <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
                 className="admin-button secondary"
               >
-                Siguiente
+                {t('freelancers.pagination.next')}
               </button>
             </div>
           )}
@@ -1490,7 +1494,6 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
       {showDetails && selectedDispute && createPortal(
         <div className="admin-modal-overlay dispute-modal-overlay" onClick={() => {
           setShowDetails(false);
-          setShowResolveForm(false);
           setSelectedDispute(null);
           setEscrowInfo(null);
           setResolution({ decision: 'client', reason: '', refund_percentage: 50 });
@@ -1506,7 +1509,6 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                 className="admin-modal-close"
                 onClick={() => {
                   setShowDetails(false);
-                  setShowResolveForm(false);
                   setSelectedDispute(null);
                   setEscrowInfo(null);
                   setResolution({ decision: 'client', reason: '', refund_percentage: 50 });
@@ -1666,8 +1668,162 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                 </div>
 
                 {/* Contenido de los tabs */}
-                {activeTab === 'summary' && (
-                  <DisputeCaseView dispute={selectedDispute} />
+                {activeTab === 'summary' && selectedDispute && (
+                  <>
+                    <DisputeCaseView dispute={selectedDispute} />
+                    {!disputeIsPending(selectedDispute) ? (
+                      <div className="dispute-resolve-panel dispute-resolve-panel--closed">
+                        <h4 className="dispute-resolve-panel-title">{t('admin.disputes.resolve.closedTitle')}</h4>
+                        <p className="dispute-resolve-intro">{t('admin.disputes.resolve.closedBody')}</p>
+                      </div>
+                    ) : (
+                      <form
+                        className="dispute-resolve-panel"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          void resolveHandlerRef.current(e);
+                        }}
+                      >
+                        <h4 className="dispute-resolve-panel-title">
+                          <FaBolt aria-hidden /> {t('admin.disputes.resolve.title')}
+                        </h4>
+                        <p className="dispute-resolve-intro">{t('admin.disputes.resolve.intro')}</p>
+
+                        {selectedDispute.escrow_id?.startsWith('C') && (
+                          <>
+                            <p className="dispute-resolve-wallet-line">{t('admin.disputes.resolve.walletRequired')}</p>
+                            {requiredDisputeResolver &&
+                              walletAddress &&
+                              walletAddress === requiredDisputeResolver && (
+                                <div className="admin-alert success dispute-resolve-wallet-msg">
+                                  <FaCheckCircle aria-hidden />
+                                  <span>{t('admin.disputes.resolve.walletMatch')}</span>
+                                </div>
+                              )}
+                            {requiredDisputeResolver &&
+                              walletAddress &&
+                              walletAddress !== requiredDisputeResolver && (
+                                <div className="admin-alert error dispute-resolve-wallet-msg">
+                                  <FaExclamationTriangle aria-hidden />
+                                  <span>
+                                    {t('admin.disputes.resolve.walletMismatch')
+                                      .replace('{{connected}}', walletAddress)
+                                      .replace('{{required}}', requiredDisputeResolver)}
+                                  </span>
+                                </div>
+                              )}
+                          </>
+                        )}
+
+                        {!selectedDispute.escrow_id?.startsWith('C') && (
+                          <div
+                            className="dispute-resolve-legacy"
+                            style={{
+                              padding: '12px',
+                              marginBottom: '16px',
+                              borderRadius: '8px',
+                              background: 'rgba(255, 152, 0, 0.12)',
+                              border: '1px solid rgba(255, 152, 0, 0.35)',
+                              fontSize: '0.9rem'
+                            }}
+                          >
+                            {t('admin.disputes.resolve.legacyNote')}
+                          </div>
+                        )}
+
+                        <div className="dispute-resolve-field">
+                          <span className="dispute-resolve-label">{t('admin.disputes.resolve.decisionLabel')}</span>
+                          <div className="dispute-resolve-options">
+                            <label className={resolution.decision === 'client' ? 'is-active' : ''}>
+                              <input
+                                type="radio"
+                                name="resolve-decision"
+                                checked={resolution.decision === 'client'}
+                                onChange={() =>
+                                  setResolution((r) => ({ ...r, decision: 'client' }))
+                                }
+                              />
+                              {t('admin.disputes.resolve.option.client')}
+                            </label>
+                            <label className={resolution.decision === 'worker' ? 'is-active' : ''}>
+                              <input
+                                type="radio"
+                                name="resolve-decision"
+                                checked={resolution.decision === 'worker'}
+                                onChange={() =>
+                                  setResolution((r) => ({ ...r, decision: 'worker' }))
+                                }
+                              />
+                              {t('admin.disputes.resolve.option.worker')}
+                            </label>
+                            <label className={resolution.decision === 'split' ? 'is-active' : ''}>
+                              <input
+                                type="radio"
+                                name="resolve-decision"
+                                checked={resolution.decision === 'split'}
+                                onChange={() =>
+                                  setResolution((r) => ({ ...r, decision: 'split' }))
+                                }
+                              />
+                              {t('admin.disputes.resolve.option.split')}
+                            </label>
+                          </div>
+                        </div>
+
+                        {resolution.decision === 'split' && (
+                          <div className="dispute-resolve-field">
+                            <label className="dispute-resolve-label" htmlFor="refund-pct">
+                              {t('admin.disputes.resolve.refundPctLabel')}
+                            </label>
+                            <input
+                              id="refund-pct"
+                              type="number"
+                              min={1}
+                              max={99}
+                              className="dispute-resolve-number"
+                              value={resolution.refund_percentage}
+                              onChange={(e) =>
+                                setResolution((r) => ({
+                                  ...r,
+                                  refund_percentage: Math.min(
+                                    99,
+                                    Math.max(1, parseInt(e.target.value, 10) || 50)
+                                  )
+                                }))
+                              }
+                            />
+                            <p className="dispute-resolve-hint">{t('admin.disputes.resolve.splitHint')}</p>
+                          </div>
+                        )}
+
+                        <div className="dispute-resolve-field">
+                          <label className="dispute-resolve-label" htmlFor="resolve-reason">
+                            {t('admin.disputes.resolve.reasonLabel')}
+                          </label>
+                          <textarea
+                            id="resolve-reason"
+                            required
+                            rows={4}
+                            className="dispute-resolve-textarea"
+                            value={resolution.reason}
+                            placeholder={t('admin.disputes.resolve.reasonPlaceholder')}
+                            onChange={(e) =>
+                              setResolution((r) => ({ ...r, reason: e.target.value }))
+                            }
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          className="admin-button primary"
+                          disabled={resolving}
+                          style={{ marginTop: '8px', width: '100%', justifyContent: 'center' }}
+                        >
+                          {resolving ? t('admin.disputes.resolve.submitting') : t('admin.disputes.resolve.submit')}
+                        </button>
+                      </form>
+                    )}
+                  </>
                 )}
 
                 {activeTab === 'chat' && selectedDispute && (
@@ -1701,11 +1857,8 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
           onClose={() => {
             setShowSuccessPopup(false);
             fetchDisputes();
-            // Cerrar el modal de detalles si está abierto
             setShowDetails(false);
             setSelectedDispute(null);
-            // Cerrar el formulario de resolución si está abierto
-            setShowResolveForm(false);
           }}
           type="success"
           title={successPopupData?.alreadyResolved ? t('dispute.resolved.already') : t('dispute.resolved.success')}
@@ -1728,11 +1881,8 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
           onButtonClick={() => {
             setShowSuccessPopup(false);
             fetchDisputes();
-            // Cerrar el modal de detalles si está abierto
             setShowDetails(false);
             setSelectedDispute(null);
-            // Cerrar el formulario de resolución si está abierto
-            setShowResolveForm(false);
           }}
         />,
         document.body

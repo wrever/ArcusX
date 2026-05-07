@@ -1,11 +1,5 @@
 <?php
-// config.php - NO envía headers CORS ni maneja OPTIONS
-// Los headers CORS los maneja .htaccess
-// OPTIONS lo maneja cada archivo PHP individualmente
 
-// Credenciales leídas desde variables de entorno del servidor.
-// En cPanel: Configuración PHP → Variables de entorno, o .htaccess con SetEnv.
-// Variables requeridas: ARCUSX_DB_PASSWORD, ARCUSX_JWT_SECRET
 $db_password = getenv('ARCUSX_DB_PASSWORD');
 $jwt_secret  = getenv('ARCUSX_JWT_SECRET');
 

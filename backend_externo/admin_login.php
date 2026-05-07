@@ -1,12 +1,12 @@
 <?php
 /**
  * admin_login.php
- * Login simplificado para administradores - similar a login.php pero verifica que sea admin
+ * Login simplificado para administradores - JWT propio; verifica que sea admin
  */
 
 // Manejar OPTIONS preflight
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    header('Access-Control-Allow-Origin: *');
+    $_cors_o = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header('Access-Control-Allow-Origin: '.$_cors_o);
     header('Access-Control-Allow-Methods: POST, OPTIONS');
     header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
     header('Access-Control-Max-Age: 3600');
@@ -25,7 +25,7 @@ require_once 'config.php';
 $autoload_path = __DIR__ . '/vendor/autoload.php';
 if (!file_exists($autoload_path)) {
     http_response_code(500);
-    header('Access-Control-Allow-Origin: *');
+    $_cors_o = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header('Access-Control-Allow-Origin: '.$_cors_o);
     header('Content-Type: application/json');
     echo json_encode([
         'message' => 'Error en el servidor: Falta la carpeta de dependencias (vendor).',
@@ -39,16 +39,14 @@ require $autoload_path;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
-// Usar el mismo secret key que config.php
 $secret_key = $jwt_secret;
 
-// Configuración del token - 7 días de expiración
 $issuedAt = time();
 $expirationTime = $issuedAt + (3600 * 24 * 7); // 7 días
 $issuer = "arcusx.pro";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    header('Access-Control-Allow-Origin: *');
+    $_cors_o = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header('Access-Control-Allow-Origin: '.$_cors_o);
     header('Content-Type: application/json');
 
     $raw_data = file_get_contents('php://input');
@@ -103,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit();
             }
 
-            // Payload del token JWT - mismo formato que login.php
+            // Payload del token JWT - formato alineado con usuarios finales
             $payload = [
                 'iat' => $issuedAt,
                 'exp' => $expirationTime,
@@ -147,7 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $conn->close();
 
 } else {
-    header('Access-Control-Allow-Origin: *');
+    $_cors_o = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header('Access-Control-Allow-Origin: '.$_cors_o);
     header('Content-Type: application/json');
     http_response_code(405);
     echo json_encode(['message' => 'Método no permitido.']);

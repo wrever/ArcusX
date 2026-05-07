@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios'; // Importar axios
 import { API_URL } from '../config/database'; // Asegúrate de que la ruta a tu config.js es correcta
@@ -36,9 +36,8 @@ import WalletButton from './WalletButton';
 import ConfirmDialog from './ConfirmDialog';
 import RatingSystem from './RatingSystem';
 import CompleteTaskPopup from './CompleteTaskPopup';
-import { FaExclamationTriangle, FaTimes, FaFlag, FaLock, FaHome, FaDollarSign, FaComments, FaMapMarkerAlt, FaArrowLeft } from 'react-icons/fa';
+import { FaExclamationTriangle, FaTimes, FaFlag, FaLock, FaHome, FaDollarSign, FaComments, FaMapMarkerAlt, FaArrowLeft, FaPaperPlane } from 'react-icons/fa';
 import { useI18n } from '../i18n/I18nProvider';
-import { useEnterpriseMode } from '../hooks/useEnterpriseMode';
 import '../css/ConfirmDialog.css';
 
 interface TaskDetails {
@@ -209,7 +208,6 @@ const SuperviseTask = () => {
     const { taskId, acceptedApplicantId } = useParams<{ taskId: string, acceptedApplicantId: string }>();
     const navigate = useNavigate();
     const { t } = useI18n();
-    const enterprise = useEnterpriseMode();
     const [task, setTask] = useState<TaskDetails | null>(null);
     const [withdrawingFunds, setWithdrawingFunds] = useState(false);
     const [worker, setWorker] = useState<UserDetails | null>(null);
@@ -235,9 +233,8 @@ const SuperviseTask = () => {
     const [newMessage, setNewMessage] = useState('');
     const [loadingMessages, setLoadingMessages] = useState(false);
     const [sendingMessage, setSendingMessage] = useState(false);
-    const [isTyping, setIsTyping] = useState(false);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const messagesAreaRef = useRef<HTMLDivElement>(null);
+    const lastMessageIdRef = useRef<string | null>(null);
     
     // Estado para el usuario actual logueado (usamos la nueva interfaz CurrentUser)
     const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
@@ -468,13 +465,16 @@ const SuperviseTask = () => {
         }
     }, [taskId, acceptedApplicantId]); // Dependencias del useEffect
 
-    // Función para cargar mensajes
-    const fetchMessages = async () => {
+    // Cargar mensajes: `silent` evita loading en pantalla (polling) para que no parpadee el chat
+    const fetchMessages = useCallback(async (opts?: { silent?: boolean }) => {
+        const silent = opts?.silent === true;
         if (!taskId) {
              return;
         }
 
-        setLoadingMessages(true);
+        if (!silent) {
+            setLoadingMessages(true);
+        }
         try {
             const response = await axios.get(`${API_URL}/auth/get_messages.php?task_id=${taskId}`);
             
@@ -486,26 +486,48 @@ const SuperviseTask = () => {
                     sender_id: String(msg.sender_id),
                     receiver_id: String(msg.receiver_id)
                 }));
-                setMessages(formattedMessages);
+                setMessages((prev) => {
+                    if (
+                        prev.length === formattedMessages.length &&
+                        formattedMessages.length > 0 &&
+                        prev.every((m, i) => {
+                            const n = formattedMessages[i];
+                            return (
+                                n &&
+                                String(m.id) === String(n.id) &&
+                                m.message === n.message &&
+                                String(m.created_at) === String(n.created_at)
+                            );
+                        })
+                    ) {
+                        return prev;
+                    }
+                    return formattedMessages;
+                });
             } else {
                  setMessages([]);
             }
         } catch (error) {
-             setError(t('supervise.error.load.messages'));
+             if (!silent) {
+                 setError(t('supervise.error.load.messages'));
+             }
         } finally {
-            setLoadingMessages(false);
+            if (!silent) {
+                setLoadingMessages(false);
+            }
         }
-    };
+    }, [taskId, t]);
 
     // Cargar mensajes al obtener los detalles de la tarea, trabajador y usuario actual
     useEffect(() => {
         if (task && worker && currentUser) {
-            fetchMessages();
-            // Opcional: Implementar polling para nuevos mensajes
-            const interval = setInterval(fetchMessages, 5000); // Cargar mensajes cada 5 segundos
-            return () => clearInterval(interval); // Limpiar el intervalo al desmontar
+            void fetchMessages();
+            const interval = setInterval(() => {
+                void fetchMessages({ silent: true });
+            }, 5000);
+            return () => clearInterval(interval);
         }
-    }, [task, worker, currentUser, taskId]); // Depende de que task, worker y currentUser estén cargados, y taskId (aunque taskId no cambiará)
+    }, [task, worker, currentUser, fetchMessages]);
 
     // Mostrar popup de éxito automáticamente si el cliente ya aceptó el trabajo
     useEffect(() => {
@@ -533,15 +555,25 @@ const SuperviseTask = () => {
         }
     }, [task, currentUser, showClientPaymentPopup, paymentSuccessData, platformFee]);
 
-    // Scroll al último mensaje solo cuando hay mensajes nuevos
+    // Solo hace scroll el panel del chat (no la página entera: scrollIntoView en el sentinel subía el window)
     useEffect(() => {
-        if (messages.length > 0) {
-            const timeoutId = setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-            }, 100);
-            return () => clearTimeout(timeoutId);
+        if (messages.length === 0) {
+            lastMessageIdRef.current = null;
+            return;
         }
-    }, [messages.length]); // Solo cuando cambia la cantidad de mensajes
+        const last = messages[messages.length - 1];
+        const lastId = String(last.id);
+        if (lastMessageIdRef.current === lastId) {
+            return;
+        }
+        lastMessageIdRef.current = lastId;
+        const t = window.setTimeout(() => {
+            const el = messagesAreaRef.current;
+            if (!el) return;
+            el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+        }, 0);
+        return () => clearTimeout(t);
+    }, [messages]);
 
     // Función optimizada para obtener escrow con cache y debouncing (definida antes de los useEffect que la usan)
     const getEscrowDataOptimized = async (forceRefresh: boolean = false): Promise<any> => {
@@ -858,7 +890,7 @@ const SuperviseTask = () => {
             
             if (response.data.success) {
                 setNewMessage('');
-                fetchMessages();
+                void fetchMessages({ silent: true });
             } else {
                 setError(t('supervise.error.messageNotSent') + ' ' + (response.data.message || t('supervise.error.sendMessage')));
             }
@@ -1796,14 +1828,12 @@ const SuperviseTask = () => {
         <div className="supervise-task-container">
             {/* Encabezado restaurado a la estructura original */}
             <div className="supervise-task-header">
-                {enterprise && (
-                  <div className="supervise-task-header__back">
+                <div className="supervise-task-header__back">
                     <Link to="/dashboard" className="supervise-back-dashboard-btn">
                       <FaArrowLeft aria-hidden />
                       <span>{t('supervise.back.dashboard')}</span>
                     </Link>
-                  </div>
-                )}
+                </div>
                 <div className="header-content">
                     <div className="header-text">
                 <h1>{isClient ? t('supervise.task.title.client') : t('supervise.task.title.worker')}: {task.title}</h1>
@@ -1962,51 +1992,24 @@ const SuperviseTask = () => {
                 )}
             </div>
 
-            {/* Sección de Chat - Restaurado a las clases definidas en CSS */}
+            {/* Chat Section */}
             <div className="chat-section">
-                <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    marginBottom: '20px'
-                }}>
-                    <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem' }}><FaComments aria-hidden="true" /> {t('supervise.chat.with')} {chatPartnerName}</h2>
-                    {/* Botón {t('supervise.dispute.button')} - Solo visible si se puede disputar */}
+                <div className="chat-header">
+                    <h2 className="chat-header-title">
+                        <FaComments aria-hidden="true" />
+                        {t('supervise.chat.with')} {chatPartnerName}
+                    </h2>
                     {canShowDisputeButton && (
                         <button
+                            className="dispute-btn"
                             onClick={() => setShowDisputeModal(true)}
-                            style={{
-                                backgroundColor: '#dc2626',
-                                color: '#fff',
-                                border: 'none',
-                                padding: '10px 20px',
-                                borderRadius: '8px',
-                                fontSize: '14px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                transition: 'all 0.3s ease',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                boxShadow: '0 2px 8px rgba(220, 38, 38, 0.3)'
-                            }}
-                            onMouseOver={(e) => {
-                                e.currentTarget.style.backgroundColor = '#b91c1c';
-                                e.currentTarget.style.transform = 'translateY(-2px)';
-                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(220, 38, 38, 0.4)';
-                            }}
-                            onMouseOut={(e) => {
-                                e.currentTarget.style.backgroundColor = '#dc2626';
-                                e.currentTarget.style.transform = 'translateY(0)';
-                                e.currentTarget.style.boxShadow = '0 2px 8px rgba(220, 38, 38, 0.3)';
-                            }}
                         >
                             <FaFlag />
                             {t('supervise.dispute.button')}
                         </button>
                     )}
                 </div>
-                <div className="messages-area">
+                <div className="messages-area" ref={messagesAreaRef}>
                     {loadingMessages ? (
                         <p className="loading-message">{t('supervise.loading.messages')}</p>
                     ) : messages.length === 0 ? (
@@ -2014,93 +2017,62 @@ const SuperviseTask = () => {
                     ) : (
                         <>
                             {messages.map(msg => {
-                                const isMyMessage = msg.sender_id === currentUser.id;
+                                const isMyMessage = String(msg.sender_id) === String(currentUser.id);
                                 const senderName = isMyMessage ? currentUser.username : (isClient ? worker.username : task.creator_username);
                                 return (
-                            <div 
-                                key={msg.id} 
-                                        className={`message-container ${isMyMessage ? 'my-message' : 'other-message'}`}
+                                    <div
+                                        key={msg.id}
+                                        className={`chat-message-row ${isMyMessage ? 'chat-message-row--mine' : 'chat-message-row--theirs'}`}
                                     >
                                         {!isMyMessage && (
-                                            <div className="message-avatar">
+                                            <div className="message-avatar" aria-hidden>
                                                 {senderName.charAt(0).toUpperCase()}
                                             </div>
                                         )}
-                                        <div className="message-content">
+                                        <div className="message-stack">
                                             {!isMyMessage && (
                                                 <div className="message-sender-name">{senderName}</div>
                                             )}
-                                <div className="message-bubble">
-                                    {msg.message}
-                                </div>
+                                            <div className="message-bubble">
+                                                {msg.message}
+                                            </div>
                                             <span className="message-time">
                                                 {new Date(msg.created_at).toLocaleTimeString('es-ES', {
                                                     hour: '2-digit',
                                                     minute: '2-digit'
                                                 })}
                                             </span>
-                            </div>
-                                        {isMyMessage && (
-                                            <div className="message-avatar my-avatar">
-                                                {currentUser.username.charAt(0).toUpperCase()}
-                                            </div>
-                                        )}
+                                        </div>
                                     </div>
                                 );
                             })}
-                            {isTyping && !isClient && (
-                                <div className="message-container other-message typing-indicator">
-                                    <div className="message-avatar">
-                                        {worker?.username.charAt(0).toUpperCase() || 'W'}
-                                    </div>
-                                    <div className="message-content">
-                                        <div className="message-bubble typing-bubble">
-                                            <span className="typing-dots">
-                                                <span></span>
-                                                <span></span>
-                                                <span></span>
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
                         </>
                     )}
-                    <div ref={messagesEndRef} />
                 </div>
                 <div className="message-input-area">
                     {/* Restaurado a input type="text" para coincidir con el CSS */}
                     <input
                         type="text"
                         value={newMessage}
-                        onChange={(e) => {
-                            setNewMessage(e.target.value);
-                            // Indicador de escribiendo
-                            setIsTyping(true);
-                            if (typingTimeoutRef.current) {
-                                clearTimeout(typingTimeoutRef.current);
-                            }
-                            typingTimeoutRef.current = setTimeout(() => {
-                                setIsTyping(false);
-                            }, 2000);
-                        }}
+                        onChange={(e) => setNewMessage(e.target.value)}
                         placeholder={t('supervise.message.placeholder')}
                         disabled={sendingMessage}
-                         onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
-                                setIsTyping(false);
-                                if (typingTimeoutRef.current) {
-                                    clearTimeout(typingTimeoutRef.current);
-                                }
+                         onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
                                 sendMessage();
                             }
                          }}
                     />
                     <button
+                        type="button"
+                        className="chat-send-btn"
                         onClick={sendMessage}
-                         disabled={sendingMessage || !newMessage.trim()}
+                        disabled={sendingMessage || !newMessage.trim()}
+                        title={t('supervise.send')}
+                        aria-label={t('supervise.send')}
                     >
-                        {sendingMessage ? t('supervise.sending') : t('supervise.send')}
+                        <FaPaperPlane className="chat-send-btn__icon" size={18} aria-hidden />
                     </button>
                 </div>
             </div>
@@ -3251,7 +3223,7 @@ const SuperviseTask = () => {
                                 fontWeight: '500',
                                 color: 'rgba(255, 255, 255, 0.8)'
                             }}>
-                                Para recibir tu reembolso, debes firmar la transacción con Freighter
+                                Para recibir tu reembolso, debes firmar la transacción con tu wallet Stellar
                             </p>
                             <div style={{
                                 background: 'linear-gradient(135deg, rgba(16, 221, 136, 0.1) 0%, rgba(10, 184, 106, 0.1) 100%)',

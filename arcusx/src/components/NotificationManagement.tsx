@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaBell, FaPaperPlane, FaUsers, FaInfoCircle, FaExclamationTriangle, FaCheckCircle, FaTimesCircle, FaEye, FaClock, FaUser, FaHeading, FaEnvelope, FaTag } from 'react-icons/fa';
 import { sendAdminNotification, sendAdminBroadcast, getAdminNotifications } from '../services/adminService';
+import { useI18n } from '../i18n/I18nProvider';
 import '../css/AdminPanel.css';
 
 interface NotificationManagementProps {
@@ -8,6 +9,7 @@ interface NotificationManagementProps {
 }
 
 const NotificationManagement: React.FC<NotificationManagementProps> = ({ onUpdate }) => {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<'send' | 'list'>('send');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -491,17 +493,17 @@ const NotificationManagement: React.FC<NotificationManagementProps> = ({ onUpdat
                     disabled={page === 1}
                     className="admin-button secondary"
                   >
-                    Anterior
+                    {t('freelancers.pagination.previous')}
                   </button>
                   <span>
-                    Página {page} de {totalPages}
+                    {t('admin.disputes.page').replace('{{page}}', String(page)).replace('{{total}}', String(totalPages))}
                   </span>
                   <button
                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
                     className="admin-button secondary"
                   >
-                    Siguiente
+                    {t('freelancers.pagination.next')}
                   </button>
                 </div>
               )}

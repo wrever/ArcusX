@@ -5,6 +5,8 @@ import axios from 'axios';
 import { API_URL } from '../config/database';
 import '../css/ApplyTask.css'; // Necesitas crear este archivo CSS
 import { useI18n } from '../i18n/I18nProvider';
+import { authService } from '../services/authService';
+import { useWallet } from '../hooks/useWallet';
 
 interface TaskData {
   id: number;
@@ -27,6 +29,7 @@ interface ApplicationData {
 
 const ApplyTask = () => {
   const { t } = useI18n();
+  const { address: connectedWallet } = useWallet();
   const { taskId } = useParams<{ taskId: string }>(); // Obtener el ID de la tarea de la URL
   const [task, setTask] = useState<TaskData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -95,6 +98,34 @@ const ApplyTask = () => {
       setLoading(false);
     }
   }, [taskId]); // Ejecutar efecto cuando cambie el taskId de la URL
+
+  useEffect(() => {
+    let cancelled = false;
+    const fillRegisteredWallet = async () => {
+      if (!user?.id) return;
+      try {
+        const res = await authService.verifyWallet();
+        if (
+          cancelled ||
+          !res.success ||
+          !res.has_wallet ||
+          !res.wallet_address
+        ) {
+          return;
+        }
+        setApplicationData((prev) => ({
+          ...prev,
+          walletAddress: prev.walletAddress.trim() ? prev.walletAddress : res.wallet_address || ''
+        }));
+      } catch {
+        /* sin wallet registrada */
+      }
+    };
+    fillRegisteredWallet();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   // Manejar el envío del formulario de aplicación
   const handleApplicationSubmit = async (e: React.FormEvent) => {
@@ -292,14 +323,26 @@ const ApplyTask = () => {
                 <FaWallet style={{ marginRight: '6px', fontSize: '14px' }} />
                 {t('apply.wallet.label')}
               </label>
-              <input
-                type="text"
-                id="walletAddress"
-                value={applicationData.walletAddress}
-                onChange={(e) => handleInputChange('walletAddress', e.target.value)}
-                placeholder={t('apply.wallet.placeholder')}
-                required
-              />
+              <div className="apply-wallet-row">
+                <input
+                  type="text"
+                  id="walletAddress"
+                  value={applicationData.walletAddress}
+                  onChange={(e) => handleInputChange('walletAddress', e.target.value)}
+                  placeholder={t('apply.wallet.placeholder')}
+                  required
+                  autoComplete="off"
+                />
+                {connectedWallet && (
+                  <button
+                    type="button"
+                    className="apply-wallet-paste-btn"
+                    onClick={() => handleInputChange('walletAddress', connectedWallet)}
+                  >
+                    {t('apply.wallet.pasteConnected')}
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="form-info">

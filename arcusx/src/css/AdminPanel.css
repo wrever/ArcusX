@@ -1711,3 +1711,121 @@
     width: 100%;
   }
 }
+
+/* Panel: resolver disputa (Trustless / BD) */
+.dispute-resolve-panel {
+  margin-top: 1.5rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: 12px;
+  border: 1px solid rgba(16, 221, 136, 0.35);
+  background: linear-gradient(145deg, rgba(7, 35, 60, 0.85), rgba(16, 221, 136, 0.06));
+}
+
+.dispute-resolve-panel--closed {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.dispute-resolve-panel-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #fff;
+}
+
+.dispute-resolve-intro {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.dispute-resolve-wallet-line {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: rgba(255, 193, 7, 0.95);
+}
+
+.dispute-resolve-wallet-msg {
+  margin-bottom: 12px !important;
+  align-items: flex-start !important;
+}
+
+.dispute-resolve-wallet-msg span {
+  white-space: pre-wrap;
+}
+
+.dispute-resolve-field {
+  margin-bottom: 1rem;
+}
+
+.dispute-resolve-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.dispute-resolve-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dispute-resolve-options label {
+  flex: 1;
+  min-width: 140px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  font-size: 0.88rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.dispute-resolve-options label.is-active {
+  border-color: rgba(16, 221, 136, 0.65);
+  background: rgba(16, 221, 136, 0.12);
+}
+
+.dispute-resolve-options input {
+  accent-color: #10dd88;
+}
+
+.dispute-resolve-number {
+  width: 100%;
+  max-width: 120px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-size: 1rem;
+}
+
+.dispute-resolve-hint {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.35;
+}
+
+.dispute-resolve-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.95rem;
+  resize: vertical;
+}

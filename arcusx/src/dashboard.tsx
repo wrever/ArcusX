@@ -1039,12 +1039,7 @@ const Dashboard = () => {
               </div>
 
               {/* Barra de búsqueda */}
-              <div className="search-bar" style={{
-                marginBottom: '1rem',
-                display: 'flex',
-                gap: '0.5rem',
-                alignItems: 'center'
-              }}>
+              <div className="search-bar">
                 <input
                   type="text"
                   className="search-input"
@@ -1070,12 +1065,7 @@ const Dashboard = () => {
               </div>
 
               <div className={`filters-wrapper ${showFilters ? 'active' : ''}`}>
-                <div className="filter-container" style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-                  gap: '1rem',
-                  width: '100%'
-                }}>
+                <div className="filter-container">
                   <select
                     className="filter-select"
                     value={categoryFilter}
@@ -1261,23 +1251,11 @@ const Dashboard = () => {
                       </div>
                       <div className="task-detail">
                         <span className="task-detail-label">{t('dashboard.tasks.creator')}</span>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                        <div className="task-creator-wrap">
                           <Link 
                             to={`/profile/${task.creator_id || task.id}`}
                             className="task-creator-link"
-                            style={{
-                              color: 'var(--primary-blue)',
-                              textDecoration: 'none',
-                              fontWeight: 500,
-                              transition: 'all 0.3s ease'
-                            }}
                             onClick={(e) => e.stopPropagation()}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.textDecoration = 'underline';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.textDecoration = 'none';
-                            }}
                           >
                             {task.creator_username}
                           </Link>
@@ -1346,17 +1324,20 @@ const Dashboard = () => {
                   {transactions.map(transaction => (
                     <div key={transaction.id} className="transaction-row">
                           <div className="transaction-cell">
-                            {new Date(transaction.date).toLocaleDateString('es-ES', {
+                            {new Date(transaction.date).toLocaleDateString(
+                              lang === 'es' ? 'es-ES' : lang === 'pt' ? 'pt-BR' : 'en-US',
+                              {
                               year: 'numeric',
                               month: 'short',
                               day: 'numeric',
                               hour: '2-digit',
                               minute: '2-digit'
-                            })}
+                              }
+                            )}
                           </div>
                           <div className="transaction-cell">
                             <Link 
-                              to={`/task/${transaction.task_id}`}
+                              to={`/apply-task/${transaction.task_id}`}
                               style={{ color: 'var(--primary-green, #10dd88)', textDecoration: 'none' }}
                             >
                               {transaction.task_title}

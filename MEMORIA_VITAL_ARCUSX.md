@@ -1,8 +1,8 @@
 # 🧠 MEMORIA VITAL - ARCUSX
 ## Documento de Referencia Completa del Proyecto
 
-**Última Actualización:** Marzo 2026  
-**Versión del Proyecto:** 1.3  
+**Última Actualización:** Mayo 2026  
+**Versión del Proyecto:** 1.4  
 **Estado:** Testnet operativo (preparación de production readiness)
 
 ---
@@ -44,7 +44,7 @@
 - **Estado:** React Hooks + Context API
 - **Blockchain:** Stellar SDK + Trustless Work SDK
 - **Wallets:** Freighter (Stellar Wallets Kit)
-- **Autenticación:** JWT + Supabase OAuth
+- **Autenticación:** Supabase OAuth (Google/GitHub) obligatorio para usuarios; JWT emitido por `sync_supabase_user.php` tras el callback (sin registro ni login por email/contraseña en la app)
 - **HTTP Client:** Axios
 - **i18n:** Sistema propio de traducciones
 - **Temas:** Dark/Light mode con CSS Variables
@@ -182,18 +182,20 @@ arcusx/
 ### Servicios (`src/services/`)
 
 #### `authService.ts`
-**Propósito:** Maneja autenticación de usuarios.
+**Propósito:** Maneja autenticación de usuarios y sincronización con el backend.
 
-**Funciones:**
-- `login(email, password)` - Inicia sesión
-- `register(userData)` - Registra nuevo usuario
-- `logout()` - Cierra sesión
-- `getCurrentUser()` - Obtiene usuario actual
-- `refreshToken()` - Renueva token JWT
+**Funciones principales:**
+- `signInWithGoogle` / `signInWithGitHub` - Inician OAuth (redirección a Supabase)
+- `handleSupabaseCallback` - Tras el callback, llama a `sync_supabase_user.php` y guarda JWT + usuario en `localStorage`
+- `logout()` - Cierra Supabase (si aplica) y limpia `localStorage`
+- `isAuthenticated`, `getToken`, `getUser` - Estado de sesión app (JWT)
+- `registerWallet` / `verifyWallet` - Vinculan wallet Stellar al usuario autenticado
+
+**Política:** No hay `login`/`register` por email y contraseña en el frontend; los endpoints PHP equivalentes fueron eliminados para reducir abuso y superficie de ataque.
 
 **Integraciones:**
 - Supabase OAuth (Google, GitHub)
-- JWT tokens almacenados en localStorage
+- JWT en `localStorage` emitido por el backend tras sync
 
 #### `trustlessWorkEscrowService.ts`
 **Propósito:** Servicio principal para operaciones de escrow con Trustless Work.
@@ -315,12 +317,10 @@ arcusx/
 **Propósito:** Hook para autenticación.
 
 **Retorna:**
-- `user` - Usuario actual
-- `loading` - Estado de carga
-- `error` - Errores
-- `login(email, password)` - Función de login
-- `logout()` - Función de logout
-- `register(userData)` - Función de registro
+- `user` - Usuario actual (desde `localStorage`, poblado tras OAuth + sync)
+- `loading` - Estado de carga inicial
+- `isAuthenticated` - Boolean según token JWT válido
+- `logout()` - Cierra sesión (limpia token y usuario)
 
 #### `useWallet.ts`
 **Propósito:** Hook para integración con wallets Stellar.
@@ -422,17 +422,16 @@ arcusx/
 **Propósito:** Página de inicio de sesión.
 
 **Funcionalidades:**
-- Login con email/password
-- OAuth con Google/GitHub (Supabase)
-- Redirección post-login
+- OAuth con Google/GitHub (Supabase) únicamente
+- Enlace a `/register` para quien no tiene cuenta (también OAuth)
+- Redirección tras sesión válida (query `redirect`)
 
 #### `Register.tsx`
-**Propósito:** Página de registro.
+**Propósito:** Página de registro / primera entrada.
 
 **Funcionalidades:**
-- Registro con email/password
-- Validación de formulario
-- OAuth con Google/GitHub
+- OAuth con Google/GitHub únicamente (mismo flujo que login)
+- Columna informativa de beneficios; sin formulario de email/contraseña
 
 #### `AuthCallback.tsx`
 **Propósito:** Maneja callback de OAuth.
@@ -972,26 +971,26 @@ arcusx/
 ```
 1. Usuario intenta acceder a ruta protegida
    └─> ProtectedRoute.tsx
-       └─> Verifica token en localStorage
+       └─> Verifica token JWT en localStorage
 
 2. Si no autenticado → Redirige a /login
-   └─> Login.tsx
+   └─> Login.tsx (solo botones OAuth)
 
-3. Usuario inicia sesión
-   └─> authService.login()
-       ├─> POST /api/auth/login.php
-       ├─> Recibe JWT token
-       └─> Almacena en localStorage
+3. Usuario elige Google o GitHub
+   └─> Supabase signInWithOAuth
+       ├─> Redirección al proveedor
+       └─> Vuelta a /auth/callback
 
-4. OAuth (alternativa)
-   └─> Supabase OAuth
-       ├─> Redirige a proveedor (Google/GitHub)
-       ├─> Callback a /auth/callback
-       └─> AuthCallback.tsx intercambia código por token
+4. AuthCallback.tsx + authService.handleSupabaseCallback()
+       ├─> POST .../sync_supabase_user.php (datos del usuario Supabase)
+       ├─> Backend crea/actualiza usuario MySQL y devuelve JWT
+       └─> Guarda token + user en localStorage
 
-5. Token incluido en headers de todas las requests
-   └─> axios interceptor (config/axios.ts)
+5. Token incluido en headers de las requests API
+   └─> Interceptor Axios (config/axios.ts u otro cliente configurado)
 ```
+
+**Nota:** El registro e inicio de sesión con email/contraseña y los endpoints `login.php` / `register.php` fueron retirados; el JWT de aplicación solo se obtiene vía sync tras OAuth.
 
 ---
 
@@ -1084,10 +1083,10 @@ arcusx/
 - GitHub
 
 **Flujo:**
-1. Usuario hace click en "Sign in with Google/GitHub"
+1. Usuario hace clic en Continuar con Google/GitHub
 2. Redirige a Supabase OAuth
 3. Callback a `/auth/callback`
-4. Intercambia código por token JWT del backend
+4. `sync_supabase_user.php` valida la sesión Supabase y devuelve JWT + usuario ArcusX
 
 ### Axios
 
@@ -1249,8 +1248,10 @@ VITE_SUPABASE_ANON_KEY=tu_supabase_key
 
 ### JWT Tokens
 
-**Almacenamiento:** localStorage
+**Almacenamiento:** localStorage  
 **Key:** `token`
+
+**Emisión:** Tras OAuth exitoso, únicamente mediante `sync_supabase_user.php` (no hay login por contraseña en PHP para usuarios finales).
 
 **Uso:**
 - Incluido en header `Authorization: Bearer <token>`
@@ -1379,7 +1380,7 @@ VITE_SUPABASE_ANON_KEY=tu_supabase_key
 
 ### Funcionalidades Completadas ✅
 
-- ✅ Autenticación (JWT + OAuth)
+- ✅ Autenticación (OAuth Supabase + JWT vía sync; sin credenciales locales en la app)
 - ✅ Creación y gestión de tareas
 - ✅ Sistema de propuestas
 - ✅ Escrows con Trustless Work
@@ -1410,9 +1411,9 @@ VITE_SUPABASE_ANON_KEY=tu_supabase_key
 ### Estimación de Endpoints
 
 **Endpoints Actuales (Q1 2026):**
-- **Total:** ~37-40 endpoints funcionales
+- **Total:** ~35-38 endpoints funcionales (tras retirar login/registro por email)
 - Distribución:
-  - Autenticación: 5 endpoints
+  - Autenticación: ~3 endpoints (p. ej. sync Supabase, registro de wallet, utilidades JWT; admin aparte)
   - Tareas: 6 endpoints
   - Propuestas: 3 endpoints
   - Escrow: 4 endpoints
@@ -1475,9 +1476,9 @@ En lugar de migrar 60-70 archivos PHP individuales, se consolidarán endpoints r
 
 ---
 
-**Última actualización:** Marzo 2026 (alineado con plan mensual de revisores y estado actual del repo)
+**Última actualización:** Mayo 2026 (OAuth-only usuarios, memoria vital alineada al repo)
 **Mantenido por:** Equipo ArcusX  
-**Versión del documento:** 1.3
+**Versión del documento:** 1.4
 
 ---
 

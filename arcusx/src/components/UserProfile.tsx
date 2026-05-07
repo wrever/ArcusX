@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { FaArrowLeft, FaUser, FaCheckCircle, FaBriefcase, FaStar, FaDollarSign, FaTasks, FaLock } from 'react-icons/fa';
 import { getUserProfile, getUserPublicStats } from '../services/profileService';
 import type { UserProfile as UserProfileType, UserStatistics } from '../types/profile';
@@ -16,8 +16,10 @@ import { useI18n } from '../i18n/I18nProvider';
 const UserProfile = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo = (location.state as { from?: string } | null)?.from;
   const { theme } = useTheme();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const logo = theme === 'light' ? logoLight : logoDark;
   const [profile, setProfile] = useState<UserProfileType | null>(null);
   const [stats, setStats] = useState<UserStatistics | null>(null);
@@ -59,11 +61,20 @@ const UserProfile = () => {
   }, [userId, t]);
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
+    const locale = lang === 'es' ? 'es-ES' : lang === 'pt' ? 'pt-BR' : 'en-US';
+    return new Date(dateString).toLocaleDateString(locale, {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
+  };
+
+  const handleBack = () => {
+    if (returnTo) {
+      navigate(returnTo);
+    } else {
+      navigate(-1);
+    }
   };
 
   const getSkillLevelColor = (level: string) => {
@@ -97,7 +108,7 @@ const UserProfile = () => {
         <div className="error-message">
           <h3>{isPrivateError ? t('profile.private.title') : t('common.error')}</h3>
           <p>{error || t('profile.not.found')}</p>
-          <button onClick={() => navigate(-1)} className="back-button">
+          <button type="button" onClick={handleBack} className="back-button">
             <FaArrowLeft />
             <span>{t('common.back')}</span>
           </button>
@@ -135,7 +146,7 @@ const UserProfile = () => {
       <div className="user-profile-container">
         {/* Header con botón de volver */}
         <div className="profile-header-nav">
-        <button onClick={() => navigate(-1)} className="back-button">
+        <button type="button" onClick={handleBack} className="back-button">
           <FaArrowLeft />
           <span>{t('common.back')}</span>
         </button>
@@ -193,7 +204,9 @@ const UserProfile = () => {
           
           <div className="profile-meta">
             <span className="meta-item">
-              <span className="meta-text">Miembro desde {formatDate(profile.member_since)}</span>
+              <span className="meta-text">
+                {t('profile.memberSinceLine').replace('{{date}}', formatDate(profile.member_since))}
+              </span>
             </span>
             {profile.portfolio_url && (
               <a 

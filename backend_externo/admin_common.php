@@ -279,7 +279,7 @@ try {
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
-// Función para obtener usuario del JWT - SIMPLIFICADA (igual que login.php)
+// Función para obtener usuario del JWT - SIMPLIFICADA (mismo criterio que el resto de endpoints)
 // IMPORTANTE: Esta función debe estar DESPUÉS de cargar las dependencias de Firebase JWT
 function getLoggedInUser($conn, $jwt_secret) {
     try {
@@ -298,7 +298,7 @@ function getLoggedInUser($conn, $jwt_secret) {
             return null;
         }
         
-        // Usar Firebase JWT para validar el token - mismo método que login.php
+        // Usar Firebase JWT para validar el token (config.php / ARCUSX_JWT_SECRET)
         \Firebase\JWT\JWT::$leeway = 300; // 5 minutos de tolerancia
         
         try {
