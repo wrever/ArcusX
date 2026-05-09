@@ -39,7 +39,7 @@ const Hero = () => {
   const [carouselTasks, setCarouselTasks] = useState<TaskResult[]>([]);
   const [loadingCarousel, setLoadingCarousel] = useState(true);
   /* Mockup stats para la landing (sin fetch) */
-  const heroStats = { openTasks: 10, totalUsers: 170, totalVolumeUsdc: 600 };
+  const heroStats = { openTasks: 10, totalUsers: 190, totalVolumeUsdc: 600 };
 
   // Carrusel infinito: muchas copias de la lista para sensación de “millones de opciones”; el scroll avanza y al pasar un bloque se reubica sin que se note
   const REPEAT_COPIES = 8;

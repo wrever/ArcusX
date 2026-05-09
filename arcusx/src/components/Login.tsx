@@ -130,8 +130,6 @@ const Login = () => {
             </button>
           </div>
 
-          <p className="login-oauth-note">{t('login.oauth.note')}</p>
-
           {!enterprise ? (
             <div className="login-footer">
               <p>
