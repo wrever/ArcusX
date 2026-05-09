@@ -17,6 +17,8 @@ Empowering freelancers with fast, secure, and borderless crypto payments on Stel
 
 ## 📋 Table of Contents
 
+- [Changelog](#changelog)
+- [Releases (guía)](./docs/RELEASING.md)
 - [Overview](#overview)
 - [Features](#features)
 - [Technology Stack](#technology-stack)
@@ -28,6 +30,13 @@ Empowering freelancers with fast, secure, and borderless crypto payments on Stel
 - [API Documentation](#api-documentation)
 - [Contributing](#contributing)
 - [License](#license)
+
+## Changelog
+
+Los cambios notables están en **[CHANGELOG.md](./CHANGELOG.md)**.
+
+- **Publicar una versión:** [Guía de releases](./docs/RELEASING.md).
+- **Historial etiquetado:** [Releases en GitHub](https://github.com/wrever/ArcusX/releases) (crear el release asociado al tag `v*`).
 
 ## 🎯 Overview
 

@@ -129,8 +129,6 @@ const Register = () => {
                 </button>
               </div>
 
-              <p className="register-oauth-note">{t('register.oauth.note')}</p>
-
               <p className="login-link">
                 {t('register.has.account')} <Link to="/login">{t('register.login.link')}</Link>
               </p>
