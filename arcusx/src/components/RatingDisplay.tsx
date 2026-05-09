@@ -18,6 +18,7 @@ interface RatingDisplayProps {
   };
   showDistribution?: boolean;
   size?: 'small' | 'medium' | 'large';
+  hideRatingValue?: boolean;
 }
 
 const RatingDisplay = ({
@@ -25,11 +26,14 @@ const RatingDisplay = ({
   totalRatings,
   ratingDistribution,
   showDistribution = false,
-  size = 'medium'
+  size = 'medium',
+  hideRatingValue = false
 }: RatingDisplayProps) => {
-  const fullStars = Math.floor(averageRating);
-  const hasHalfStar = averageRating % 1 >= 0.5;
-  const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+  const rating = Number(averageRating);
+  const clamped = Number.isFinite(rating) ? Math.min(5, Math.max(0, rating)) : 0;
+  const fullStars = Math.min(5, Math.max(0, Math.floor(clamped)));
+  const hasHalfStar = clamped % 1 >= 0.5;
+  const emptyStars = Math.min(5, Math.max(0, 5 - fullStars - (hasHalfStar ? 1 : 0)));
 
   const sizeClass = `rating-${size}`;
 
@@ -44,12 +48,14 @@ const RatingDisplay = ({
           <FaStar key={`empty-${i}`} className="star star-empty" />
         ))}
       </div>
-      <div className="rating-info">
-        <span className="rating-value">{averageRating.toFixed(1)}</span>
-        {totalRatings > 0 && (
-          <span className="rating-count">({totalRatings})</span>
-        )}
-      </div>
+      {!hideRatingValue && (
+        <div className="rating-info">
+          <span className="rating-value">{clamped.toFixed(1)}</span>
+          {totalRatings > 0 && (
+            <span className="rating-count">({totalRatings})</span>
+          )}
+        </div>
+      )}
       
       {showDistribution && ratingDistribution && (
         <div className="rating-distribution">
@@ -58,7 +64,7 @@ const RatingDisplay = ({
             const percentage = totalRatings > 0 ? (count / totalRatings) * 100 : 0;
             return (
               <div key={rating} className="distribution-row">
-                <span className="distribution-rating">{rating}★</span>
+                <span className="distribution-rating">{rating}<FaStar aria-hidden="true" className="rating-star" /></span>
                 <div className="distribution-bar">
                   <div
                     className="distribution-fill"

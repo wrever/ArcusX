@@ -27,11 +27,6 @@
   gap: 0.5rem;
 }
 
-.evidence-header h4::before {
-  content: '📎';
-  font-size: 1rem;
-}
-
 .evidence-actions {
   display: flex;
   gap: 0.5rem;
@@ -309,3 +304,6 @@
     font-size: 0.85rem;
   }
 }
+
+.evidence-title{display:flex;align-items:center;gap:.5rem;}
+.evidence-title svg{opacity:.9;}

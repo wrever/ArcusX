@@ -1,0 +1,235 @@
+/**
+ * ArcusX Empresas — registro (misma lógica, piel B2B clara).
+ * Anula solo dentro de .register-container--enterprise lo oscuro de Register.css.
+ */
+
+.register-container.register-container--enterprise {
+  min-height: 100vh;
+  padding-top: 6rem;
+  padding-left: max(1rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1rem, env(safe-area-inset-right, 0px));
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2f7 50%, #f1f5f9 100%);
+}
+
+.register-container.register-container--enterprise::before {
+  display: none;
+}
+
+.register-container.register-container--enterprise .register-content {
+  border-radius: 0;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  box-shadow: 0 20px 50px -12px rgba(15, 23, 42, 0.1);
+}
+
+/* Panel izquierdo: siempre claro (subdominio empresas = sin bloques “dark”) */
+.register-container.register-container--enterprise .register-left {
+  background: linear-gradient(180deg, #eef4fc 0%, #f8fafc 55%, #ffffff 100%);
+  color: #0f172a;
+  border-right: 1px solid rgba(148, 163, 184, 0.28);
+}
+
+.register-container.register-container--enterprise .register-info h1 {
+  color: #0b3558 !important;
+}
+
+.register-container.register-container--enterprise .register-info h1 .highlight-text {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background: linear-gradient(90deg, #0f6ab4, #0a4e86) !important;
+  background-size: 100% 100% !important;
+  box-shadow: 0 4px 16px rgba(15, 106, 180, 0.28) !important;
+  border: 1px solid rgba(147, 197, 253, 0.45);
+}
+
+.register-container.register-container--enterprise .register-info p {
+  color: #475569 !important;
+}
+
+.register-container.register-container--enterprise .register-right {
+  background: #ffffff;
+  border-left: none;
+}
+
+.register-container.register-container--enterprise .register-form h2 {
+  color: #0f172a;
+}
+
+/* Panel derecho: inputs modo claro legible (Register.css fuerza fondos oscuros con !important) */
+.register-container.register-container--enterprise .register-right .form-group input[type="text"],
+.register-container.register-container--enterprise .register-right .form-group input[type="email"],
+.register-container.register-container--enterprise .register-right .form-group input[type="password"] {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 2px solid rgba(148, 163, 184, 0.45) !important;
+}
+
+.register-container.register-container--enterprise .register-right .form-group input::placeholder {
+  color: #64748b !important;
+  opacity: 1 !important;
+}
+
+.register-container.register-container--enterprise .register-right .form-group input:focus {
+  border-color: #0f6ab4 !important;
+  box-shadow: 0 0 0 4px rgba(15, 106, 180, 0.15) !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  outline: none !important;
+  transform: none !important;
+}
+
+.register-container.register-container--enterprise .register-right .form-group input:not(:placeholder-shown) {
+  background: #ffffff !important;
+  border-color: rgba(148, 163, 184, 0.55) !important;
+  color: #0f172a !important;
+}
+
+.register-container.register-container--enterprise .register-right .toggle-password {
+  color: #64748b !important;
+}
+
+.register-container.register-container--enterprise .register-right .toggle-password:hover {
+  color: #0f6ab4 !important;
+}
+
+/* OAuth: tarjetas claras, no “modo oscuro” */
+.register-container.register-container--enterprise .register-right .oauth-divider {
+  color: #64748b !important;
+}
+
+.register-container.register-container--enterprise .register-right .oauth-divider::before,
+.register-container.register-container--enterprise .register-right .oauth-divider::after {
+  border-bottom-color: rgba(148, 163, 184, 0.45) !important;
+}
+
+.register-container.register-container--enterprise .register-right .oauth-divider span {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color: #64748b !important;
+  text-shadow: none !important;
+}
+
+.register-container.register-container--enterprise .register-right .oauth-button {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(148, 163, 184, 0.55) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05) !important;
+}
+
+.register-container.register-container--enterprise .register-right .oauth-button:hover:not(:disabled) {
+  border-color: #0f6ab4 !important;
+  background: #f8fafc !important;
+  box-shadow: 0 4px 12px rgba(15, 106, 180, 0.12) !important;
+  transform: translateY(-1px);
+}
+
+.register-container.register-container--enterprise .register-right .oauth-button svg,
+.register-container.register-container--enterprise .register-right .oauth-button .fa-google,
+.register-container.register-container--enterprise .register-right .oauth-button .fa-github {
+  color: #0f172a !important;
+  fill: currentColor !important;
+}
+
+.register-container.register-container--enterprise .register-right .oauth-button svg path {
+  fill: currentColor !important;
+}
+
+.register-container.register-container--enterprise .register-right .oauth-button span {
+  color: #0f172a !important;
+}
+
+.register-container.register-container--enterprise .register-right .oauth-google:hover:not(:disabled) {
+  border-color: #4285f4 !important;
+}
+
+.register-container.register-container--enterprise .register-right .oauth-github:hover:not(:disabled) {
+  border-color: #334155 !important;
+  background: #f1f5f9 !important;
+}
+
+.register-container.register-container--enterprise .register-button {
+  background: linear-gradient(90deg, #0f6ab4, #0a4e86) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 16px rgba(15, 106, 180, 0.35) !important;
+}
+
+.register-container.register-container--enterprise .register-button:hover:not(:disabled) {
+  filter: none !important;
+  color: #ffffff !important;
+  background: linear-gradient(90deg, #0a4e86, #072f52) !important;
+  box-shadow: 0 6px 22px rgba(15, 106, 180, 0.42) !important;
+  transform: translateY(-1px);
+}
+
+.register-container.register-container--enterprise .login-link {
+  color: #475569 !important;
+}
+
+.register-container.register-container--enterprise .login-link a {
+  color: #0f6ab4 !important;
+}
+
+.register-container.register-container--enterprise .login-link a:hover {
+  color: #0a4e86 !important;
+}
+
+.register-container.register-container--enterprise .register-error {
+  background: rgba(254, 226, 226, 0.85) !important;
+  color: #b91c1c !important;
+  border-color: rgba(248, 113, 113, 0.45) !important;
+}
+
+.register-container.register-container--enterprise .back-button {
+  position: fixed;
+  top: calc(72px + 0.75rem);
+  left: 1.25rem;
+  z-index: 1001;
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
+}
+
+.register-container.register-container--enterprise .back-button:hover {
+  background: #ffffff;
+  border-color: #94a3b8;
+}
+
+.register-container.register-container--enterprise .back-button span,
+.register-container.register-container--enterprise .back-button svg {
+  color: #0f172a;
+}
+
+@media (max-width: 768px) {
+  .register-container.register-container--enterprise .back-button {
+    top: calc(72px + 0.5rem);
+    left: 1rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* Beneficios: tarjetas claras (Register.css fuerza fondo oscuro con !important) */
+.register-container.register-container--enterprise .benefit-item {
+  color: #0f172a !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(148, 163, 184, 0.4) !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06) !important;
+}
+
+.register-container.register-container--enterprise .benefit-item span:not(.benefit-icon) {
+  color: #334155 !important;
+  text-shadow: none !important;
+}
+
+.register-container.register-container--enterprise .benefit-icon {
+  color: #0f6ab4 !important;
+  filter: none !important;
+}
+
+.register-container.register-container--enterprise .benefit-item:hover {
+  border-color: rgba(59, 130, 246, 0.45) !important;
+  box-shadow: 0 8px 22px rgba(15, 106, 180, 0.12) !important;
+  background: #f8fafc !important;
+  transform: translateX(4px);
+}

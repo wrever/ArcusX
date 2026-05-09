@@ -37,11 +37,11 @@ const DisputeTimelineView: React.FC<DisputeTimelineViewProps> = ({ disputeId }) 
   const getEventIcon = (type: TimelineEvent['type']) => {
     switch (type) {
       case 'task_created':
-        return <FaTasks style={{ color: '#28c0f0' }} />;
+        return <FaTasks style={{ color: '#10dd88' }} />;
       case 'proposal_accepted':
         return <FaCheckCircle style={{ color: '#10b981' }} />;
       case 'escrow_created':
-        return <FaWallet style={{ color: '#28c0f0' }} />;
+        return <FaWallet style={{ color: '#10dd88' }} />;
       case 'escrow_funded':
         return <FaCoins style={{ color: '#10b981' }} />;
       case 'task_completed':
@@ -49,11 +49,11 @@ const DisputeTimelineView: React.FC<DisputeTimelineViewProps> = ({ disputeId }) 
       case 'dispute_created':
         return <FaGavel style={{ color: '#ef4444' }} />;
       case 'message_sent':
-        return <FaComment style={{ color: '#28c0f0' }} />;
+        return <FaComment style={{ color: '#10dd88' }} />;
       case 'file_uploaded':
-        return <FaFile style={{ color: '#28c0f0' }} />;
+        return <FaFile style={{ color: '#10dd88' }} />;
       default:
-        return <FaClock style={{ color: '#28c0f0' }} />;
+        return <FaClock style={{ color: '#10dd88' }} />;
     }
   };
 
@@ -63,7 +63,7 @@ const DisputeTimelineView: React.FC<DisputeTimelineViewProps> = ({ disputeId }) 
       case 'escrow_created':
       case 'message_sent':
       case 'file_uploaded':
-        return '#28c0f0';
+        return '#10dd88';
       case 'proposal_accepted':
       case 'escrow_funded':
         return '#10b981';
@@ -72,7 +72,7 @@ const DisputeTimelineView: React.FC<DisputeTimelineViewProps> = ({ disputeId }) 
       case 'dispute_created':
         return '#ef4444';
       default:
-        return '#28c0f0';
+        return '#10dd88';
     }
   };
 
@@ -116,7 +116,7 @@ const DisputeTimelineView: React.FC<DisputeTimelineViewProps> = ({ disputeId }) 
           top: '0',
           bottom: '0',
           width: '2px',
-          background: 'linear-gradient(180deg, #28c0f0 0%, #1180b3 100%)',
+          background: 'linear-gradient(180deg, #10dd88 0%, #0ab86a 100%)',
           opacity: 0.3
         }} />
 

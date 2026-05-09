@@ -1,6 +1,6 @@
 <?php
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
+$_cors_origin = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header('Access-Control-Allow-Origin: '.$_cors_origin);
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
@@ -43,8 +43,8 @@ $email = $data['email'];
 $name = $data['name'] ?? $email;
 $avatar_url = $data['avatar_url'] ?? null;
 
-// Configuración JWT (igual que en login.php)
-$secret_key = "SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY";
+// Configuración JWT (centralizada; mismo secreto que validan los demás endpoints)
+$secret_key = $jwt_secret;
 $issuedAt = time();
 $expirationTime = $issuedAt + (3600 * 24); // 1 día
 $issuer = "arcusx.pro";
@@ -78,16 +78,49 @@ try {
         $username = $existingUser['username'];
     } else {
         // Usuario no existe, crear nuevo usuario
-        // Generar username único si no se proporciona
-        $username = $data['username'] ?? strtolower(str_replace(' ', '', preg_replace('/[^a-zA-Z0-9]/', '', $name))) . '_' . substr($supabase_user_id, 0, 8);
-        
-        // Verificar que el username sea único
+        // Username legible: nombre saneado (o parte local del email). El sufijo _XXXXXXXX solo si ya existe otro igual.
+        $providedUsername = isset($data['username']) ? trim((string) $data['username']) : '';
+        if ($providedUsername !== '') {
+            $base = strtolower(preg_replace('/[^a-zA-Z0-9._-]/', '', $providedUsername));
+        } else {
+            $base = strtolower(str_replace(' ', '', preg_replace('/[^a-zA-Z0-9]/', '', $name)));
+        }
+        if ($base === '' || strlen($base) < 2) {
+            $localPart = explode('@', (string) $email)[0] ?? '';
+            $base = strtolower(preg_replace('/[^a-zA-Z0-9._-]/', '', $localPart));
+        }
+        if ($base === '') {
+            $base = 'user';
+        }
+        $base = substr($base, 0, 48);
+
+        $idSuffix = substr(str_replace('-', '', $supabase_user_id), 0, 8);
+
         $checkStmt = $conn->prepare("SELECT id FROM users WHERE username = ?");
-        $checkStmt->bind_param("s", $username);
+        $candidate = $base;
+        $checkStmt->bind_param("s", $candidate);
         $checkStmt->execute();
         $checkResult = $checkStmt->get_result();
-        if ($checkResult->num_rows > 0) {
-            $username = $username . '_' . time();
+        if ($checkResult->num_rows === 0) {
+            $username = $candidate;
+        } else {
+            $candidate = $base . '_' . $idSuffix;
+            $checkStmt->bind_param("s", $candidate);
+            $checkStmt->execute();
+            $checkResult = $checkStmt->get_result();
+            if ($checkResult->num_rows === 0) {
+                $username = $candidate;
+            } else {
+                $k = 2;
+                do {
+                    $candidate = $base . '_' . $idSuffix . '_' . $k;
+                    $k++;
+                    $checkStmt->bind_param("s", $candidate);
+                    $checkStmt->execute();
+                    $checkResult = $checkStmt->get_result();
+                } while ($checkResult->num_rows > 0);
+                $username = $candidate;
+            }
         }
 
         // Intentar insertar con supabase_user_id y avatar_url si las columnas existen
@@ -111,7 +144,7 @@ try {
         }
     }
 
-    // Generar token JWT (igual estructura que login.php)
+    // Generar token JWT para el cliente (estructura habitual del backend)
     $payload = [
         'iat' => $issuedAt,
         'exp' => $expirationTime,

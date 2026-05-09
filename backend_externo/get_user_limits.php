@@ -1,82 +1,95 @@
 <?php
-require_once 'config.php'; // Incluye la configuración de la base de datos
+header('Content-Type: application/json; charset=UTF-8');
+$_cors_origin = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header('Access-Control-Allow-Origin: '.$_cors_origin);
+header('Access-Control-Allow-Methods: GET, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
 
-// Asegurarse de que la solicitud es GET
-if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    // Obtener el user_id de los parámetros GET
-    $user_id = isset($_GET['user_id']) ? intval($_GET['user_id']) : null;
-    
-    if (!$user_id) {
-        http_response_code(400); // Bad Request
-        echo json_encode(['message' => 'user_id es requerido']);
-        exit;
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+    http_response_code(405);
+    echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+    exit;
+}
+
+try {
+    require_once __DIR__ . '/config.php';
+    if (!isset($conn)) {
+        throw new Exception('Error de conexión a la base de datos');
     }
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Error de configuración del servidor.']);
+    exit;
+}
 
-    // Opcional: Verificar si el usuario existe
-    $check_user = $conn->query("SELECT id FROM users WHERE id = $user_id");
+$user_id = isset($_GET['user_id']) ? intval($_GET['user_id']) : null;
+if (!$user_id) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'user_id es requerido']);
+    exit;
+}
+
+try {
+    $check_user = $conn->query("SELECT id FROM users WHERE id = " . intval($user_id));
+    if ($check_user === false) {
+        throw new Exception('Error al verificar usuario: ' . $conn->error);
+    }
     if ($check_user->num_rows === 0) {
-        http_response_code(404); // Not Found
-        echo json_encode(['message' => 'Usuario no encontrado.']);
+        http_response_code(404);
+        echo json_encode(['success' => false, 'message' => 'Usuario no encontrado.']);
+        $conn->close();
         exit;
     }
 
-    // Contar tareas reales del usuario
     $today = date('Y-m-d');
     $week_start = date('Y-m-d', strtotime('monday this week'));
-    
-    // Contar tareas de hoy
-    $today_result = $conn->query("SELECT COUNT(*) as count FROM tasks WHERE user_id = $user_id AND DATE(created_at) = '$today'");
-    $tasks_today = $today_result->fetch_assoc()['count'];
-    
-    // Contar tareas de esta semana
-    $week_result = $conn->query("SELECT COUNT(*) as count FROM tasks WHERE user_id = $user_id AND DATE(created_at) >= '$week_start'");
-    $tasks_this_week = $week_result->fetch_assoc()['count'];
-    
-    // Obtener la última tarea creada
-    $last_task_result = $conn->query("SELECT created_at FROM tasks WHERE user_id = $user_id ORDER BY created_at DESC LIMIT 1");
-    $last_task = $last_task_result->fetch_assoc();
-    
-    // Obtener límites del usuario (para cooldown)
-    $limits_result = $conn->query("SELECT * FROM user_task_limits WHERE user_id = $user_id ORDER BY updated_at DESC LIMIT 1");
-    $limits = $limits_result->fetch_assoc();
-    
-    if (!$limits) {
-        // Usuario nuevo, crear registro
-        $conn->query("INSERT INTO user_task_limits (user_id, last_task_created, tasks_today, tasks_this_week) VALUES ($user_id, NOW(), 0, 0)");
-        $limits = ['cooldown_until' => null];
+
+    $today_result = $conn->query("SELECT COUNT(*) as count FROM tasks WHERE user_id = " . intval($user_id) . " AND DATE(created_at) = '" . $conn->real_escape_string($today) . "'");
+    if ($today_result === false) {
+        throw new Exception('Error al contar tareas: ' . $conn->error);
+    }
+    $tasks_today = (int) $today_result->fetch_assoc()['count'];
+
+    $week_result = $conn->query("SELECT COUNT(*) as count FROM tasks WHERE user_id = " . intval($user_id) . " AND DATE(created_at) >= '" . $conn->real_escape_string($week_start) . "'");
+    if ($week_result === false) {
+        throw new Exception('Error al contar tareas: ' . $conn->error);
+    }
+    $tasks_this_week = (int) $week_result->fetch_assoc()['count'];
+
+    $limits = ['cooldown_until' => null];
+    $limits_result = @$conn->query("SELECT * FROM user_task_limits WHERE user_id = " . intval($user_id) . " ORDER BY updated_at DESC LIMIT 1");
+    if ($limits_result && $limits_result->num_rows > 0) {
+        $limits = $limits_result->fetch_assoc();
     }
 
-    // Verificar cooldown
     $can_create = true;
     $cooldown_remaining = 0;
-
-    if ($limits['cooldown_until']) {
+    if (!empty($limits['cooldown_until'])) {
         $cooldown_until = strtotime($limits['cooldown_until']);
-        if (time() < $cooldown_until) {
+        if ($cooldown_until && time() < $cooldown_until) {
             $can_create = false;
             $cooldown_remaining = $cooldown_until - time();
         }
     }
-
-    // Verificar límites diarios/semanales
     $can_create = $can_create && $tasks_today < 5 && $tasks_this_week < 20;
 
-    // Éxito: devolver los límites del usuario
-    http_response_code(200); // OK
+    http_response_code(200);
     echo json_encode([
+        'success' => true,
         'can_create' => $can_create,
         'cooldown_remaining' => $cooldown_remaining,
         'tasks_today' => $tasks_today,
         'tasks_this_week' => $tasks_this_week,
-        'next_task_time' => $can_create ? 'Ahora' : ($limits['cooldown_until'] ? $limits['cooldown_until'] : 'Ahora')
-    ]);
-
-    // Cerrar la conexión a la base de datos
-    $conn->close();
-
-} else {
-    // Si la solicitud no es GET, devolver método no permitido
-    http_response_code(405); // Method Not Allowed
-    echo json_encode(['message' => 'Método no permitido']);
+        'next_task_time' => $can_create ? 'Ahora' : (!empty($limits['cooldown_until']) ? $limits['cooldown_until'] : 'Ahora')
+    ], JSON_UNESCAPED_UNICODE);
+} catch (Throwable $e) {
+    error_log('get_user_limits.php: ' . $e->getMessage());
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Error al obtener límites.']);
 }
+if (isset($conn)) $conn->close();
 ?>

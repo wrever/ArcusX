@@ -1,38 +1,72 @@
-/* Wallet Connect Popup Styles */
+/* Wallet Connect Popup Styles — overlay suave, sin fondo oscuro pesado */
 .wallet-popup-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(5px);
+  z-index: 10000;
+  backdrop-filter: blur(4px);
+}
+
+/* Ocultar botones flotantes cuando hay un modal abierto (usando clase en body) */
+body.wallet-modal-open .theme-toggle:not(.theme-toggle-inline),
+body.wallet-modal-open .lang-select--fab {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
+}
+
+/* También usar :has() como respaldo si el navegador lo soporta */
+body:has(.wallet-popup-overlay) .theme-toggle:not(.theme-toggle-inline),
+body:has(.wallet-popup-overlay) .lang-select--fab {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
 }
 
 .wallet-popup-content {
-  background: linear-gradient(135deg, #07233c 0%, #0a2d4a 100%);
-  border-radius: 16px;
+  background: var(--bg-card);
+  border-radius: 20px;
   padding: 32px;
   max-width: 500px;
   width: 90%;
   max-height: 80vh;
   overflow-y: auto;
   position: relative;
-  box-shadow: 0 20px 60px rgba(7, 35, 60, 0.4), 0 0 0 1px rgba(40, 192, 240, 0.1);
+  box-shadow: var(--shadow-lg);
+  border: 2px solid var(--border-color);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Fondo blanco y bordes más visibles en modo claro */
+:root[data-theme="light"] .wallet-popup-content {
+  background: #ffffff !important;
+  border-color: rgba(100, 116, 139, 0.4) !important;
+  border-width: 2px !important;
+  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.16) !important;
+}
+
+:root[data-theme="light"] .wallet-popup-overlay {
+  background: rgba(0, 0, 0, 0.25) !important;
 }
 
 .wallet-popup-close {
   position: absolute;
   top: 20px;
   right: 20px;
-  background: rgba(40, 192, 240, 0.1);
-  border: 1px solid rgba(40, 192, 240, 0.3);
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
   font-size: 20px;
-  color: #28c0f0;
+  color: var(--primary-blue);
   cursor: pointer;
   padding: 10px;
   border-radius: 50%;
@@ -42,13 +76,28 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 10;
+}
+
+/* Botón de cerrar visible en modo claro */
+:root[data-theme="light"] .wallet-popup-close {
+  background: #ffffff !important;
+  border-color: rgba(100, 116, 139, 0.4) !important;
+  border-width: 2px !important;
+  color: var(--primary-blue) !important;
 }
 
 .wallet-popup-close:hover {
-  background: linear-gradient(135deg, #28c0f0, #1180b3);
-  color: white;
+  background: var(--primary-blue);
+  color: #ffffff;
+  border-color: var(--primary-blue);
   transform: scale(1.1);
-  box-shadow: 0 4px 15px rgba(40, 192, 240, 0.3);
+  box-shadow: var(--shadow-md);
+}
+
+:root[data-theme="light"] .wallet-popup-close:hover {
+  background: var(--primary-blue) !important;
+  color: #ffffff !important;
 }
 
 /* Header */
@@ -60,18 +109,33 @@
 .wallet-popup-title {
   font-size: 32px;
   font-weight: 800;
-  background: linear-gradient(135deg, #fff 0%, #28c0f0 100%);
+  color: var(--text-primary);
+  margin: 0 0 16px 0;
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--primary-blue) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin: 0 0 16px 0;
-  text-shadow: 0 2px 4px rgba(40, 192, 240, 0.3);
+  background-clip: text;
+}
+
+/* Título visible en modo claro */
+:root[data-theme="light"] .wallet-popup-title {
+  background: linear-gradient(135deg, #0f172a 0%, var(--primary-blue) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: #000000 !important;
 }
 
 .wallet-popup-description {
   font-size: 18px;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-secondary);
   margin: 0;
   line-height: 1.6;
+}
+
+/* Descripción visible en modo claro */
+:root[data-theme="light"] .wallet-popup-description {
+  color: #475569 !important;
 }
 
 /* Wallet Options */
@@ -86,9 +150,9 @@
   display: flex;
   align-items: center;
   padding: 20px 24px;
-  border: 1px solid rgba(40, 192, 240, 0.3);
+  border: 2px solid var(--border-color);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-card);
   backdrop-filter: blur(10px);
   cursor: pointer;
   transition: all 0.3s ease;
@@ -98,6 +162,14 @@
   overflow: hidden;
 }
 
+/* Opción de wallet con fondo blanco y bordes visibles en modo claro */
+:root[data-theme="light"] .wallet-option {
+  background: #ffffff !important;
+  border-color: rgba(100, 116, 139, 0.4) !important;
+  border-width: 2px !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
 .wallet-option::before {
   content: '';
   position: absolute;
@@ -105,20 +177,34 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, rgba(40, 192, 240, 0.1) 0%, rgba(17, 128, 179, 0.1) 100%);
+  background: linear-gradient(135deg, rgba(16, 221, 136, 0.1) 0%, rgba(10, 184, 106, 0.1) 100%);
   opacity: 0;
   transition: opacity 0.3s ease;
   z-index: 0;
 }
 
+:root[data-theme="light"] .wallet-option::before {
+  background: #f1f5f9 !important;
+}
+
 .wallet-option:hover {
-  border-color: #28c0f0;
+  border-color: var(--primary-blue);
   transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(40, 192, 240, 0.2);
+  box-shadow: var(--shadow-md);
+}
+
+:root[data-theme="light"] .wallet-option:hover {
+  border-color: var(--primary-blue) !important;
+  box-shadow: var(--shadow-md) !important;
+  background: #f8fafc !important;
 }
 
 .wallet-option:hover::before {
   opacity: 1;
+}
+
+:root[data-theme="light"] .wallet-option:hover::before {
+  opacity: 1 !important;
 }
 
 .wallet-icon {
@@ -147,6 +233,12 @@
   box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
 }
 
+.xbull-icon {
+  background: linear-gradient(135deg, #0ea5e9, #0284c7);
+  color: white;
+  box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);
+}
+
 .wallet-option:hover .wallet-icon {
   transform: scale(1.1);
 }
@@ -154,10 +246,15 @@
 .wallet-name {
   font-size: 20px;
   font-weight: 700;
-  color: #fff;
+  color: var(--text-primary);
   position: relative;
   z-index: 1;
   transition: all 0.3s ease;
+}
+
+/* Nombre de wallet visible en modo claro */
+:root[data-theme="light"] .wallet-name {
+  color: #000000 !important;
 }
 
 /* Divider */
@@ -168,8 +265,13 @@
 .wallet-divider hr {
   border: none;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(40, 192, 240, 0.3), transparent);
+  background: var(--border-color);
   margin: 0;
+}
+
+/* Divisor visible en modo claro */
+:root[data-theme="light"] .wallet-divider hr {
+  background: rgba(100, 116, 139, 0.3) !important;
 }
 
 /* No wallet section */
@@ -180,9 +282,14 @@
 
 .no-wallet-question {
   font-size: 18px;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-primary);
   margin: 0 0 20px 0;
   font-weight: 600;
+}
+
+/* Pregunta visible en modo claro */
+:root[data-theme="light"] .no-wallet-question {
+  color: #000000 !important;
 }
 
 .download-buttons {
@@ -195,16 +302,25 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 12px;
   padding: 16px 24px;
-  border: 1px solid rgba(40, 192, 240, 0.3);
+  border: 2px solid var(--border-color);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-card);
   backdrop-filter: blur(10px);
   cursor: pointer;
   transition: all 0.3s ease;
   width: 100%;
   position: relative;
   overflow: hidden;
+}
+
+/* Botón de descarga con fondo blanco y bordes visibles en modo claro */
+:root[data-theme="light"] .download-button {
+  background: #ffffff !important;
+  border-color: rgba(100, 116, 139, 0.4) !important;
+  border-width: 2px !important;
+  box-shadow: var(--shadow-sm) !important;
 }
 
 .download-button::before {
@@ -214,35 +330,64 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, rgba(40, 192, 240, 0.1) 0%, rgba(17, 128, 179, 0.1) 100%);
+  background: linear-gradient(135deg, rgba(16, 221, 136, 0.1) 0%, rgba(10, 184, 106, 0.1) 100%);
   opacity: 0;
   transition: opacity 0.3s ease;
   z-index: 0;
 }
 
+:root[data-theme="light"] .download-button::before {
+  background: #f1f5f9 !important;
+}
+
 .download-button:hover {
-  border-color: #28c0f0;
+  border-color: var(--primary-blue);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(40, 192, 240, 0.2);
+  box-shadow: var(--shadow-md);
+}
+
+:root[data-theme="light"] .download-button:hover {
+  border-color: var(--primary-blue) !important;
+  box-shadow: var(--shadow-md) !important;
+  background: #f8fafc !important;
 }
 
 .download-button:hover::before {
   opacity: 1;
 }
 
+:root[data-theme="light"] .download-button:hover::before {
+  opacity: 1 !important;
+}
+
 .download-icon {
-  margin-right: 12px;
   font-size: 18px;
   position: relative;
   z-index: 1;
+  color: var(--primary-blue);
+  flex-shrink: 0;
+}
+
+/* Icono de descarga visible en ambos modos */
+:root[data-theme="light"] .download-icon {
+  color: var(--primary-blue) !important;
+}
+
+:root[data-theme="dark"] .download-icon {
+  color: #ffffff !important;
 }
 
 .download-button span {
   font-size: 16px;
-  color: #fff;
+  color: var(--text-primary);
   font-weight: 600;
   position: relative;
   z-index: 1;
+}
+
+/* Texto del botón visible en modo claro */
+:root[data-theme="light"] .download-button span {
+  color: #000000 !important;
 }
 
 /* Network info */
@@ -255,12 +400,23 @@
 .network-badge {
   display: flex;
   align-items: center;
+  justify-content: center;
   padding: 12px 16px;
   border-radius: 24px;
   font-size: 14px;
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 2px solid var(--border-color);
+  background: var(--bg-card);
+  transition: all 0.3s ease;
+}
+
+/* Badge de red con fondo blanco y bordes visibles en modo claro */
+:root[data-theme="light"] .network-badge {
+  background: #ffffff !important;
+  border-color: rgba(139, 92, 246, 0.4) !important;
+  border-width: 2px !important;
+  box-shadow: var(--shadow-sm) !important;
 }
 
 .network-badge::before {
@@ -272,6 +428,10 @@
   bottom: 0;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
   z-index: 0;
+}
+
+:root[data-theme="light"] .network-badge::before {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(124, 58, 237, 0.05) 100%) !important;
 }
 
 .metamask-badge {
@@ -286,6 +446,13 @@
   box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
 }
 
+/* Badge de Freighter visible en modo claro */
+:root[data-theme="light"] .freighter-badge {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3) !important;
+}
+
 .network-name {
   font-weight: 800;
   margin-right: 12px;
@@ -293,6 +460,12 @@
   z-index: 1;
   font-size: 12px;
   letter-spacing: 1px;
+  color: #ffffff;
+}
+
+/* Nombre de red visible en modo claro */
+:root[data-theme="light"] .freighter-badge .network-name {
+  color: #ffffff !important;
 }
 
 .network-description {
@@ -300,6 +473,11 @@
   position: relative;
   z-index: 1;
   font-size: 13px;
+}
+
+/* Descripción de red visible en modo claro */
+:root[data-theme="light"] .freighter-badge .network-description {
+  color: rgba(255, 255, 255, 0.95) !important;
 }
 
 /* Responsive */

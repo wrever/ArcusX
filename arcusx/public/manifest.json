@@ -1,0 +1,45 @@
+{
+  "name": "ArcusX - Plataforma de Freelancing Web3",
+  "short_name": "ArcusX",
+  "description": "Plataforma descentralizada de freelancing con pagos en USDC sobre Stellar",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07233c",
+  "theme_color": "#28c0f0",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/logo192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/logo512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "categories": ["business", "finance", "productivity"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Acceso rápido al dashboard",
+      "url": "/dashboard",
+      "icons": [{ "src": "/logo192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Crear Tarea",
+      "short_name": "Crear",
+      "description": "Crear una nueva tarea",
+      "url": "/create-task",
+      "icons": [{ "src": "/logo192.png", "sizes": "192x192" }]
+    }
+  ]
+}

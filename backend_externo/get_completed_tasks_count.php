@@ -45,7 +45,7 @@ function getLoggedInUserId($conn) {
         $jwt = $matches[1];
         if (!$jwt) return null;
         try {
-            $secretKey = 'SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY';
+            $secretKey = $jwt_secret;
             $decoded = JWT::decode($jwt, new Key($secretKey, 'HS256'));
             return $decoded->data->id;
         } catch (Exception $e) {

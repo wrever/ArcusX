@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaUser, FaEnvelope, FaLock, FaSave, FaTimes, FaUpload, FaGlobe, FaUnlock, FaLock as FaLockIcon, FaPlus, FaTrash, FaEdit } from 'react-icons/fa';
-import axios from 'axios';
-import { API_URL } from '../config/database';
-import { getUserProfile, updateUserProfile, uploadAvatar, getPortfolio, addPortfolioItem, updatePortfolioItem, deletePortfolioItem } from '../services/profileService';
-import type { UserProfile, PortfolioItem, CreatePortfolioItemData } from '../types/profile';
+import { FaArrowLeft, FaUser, FaEnvelope, FaLock, FaSave, FaTimes, FaUpload, FaGlobe, FaUnlock, FaLock as FaLockIcon } from 'react-icons/fa';
+import { getUserProfile, updateUserProfile, updateUserBasicData, uploadAvatar } from '../services/profileService';
+import type { UserProfile, Skill } from '../types/profile';
+import { getAvatarUrl } from '../utils/avatarUtils';
+import { useI18n } from '../i18n/I18nProvider';
 import '../css/EditProfile.css';
 
 interface StoredUser {
@@ -16,6 +16,7 @@ interface StoredUser {
 
 const EditProfile: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [user, setUser] = useState<StoredUser | null>(null);
@@ -35,17 +36,39 @@ const EditProfile: React.FC = () => {
   const [publicProfile, setPublicProfile] = useState(true);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   
-  // Portfolio
-  const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
-  const [showPortfolioForm, setShowPortfolioForm] = useState(false);
-  const [editingPortfolioItem, setEditingPortfolioItem] = useState<PortfolioItem | null>(null);
-  const [portfolioForm, setPortfolioForm] = useState<CreatePortfolioItemData>({
-    title: '',
-    description: '',
-    image_url: '',
-    project_url: '',
-    category: 'Otros'
-  });
+  // Habilidades agrupadas por categoría
+  const [selectedSkills, setSelectedSkills] = useState<Skill[]>([]);
+  
+  const skillsByCategory: { categoryKey: string; skills: string[] }[] = [
+    {
+      categoryKey: 'edit.skills.category.development',
+      skills: [
+        'JavaScript', 'TypeScript', 'Python', 'PHP', 'Java', 'C++', 'C#', 'Go', 'Rust',
+        'Ruby', 'Swift', 'Kotlin', 'Dart', 'Node.js', 'Express', 'Django', 'Flask',
+        'Laravel', 'Spring', 'GraphQL', 'REST API', 'Git', 'Linux'
+      ]
+    },
+    {
+      categoryKey: 'edit.skills.category.frontend',
+      skills: ['HTML', 'CSS', 'SCSS', 'SASS', 'React', 'Vue.js', 'Angular', 'Next.js']
+    },
+    {
+      categoryKey: 'edit.skills.category.databases',
+      skills: ['MongoDB', 'PostgreSQL', 'MySQL', 'Redis']
+    },
+    {
+      categoryKey: 'edit.skills.category.devops',
+      skills: ['Docker', 'Kubernetes', 'AWS', 'Azure', 'GCP']
+    },
+    {
+      categoryKey: 'edit.skills.category.design',
+      skills: ['UI/UX Design', 'Figma', 'Adobe XD', 'Photoshop', 'Illustrator']
+    },
+    {
+      categoryKey: 'edit.skills.category.blockchain',
+      skills: ['Blockchain', 'Solidity', 'Web3', 'Smart Contracts', 'Stellar', 'Ethereum', 'Bitcoin']
+    }
+  ];
 
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -88,13 +111,8 @@ const EditProfile: React.FC = () => {
           setPublicProfile(profileData.public_profile);
           setAvatarUrl(profileData.avatar_url || null);
           
-          // Cargar portfolio
-          try {
-            const portfolioData = await getPortfolio(parsed.id);
-            setPortfolio(portfolioData);
-          } catch (e) {
-            setPortfolio([]);
-          }
+          // Cargar habilidades
+          setSelectedSkills(profileData.skills || []);
         } catch (e) {
           // Si falla, usar datos básicos del localStorage
         }
@@ -140,7 +158,7 @@ const EditProfile: React.FC = () => {
       setSuccess('Avatar actualizado correctamente');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      setError(err.message || 'Error al subir avatar');
+      setError(err.message || t('edit.error.avatar'));
     } finally {
       setUploadingAvatar(false);
       if (fileInputRef.current) {
@@ -170,19 +188,20 @@ const EditProfile: React.FC = () => {
       setSaving(true);
       
       // 1. Actualizar datos de cuenta (username, email, password)
-      await axios.post(`${API_URL}/auth/update_user.php`, {
+      await updateUserBasicData({
         id: user.id,
         name,
         email,
-        currentPassword,
-        newPassword
+        currentPassword: currentPassword || undefined,
+        newPassword: newPassword || undefined
       });
 
-      // 2. Actualizar perfil público (bio, portfolio_url, public_profile)
+      // 2. Actualizar perfil público (bio, portfolio_url, public_profile, skills)
       await updateUserProfile({
         bio: bio.trim() || undefined,
         portfolio_url: portfolioUrl.trim() || undefined,
-        public_profile: publicProfile
+        public_profile: publicProfile,
+        skills: selectedSkills.length > 0 ? selectedSkills : undefined
       });
 
       // Actualizar localStorage
@@ -208,119 +227,42 @@ const EditProfile: React.FC = () => {
       const message =
         err?.response?.data?.message ||
         err?.message ||
-        'Error al guardar los cambios.';
+        t('edit.error.save');
       setError(message);
     } finally {
       setSaving(false);
     }
   };
 
-  // Portfolio handlers
-  const handleAddPortfolioItem = async () => {
-    if (!portfolioForm.title.trim()) {
-      setError('El título es requerido');
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setError(null);
-      
-      const id = await addPortfolioItem(portfolioForm);
-      const newItem: PortfolioItem = {
-        id,
-        ...portfolioForm,
-        category: portfolioForm.category || '',
-        created_at: new Date().toISOString()
-      };
-      
-      setPortfolio(prev => [...prev, newItem]);
-      setPortfolioForm({
-        title: '',
-        description: '',
-        image_url: '',
-        project_url: '',
-        category: 'Otros'
-      });
-      setShowPortfolioForm(false);
-      setSuccess('Item agregado al portfolio');
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err: any) {
-      setError(err.message || 'Error al agregar item');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleUpdatePortfolioItem = async () => {
-    if (!editingPortfolioItem || !portfolioForm.title.trim()) {
-      setError('El título es requerido');
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setError(null);
-      
-      await updatePortfolioItem({
-        id: editingPortfolioItem.id,
-        ...portfolioForm
-      });
-      
-      setPortfolio(prev => prev.map(item => 
-        item.id === editingPortfolioItem.id 
-          ? { ...item, ...portfolioForm }
-          : item
-      ));
-      
-      setEditingPortfolioItem(null);
-      setPortfolioForm({
-        title: '',
-        description: '',
-        image_url: '',
-        project_url: '',
-        category: 'Otros'
-      });
-      setShowPortfolioForm(false);
-      setSuccess('Item actualizado correctamente');
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err: any) {
-      setError(err.message || 'Error al actualizar item');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDeletePortfolioItem = async (itemId: number) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este item del portfolio?')) {
-      return;
-    }
-
-    try {
-      setSaving(true);
-      setError(null);
-      
-      await deletePortfolioItem(itemId);
-      setPortfolio(prev => prev.filter(item => item.id !== itemId));
-      setSuccess('Item eliminado correctamente');
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (err: any) {
-      setError(err.message || 'Error al eliminar item');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const startEditPortfolioItem = (item: PortfolioItem) => {
-    setEditingPortfolioItem(item);
-    setPortfolioForm({
-      title: item.title,
-      description: item.description || '',
-      image_url: item.image_url || '',
-      project_url: item.project_url || '',
-      category: item.category
+  // Handlers de habilidades
+  const handleToggleSkill = (skillName: string) => {
+    setSelectedSkills(prev => {
+      const existing = prev.find(s => s.name === skillName);
+      if (existing) {
+        // Si ya existe, eliminarlo
+        return prev.filter(s => s.name !== skillName);
+      } else {
+        // Si no existe, agregarlo con nivel beginner por defecto
+        return [...prev, { name: skillName, level: 'beginner' }];
+      }
     });
-    setShowPortfolioForm(true);
+  };
+
+  const handleSkillLevelChange = (skillName: string, level: Skill['level']) => {
+    setSelectedSkills(prev =>
+      prev.map(skill =>
+        skill.name === skillName ? { ...skill, level } : skill
+      )
+    );
+  };
+
+  const isSkillSelected = (skillName: string) => {
+    return selectedSkills.some(s => s.name === skillName);
+  };
+
+  const getSkillLevel = (skillName: string): Skill['level'] => {
+    const skill = selectedSkills.find(s => s.name === skillName);
+    return skill?.level || 'beginner';
   };
 
   if (loading || !user) {
@@ -328,7 +270,7 @@ const EditProfile: React.FC = () => {
       <div className="edit-profile-page">
         <div className="edit-profile-loading">
           <div className="spinner" />
-          <p>Cargando perfil...</p>
+          <p>{t('common.loading.profile')}</p>
         </div>
       </div>
     );
@@ -343,7 +285,7 @@ const EditProfile: React.FC = () => {
           type="button"
         >
           <FaArrowLeft />
-          <span>Volver al Dashboard</span>
+          <span>{t('edit.back')}</span>
         </button>
       </div>
 
@@ -352,9 +294,18 @@ const EditProfile: React.FC = () => {
           <div className="avatar-section">
             {avatarUrl ? (
               <img 
-                src={`${API_URL.replace('/api', '')}${avatarUrl}`} 
+                src={getAvatarUrl(avatarUrl)} 
                 alt="Avatar" 
                 className="avatar-image"
+                onError={(e) => {
+                  // Si la imagen falla, mostrar placeholder
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  const placeholder = target.nextElementSibling as HTMLElement;
+                  if (placeholder && placeholder.classList.contains('avatar-circle')) {
+                    placeholder.style.display = 'flex';
+                  }
+                }}
               />
             ) : (
               <div className="avatar-circle">
@@ -375,12 +326,12 @@ const EditProfile: React.FC = () => {
               disabled={uploadingAvatar}
             >
               <FaUpload />
-              {uploadingAvatar ? 'Subiendo...' : 'Cambiar foto'}
+              {uploadingAvatar ? t('edit.uploading') : t('profile.upload.avatar')}
             </button>
           </div>
           <div className="title-block">
-            <h1>Editar perfil</h1>
-            <p>Actualiza tu información básica, perfil público y portfolio.</p>
+            <h1>{t('edit.title')}</h1>
+            <p>{t('edit.description')}</p>
           </div>
         </div>
 
@@ -390,7 +341,7 @@ const EditProfile: React.FC = () => {
         <form className="edit-profile-form" onSubmit={handleSubmit}>
           {/* Sección 1: Información básica */}
           <div className="form-section">
-            <h2>Información básica</h2>
+            <h2>{t('edit.section.basic')}</h2>
 
             <div className="form-group">
               <label htmlFor="name">
@@ -423,233 +374,168 @@ const EditProfile: React.FC = () => {
 
           {/* Sección 2: Perfil público */}
           <div className="form-section">
-            <h2>Perfil público</h2>
+            <h2>{t('edit.section.public')}</h2>
             <p className="section-help">
               Esta información será visible para otros usuarios si tu perfil es público.
             </p>
 
             <div className="form-group">
-              <label htmlFor="bio">Biografía</label>
+              <label htmlFor="bio">{t('edit.label.bio')}</label>
               <textarea
                 id="bio"
                 value={bio}
                 onChange={e => setBio(e.target.value)}
                 rows={4}
                 maxLength={1000}
-                placeholder="Cuéntanos sobre ti..."
+                placeholder={t('edit.bio.placeholder')}
               />
               <span className="char-count">{bio.length}/1000</span>
             </div>
 
             <div className="form-group">
               <label htmlFor="portfolioUrl">
-                <FaGlobe /> URL de Portfolio
+                <FaGlobe /> {t('edit.label.portfolio')}
               </label>
               <input
                 id="portfolioUrl"
                 type="url"
                 value={portfolioUrl}
                 onChange={e => setPortfolioUrl(e.target.value)}
-                placeholder="https://tu-portfolio.com"
+                placeholder={t('edit.portfolio.placeholder')}
               />
             </div>
 
             <div className="form-group checkbox-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={publicProfile}
-                  onChange={e => setPublicProfile(e.target.checked)}
-                />
-                <span className="checkbox-custom">
+              <div className="checkbox-label">
+                <button
+                  type="button"
+                  className={`checkbox-custom ${publicProfile ? 'public' : 'private'}`}
+                  onClick={() => setPublicProfile(!publicProfile)}
+                  aria-label={publicProfile ? t('edit.profile.makePrivate') : t('edit.profile.makePublic')}
+                >
                   {publicProfile ? <FaUnlock /> : <FaLockIcon />}
-                </span>
+                </button>
                 <div className="checkbox-text">
-                  <strong>Perfil Público</strong>
-                  <p>Permitir que otros usuarios vean tu perfil y estadísticas</p>
+                  <strong>{t('edit.public.label')}</strong>
+                  <p>{t('edit.public.desc')}</p>
                 </div>
-              </label>
+              </div>
             </div>
           </div>
 
-          {/* Sección 3: Portfolio */}
+          {/* Sección 3: Habilidades */}
           <div className="form-section">
-            <h2>Portfolio</h2>
-            
-            {portfolio.length > 0 && (
-              <div className="portfolio-list">
-                {portfolio.map((item) => (
-                  <div key={item.id} className="portfolio-item-card">
-                    {item.image_url && (
-                      <img src={item.image_url} alt={item.title} className="portfolio-item-image" />
-                    )}
-                    <div className="portfolio-item-content">
-                      <h3>{item.title}</h3>
-                      {item.description && <p>{item.description}</p>}
-                      {item.project_url && (
-                        <a href={item.project_url} target="_blank" rel="noopener noreferrer">
-                          <FaGlobe /> Ver Proyecto
-                        </a>
-                      )}
-                      <span className="portfolio-category">{item.category}</span>
-                    </div>
-                    <div className="portfolio-item-actions">
-                      <button
-                        type="button"
-                        onClick={() => startEditPortfolioItem(item)}
-                        className="edit-button"
-                      >
-                        <FaEdit />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeletePortfolioItem(item.id)}
-                        className="delete-button"
-                      >
-                        <FaTrash />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <h2>{t('edit.section.skills')}</h2>
+            <p className="section-help">
+              {t('edit.skills.help')}
+            </p>
 
-            {showPortfolioForm ? (
-              <div className="portfolio-form">
-                <h3>{editingPortfolioItem ? 'Editar Item' : 'Agregar Item'}</h3>
-                <div className="form-group">
-                  <label>Título *</label>
-                  <input
-                    type="text"
-                    value={portfolioForm.title}
-                    onChange={(e) => setPortfolioForm(prev => ({ ...prev, title: e.target.value }))}
-                    required
-                  />
+            <div className="skills-selection">
+              {skillsByCategory.map((group) => (
+                <div key={group.categoryKey} className="skills-category-block">
+                  <h3 className="skills-category-title">{t(group.categoryKey)}</h3>
+                  <div className="skills-grid">
+                    {group.skills.map((skill) => {
+                      const isSelected = isSkillSelected(skill);
+                      const level = getSkillLevel(skill);
+                      return (
+                        <div key={skill} className={`skill-select-item ${isSelected ? 'selected' : ''}`}>
+                          <label className="skill-checkbox">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleSkill(skill)}
+                            />
+                            <span className="skill-name">{skill}</span>
+                          </label>
+                          {isSelected && (
+                            <select
+                              className="skill-level-select"
+                              value={level}
+                              onChange={(e) => handleSkillLevelChange(skill, e.target.value as Skill['level'])}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <option value="beginner">{t('edit.skill.beginner')}</option>
+                              <option value="intermediate">{t('edit.skill.intermediate')}</option>
+                              <option value="advanced">{t('edit.skill.advanced')}</option>
+                              <option value="expert">{t('edit.skill.expert')}</option>
+                            </select>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label>Descripción</label>
-                  <textarea
-                    value={portfolioForm.description}
-                    onChange={(e) => setPortfolioForm(prev => ({ ...prev, description: e.target.value }))}
-                    rows={3}
-                  />
+              ))}
+              
+              {selectedSkills.length > 0 && (
+                <div className="selected-skills-summary">
+                  <h3>{t('edit.selected.skills')} ({selectedSkills.length})</h3>
+                  <div className="selected-skills-list">
+                    {selectedSkills.map((skill, index) => (
+                      <div key={index} className="selected-skill-badge">
+                        <span className="skill-name">{skill.name}</span>
+                        <span className="skill-level-badge">{skill.level}</span>
+                        <button
+                          type="button"
+                          className="remove-skill-btn"
+                          onClick={() => handleToggleSkill(skill.name)}
+                          title={t('edit.remove.skill')}
+                        >
+                          <FaTimes />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label>URL de Imagen</label>
-                  <input
-                    type="url"
-                    value={portfolioForm.image_url}
-                    onChange={(e) => setPortfolioForm(prev => ({ ...prev, image_url: e.target.value }))}
-                    placeholder="https://ejemplo.com/imagen.jpg"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>URL del Proyecto</label>
-                  <input
-                    type="url"
-                    value={portfolioForm.project_url}
-                    onChange={(e) => setPortfolioForm(prev => ({ ...prev, project_url: e.target.value }))}
-                    placeholder="https://ejemplo.com"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Categoría</label>
-                  <select
-                    value={portfolioForm.category}
-                    onChange={(e) => setPortfolioForm(prev => ({ ...prev, category: e.target.value }))}
-                  >
-                    <option value="Desarrollo">Desarrollo</option>
-                    <option value="Diseño">Diseño</option>
-                    <option value="Marketing">Marketing</option>
-                    <option value="Blockchain">Blockchain</option>
-                    <option value="Contenido">Contenido</option>
-                    <option value="Otros">Otros</option>
-                  </select>
-                </div>
-                <div className="portfolio-form-actions">
-                  <button
-                    type="button"
-                    onClick={editingPortfolioItem ? handleUpdatePortfolioItem : handleAddPortfolioItem}
-                    className="btn-primary"
-                    disabled={saving}
-                  >
-                    {editingPortfolioItem ? 'Actualizar' : 'Agregar'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowPortfolioForm(false);
-                      setEditingPortfolioItem(null);
-                      setPortfolioForm({
-                        title: '',
-                        description: '',
-                        image_url: '',
-                        project_url: '',
-                        category: 'Otros'
-                      });
-                    }}
-                    className="btn-secondary"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowPortfolioForm(true)}
-                className="add-portfolio-button"
-              >
-                <FaPlus />
-                Agregar Item al Portfolio
-              </button>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Sección 4: Seguridad */}
           <div className="form-section">
-            <h2>Seguridad</h2>
+            <h2>{t('edit.section.security')}</h2>
             <p className="section-help">
-              Solo necesitas rellenar estos campos si quieres cambiar tu contraseña.
+              {t('edit.security.help')}
             </p>
 
             <div className="form-group">
               <label htmlFor="currentPassword">
-                <FaLock /> Contraseña actual
+                <FaLock /> {t('edit.password.current.label')}
               </label>
               <input
                 id="currentPassword"
                 type="password"
                 value={currentPassword}
                 onChange={e => setCurrentPassword(e.target.value)}
-                placeholder="Introduce tu contraseña actual"
+                placeholder={t('edit.password.current')}
               />
             </div>
 
             <div className="form-row">
               <div className="form-group">
                 <label htmlFor="newPassword">
-                  <FaLock /> Nueva contraseña
+                  <FaLock /> {t('edit.password.new.label')}
                 </label>
                 <input
                   id="newPassword"
                   type="password"
                   value={newPassword}
                   onChange={e => setNewPassword(e.target.value)}
-                  placeholder="Dejar vacío si no quieres cambiarla"
+                  placeholder={t('edit.password.leave.empty')}
                 />
               </div>
 
               <div className="form-group">
                 <label htmlFor="confirmPassword">
-                  <FaLock /> Confirmar nueva contraseña
+                  <FaLock /> {t('edit.password.confirm.label')}
                 </label>
                 <input
                   id="confirmPassword"
                   type="password"
                   value={confirmPassword}
                   onChange={e => setConfirmPassword(e.target.value)}
-                  placeholder="Repite la nueva contraseña"
+                  placeholder={t('edit.password.repeat')}
                 />
               </div>
             </div>
@@ -662,7 +548,7 @@ const EditProfile: React.FC = () => {
               onClick={() => navigate('/dashboard')}
             >
               <FaTimes />
-              Cancelar
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
@@ -670,7 +556,7 @@ const EditProfile: React.FC = () => {
               disabled={saving}
             >
               <FaSave />
-              {saving ? 'Guardando...' : 'Guardar cambios'}
+              {saving ? t('edit.saving') : t('edit.save')}
             </button>
           </div>
         </form>

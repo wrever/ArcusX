@@ -9,26 +9,33 @@
  * @deprecated Desde la migración a Trustless Work
  */
 
-header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
+$_cors_origin = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header("Access-Control-Allow-Origin: ".$_cors_origin);
+header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
-header("Content-Type: application/json");
+header("Content-Type: application/json; charset=UTF-8");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
 
-require_once 'config.php';
-require_once 'vendor/autoload.php';
+require_once __DIR__ . '/config.php';
+$autoload_path = __DIR__ . '/vendor/autoload.php';
+if (!file_exists($autoload_path)) {
+    http_response_code(500);
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Error en el servidor: dependencias no encontradas.']);
+    exit;
+}
+require_once $autoload_path;
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
-$secret_key = "SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY";
+$secret_key = $jwt_secret;
 
 function getLoggedInUserId($conn, $secret_key) {
-    $headers = getallheaders();
+    $headers = function_exists('getallheaders') ? getallheaders() : [];
     if (!isset($headers['Authorization'])) {
         return null;
     }
@@ -52,81 +59,37 @@ function getLoggedInUserId($conn, $secret_key) {
     }
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $loggedInUserId = getLoggedInUserId($conn, $secret_key);
-
-    if (is_null($loggedInUserId)) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'Acceso no autorizado']);
-        exit;
-    }
-
-    $data = json_decode(file_get_contents('php://input'), true);
-
-    if (!isset($data['task_id']) || !is_numeric($data['task_id'])) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'task_id requerido']);
-        exit;
-    }
-
-    if (!isset($data['escrow_secret']) || empty($data['escrow_secret'])) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'escrow_secret requerido']);
-        exit;
-    }
-
-    $taskId = intval($data['task_id']);
-    $escrowSecret = $data['escrow_secret'];
-
-    // Este endpoint está deprecado - Trustless Work no usa secret keys
-    http_response_code(410); // Gone
-    echo json_encode([
-        'success' => false, 
-        'message' => 'Este endpoint está deprecado. El sistema ahora usa exclusivamente Trustless Work, que no requiere secret keys.'
-    ]);
-    exit;
-
-
-        // Guardar el secret encriptado (en producción, usar encriptación real)
-        // Por ahora lo guardamos en texto plano pero solo accesible por el dueño de la tarea
-        // NOTA: En producción, usar AES-256 o similar para encriptar
-        
-        // Actualizar la tarea con el secret (podríamos crear una tabla separada para mayor seguridad)
-        // Por ahora, lo guardamos en un campo nuevo de la tabla tasks
-        // Primero verificar si existe la columna
-        $checkColumn = $conn->query("SHOW COLUMNS FROM tasks LIKE 'escrow_secret'");
-        if ($checkColumn->num_rows === 0) {
-            // Crear columna si no existe
-            $conn->query("ALTER TABLE tasks ADD COLUMN escrow_secret VARCHAR(255) NULL AFTER escrow_id");
-        }
-
-        $stmt = $conn->prepare("
-            UPDATE tasks 
-            SET escrow_secret = ? 
-            WHERE id = ? AND user_id = ?
-        ");
-        $stmt->bind_param("sii", $escrowSecret, $taskId, $loggedInUserId);
-        $stmt->execute();
-        $stmt->close();
-
-        $conn->commit();
-
-        echo json_encode([
-            'success' => true,
-            'message' => 'Secret key guardado exitosamente'
-        ]);
-
-    } catch (Exception $e) {
-        $conn->rollback();
-        error_log('Error en save_escrow_secret.php: ' . $e->getMessage());
-        http_response_code(500);
-        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-    }
-
-    $conn->close();
-} else {
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+    exit;
 }
+
+$loggedInUserId = getLoggedInUserId($conn, $secret_key);
+if (is_null($loggedInUserId)) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'message' => 'Acceso no autorizado']);
+    exit;
+}
+
+$data = json_decode(file_get_contents('php://input'), true);
+if (!isset($data['task_id']) || !is_numeric($data['task_id'])) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'task_id requerido']);
+    exit;
+}
+if (!isset($data['escrow_secret']) || empty($data['escrow_secret'])) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'escrow_secret requerido']);
+    exit;
+}
+
+// Este endpoint está deprecado - Trustless Work no usa secret keys
+http_response_code(410); // Gone
+echo json_encode([
+    'success' => false,
+    'message' => 'Este endpoint está deprecado. El sistema ahora usa exclusivamente Trustless Work, que no requiere secret keys.'
+]);
+$conn->close();
 ?>
 

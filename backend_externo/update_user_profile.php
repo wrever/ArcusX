@@ -23,7 +23,7 @@ use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
 // Headers CORS
-header("Access-Control-Allow-Origin: *");
+$_cors_origin = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header("Access-Control-Allow-Origin: ".$_cors_origin);
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
 header("Content-Type: application/json; charset=UTF-8");
@@ -33,7 +33,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-$jwt_secret = "SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY";
 
 function getLoggedInUserIdForProfile($secret_key) {
     $headers = getallheaders();
@@ -79,9 +78,14 @@ if (!$userId) {
     exit();
 }
 
-// Asegurar columnas necesarias (bio, portfolio_url, public_profile) sin romper si ya existen
+// Asegurar columnas necesarias (bio, portfolio_url, public_profile, skills) sin romper si ya existen
 try {
-    $columns = ['bio' => "TEXT NULL", 'portfolio_url' => "VARCHAR(500) NULL", 'public_profile' => "TINYINT(1) DEFAULT 1"];
+    $columns = [
+        'bio' => "TEXT NULL", 
+        'portfolio_url' => "VARCHAR(500) NULL", 
+        'public_profile' => "TINYINT(1) DEFAULT 1",
+        'skills' => "TEXT NULL"
+    ];
     foreach ($columns as $col => $definition) {
         $check = $conn->query("SHOW COLUMNS FROM users LIKE '" . $col . "'");
         if ($check && $check->num_rows === 0) {
@@ -141,6 +145,20 @@ if (isset($data['public_profile'])) {
     $updates[] = "public_profile = ?";
     $params[] = $publicProfile;
     $types .= 'i';
+}
+
+if (isset($data['skills'])) {
+    $skills = $data['skills'];
+    if (is_array($skills)) {
+        $skillsJson = json_encode($skills);
+        $updates[] = "skills = ?";
+        $params[] = $skillsJson;
+        $types .= 's';
+    } else if ($skills === null || $skills === '') {
+        $updates[] = "skills = ?";
+        $params[] = null;
+        $types .= 's';
+    }
 }
 
 if (empty($updates)) {

@@ -1,3 +1,16 @@
+# ArcusX SPA (Vite/React) — copiar este archivo a la raíz de public_html Y a la raíz del subdominio (mismo dist/).
+# Si ves 404 en empresas.*: en cPanel → Subdominios → comprobar que la carpeta contiene index.html, assets/ y este .htaccess
+#
+# secretos backend (solo en servidor; editar estos valores en cPanel/File Manager, NO subirlos al repo público).
+# Requiere mod_env. Si getenv() sigue vacío, el host puede usar PHP-FPM sin pasar vars: usa entorno desde cPanel o contacta soporte.
+
+<IfModule mod_env.c>
+    SetEnv ARCUSX_DB_PASSWORD "REEMPLAZA_CON_PASSWORD_REAL"
+    SetEnv ARCUSX_JWT_SECRET "REEMPLAZA_CON_JWT_SECRET_REAL"
+</IfModule>
+
+DirectoryIndex index.html
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteBase /
@@ -9,6 +22,14 @@
     # Permitir métodos DELETE
     RewriteCond %{REQUEST_METHOD} DELETE
     RewriteRule ^api/auth/get_task_details\.php$ - [L]
+    
+    # Permitir acceso a assets (CSS, JS, imágenes, etc.)
+    RewriteCond %{REQUEST_URI} ^/assets/
+    RewriteRule . - [L]
+    
+    # Permitir acceso a archivos estáticos
+    RewriteCond %{REQUEST_URI} \.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|webp|json|xml|txt)$ [NC]
+    RewriteRule . - [L]
     
     # SPA Routing: Redirigir todas las rutas que no sean archivos/directorios a index.html
     # Esto aplica solo para rutas que no empiecen con /api/

@@ -4,7 +4,7 @@
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  background: linear-gradient(135deg, #07233c 0%, #0a2d4a 100%);
+  background: var(--gradient-secondary, linear-gradient(135deg, #07233c 0%, #0a2d4a 100%));
   position: relative;
   overflow: hidden;
 }
@@ -26,16 +26,16 @@
 
 .register-content {
   display: flex;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-card, rgba(255, 255, 255, 0.05));
   backdrop-filter: blur(20px);
   border-radius: 24px;
   overflow: hidden;
   width: 100%;
   max-width: 1100px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  box-shadow: var(--shadow-lg, 0 20px 60px rgba(0, 0, 0, 0.3));
   position: relative;
   z-index: 10;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
 }
 
 .register-left {
@@ -49,7 +49,7 @@
 }
 
 .register-info {
-  color: white;
+  color: var(--text-primary, white);
   max-width: 300px;
 }
 
@@ -57,13 +57,13 @@
   font-size: 2.5rem;
   font-weight: 800;
   margin-bottom: 1rem;
-  color: #fff;
+  color: var(--text-primary, #fff);
   line-height: 1.2;
 }
 
 .register-info h1 .highlight-text {
   color: #ffffff !important;
-  background: linear-gradient(90deg, #28c0f0, #1180b3);
+  background: linear-gradient(90deg, #10dd88, #0ab86a);
   background-size: 200% 100%;
   padding: 0.3rem 1rem;
   border-radius: 8px;
@@ -197,7 +197,7 @@
   height: 40px;
   background: rgba(40, 192, 240, 0.1);
   border-radius: 10px;
-  color: #28c0f0;
+  color: #10dd88;
   font-size: 1rem;
   flex-shrink: 0;
 }
@@ -228,7 +228,7 @@
 }
 
 .form-group input:focus {
-  border-color: #28c0f0;
+  border-color: #10dd88;
   box-shadow: 0 0 0 4px rgba(40, 192, 240, 0.15);
   outline: none;
   background: rgba(0, 0, 0, 0.4);
@@ -269,8 +269,29 @@
 }
 
 /* Solo los inputs de contraseña necesitan padding extra para el botón */
-.form-group:has(.toggle-password) input {
+.form-group:has(.toggle-password) input,
+.form-group.password-field input {
   padding-right: 2.75rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Asegurar que el contenedor de password tenga el mismo width */
+.form-group.password-field {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group.password-field > div {
+  width: 100%;
+  position: relative;
+  display: flex;
+}
+
+.form-group.password-field > div > input {
+  flex: 1;
+  width: 100%;
 }
 
 /* Ocultar iconos de correo y candado */
@@ -298,13 +319,13 @@
 }
 
 .toggle-password:hover {
-  color: #28c0f0;
+  color: #10dd88;
 }
 
 .register-button {
   width: 100%;
   padding: 1rem;
-  background: linear-gradient(90deg, #28c0f0, #1180b3);
+  background: linear-gradient(90deg, #10dd88, #0ab86a);
   border: none;
   border-radius: 12px;
   color: white;
@@ -350,14 +371,14 @@
 }
 
 .login-link a {
-  color: #28c0f0;
+  color: #10dd88;
   text-decoration: none;
   font-weight: 600;
   transition: color 0.3s ease;
 }
 
 .login-link a:hover {
-  color: #1180b3;
+  color: #0ab86a;
 }
 
 @media (max-width: 768px) {
@@ -410,7 +431,7 @@
 /* Estilo para inputs con valor */
 .form-group input:not(:placeholder-shown) {
   background: white;
-  border-color: #28c0f0;
+  border-color: #10dd88;
 }
 
 /* OAuth Styles para Register */
@@ -442,7 +463,16 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.75rem;
+  width: 100%;
+}
+
+.register-oauth-note {
+  text-align: center;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.65);
+  margin: 0 0 1.25rem;
   width: 100%;
 }
 
@@ -464,7 +494,7 @@
 }
 
 .oauth-button:hover:not(:disabled) {
-  border-color: #28c0f0;
+  border-color: #10dd88;
   background: rgba(0, 0, 0, 0.4);
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(40, 192, 240, 0.25);

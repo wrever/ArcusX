@@ -1,18 +1,83 @@
+/* Navbar — orden y diseño; colores solo desde themes.css */
+
 .navbar {
   width: 100%;
   height: 80px;
-  background: rgba(7, 35, 60, 0.95);
-  backdrop-filter: blur(10px);
   position: fixed;
   top: 0;
   left: 0;
   z-index: 1000;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.3s ease;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-glass);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  box-shadow: var(--shadow-md);
+  transition: background 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+}
+
+/* Línea superior sutil (acento marca) */
+.navbar::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--border-accent) 50%,
+    transparent 100%
+  );
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.navbar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--border-subtle),
+    transparent
+  );
+  pointer-events: none;
 }
 
 .navbar.scrolled {
-  background: rgba(7, 35, 60, 0.85);
+  background: color-mix(in srgb, var(--bg-primary) 94%, transparent);
+  border-bottom-color: var(--border-subtle);
+  box-shadow: var(--shadow-lg);
+}
+
+@supports not (background: color-mix(in srgb, black, white)) {
+  .navbar.scrolled {
+    background: var(--bg-primary);
+    opacity: 0.98;
+  }
+}
+
+:root[data-theme="light"] .navbar {
+  background: var(--bg-glass);
+  box-shadow: var(--shadow-md);
+}
+
+:root[data-theme="light"] .navbar.scrolled {
+  background: var(--bg-primary);
+  border-bottom-color: var(--border-color);
+}
+
+:root[data-theme="light"] .navbar::before {
+  opacity: 0.55;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--border-accent) 50%,
+    transparent 100%
+  );
 }
 
 .navbar.menu-open {
@@ -35,12 +100,25 @@
   display: flex;
   align-items: center;
   z-index: 1002;
+  border-radius: 12px;
+  padding: 0.2rem 0.35rem;
+  margin: -0.2rem -0.35rem;
+  transition: background 0.25s ease, box-shadow 0.25s ease;
+}
+
+.navbar-logo:hover {
+  background: var(--bg-hover);
+  box-shadow: 0 0 0 1px var(--border-color);
 }
 
 .logo-img {
   height: 65px;
   width: auto;
-  transition: all 0.3s ease;
+  transition: transform 0.35s ease, height 0.3s ease;
+}
+
+.navbar-logo:hover .logo-img {
+  transform: scale(1.02);
 }
 
 .navbar.scrolled .logo-img {
@@ -50,37 +128,155 @@
 .navbar-links {
   display: flex;
   align-items: center;
-  gap: 2rem;
+  justify-content: space-between;
+  flex: 1;
+  gap: 1rem 1.5rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.navbar-links__section {
+  display: flex;
+  align-items: center;
+}
+
+/* Enlaces principales pegados a la derecha (junto al bloque Empresas / auth) */
+.navbar-links__section--nav {
+  gap: 0.35rem 0.5rem;
+  flex-wrap: wrap;
+  flex: 1;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.navbar-links__section--cta {
+  gap: 0;
+  flex-wrap: wrap;
+  padding-left: 0.85rem;
+  margin-left: 0.35rem;
+  border-left: 1px solid var(--border-color);
+}
+
+.navbar-cta-shell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.35rem 0.5rem;
+  border-radius: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  box-shadow: inset 0 1px 0 var(--border-subtle);
+}
+
+:root[data-theme="light"] .navbar-cta-shell {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), var(--shadow-sm);
 }
 
 .nav-link {
-  color: #fff;
+  color: var(--text-secondary);
   text-decoration: none;
-  font-size: 1rem;
+  font-size: 0.875rem;
   font-weight: 500;
-  padding: 0.5rem;
+  letter-spacing: 0.02em;
+  padding: 0.5rem 0.95rem;
   position: relative;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
 }
 
 .nav-link::after {
-  content: '';
+  content: "";
   position: absolute;
-  bottom: 0;
-  left: 0;
+  left: 50%;
+  bottom: 0.35rem;
   width: 0;
   height: 2px;
-  background: linear-gradient(90deg, #28c0f0, #1180b3);
-  transition: width 0.3s ease;
+  border-radius: 2px;
+  background: var(--gradient-primary);
+  transform: translateX(-50%);
+  transition: width 0.25s ease, opacity 0.25s ease;
+  opacity: 0;
 }
 
 .nav-link:hover {
-  color: #28c0f0;
+  color: var(--text-primary);
+  background: var(--bg-hover);
+  border-color: var(--border-color);
 }
 
 .nav-link:hover::after {
-  width: 100%;
+  width: 40%;
+  opacity: 0.4;
+}
+
+.nav-link--active {
+  color: var(--text-primary) !important;
+  background: var(--bg-active) !important;
+  border-color: var(--border-color-active) !important;
+  box-shadow: var(--shadow-blue);
+}
+
+.nav-link--active::after {
+  width: 55%;
+  opacity: 0.85;
+}
+
+.nav-link--external {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+}
+
+.nav-link--external::before {
+  content: "";
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: background 0.2s ease;
+}
+
+.nav-link--external:hover::before {
+  background: var(--primary-green);
+}
+
+/* Empresas — mismo sistema de acento (marca), un poco más marcado */
+.nav-link--empresas {
+  border-color: var(--border-accent);
+  background: var(--bg-active);
+  font-weight: 600;
+}
+
+.nav-link--empresas:hover {
+  border-color: var(--border-color-active);
+  background: color-mix(in srgb, var(--bg-active) 85%, var(--primary-green));
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+@supports not (background: color-mix(in srgb, black, white)) {
+  .nav-link--empresas:hover {
+    background: var(--bg-active);
+    filter: brightness(1.08);
+  }
+}
+
+.nav-link--empresas.nav-link--active {
+  border-color: var(--border-color-active) !important;
+  background: var(--bg-active) !important;
+  box-shadow: var(--shadow-blue);
+}
+
+.nav-link--empresas.nav-link--active::after {
+  background: var(--gradient-primary);
+  width: 60%;
+  opacity: 1;
 }
 
 .navbar-buttons {
@@ -90,58 +286,102 @@
 }
 
 .nav-button {
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
+  padding: 0.55rem 1.25rem;
+  border-radius: 999px;
   font-weight: 600;
-  font-size: 1rem;
-  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+  transition: transform 0.2s ease, box-shadow 0.25s ease, background 0.2s ease, border-color 0.2s ease;
   text-decoration: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 .nav-button.login {
-  color: #fff;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-primary);
+  background: var(--bg-hover);
+  border-color: var(--border-color-hover);
 }
 
 .nav-button.login:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: var(--bg-active);
+  border-color: var(--border-color-active);
+  box-shadow: 0 0 0 1px var(--border-subtle);
 }
 
-.nav-button.register {
-  background: linear-gradient(90deg, #28c0f0, #1180b3);
-  color: #fff;
+.nav-button.login.nav-button--active {
+  background: var(--bg-active);
+  border-color: var(--border-color-active);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+a.nav-button.register {
+  background: var(--gradient-primary);
+  color: var(--dark-blue);
   border: none;
+  box-shadow: var(--shadow-blue);
 }
 
-.nav-button.register:hover {
+a.nav-button.register:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(40, 192, 240, 0.3);
+  box-shadow: var(--shadow-lg);
+  filter: brightness(1.05);
 }
 
-/* Hamburger Menu */
+:root[data-theme="light"] a.nav-button.register {
+  color: var(--white);
+}
+
+/* Cerrar sesión — secundario, sin rojo ajeno a la paleta */
+button.nav-button.register {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color-hover);
+  box-shadow: none;
+}
+
+button.nav-button.register:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color-active);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+  filter: none;
+}
+
+/* Hamburger */
 .hamburger {
   display: none;
   flex-direction: column;
   justify-content: space-between;
-  width: 30px;
-  height: 21px;
+  width: 44px;
+  height: 44px;
+  padding: 12px 10px;
+  border-radius: 12px;
   cursor: pointer;
   z-index: 1001;
+  border: 1px solid var(--border-color);
+  background: var(--bg-hover);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.hamburger:hover {
+  background: var(--bg-active);
+  border-color: var(--border-color-active);
 }
 
 .hamburger-line {
   display: block;
-  height: 3px;
+  height: 2px;
   width: 100%;
-  background-color: #fff;
-  border-radius: 3px;
+  background: var(--text-primary);
+  border-radius: 2px;
   transition: all 0.3s ease;
 }
 
 .hamburger-line.open:nth-child(1) {
-  transform: translateY(9px) rotate(45deg);
+  transform: translateY(7px) rotate(45deg);
 }
 
 .hamburger-line.open:nth-child(2) {
@@ -149,21 +389,21 @@
 }
 
 .hamburger-line.open:nth-child(3) {
-  transform: translateY(-9px) rotate(-45deg);
+  transform: translateY(-7px) rotate(-45deg);
 }
 
-/* Responsive Styles */
 @media (max-width: 1024px) {
   .navbar-container {
     padding: 0 1.5rem;
   }
 
   .navbar-links {
-    gap: 1.5rem;
+    gap: 1.25rem;
   }
 
   .nav-button {
-    padding: 0.6rem 1.2rem;
+    padding: 0.5rem 1.1rem;
+    font-size: 0.875rem;
   }
 }
 
@@ -177,38 +417,89 @@
     top: 80px;
     left: 0;
     width: 100%;
-    background: rgba(7, 35, 60, 0.98);
-    backdrop-filter: blur(10px);
+    background: var(--bg-glass);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
     flex-direction: column;
-    align-items: center;
-    padding: 1.5rem 0;
+    align-items: stretch;
+    padding: 1.25rem 1.5rem 2rem;
     transform: translateY(-100%);
     opacity: 0;
-    transition: all 0.3s ease;
+    transition: transform 0.35s ease, opacity 0.35s ease;
     pointer-events: none;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-lg);
+    border-bottom: 1px solid var(--border-color);
+    justify-content: flex-start;
+    flex: none;
+    gap: 0;
+  }
+
+  .navbar-links__section--nav,
+  .navbar-links__section--cta {
+    flex-direction: column;
+    width: 100%;
+    align-items: stretch;
+    border-left: none;
+    padding-left: 0;
+    margin-left: 0;
+    gap: 0;
+  }
+
+  .navbar-links__section--nav {
+    justify-content: flex-start;
+  }
+
+  .navbar-links__section--cta {
+    margin-top: 0.75rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .navbar-cta-shell {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.75rem;
+    gap: 0.5rem;
   }
 
   .navbar-links.open {
     transform: translateY(0);
     opacity: 1;
     pointer-events: auto;
+    justify-content: flex-start;
+    /* Fondo opaco: el vidrio (--bg-glass) deja ver el contenido detrás y los enlaces se pierden */
+    background: var(--bg-primary);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .navbar-links.open .navbar-links__section--nav {
+    flex: none;
+    width: 100%;
   }
 
   .nav-link {
     width: 100%;
+    max-width: none;
     text-align: center;
-    padding: 0.75rem;
+    padding: 0.75rem 1rem;
+    margin: 0.2rem 0;
+    border-radius: 12px;
+  }
+
+  .nav-link::after {
+    display: none;
   }
 
   .nav-button {
-    width: 80%;
+    width: 100%;
     text-align: center;
-    margin: 0.5rem 0;
+    margin: 0.35rem 0;
   }
 
   .nav-button.login {
-    margin-top: 1.5rem;
+    margin-top: 0;
   }
 
   .logo-img {
@@ -222,6 +513,46 @@
   .hamburger {
     z-index: 1002;
   }
+}
+
+/* Tema claro — solo tokens */
+:root[data-theme="light"] .nav-link {
+  color: var(--text-secondary);
+  border-color: transparent;
+}
+
+:root[data-theme="light"] .nav-link:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+  border-color: var(--border-color);
+}
+
+:root[data-theme="light"] .nav-link.nav-link--active:not(.nav-link--empresas) {
+  color: var(--primary-blue) !important;
+  background: var(--bg-active) !important;
+  border-color: var(--border-color-active) !important;
+  box-shadow: var(--shadow-sm);
+}
+
+:root[data-theme="light"] .nav-link--empresas.nav-link--active {
+  color: var(--primary-blue) !important;
+  background: var(--bg-active) !important;
+  border-color: var(--border-color-active) !important;
+  box-shadow: var(--shadow-blue);
+}
+
+:root[data-theme="light"] .nav-button.login {
+  border-color: var(--border-color);
+  background: var(--bg-secondary);
+}
+
+:root[data-theme="light"] .nav-button.login:hover {
+  border-color: var(--border-color-active);
+  background: var(--bg-tertiary);
+}
+
+:root[data-theme="light"] .nav-button.login.nav-button--active {
+  color: var(--primary-blue);
 }
 
 @media (max-width: 480px) {
@@ -238,6 +569,17 @@
   }
 
   .nav-button {
-    width: 90%;
+    width: 100%;
   }
-} 
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-link::after {
+    transition: none;
+  }
+
+  a.nav-button.register:hover,
+  .navbar-logo:hover .logo-img {
+    transform: none;
+  }
+}

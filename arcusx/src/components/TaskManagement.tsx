@@ -3,13 +3,16 @@ import { createPortal } from 'react-dom';
 import { FaTasks, FaSearch, FaEye, FaCheckCircle, FaExclamationTriangle, FaWallet, FaLink, FaTimesCircle, FaSpinner } from 'react-icons/fa';
 import { getAdminTasks, getAdminTaskDetails } from '../services/adminService';
 import { useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks';
+import { useI18n } from '../i18n/I18nProvider';
 import '../css/AdminPanel.css';
+import EscrowLifecycle from './EscrowLifecycle';
 
 interface TaskManagementProps {
   onUpdate?: () => void;
 }
 
 const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) => {
+  const { t } = useI18n();
   // onUpdate se puede usar para refrescar estadísticas cuando sea necesario
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -79,7 +82,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
       setTotalPages(data.pagination.total_pages);
       setTotal(data.pagination.total);
     } catch (err: any) {
-      setError(err.message || 'Error al cargar tareas');
+      setError(err.message || t('admin.tasks.error.load'));
     } finally {
       setLoading(false);
     }
@@ -120,7 +123,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
         fetchEscrowInfo(task.escrow_id);
       }
     } catch (err: any) {
-      setError(err.message || 'Error al cargar detalles de la tarea');
+      setError(err.message || t('admin.tasks.error.details'));
     } finally {
       setLoadingDetails(false);
     }
@@ -177,9 +180,9 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
       <div className="admin-section-header">
         <h2>
           <FaTasks />
-          Gestión de Tareas
+          {t('admin.tasks.title')}
         </h2>
-        <p>Administra todas las tareas del sistema y sus escrows asociados</p>
+        <p>{t('admin.tasks.subtitle')}</p>
       </div>
 
       {/* Mensajes de error y éxito */}
@@ -204,20 +207,20 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
             <FaSearch className="search-icon" />
             <input
               type="text"
-              placeholder="Buscar por título o descripción..."
+              placeholder={t('admin.tasks.search.placeholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="admin-input search-input"
             />
             <button type="submit" className="admin-button primary small">
-              Buscar
+              {t('admin.tasks.search.button')}
             </button>
             {search && (
               <button 
                 type="button"
                 onClick={handleClearSearch}
                 className="admin-button secondary small"
-                title="Limpiar búsqueda"
+                title={t('admin.tasks.search.clear')}
               >
                 <FaTimesCircle />
               </button>
@@ -226,7 +229,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
         </form>
         
         <div className="filter-group">
-          <label>Estado de Tarea:</label>
+          <label>{t('admin.tasks.filter.task')}</label>
           <select
             value={statusFilter}
             onChange={(e) => {
@@ -235,17 +238,17 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
             }}
             className="admin-select"
           >
-            <option value="">Todos</option>
-            <option value="open">Abierta</option>
-            <option value="in_progress">En Progreso</option>
-            <option value="completed">Completada</option>
-            <option value="disputed">En Disputa</option>
-            <option value="cancelled">Cancelada</option>
+            <option value="">{t('admin.tasks.filter.all')}</option>
+            <option value="open">{t('admin.tasks.status.open')}</option>
+            <option value="in_progress">{t('admin.tasks.status.in_progress')}</option>
+            <option value="completed">{t('admin.tasks.status.completed')}</option>
+            <option value="disputed">{t('admin.tasks.status.disputed')}</option>
+            <option value="cancelled">{t('admin.tasks.status.cancelled')}</option>
           </select>
         </div>
 
         <div className="filter-group">
-          <label>Estado de Escrow:</label>
+          <label>{t('admin.tasks.filter.escrow')}</label>
           <select
             value={escrowStatusFilter}
             onChange={(e) => {
@@ -254,12 +257,12 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
             }}
             className="admin-select"
           >
-            <option value="">Todos</option>
-            <option value="pending">Pendiente</option>
-            <option value="active">Activo</option>
-            <option value="completed">Completado</option>
-            <option value="disputed">En Disputa</option>
-            <option value="released">Liberado</option>
+            <option value="">{t('admin.tasks.filter.all')}</option>
+            <option value="pending">{t('admin.tasks.status.pending')}</option>
+            <option value="active">{t('admin.tasks.status.active')}</option>
+            <option value="completed">{t('admin.tasks.status.completed')}</option>
+            <option value="disputed">{t('admin.tasks.status.disputed')}</option>
+            <option value="released">{t('admin.tasks.status.released')}</option>
           </select>
         </div>
       </div>
@@ -268,12 +271,12 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
       {loading ? (
         <div className="admin-loading">
           <div className="loading-spinner"></div>
-          <p>Cargando tareas...</p>
+          <p>{t('admin.tasks.loading')}</p>
         </div>
       ) : tasks.length === 0 ? (
         <div className="admin-empty-state">
           <FaTasks />
-          <p>No se encontraron tareas</p>
+          <p>{t('admin.tasks.empty')}</p>
         </div>
       ) : (
         <>
@@ -281,15 +284,15 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
             <table className="admin-table">
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Título</th>
-                  <th>Cliente</th>
-                  <th>Trabajador</th>
-                  <th>Precio</th>
-                  <th>Estado</th>
-                  <th>Escrow</th>
-                  <th>Estado Escrow</th>
-                  <th>Acciones</th>
+                  <th>{t('admin.tasks.th.id')}</th>
+                  <th>{t('admin.tasks.th.title')}</th>
+                  <th>{t('admin.tasks.th.client')}</th>
+                  <th>{t('admin.tasks.th.worker')}</th>
+                  <th>{t('admin.tasks.th.price')}</th>
+                  <th>{t('admin.tasks.th.status')}</th>
+                  <th>{t('admin.tasks.th.escrow')}</th>
+                  <th>{t('admin.tasks.th.escrowStatus')}</th>
+                  <th>{t('admin.tasks.th.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -298,7 +301,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                     <td>#{task.id}</td>
                     <td>
                       <div style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {task.title || 'Sin título'}
+                        {task.title || t('common.noTitle')}
                       </div>
                     </td>
                     <td>{task.creator_username || 'N/A'}</td>
@@ -313,7 +316,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                           {formatEscrowId(task.escrow_id)}
                         </span>
                       ) : (
-                        'Sin escrow'
+                        t('admin.tasks.noEscrow')
                       )}
                     </td>
                     <td>{getEscrowStatusBadge(task.escrow_status)}</td>
@@ -321,7 +324,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                       <button
                         onClick={() => handleViewDetails(task.id)}
                         className="admin-button secondary small"
-                        title="Ver detalles"
+                        title={t('admin.tasks.viewDetails')}
                       >
                         <FaEye />
                       </button>
@@ -340,17 +343,17 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                 disabled={page === 1}
                 className="admin-button secondary"
               >
-                Anterior
+                {t('admin.tasks.prev')}
               </button>
               <span>
-                Página {page} de {totalPages} ({total} tareas)
+                {t('admin.tasks.pageOf').replace('{{page}}', String(page)).replace('{{total}}', String(totalPages)).replace('{{count}}', String(total))}
               </span>
               <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
                 className="admin-button secondary"
               >
-                Siguiente
+                {t('admin.tasks.next')}
               </button>
             </div>
           )}
@@ -366,7 +369,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
         }}>
           <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
             <div className="admin-modal-header">
-              <h3>Detalles de la Tarea #{selectedTask.id}</h3>
+              <h3>{t('admin.tasks.detailsTitle').replace('{{id}}', String(selectedTask.id))}</h3>
               <button
                 className="admin-modal-close"
                 onClick={() => {
@@ -382,24 +385,24 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
             {loadingDetails ? (
               <div className="admin-loading">
                 <div className="loading-spinner"></div>
-                <p>Cargando detalles...</p>
+                <p>{t('admin.tasks.loadingDetails')}</p>
               </div>
             ) : (
               <div className="admin-modal-content">
                 {/* Información de la tarea */}
                 <div className="dispute-details-section">
-                  <h4>Información General</h4>
+                  <h4>{t('admin.tasks.section.general')}</h4>
                   <div className="detail-grid">
                     <div className="detail-item">
-                      <label>Título:</label>
-                      <span>{selectedTask.title || 'Sin título'}</span>
+                      <label>{t('admin.tasks.label.title')}</label>
+                      <span>{selectedTask.title || t('common.noTitle')}</span>
                     </div>
                     <div className="detail-item">
-                      <label>Estado:</label>
+                      <label>{t('admin.tasks.label.status')}</label>
                       <span>{getStatusBadge(selectedTask.status)}</span>
                     </div>
                     <div className="detail-item">
-                      <label>Precio:</label>
+                      <label>{t('admin.tasks.label.price')}</label>
                       <span>
                         {selectedTask.price 
                           ? `${parseFloat(selectedTask.price).toFixed(7)} ${selectedTask.currency || 'USDC'}`
@@ -407,13 +410,13 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                       </span>
                     </div>
                     <div className="detail-item">
-                      <label>Fecha de creación:</label>
+                      <label>{t('admin.tasks.label.createdAt')}</label>
                       <span>{new Date(selectedTask.created_at).toLocaleString('es-ES')}</span>
                     </div>
                   </div>
                   {selectedTask.description && (
                     <div className="detail-item full-width">
-                      <label>Descripción:</label>
+                      <label>{t('admin.tasks.label.description')}</label>
                       <p className="detail-text">{selectedTask.description}</p>
                     </div>
                   )}
@@ -421,104 +424,108 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
 
                 {/* Información de usuarios */}
                 <div className="dispute-details-section">
-                  <h4>Usuarios</h4>
+                  <h4>{t('admin.tasks.section.users')}</h4>
                   <div className="detail-grid">
                     <div className="detail-item">
-                      <label>Cliente:</label>
+                      <label>{t('admin.tasks.th.client')}:</label>
                       <span>{selectedTask.creator_username || 'N/A'}</span>
                     </div>
                     <div className="detail-item">
-                      <label>Trabajador:</label>
+                      <label>{t('admin.tasks.th.worker')}:</label>
                       <span>{selectedTask.worker_username || 'N/A'}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Información del Escrow (Trustless Work) */}
+                {/* Información del escrow (indexador) */}
                 {selectedTask.escrow_id && selectedTask.escrow_id.startsWith('C') && (
                   <div className="dispute-details-section">
                     <h4>
                       <FaWallet style={{ marginRight: '8px' }} />
-                      Información del Escrow (Trustless Work)
+                      Información del escrow
                     </h4>
                     {loadingEscrowInfo ? (
                       <div style={{ padding: '20px', textAlign: 'center' }}>
                         <FaSpinner className="spinning" style={{ fontSize: '24px', margin: '0 auto', display: 'block' }} />
                         <p style={{ marginTop: '10px', color: 'rgba(255, 255, 255, 0.6)' }}>
-                          Cargando información del escrow desde Trustless Work...
+                          Cargando información del escrow...
                         </p>
                       </div>
                     ) : escrowInfo ? (
-                      <div className="detail-grid">
-                        <div className="detail-item">
-                          <label>Contract ID:</label>
-                          <span>
-                            <a 
-                              href={`https://stellar.expert/explorer/testnet/contract/${selectedTask.escrow_id}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{ 
-                                color: '#28c0f0', 
-                                textDecoration: 'none',
-                                wordBreak: 'break-all'
-                              }}
-                            >
-                              {selectedTask.escrow_id.slice(0, 8)}...{selectedTask.escrow_id.slice(-6)}
-                              <FaLink style={{ marginLeft: '5px', fontSize: '12px' }} />
-                            </a>
-                          </span>
-                        </div>
-                        <div className="detail-item">
-                          <label>Balance Actual:</label>
-                          <span style={{ 
-                            fontWeight: 'bold',
-                            color: parseFloat(escrowInfo.balance || '0') > 0 ? '#10b981' : '#ef4444'
-                          }}>
-                            {parseFloat(escrowInfo.balance || '0').toFixed(7)} USDC
-                          </span>
-                        </div>
-                        <div className="detail-item">
-                          <label>Monto Total:</label>
-                          <span>{parseFloat(escrowInfo.amount || '0').toFixed(7)} USDC</span>
-                        </div>
-                        <div className="detail-item">
-                          <label>Estado Real:</label>
-                          <span className={`badge ${
-                            escrowInfo.status === 'released' || escrowInfo.status === 'completed' ? 'success' :
-                            escrowInfo.status === 'disputed' ? 'warning' :
-                            escrowInfo.status === 'active' ? 'info' : 'error'
-                          }`}>
-                            {escrowInfo.status || 'unknown'}
-                          </span>
-                        </div>
-                        <div className="detail-item">
-                          <label>Estado en BD:</label>
-                          <span>{getEscrowStatusBadge(selectedTask.escrow_status)}</span>
-                        </div>
-                        <div className="detail-item">
-                          <label>Activo:</label>
-                          <span className={`badge ${escrowInfo.isActive ? 'success' : 'error'}`}>
-                            {escrowInfo.isActive ? 'Sí' : 'No'}
-                          </span>
-                        </div>
-                        {escrowInfo.inconsistencies?.inconsistencyFound && (
-                          <div className="detail-item full-width">
-                            <div style={{
-                              padding: '12px',
-                              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                              border: '1px solid rgba(239, 68, 68, 0.3)',
-                              borderRadius: '8px',
-                              marginTop: '10px'
-                            }}>
-                              <FaExclamationTriangle style={{ color: '#ef4444', marginRight: '8px' }} />
-                              <strong style={{ color: '#ef4444' }}>Inconsistencias Detectadas:</strong>
-                              <p style={{ marginTop: '8px', color: 'rgba(255, 255, 255, 0.8)' }}>
-                                {JSON.stringify(escrowInfo.inconsistencies, null, 2)}
-                              </p>
-                            </div>
+                      <>
+                        <div className="detail-grid">
+                          <div className="detail-item">
+                            <label>Contract ID:</label>
+                            <span>
+                              <a 
+                                href={`https://stellar.expert/explorer/testnet/contract/${selectedTask.escrow_id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ 
+                                  color: 'var(--primary-green, #10dd88)', 
+                                  textDecoration: 'none',
+                                  wordBreak: 'break-all'
+                                }}
+                              >
+                                {selectedTask.escrow_id.slice(0, 8)}...{selectedTask.escrow_id.slice(-6)}
+                                <FaLink style={{ marginLeft: '5px', fontSize: '12px' }} />
+                              </a>
+                            </span>
                           </div>
-                        )}
-                      </div>
+                          <div className="detail-item">
+                            <label>Balance Actual:</label>
+                            <span style={{ 
+                              fontWeight: 'bold',
+                              color: parseFloat(escrowInfo.balance || '0') > 0 ? '#10b981' : '#ef4444'
+                            }}>
+                              {parseFloat(escrowInfo.balance || '0').toFixed(7)} USDC
+                            </span>
+                          </div>
+                          <div className="detail-item">
+                            <label>Monto Total:</label>
+                            <span>{parseFloat(escrowInfo.amount || '0').toFixed(7)} USDC</span>
+                          </div>
+                          <div className="detail-item">
+                            <label>Estado Real:</label>
+                            <span className={`badge ${
+                              escrowInfo.status === 'released' || escrowInfo.status === 'completed' ? 'success' :
+                              escrowInfo.status === 'disputed' ? 'warning' :
+                              escrowInfo.status === 'active' ? 'info' : 'error'
+                            }`}>
+                              {escrowInfo.status || 'unknown'}
+                            </span>
+                          </div>
+                          <div className="detail-item">
+                            <label>Estado en BD:</label>
+                            <span>{getEscrowStatusBadge(selectedTask.escrow_status)}</span>
+                          </div>
+                          <div className="detail-item">
+                            <label>Activo:</label>
+                            <span className={`badge ${escrowInfo.isActive ? 'success' : 'error'}`}>
+                              {escrowInfo.isActive ? 'Sí' : 'No'}
+                            </span>
+                          </div>
+                          {escrowInfo.inconsistencies?.inconsistencyFound && (
+                            <div className="detail-item full-width">
+                              <div style={{
+                                padding: '12px',
+                                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                borderRadius: '8px',
+                                marginTop: '10px'
+                              }}>
+                                <FaExclamationTriangle style={{ color: '#ef4444', marginRight: '8px' }} />
+                                <strong style={{ color: '#ef4444' }}>Inconsistencias Detectadas:</strong>
+                                <p style={{ marginTop: '8px', color: 'rgba(255, 255, 255, 0.8)' }}>
+                                  {JSON.stringify(escrowInfo.inconsistencies, null, 2)}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <EscrowLifecycle status={selectedTask.escrow_status} />
+                      </>
+
                     ) : (
                       <div style={{ 
                         padding: '20px', 
@@ -526,7 +533,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                         color: 'rgba(255, 255, 255, 0.6)'
                       }}>
                         <FaExclamationTriangle style={{ marginBottom: '10px', fontSize: '24px' }} />
-                        <p>No se pudo obtener información del escrow desde Trustless Work</p>
+                        <p>{t('admin.tasks.error.escrowFetch')}</p>
                         <p style={{ fontSize: '12px', marginTop: '5px' }}>
                           Contract ID: {selectedTask.escrow_id}
                         </p>
@@ -544,7 +551,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                         <span>{selectedTask.escrow_id}</span>
                       </div>
                       <div className="detail-item">
-                        <label>Estado:</label>
+                        <label>{t('admin.tasks.label.status')}</label>
                         <span>{getEscrowStatusBadge(selectedTask.escrow_status)}</span>
                       </div>
                     </div>

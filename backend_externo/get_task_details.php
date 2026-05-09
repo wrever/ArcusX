@@ -30,7 +30,7 @@ if (in_array($origin, $allowed_origins)) {
     header("Access-Control-Allow-Origin: $origin");
     header("Access-Control-Allow-Credentials: true");
 } else {
-    header("Access-Control-Allow-Origin: *");
+    $_cors_origin = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header("Access-Control-Allow-Origin: ".$_cors_origin);
 }
 header("Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
@@ -46,11 +46,20 @@ ini_set('error_log', __DIR__ . '/php-error.log');
 
 require_once __DIR__ . '/config.php';
 
+// Corregir mojibake (UTF-8 leído como Latin-1): tildes y ñ correctos en el frontend
+function fix_utf8_mojibake($str) {
+    if (!is_string($str) || $str === '') return $str;
+    $bytes = @mb_convert_encoding($str, 'ISO-8859-1', 'UTF-8');
+    if ($bytes === false) return $str;
+    if (!mb_check_encoding($bytes, 'UTF-8')) return $str;
+    return $bytes;
+}
+
 try {
     // Verificar métodos permitidos
     if (!in_array($_SERVER['REQUEST_METHOD'], ['GET', 'POST', 'DELETE'])) {
         http_response_code(405);
-        echo json_encode(['success' => false, 'message' => 'Método no permitido. Solo se permite GET, POST, DELETE.']);
+        echo json_encode(['success' => false, 'message' => 'Método no permitido. Solo se permite GET, POST, DELETE.'], JSON_UNESCAPED_UNICODE);
         exit();
     }
 
@@ -59,7 +68,7 @@ try {
 
     if (!$task_id) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'task_id es requerido']);
+        echo json_encode(['success' => false, 'message' => 'task_id es requerido'], JSON_UNESCAPED_UNICODE);
         exit();
     }
 
@@ -88,7 +97,7 @@ try {
         header("Access-Control-Allow-Origin: $origin");
         header("Access-Control-Allow-Credentials: true");
     } else {
-        header("Access-Control-Allow-Origin: *");
+        $_cors_origin = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header("Access-Control-Allow-Origin: ".$_cors_origin);
     }
     header("Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS");
     header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
@@ -99,7 +108,7 @@ try {
         'success' => false,
         'error' => 'Error al procesar solicitud',
         'message' => $e->getMessage()
-    ]);
+    ], JSON_UNESCAPED_UNICODE);
 }
 
 /**
@@ -109,19 +118,10 @@ function handleGetTaskDetails($task_id) {
     global $conn;
     
     try {
-        // Crear conexión y seleccionar base de datos explícitamente
-        $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-        if ($conn->connect_error) {
-            throw new Exception("Error de conexión: " . $conn->connect_error);
+        // Usar la conexión global de config.php (igual que get_tasks.php)
+        if (!isset($conn) || $conn->connect_error) {
+            throw new Exception("Error de conexión: " . ($conn->connect_error ?? "Conexión no disponible"));
         }
-        
-        // Asegurar que la base de datos esté seleccionada
-        if (!$conn->select_db(DB_NAME)) {
-            throw new Exception("Error al seleccionar la base de datos: " . DB_NAME);
-        }
-        
-        // Establecer charset UTF-8
-        $conn->set_charset("utf8mb4");
 
         // CONSULTA 1: Obtener los detalles básicos de la tarea (sin JOINs complejos)
         $sql = "SELECT 
@@ -160,7 +160,7 @@ function handleGetTaskDetails($task_id) {
         
         if ($result->num_rows === 0) {
             http_response_code(404);
-            echo json_encode(['success' => false, 'message' => 'Tarea no encontrada']);
+            echo json_encode(['success' => false, 'message' => 'Tarea no encontrada'], JSON_UNESCAPED_UNICODE);
             $stmt->close();
             $conn->close();
             return;
@@ -168,11 +168,19 @@ function handleGetTaskDetails($task_id) {
         
         $task = $result->fetch_assoc();
         $stmt->close();
+
+        // Corregir tildes/mojibake en campos de texto
+        $textKeys = ['title', 'subtitle', 'description', 'category', 'difficulty', 'currency', 'creator_username'];
+        foreach ($textKeys as $k) {
+            if (isset($task[$k]) && is_string($task[$k])) {
+                $task[$k] = fix_utf8_mojibake($task[$k]);
+            }
+        }
         
         // Verificar que user_id no sea null
         if ($task['user_id'] === null || $task['user_id'] === '') {
             http_response_code(500);
-            echo json_encode(['success' => false, 'message' => 'Error: user_id no encontrado en la tarea']);
+            echo json_encode(['success' => false, 'message' => 'Error: user_id no encontrado en la tarea'], JSON_UNESCAPED_UNICODE);
             $conn->close();
             return;
         }
@@ -220,7 +228,7 @@ function handleGetTaskDetails($task_id) {
                     if ($result_user->num_rows > 0) {
                         $user_data = $result_user->fetch_assoc();
                         $worker_wallet_address = $user_data['wallet_address'] ?? null;
-                        $worker_username = $user_data['username'] ?? null;
+                        $worker_username = isset($user_data['username']) ? fix_utf8_mojibake($user_data['username']) : null;
                     }
                     $stmt_user->close();
                 }
@@ -235,7 +243,7 @@ function handleGetTaskDetails($task_id) {
                     
                     if ($result_username->num_rows > 0) {
                         $username_data = $result_username->fetch_assoc();
-                        $worker_username = $username_data['username'] ?? null;
+                        $worker_username = isset($username_data['username']) ? fix_utf8_mojibake($username_data['username']) : null;
                     }
                     $stmt_username->close();
                 }
@@ -271,14 +279,14 @@ function handleGetTaskDetails($task_id) {
         ];
 
         http_response_code(200);
-        echo json_encode($response);
+        echo json_encode($response, JSON_UNESCAPED_UNICODE);
 
         $conn->close();
 
     } catch (Exception $e) {
         error_log('Error en handleGetTaskDetails: ' . $e->getMessage());
         http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Error interno del servidor: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => 'Error interno del servidor: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
     }
 }
 
@@ -286,10 +294,12 @@ function handleGetTaskDetails($task_id) {
  * Maneja la subida de archivos
  */
 function handleFileUpload($task_id) {
+    global $conn;
+    
     // Verificar que se envió un archivo
     if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'No se envió archivo válido']);
+        echo json_encode(['success' => false, 'message' => 'No se envió archivo válido'], JSON_UNESCAPED_UNICODE);
         return;
     }
     
@@ -299,14 +309,14 @@ function handleFileUpload($task_id) {
     $max_size = 10 * 1024 * 1024; // 10MB
     if ($file['size'] > $max_size) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'El archivo es demasiado grande. Máximo 10MB']);
+        echo json_encode(['success' => false, 'message' => 'El archivo es demasiado grande. Máximo 10MB'], JSON_UNESCAPED_UNICODE);
         return;
     }
     
     try {
-        $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-        if ($conn->connect_error) {
-            throw new Exception("Error de conexión: " . $conn->connect_error);
+        // Usar la conexión global de config.php
+        if (!isset($conn) || $conn->connect_error) {
+            throw new Exception("Error de conexión: " . ($conn->connect_error ?? "Conexión no disponible"));
         }
         
         // Crear directorio files si no existe (en la raíz del servidor)
@@ -370,7 +380,7 @@ function handleFileUpload($task_id) {
             'success' => true,
             'message' => 'Archivo subido exitosamente',
             'file' => $new_file
-        ]);
+        ], JSON_UNESCAPED_UNICODE);
         
         $stmt->close();
         $conn->close();
@@ -383,7 +393,7 @@ function handleFileUpload($task_id) {
         
         error_log('Error en handleFileUpload: ' . $e->getMessage());
         http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
     }
 }
 
@@ -391,21 +401,23 @@ function handleFileUpload($task_id) {
  * Maneja la eliminación de archivos
  */
 function handleFileDelete($task_id) {
+    global $conn;
+    
     // Obtener datos del cuerpo de la petición
     $input = json_decode(file_get_contents('php://input'), true);
     
     if (!isset($input['file_id'])) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'file_id es requerido']);
+        echo json_encode(['success' => false, 'message' => 'file_id es requerido'], JSON_UNESCAPED_UNICODE);
         return;
     }
     
     $file_id = $input['file_id'];
     
     try {
-        $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-        if ($conn->connect_error) {
-            throw new Exception("Error de conexión: " . $conn->connect_error);
+        // Usar la conexión global de config.php
+        if (!isset($conn) || $conn->connect_error) {
+            throw new Exception("Error de conexión: " . ($conn->connect_error ?? "Conexión no disponible"));
         }
         
         // Obtener archivos actuales de la tarea
@@ -421,7 +433,7 @@ function handleFileDelete($task_id) {
         
         if (!$task) {
             http_response_code(404);
-            echo json_encode(['success' => false, 'message' => 'Tarea no encontrada']);
+            echo json_encode(['success' => false, 'message' => 'Tarea no encontrada'], JSON_UNESCAPED_UNICODE);
             $stmt->close();
             $conn->close();
             return;
@@ -446,7 +458,7 @@ function handleFileDelete($task_id) {
         
         if (!$file_found) {
             http_response_code(404);
-            echo json_encode(['success' => false, 'message' => 'Archivo no encontrado']);
+            echo json_encode(['success' => false, 'message' => 'Archivo no encontrado'], JSON_UNESCAPED_UNICODE);
             $stmt->close();
             $conn->close();
             return;
@@ -471,7 +483,7 @@ function handleFileDelete($task_id) {
         echo json_encode([
             'success' => true,
             'message' => 'Archivo eliminado exitosamente'
-        ]);
+        ], JSON_UNESCAPED_UNICODE);
         
         $stmt->close();
         $conn->close();
@@ -479,7 +491,7 @@ function handleFileDelete($task_id) {
     } catch (Exception $e) {
         error_log('Error en handleFileDelete: ' . $e->getMessage());
         http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
     }
 }
 
@@ -487,6 +499,8 @@ function handleFileDelete($task_id) {
  * Maneja la descarga de archivos (GET con action=download)
  */
 function handleFileDownload($task_id, $allowed_origins, $origin) {
+    global $conn;
+    
     $file_id = isset($_GET['file_id']) ? $_GET['file_id'] : null;
     
     if (!$file_id) {
@@ -498,14 +512,14 @@ function handleFileDownload($task_id, $allowed_origins, $origin) {
         header("Content-Type: application/json; charset=UTF-8");
         
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'file_id es requerido']);
+        echo json_encode(['success' => false, 'message' => 'file_id es requerido'], JSON_UNESCAPED_UNICODE);
         return;
     }
     
     try {
-        $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-        if ($conn->connect_error) {
-            throw new Exception("Error de conexión: " . $conn->connect_error);
+        // Usar la conexión global de config.php
+        if (!isset($conn) || $conn->connect_error) {
+            throw new Exception("Error de conexión: " . ($conn->connect_error ?? "Conexión no disponible"));
         }
         
         // Obtener archivos de la tarea
@@ -528,7 +542,7 @@ function handleFileDownload($task_id, $allowed_origins, $origin) {
             header("Content-Type: application/json; charset=UTF-8");
             
             http_response_code(404);
-            echo json_encode(['success' => false, 'message' => 'Tarea no encontrada']);
+            echo json_encode(['success' => false, 'message' => 'Tarea no encontrada'], JSON_UNESCAPED_UNICODE);
             $stmt->close();
             $conn->close();
             return;
@@ -557,7 +571,7 @@ function handleFileDownload($task_id, $allowed_origins, $origin) {
             header("Content-Type: application/json; charset=UTF-8");
             
             http_response_code(404);
-            echo json_encode(['success' => false, 'message' => 'Archivo no encontrado']);
+            echo json_encode(['success' => false, 'message' => 'Archivo no encontrado'], JSON_UNESCAPED_UNICODE);
             $stmt->close();
             $conn->close();
             return;
@@ -574,7 +588,7 @@ function handleFileDownload($task_id, $allowed_origins, $origin) {
             header("Content-Type: application/json; charset=UTF-8");
             
             http_response_code(404);
-            echo json_encode(['success' => false, 'message' => 'Archivo no encontrado en el servidor']);
+            echo json_encode(['success' => false, 'message' => 'Archivo no encontrado en el servidor'], JSON_UNESCAPED_UNICODE);
             $stmt->close();
             $conn->close();
             return;
@@ -610,7 +624,7 @@ function handleFileDownload($task_id, $allowed_origins, $origin) {
         header("Content-Type: application/json; charset=UTF-8");
         
         http_response_code(500);
-        echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+        echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
     }
 }
 

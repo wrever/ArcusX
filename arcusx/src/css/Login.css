@@ -3,7 +3,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background: var(--dark-blue);
+  background: var(--bg-primary, #07233c);
   background-image: 
     radial-gradient(circle at 20% 50%, rgba(40, 192, 240, 0.1) 0%, transparent 50%),
     radial-gradient(circle at 80% 80%, rgba(17, 128, 179, 0.1) 0%, transparent 50%);
@@ -28,20 +28,17 @@
 }
 
 .login-card {
-  background: linear-gradient(145deg, rgba(7, 35, 60, 0.95), rgba(17, 128, 179, 0.1));
+  background: var(--bg-card, linear-gradient(145deg, rgba(7, 35, 60, 0.95), rgba(17, 128, 179, 0.1)));
   backdrop-filter: blur(20px);
   border-radius: 24px;
   padding: 3rem;
   width: 100%;
   max-width: 440px;
-  box-shadow: 
-    0 20px 60px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(40, 192, 240, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow: var(--shadow-lg, 0 20px 60px rgba(0, 0, 0, 0.5));
   position: relative;
   z-index: 10;
   overflow: hidden;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
 }
 
 .login-card::before {
@@ -126,18 +123,32 @@
 
 .form-group {
   position: relative;
+  display: block !important;
+  width: 100%;
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block !important;
+  width: 100% !important;
+  margin-bottom: 0.75rem !important;
+  text-align: left !important;
+  float: none !important;
 }
 
 .form-group label h4 {
-  display: block;
+  display: block !important;
   color: var(--text-light);
   font-size: 0.9rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
+  text-align: left !important;
+  width: 100% !important;
+  float: none !important;
 }
 
 .form-group input {
-  width: 100%;
+  width: 100% !important;
   padding: 1rem 1.25rem;
   background: rgba(255, 255, 255, 0.05);
   border: 2px solid var(--border-color);
@@ -145,6 +156,8 @@
   color: var(--text-light);
   font-size: 1rem;
   transition: var(--transition);
+  display: block !important;
+  margin-top: 0 !important;
 }
 
 .form-group input:focus {
@@ -352,7 +365,7 @@
   align-items: center;
   text-align: center;
   margin: 2rem 0 1.5rem;
-  color: #28c0f0 !important;
+  color: #10dd88 !important;
   font-size: 0.9rem;
   font-weight: 600 !important;
   position: relative;
@@ -370,7 +383,7 @@
 .oauth-divider span {
   padding: 0 1.5rem;
   background: linear-gradient(145deg, rgba(7, 35, 60, 0.95), rgba(17, 128, 179, 0.1)) !important;
-  color: #28c0f0 !important;
+  color: #10dd88 !important;
   text-shadow: 0 0 15px rgba(40, 192, 240, 0.6) !important;
   letter-spacing: 0.5px;
   font-weight: 600 !important;
@@ -380,7 +393,17 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.75rem;
+  position: relative;
+  z-index: 1;
+}
+
+.login-oauth-note {
+  text-align: center;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--text-muted, rgba(255, 255, 255, 0.65));
+  margin: 0 0 1.25rem;
   position: relative;
   z-index: 1;
 }

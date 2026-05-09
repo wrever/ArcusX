@@ -1,11 +1,18 @@
 .edit-profile-page {
   min-height: 100vh;
   padding: 2rem;
-  background: var(--dark-blue);
-  color: var(--text-light);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   display: flex;
   flex-direction: column;
   align-items: center;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Fondo blanco en modo claro */
+:root[data-theme="light"] .edit-profile-page {
+  background: #ffffff !important;
+  color: #0f172a !important;
 }
 
 .edit-profile-header {
@@ -22,27 +29,51 @@
   gap: 0.5rem;
   padding: 0.6rem 1.4rem;
   border-radius: 999px;
-  border: 1px solid rgba(40, 192, 240, 0.4);
-  background: rgba(40, 192, 240, 0.12);
+  border: 2px solid var(--primary-blue);
+  background: var(--bg-card);
   color: var(--primary-blue);
   cursor: pointer;
   font-size: 0.9rem;
   transition: var(--transition);
+  font-weight: 500;
+}
+
+/* Botón "Volver" con fondo blanco en modo claro */
+:root[data-theme="light"] .edit-profile-back {
+  background: #ffffff !important;
+  border-color: var(--primary-blue) !important;
+  border-width: 2px !important;
+  color: var(--primary-blue) !important;
 }
 
 .edit-profile-back:hover {
-  background: rgba(40, 192, 240, 0.2);
+  background: var(--primary-blue);
+  color: #ffffff;
   transform: translateX(-2px);
+}
+
+:root[data-theme="light"] .edit-profile-back:hover {
+  background: var(--primary-blue) !important;
+  color: #ffffff !important;
 }
 
 .edit-profile-card {
   width: 100%;
   max-width: 900px;
-  background: rgba(7, 35, 60, 0.95);
+  background: var(--bg-card);
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55);
+  border: 2px solid var(--border-color);
+  box-shadow: var(--shadow-md);
   padding: 2rem 2.5rem 2.25rem;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Fondo blanco y bordes más visibles en modo claro */
+:root[data-theme="light"] .edit-profile-card {
+  background: #ffffff !important;
+  border-color: rgba(100, 116, 139, 0.4) !important;
+  border-width: 2px !important;
+  box-shadow: var(--shadow-sm) !important;
 }
 
 .edit-profile-card-header {
@@ -77,8 +108,8 @@
 .avatar-upload-btn {
   padding: 0.5rem 1rem;
   border-radius: 8px;
-  border: 1px solid rgba(40, 192, 240, 0.4);
-  background: rgba(40, 192, 240, 0.1);
+  border: 2px solid var(--primary-blue);
+  background: var(--bg-card);
   color: var(--primary-blue);
   cursor: pointer;
   display: flex;
@@ -86,10 +117,25 @@
   gap: 0.5rem;
   font-size: 0.85rem;
   transition: var(--transition);
+  font-weight: 500;
+}
+
+/* Botón de subir avatar con fondo blanco en modo claro */
+:root[data-theme="light"] .avatar-upload-btn {
+  background: #ffffff !important;
+  border-color: var(--primary-blue) !important;
+  border-width: 2px !important;
+  color: var(--primary-blue) !important;
 }
 
 .avatar-upload-btn:hover:not(:disabled) {
-  background: rgba(40, 192, 240, 0.2);
+  background: var(--primary-blue);
+  color: #ffffff;
+}
+
+:root[data-theme="light"] .avatar-upload-btn:hover:not(:disabled) {
+  background: var(--primary-blue) !important;
+  color: #ffffff !important;
 }
 
 .avatar-upload-btn:disabled {
@@ -100,12 +146,23 @@
 .title-block h1 {
   font-size: 1.8rem;
   margin: 0 0 0.25rem;
+  color: var(--text-primary);
+}
+
+/* Título principal en negro en modo claro */
+:root[data-theme="light"] .title-block h1 {
+  color: #000000 !important;
 }
 
 .title-block p {
   margin: 0;
   font-size: 0.95rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
+}
+
+/* Descripción en gris oscuro en modo claro */
+:root[data-theme="light"] .title-block p {
+  color: #475569 !important;
 }
 
 .edit-profile-alert {
@@ -117,14 +174,29 @@
 
 .edit-profile-alert.error {
   background: rgba(239, 68, 68, 0.12);
-  border: 1px solid rgba(239, 68, 68, 0.5);
-  color: #fecaca;
+  border: 2px solid rgba(239, 68, 68, 0.5);
+  color: #dc2626;
+}
+
+/* Alertas con bordes más visibles en modo claro */
+:root[data-theme="light"] .edit-profile-alert.error {
+  background: #fef2f2 !important;
+  border-color: rgba(239, 68, 68, 0.5) !important;
+  border-width: 2px !important;
+  color: #dc2626 !important;
 }
 
 .edit-profile-alert.success {
   background: rgba(16, 185, 129, 0.12);
-  border: 1px solid rgba(16, 185, 129, 0.5);
-  color: #bbf7d0;
+  border: 2px solid rgba(16, 185, 129, 0.5);
+  color: #059669;
+}
+
+:root[data-theme="light"] .edit-profile-alert.success {
+  background: #ecfdf5 !important;
+  border-color: rgba(16, 185, 129, 0.5) !important;
+  border-width: 2px !important;
+  color: #059669 !important;
 }
 
 .edit-profile-form {
@@ -134,74 +206,155 @@
 }
 
 .form-section {
-  padding: 1.25rem 1.4rem;
+  padding: 1.75rem 2rem;
   border-radius: 16px;
-  background: radial-gradient(circle at top left, rgba(40, 192, 240, 0.18), transparent 55%),
-              radial-gradient(circle at bottom right, rgba(248, 113, 113, 0.14), transparent 55%),
-              rgba(5, 23, 43, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Fondo blanco y bordes más visibles en modo claro */
+:root[data-theme="light"] .form-section {
+  background: #ffffff !important;
+  border-color: rgba(100, 116, 139, 0.4) !important;
+  border-width: 2px !important;
+  box-shadow: var(--shadow-sm) !important;
 }
 
 .form-section h2 {
-  font-size: 1.1rem;
-  margin-bottom: 0.85rem;
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+  margin-top: 0;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* Título de sección en negro en modo claro */
+:root[data-theme="light"] .form-section h2 {
+  color: #000000 !important;
 }
 
 .section-help {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin-bottom: 0.9rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+  margin-top: 0;
+  line-height: 1.5;
+}
+
+/* Texto de ayuda visible en modo claro */
+:root[data-theme="light"] .section-help {
+  color: #475569 !important;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  margin-bottom: 0.95rem;
+  margin-bottom: 1.25rem;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
 }
 
 .form-group label {
   font-size: 0.9rem;
-  margin-bottom: 0.35rem;
-  display: inline-flex;
+  margin-bottom: 0.5rem;
+  display: flex;
   align-items: center;
-  gap: 0.45rem;
-  color: var(--text-light);
+  gap: 0.5rem;
+  color: var(--text-primary);
+  font-weight: 500;
+  width: 100%;
+}
+
+/* Labels en negro en modo claro */
+:root[data-theme="light"] .form-group label {
+  color: #000000 !important;
 }
 
 .form-group input,
 .form-group textarea,
 .form-group select {
   border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  background: rgba(15, 23, 42, 0.95);
-  padding: 0.65rem 0.85rem;
+  border: 2px solid var(--input-border);
+  background: var(--input-background);
+  padding: 0.75rem 1rem;
   font-size: 0.95rem;
-  color: #e5e7eb;
+  color: var(--text-primary);
   outline: none;
   transition: var(--transition);
   font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Campos de relleno blancos con texto negro en modo claro */
+:root[data-theme="light"] .form-group input,
+:root[data-theme="light"] .form-group textarea,
+:root[data-theme="light"] .form-group select {
+  background: #ffffff !important;
+  border-color: rgba(100, 116, 139, 0.4) !important;
+  border-width: 2px !important;
+  color: #0f172a !important;
+}
+
+/* Asegurar que inputs tipo URL tengan fondo blanco en modo claro */
+:root[data-theme="light"] .form-group input[type="url"],
+:root[data-theme="light"] .form-group input[type="url"]:focus,
+:root[data-theme="light"] .form-group input[type="url"]:not(:placeholder-shown) {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-color: rgba(100, 116, 139, 0.4) !important;
 }
 
 .form-group textarea {
   resize: vertical;
-  min-height: 100px;
+  min-height: 120px;
+  width: 100%;
+  font-family: inherit;
 }
 
 .char-count {
   display: block;
   text-align: right;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+  padding-right: 0.25rem;
+}
+
+/* Contador de caracteres visible en modo claro */
+:root[data-theme="light"] .char-count {
+  color: #64748b !important;
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
   color: var(--text-muted);
-  margin-top: 0.25rem;
 }
 
-.form-group input::placeholder {
-  color: rgba(148, 163, 184, 0.9);
+/* Placeholders visibles en modo claro */
+:root[data-theme="light"] .form-group input::placeholder,
+:root[data-theme="light"] .form-group textarea::placeholder {
+  color: #94a3b8 !important;
+  opacity: 0.8;
 }
 
-.form-group input:focus {
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
   border-color: var(--primary-blue);
-  box-shadow: 0 0 0 1px rgba(40, 192, 240, 0.6);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  outline: none;
+}
+
+:root[data-theme="light"] .form-group input:focus,
+:root[data-theme="light"] .form-group textarea:focus,
+:root[data-theme="light"] .form-group select:focus {
+  border-color: var(--primary-blue) !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
 }
 
 .form-row {
@@ -247,13 +400,56 @@
 }
 
 .btn-secondary {
-  background: rgba(148, 163, 184, 0.1);
-  color: #e5e7eb;
-  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 2px solid var(--border-color);
+}
+
+/* Botón secundario con fondo blanco en modo claro */
+:root[data-theme="light"] .btn-secondary {
+  background: #ffffff !important;
+  border-color: rgba(100, 116, 139, 0.4) !important;
+  border-width: 2px !important;
+  color: #0f172a !important;
 }
 
 .btn-secondary:hover {
-  background: rgba(148, 163, 184, 0.18);
+  background: var(--bg-hover);
+  border-color: var(--border-color-hover);
+}
+
+:root[data-theme="light"] .btn-secondary:hover {
+  background: #f1f5f9 !important;
+  border-color: rgba(100, 116, 139, 0.5) !important;
+}
+
+.btn-logout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.7rem 1.6rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+  border: none;
+  transition: var(--transition);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(220, 38, 38, 0.9));
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.btn-logout:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(239, 68, 68, 0.5);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 1), rgba(220, 38, 38, 1));
+}
+
+.btn-logout:active {
+  transform: translateY(0);
+  box-shadow: 0 8px 15px rgba(239, 68, 68, 0.4);
 }
 
 .edit-profile-loading {
@@ -262,7 +458,12 @@
   flex-direction: column;
   align-items: center;
   gap: 1rem;
-  color: var(--text-light);
+  color: var(--text-primary);
+}
+
+/* Texto de carga visible en modo claro */
+:root[data-theme="light"] .edit-profile-loading {
+  color: #0f172a !important;
 }
 
 .edit-profile-loading .spinner {
@@ -286,12 +487,17 @@
   }
 
   .edit-profile-card {
-    padding: 1.5rem 1.3rem;
+    padding: 1.5rem 1.25rem;
   }
 
   .edit-profile-card-header {
     flex-direction: column;
     align-items: flex-start;
+    gap: 1.25rem;
+  }
+
+  .form-section {
+    padding: 1.5rem 1.25rem;
   }
 
   .form-row {
@@ -307,214 +513,415 @@
   .btn-secondary {
     justify-content: center;
   }
+  
+  .btn-logout {
+    width: 100%;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  .checkbox-label {
+    padding: 1.75rem 1.5rem;
+    gap: 1.25rem;
+    max-width: 100%;
+  }
+
+  .checkbox-custom {
+    width: 60px;
+    height: 60px;
+    font-size: 1.6rem;
+  }
+
+  .checkbox-text {
+    text-align: center;
+    width: 100%;
+  }
 }
 
 /* Checkbox personalizado */
 .checkbox-group {
   margin-bottom: 0;
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: center;
+  width: 100%;
 }
 
 .checkbox-label {
   display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  cursor: pointer;
-  padding: 1rem;
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 2rem 2.5rem;
+  background: var(--bg-card);
+  border-radius: 16px;
+  border: 2px solid var(--border-color);
   transition: var(--transition);
+  width: 100%;
+  max-width: 500px;
+  box-sizing: border-box;
+  margin: 0 auto;
+  text-align: center;
 }
 
-.checkbox-label:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(40, 192, 240, 0.3);
+/* Fondo blanco y bordes más visibles en modo claro */
+:root[data-theme="light"] .checkbox-label {
+  background: #ffffff !important;
+  border-color: rgba(100, 116, 139, 0.4) !important;
+  border-width: 2px !important;
 }
 
-.checkbox-label input[type="checkbox"] {
-  display: none;
-}
 
 .checkbox-custom {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  background: rgba(40, 192, 240, 0.1);
-  border: 2px solid rgba(40, 192, 240, 0.3);
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--primary-blue);
-  font-size: 1.2rem;
+  font-size: 1.75rem;
   flex-shrink: 0;
   transition: var(--transition);
+  cursor: pointer;
+  user-select: none;
+  padding: 0;
+  margin: 0;
+  outline: none;
+  border: 2px solid;
 }
 
-.checkbox-label input[type="checkbox"]:checked + .checkbox-custom {
+/* Estilo cuando el perfil es público (candado abierto) */
+.checkbox-custom.public {
   background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
   border-color: var(--primary-blue);
   color: white;
 }
 
+.checkbox-custom.public:hover {
+  background: linear-gradient(135deg, var(--secondary-blue) 0%, var(--primary-blue) 100%);
+  transform: scale(1.05);
+}
+
+/* Estilo cuando el perfil es privado (candado cerrado) */
+.checkbox-custom.private {
+  background: rgba(148, 163, 184, 0.1);
+  border-color: rgba(148, 163, 184, 0.3);
+  color: #94a3b8;
+}
+
+.checkbox-custom.private:hover {
+  background: rgba(148, 163, 184, 0.2);
+  border-color: rgba(148, 163, 184, 0.5);
+  transform: scale(1.05);
+}
+
+.checkbox-custom:active {
+  transform: scale(0.95);
+}
+
+.checkbox-custom:focus {
+  box-shadow: 0 0 0 3px rgba(40, 192, 240, 0.3);
+}
+
+/* Estilos para cuando el perfil es público (candado abierto) */
+.checkbox-label:has(.checkbox-custom:focus) .checkbox-custom {
+  box-shadow: 0 0 0 3px rgba(40, 192, 240, 0.3);
+}
+
 .checkbox-text {
-  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: center;
+  width: 100%;
 }
 
 .checkbox-text strong {
   display: block;
-  margin-bottom: 0.25rem;
-  color: var(--text-light);
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+/* Título de checkbox en negro en modo claro */
+:root[data-theme="light"] .checkbox-text strong {
+  color: #000000 !important;
 }
 
 .checkbox-text p {
   margin: 0;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.9rem;
+  line-height: 1.5;
 }
 
-/* Portfolio */
-.portfolio-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+/* Texto de checkbox visible en modo claro */
+:root[data-theme="light"] .checkbox-text p {
+  color: #475569 !important;
+}
+
+/* Habilidades agrupadas por categoría */
+.skills-selection {
+  display: flex;
+  flex-direction: column;
   gap: 1.5rem;
+}
+
+.skills-category-block {
   margin-bottom: 1.5rem;
 }
 
-.portfolio-item-card {
-  background: rgba(255, 255, 255, 0.02);
+.skills-category-block:last-of-type {
+  margin-bottom: 0;
+}
+
+.skills-category-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.75rem 0;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.skills-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+  padding: 0.5rem;
   border-radius: 12px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+  box-sizing: border-box;
+}
+
+/* Fondo blanco y bordes más visibles en modo claro */
+:root[data-theme="light"] .skills-grid {
+  background: #ffffff !important;
+  border-color: rgba(100, 116, 139, 0.4) !important;
+  border-width: 2px !important;
+}
+
+.skill-select-item {
   display: flex;
-  flex-direction: column;
-}
-
-.portfolio-item-image {
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 10px;
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+  transition: var(--transition);
+  box-sizing: border-box;
+  min-width: 0;
+  overflow: hidden;
   width: 100%;
-  height: 150px;
-  object-fit: cover;
-  background: rgba(40, 192, 240, 0.1);
 }
 
-.portfolio-item-content {
-  padding: 1rem;
+/* Fondo blanco y bordes más visibles en modo claro */
+:root[data-theme="light"] .skill-select-item {
+  background: #ffffff !important;
+  border-color: rgba(100, 116, 139, 0.4) !important;
+  border-width: 2px !important;
+}
+
+.skill-select-item:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-color-hover);
+}
+
+:root[data-theme="light"] .skill-select-item:hover {
+  background: #f8fafc !important;
+  border-color: rgba(100, 116, 139, 0.5) !important;
+}
+
+.skill-select-item.selected {
+  background: var(--bg-active);
+  border-color: var(--primary-blue);
+}
+
+:root[data-theme="light"] .skill-select-item.selected {
+  background: #e2e8f0 !important;
+  border-color: var(--primary-blue) !important;
+}
+
+.skill-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.skill-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--primary-blue);
+}
+
+.skill-name {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
   flex: 1;
 }
 
-.portfolio-item-content h3 {
-  margin: 0 0 0.5rem 0;
-  color: var(--text-light);
-  font-size: 1.1rem;
+/* Nombre de skill en negro en modo claro */
+:root[data-theme="light"] .skill-name {
+  color: #000000 !important;
 }
 
-.portfolio-item-content p {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  margin-bottom: 0.75rem;
+.skill-level-select {
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  border: 2px solid var(--border-color);
+  background: var(--input-background);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  outline: none;
+  transition: var(--transition);
+  flex-shrink: 0;
+  min-width: 120px;
+  max-width: 150px;
+  box-sizing: border-box;
+  width: auto;
 }
 
-.portfolio-item-content a {
-  color: var(--primary-blue);
-  text-decoration: none;
+/* Selector de nivel de skill blanco con texto negro en modo claro */
+:root[data-theme="light"] .skill-level-select {
+  background: #ffffff !important;
+  border-color: rgba(100, 116, 139, 0.4) !important;
+  border-width: 2px !important;
+  color: #0f172a !important;
+}
+
+.skill-level-select:hover {
+  border-color: var(--primary-blue);
+}
+
+.skill-level-select:focus {
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 2px rgba(40, 192, 240, 0.2);
+}
+
+.selected-skills-summary {
+  margin-top: 1rem;
+  padding: 1.25rem;
+  background: var(--bg-card);
+  border-radius: 12px;
+  border: 2px solid var(--border-color);
+}
+
+/* Fondo blanco y bordes más visibles en modo claro */
+:root[data-theme="light"] .selected-skills-summary {
+  background: #ffffff !important;
+  border-color: rgba(100, 116, 139, 0.4) !important;
+  border-width: 2px !important;
+}
+
+.selected-skills-summary h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+/* Título de resumen de skills en negro en modo claro */
+:root[data-theme="light"] .selected-skills-summary h3 {
+  color: #000000 !important;
+}
+
+.selected-skills-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.selected-skill-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.9rem;
-}
-
-.portfolio-item-content a:hover {
-  text-decoration: underline;
-}
-
-.portfolio-category {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  background: rgba(40, 192, 240, 0.2);
+  padding: 0.5rem 0.75rem;
+  background: rgba(40, 192, 240, 0.15);
   border: 1px solid rgba(40, 192, 240, 0.3);
-  border-radius: 12px;
+  border-radius: 20px;
   font-size: 0.85rem;
+}
+
+.selected-skill-badge .skill-name {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* Nombre de skill en badge en negro en modo claro */
+:root[data-theme="light"] .selected-skill-badge .skill-name {
+  color: #000000 !important;
+}
+
+.skill-level-badge {
+  padding: 0.2rem 0.5rem;
+  background: rgba(40, 192, 240, 0.2);
+  border-radius: 12px;
+  font-size: 0.75rem;
   color: var(--primary-blue);
-  margin-top: 0.5rem;
+  text-transform: capitalize;
+  font-weight: 600;
 }
 
-.portfolio-item-actions {
-  display: flex;
-  gap: 0.5rem;
-  padding: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.edit-button,
-.delete-button {
-  flex: 1;
-  padding: 0.5rem;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: var(--transition);
+.remove-skill-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-}
-
-.edit-button {
-  background: rgba(40, 192, 240, 0.2);
-  color: var(--primary-blue);
-}
-
-.edit-button:hover {
-  background: rgba(40, 192, 240, 0.3);
-}
-
-.delete-button {
+  width: 20px;
+  height: 20px;
+  border: none;
   background: rgba(239, 68, 68, 0.2);
   color: #ef4444;
-}
-
-.delete-button:hover {
-  background: rgba(239, 68, 68, 0.3);
-}
-
-.portfolio-form {
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: 12px;
-  padding: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  margin-bottom: 1rem;
-}
-
-.portfolio-form h3 {
-  margin: 0 0 1.5rem 0;
-  color: var(--text-light);
-}
-
-.portfolio-form-actions {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1.5rem;
-}
-
-.add-portfolio-button {
-  width: 100%;
-  padding: 1rem;
-  background: rgba(40, 192, 240, 0.1);
-  border: 2px dashed rgba(40, 192, 240, 0.3);
-  border-radius: 12px;
-  color: var(--primary-blue);
+  border-radius: 50%;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
   transition: var(--transition);
-  font-size: 1rem;
+  font-size: 0.7rem;
+  padding: 0;
 }
 
-.add-portfolio-button:hover {
-  background: rgba(40, 192, 240, 0.2);
-  border-color: var(--primary-blue);
+.remove-skill-btn:hover {
+  background: rgba(239, 68, 68, 0.3);
+  transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+  .skills-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.5rem;
+    overflow-x: hidden;
+  }
+
+  .skill-select-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
     width: 100%;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .skill-checkbox {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .skill-level-select {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
 }
 

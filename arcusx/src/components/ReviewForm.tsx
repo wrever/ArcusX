@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { FaStar } from 'react-icons/fa';
 import { createRating, CreateRatingPayload } from '../services/ratingService';
+import { useI18n } from '../i18n/I18nProvider';
 import '../css/ReviewForm.css';
 
 interface ReviewFormProps {
@@ -23,6 +24,7 @@ const ReviewForm = ({
   onSuccess,
   onCancel
 }: ReviewFormProps) => {
+  const { t } = useI18n();
   const [rating, setRating] = useState<number>(0);
   const [hoveredRating, setHoveredRating] = useState<number>(0);
   const [review, setReview] = useState<string>('');
@@ -46,7 +48,7 @@ const ReviewForm = ({
     e.preventDefault();
 
     if (rating === 0) {
-      setError('Por favor, selecciona una calificación');
+      setError(t('review.rating.required'));
       return;
     }
 
@@ -67,7 +69,7 @@ const ReviewForm = ({
         onSuccess();
       }
     } catch (err: any) {
-      setError(err.message || 'Error al enviar la calificación');
+      setError(err.message || t('review.error.send'));
     } finally {
       setSubmitting(false);
     }
@@ -78,13 +80,13 @@ const ReviewForm = ({
   return (
     <div className="review-form-container">
       <div className="review-form-header">
-        <h3>Calificar a {ratedUserName}</h3>
-        <p>¿Cómo fue tu experiencia trabajando con {ratedUserName}?</p>
+        <h3>{t('review.title').replace('{{name}}', ratedUserName)}</h3>
+        <p>{t('review.subtitle').replace('{{name}}', ratedUserName)}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="review-form">
         <div className="rating-input-section">
-          <label>Calificación *</label>
+          <label>{t('review.rate.label')}</label>
           <div className="star-rating-input">
             {[1, 2, 3, 4, 5].map((value) => (
               <button
@@ -102,22 +104,22 @@ const ReviewForm = ({
           </div>
           {rating > 0 && (
             <span className="rating-label">
-              {rating === 1 && 'Muy malo'}
-              {rating === 2 && 'Malo'}
-              {rating === 3 && 'Regular'}
-              {rating === 4 && 'Bueno'}
-              {rating === 5 && 'Excelente'}
+              {rating === 1 && t('review.rating.1')}
+              {rating === 2 && t('review.rating.2')}
+              {rating === 3 && t('review.rating.3')}
+              {rating === 4 && t('review.rating.4')}
+              {rating === 5 && t('review.rating.5')}
             </span>
           )}
         </div>
 
         <div className="review-text-section">
-          <label htmlFor="review">Review (opcional)</label>
+          <label htmlFor="review">{t('review.optional')}</label>
           <textarea
             id="review"
             value={review}
             onChange={(e) => setReview(e.target.value)}
-            placeholder="Comparte tu experiencia trabajando con este usuario..."
+            placeholder={t('review.placeholder')}
             rows={4}
             maxLength={500}
             disabled={submitting}
@@ -135,7 +137,7 @@ const ReviewForm = ({
               className="btn-cancel"
               disabled={submitting}
             >
-              Cancelar
+              {t('review.cancel')}
             </button>
           )}
           <button
@@ -143,7 +145,7 @@ const ReviewForm = ({
             className="btn-submit"
             disabled={submitting || rating === 0}
           >
-            {submitting ? 'Enviando...' : 'Enviar Calificación'}
+            {submitting ? t('review.submitting') : t('review.submit')}
           </button>
         </div>
       </form>

@@ -1,7 +1,15 @@
 <?php
-require_once 'config.php';
+require_once __DIR__ . '/config.php';
 
-header("Access-Control-Allow-Origin: *");
+function fix_utf8_mojibake($str) {
+    if (!is_string($str) || $str === '') return $str;
+    $bytes = @mb_convert_encoding($str, 'ISO-8859-1', 'UTF-8');
+    if ($bytes === false) return $str;
+    if (!mb_check_encoding($bytes, 'UTF-8')) return $str;
+    return $bytes;
+}
+
+$_cors_origin = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header("Access-Control-Allow-Origin: ".$_cors_origin);
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Methods: GET, OPTIONS");
 header("Access-Control-Max-Age: 3600");
@@ -51,14 +59,18 @@ try {
     $result = $stmt->get_result();
     
     $proposals = [];
+    $textKeys = ['message', 'applicant_username'];
     while ($row = $result->fetch_assoc()) {
+        foreach ($textKeys as $k) {
+            if (isset($row[$k]) && is_string($row[$k])) $row[$k] = fix_utf8_mojibake($row[$k]);
+        }
         $proposals[] = $row;
     }
     
     $stmt->close();
     
     http_response_code(200);
-    echo json_encode($proposals, JSON_UNESCAPED_UNICODE);
+    echo json_encode($proposals);
     
 } catch (Exception $e) {
     http_response_code(500);

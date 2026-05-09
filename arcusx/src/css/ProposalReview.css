@@ -3,10 +3,11 @@
   flex-direction: column;
   align-items: center;
   padding: 2rem;
-  background-color: #0b1b2f;
+  background-color: var(--bg-primary);
   min-height: 100vh;
-  color: #fff;
+  color: var(--text-primary);
   position: relative;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .back-button {
@@ -16,14 +17,24 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #28c0f0;
+  color: var(--primary-blue);
   text-decoration: none;
   font-size: 1rem;
-  transition: color 0.3s ease;
+  transition: all 0.3s ease;
+  padding: 0.75rem 1.25rem;
+  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-sm);
 }
 
 .back-button:hover {
-  color: #1180b3;
+  color: var(--text-primary);
+  background: var(--bg-hover);
+  border-color: var(--border-color-hover);
+  transform: translateX(-3px);
+  box-shadow: var(--shadow-md);
 }
 
 .proposal-review-content {
@@ -37,22 +48,22 @@
 
 /* Información de la tarea */
 .task-info-card {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-card);
   backdrop-filter: blur(10px);
   border-radius: 16px;
   padding: 2rem;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border: 2px solid var(--border-color);
+  box-shadow: var(--shadow-md);
 }
 
 .task-header h1 {
-  color: #28c0f0;
+  color: var(--primary-blue);
   margin-bottom: 0.5rem;
   font-size: 1.8rem;
 }
 
 .task-subtitle {
-  color: #b0b0b0;
+  color: var(--text-secondary);
   font-style: italic;
   margin-bottom: 1rem;
   font-size: 1.1rem;
@@ -88,7 +99,7 @@
 }
 
 .category-tag {
-  background-color: #28c0f0;
+  background-color: #10dd88;
   color: #fff;
 }
 
@@ -102,25 +113,25 @@
 }
 
 .task-description h3 {
-  color: #fff;
+  color: var(--text-primary);
   margin-bottom: 1rem;
   font-size: 1.2rem;
 }
 
 .task-description p {
-  color: #e1e1e1;
+  color: var(--text-secondary);
   line-height: 1.6;
   font-size: 1rem;
 }
 
 /* Sección de propuestas */
 .proposals-section {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-card);
   backdrop-filter: blur(10px);
   border-radius: 16px;
   padding: 2rem;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border: 2px solid var(--border-color);
+  box-shadow: var(--shadow-md);
 }
 
 .proposals-header {
@@ -128,21 +139,64 @@
 }
 
 .proposals-header h2 {
-  color: #28c0f0;
+  color: var(--primary-blue);
   margin-bottom: 0.5rem;
   font-size: 1.5rem;
 }
 
+/* Modo claro */
+:root[data-theme="light"] .proposals-header h2 {
+  color: #0f172a !important;
+}
+
 .proposals-header p {
-  color: #b0b0b0;
+  color: var(--text-secondary);
   font-size: 1rem;
+}
+
+/* Modo claro */
+:root[data-theme="light"] .proposals-header p {
+  color: #475569 !important;
+}
+
+/* Cost info box */
+.cost-info-box {
+  background: rgba(255, 165, 0, 0.1);
+  border: 1px solid rgba(255, 165, 0, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+/* Modo claro */
+:root[data-theme="light"] .cost-info-box {
+  background: rgba(255, 165, 0, 0.15) !important;
+  border: 1px solid rgba(255, 165, 0, 0.4) !important;
+}
+
+.cost-info-box p {
+  margin: 0;
+  color: #4ade80;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Modo claro */
+:root[data-theme="light"] .cost-info-box p {
+  color: #16a34a !important;
+}
+
+:root[data-theme="light"] .cost-info-box p strong {
+  color: #15803d !important;
 }
 
 /* Sin propuestas */
 .no-proposals {
   text-align: center;
   padding: 3rem 2rem;
-  color: #b0b0b0;
+  color: var(--text-secondary);
 }
 
 .no-proposals-icon {
@@ -151,9 +205,18 @@
 }
 
 .no-proposals h3 {
-  color: #fff;
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
   font-size: 1.3rem;
+}
+
+/* Modo claro */
+:root[data-theme="light"] .no-proposals h3 {
+  color: #0f172a !important;
+}
+
+:root[data-theme="light"] .no-proposals {
+  color: #475569 !important;
 }
 
 /* Lista de propuestas */
@@ -163,19 +226,38 @@
   gap: 1.5rem;
 }
 
+/* Tarjeta + panel de confirmación debajo de la misma propuesta */
+.proposal-list-item {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.selection-confirmation--below-card {
+  margin-top: 0.75rem;
+}
+
 .proposal-card {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-card);
   backdrop-filter: blur(10px);
   border-radius: 12px;
   padding: 1.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 2px solid var(--border-color);
   transition: all 0.3s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Modo claro */
+:root[data-theme="light"] .proposal-card {
+  background: #ffffff !important;
+  border: 2px solid rgba(100, 116, 139, 0.3) !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.1) !important;
 }
 
 .proposal-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-  border-color: rgba(40, 192, 240, 0.3);
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-color-hover);
 }
 
 .proposal-card.accepted {
@@ -183,13 +265,23 @@
   background: rgba(76, 175, 80, 0.05);
 }
 
+/* Modo claro */
+:root[data-theme="light"] .proposal-card.accepted {
+  background: rgba(76, 175, 80, 0.1) !important;
+}
+
 .proposal-card.rejected {
   border-left: 4px solid #f44336;
   background: rgba(244, 67, 54, 0.05);
 }
 
+/* Modo claro */
+:root[data-theme="light"] .proposal-card.rejected {
+  background: rgba(244, 67, 54, 0.1) !important;
+}
+
 .proposal-card.pending {
-  border-left: 4px solid #28c0f0;
+  border-left: 4px solid #10dd88;
 }
 
 .proposal-header {
@@ -209,7 +301,7 @@
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #28c0f0, #1180b3);
+  background: linear-gradient(135deg, #10dd88, #0ab86a);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -218,24 +310,79 @@
 }
 
 .applicant-details h3 {
-  color: #fff;
+  color: var(--text-primary);
   margin: 0 0 0.25rem 0;
   font-size: 1.1rem;
 }
 
+/* Modo claro */
+:root[data-theme="light"] .applicant-details h3 {
+  color: #0f172a !important;
+}
+
 .applicant-email {
-  color: #b0b0b0;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   margin: 0 0 0.25rem 0;
 }
 
+/* Modo claro */
+:root[data-theme="light"] .applicant-email {
+  color: #475569 !important;
+}
+
 .proposal-date {
-  color: #b0b0b0;
+  color: var(--text-secondary);
   font-size: 0.85rem;
   margin: 0;
   display: flex;
   align-items: center;
   gap: 0.25rem;
+}
+
+/* Modo claro */
+:root[data-theme="light"] .proposal-date {
+  color: #64748b !important;
+}
+
+.proposal-footer {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+/* Modo claro */
+:root[data-theme="light"] .proposal-footer {
+  border-top: 1px solid rgba(100, 116, 139, 0.2) !important;
+}
+
+.view-profile-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  background: var(--primary-blue);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.view-profile-button:hover {
+  background: var(--primary-blue-hover, #1a9bc7);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(40, 192, 240, 0.3);
+}
+
+.view-profile-button:active {
+  transform: translateY(0);
 }
 
 .proposal-status {
@@ -262,7 +409,7 @@
 }
 
 .status-badge.pending {
-  background-color: #28c0f0;
+  background-color: #10dd88;
   color: #fff;
 }
 
@@ -275,46 +422,168 @@
   margin-bottom: 1rem;
 }
 
+/* Modo claro - Asegurar visibilidad del wallet */
+:root[data-theme="light"] .proposal-wallet {
+  color: #000000 !important;
+}
+
+:root[data-theme="light"] .proposal-wallet h4 {
+  color: #000000 !important;
+  font-weight: 700 !important;
+  font-size: 1.1rem !important;
+}
+
+:root[data-theme="light"] .proposal-wallet .wallet-info {
+  color: #000000 !important;
+  font-weight: 500 !important;
+}
+
+:root[data-theme="light"] .proposal-wallet .wallet-info svg {
+  color: #0284c7 !important;
+  font-size: 1.1rem !important;
+}
+
+:root[data-theme="light"] .proposal-wallet .wallet-address {
+  background: #e2e8f0 !important;
+  color: #000000 !important;
+  border: 2px solid #94a3b8 !important;
+  padding: 0.75rem 1rem !important;
+  font-weight: 600 !important;
+  font-size: 0.95rem !important;
+  display: inline-block !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  margin-top: 0.5rem !important;
+}
+
 .proposal-message h4, .proposal-portfolio h4, .proposal-wallet h4 {
-  color: #28c0f0;
+  color: var(--primary-blue);
   margin-bottom: 0.5rem;
   font-size: 1rem;
 }
 
+/* Modo claro */
+:root[data-theme="light"] .proposal-message h4,
+:root[data-theme="light"] .proposal-portfolio h4,
+:root[data-theme="light"] .proposal-wallet h4 {
+  color: #0f172a !important;
+}
+
 .proposal-message p {
-  color: #e1e1e1;
+  color: var(--text-secondary);
   line-height: 1.5;
   font-size: 0.95rem;
+}
+
+/* Modo claro */
+:root[data-theme="light"] .proposal-message p {
+  color: #475569 !important;
 }
 
 .portfolio-link {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  color: #28c0f0;
+  color: var(--primary-blue);
   text-decoration: none;
   font-size: 0.9rem;
   transition: color 0.3s ease;
 }
 
+/* Modo claro */
+:root[data-theme="light"] .portfolio-link {
+  color: #0284c7 !important;
+}
+
 .portfolio-link:hover {
-  color: #1180b3;
+  color: var(--secondary-blue);
+}
+
+/* Modo claro */
+:root[data-theme="light"] .portfolio-link:hover {
+  color: #0369a1 !important;
 }
 
 .wallet-info {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #e1e1e1;
+  color: var(--text-secondary);
   font-size: 0.9rem;
+}
+
+/* Modo claro */
+:root[data-theme="light"] .wallet-info {
+  color: #0f172a !important;
+}
+
+:root[data-theme="light"] .wallet-info svg {
+  color: #0284c7 !important;
 }
 
 .wallet-address {
   font-family: 'Courier New', monospace;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-tertiary);
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+/* Modo claro - Wallet address en cards de propuestas - MÁXIMA ESPECIFICIDAD */
+:root[data-theme="light"] .proposal-review-container .wallet-address,
+:root[data-theme="light"] .proposal-review-container .proposal-wallet .wallet-address,
+:root[data-theme="light"] .proposal-review-container .wallet-info .wallet-address,
+:root[data-theme="light"] .proposal-card .wallet-address,
+:root[data-theme="light"] .wallet-address,
+:root[data-theme="light"] .proposal-wallet .wallet-address,
+:root[data-theme="light"] .wallet-info .wallet-address {
+  background: #e2e8f0 !important;
+  background-color: #e2e8f0 !important;
+  color: #000000 !important;
+  border: 2px solid #64748b !important;
+  border-color: #64748b !important;
+  padding: 0.75rem 1rem !important;
+  font-weight: 700 !important;
+  font-size: 0.95rem !important;
+  display: inline-block !important;
+  word-break: break-all !important;
+  line-height: 1.5 !important;
+}
+
+/* Wallet address dentro de summary-item (panel de confirmación) */
+.summary-item .wallet-address {
+  font-family: 'Courier New', monospace;
+  background: var(--bg-tertiary);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  display: inline-block;
+  margin-top: 0.25rem;
+}
+
+/* Modo claro - Wallet address en summary-item - MÁXIMA ESPECIFICIDAD */
+:root[data-theme="light"] .proposal-review-container .summary-item .wallet-address,
+:root[data-theme="light"] .proposal-review-container .selected-proposal-summary .wallet-address,
+:root[data-theme="light"] .proposal-review-container .selection-confirmation .wallet-address,
+:root[data-theme="light"] .summary-item .wallet-address,
+:root[data-theme="light"] .selected-proposal-summary .wallet-address,
+:root[data-theme="light"] .selection-confirmation .wallet-address {
+  background: #e2e8f0 !important;
+  background-color: #e2e8f0 !important;
+  color: #000000 !important;
+  border: 2px solid #64748b !important;
+  border-color: #64748b !important;
+  padding: 0.75rem 1rem !important;
+  font-weight: 700 !important;
+  font-size: 0.95rem !important;
+  display: inline-block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  word-break: break-all !important;
+  line-height: 1.5 !important;
 }
 
 /* Acciones de la propuesta */
@@ -338,13 +607,13 @@
 }
 
 .select-button {
-  background: linear-gradient(90deg, #28c0f0, #1180b3);
+  background: var(--gradient-primary);
   color: #fff;
 }
 
 .select-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(40, 192, 240, 0.3);
+  box-shadow: var(--shadow-md);
 }
 
 .accept-button {
@@ -354,7 +623,7 @@
 
 .accept-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3);
+  box-shadow: var(--shadow-md);
 }
 
 .reject-button {
@@ -364,18 +633,31 @@
 
 .reject-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(244, 67, 54, 0.3);
+  box-shadow: var(--shadow-md);
 }
 
 .cancel-button {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+/* Modo claro */
+:root[data-theme="light"] .cancel-button {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(100, 116, 139, 0.3) !important;
 }
 
 .cancel-button:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: var(--bg-active);
+  border-color: var(--border-color-hover);
+}
+
+/* Modo claro */
+:root[data-theme="light"] .cancel-button:hover {
+  background: #e2e8f0 !important;
+  border-color: rgba(100, 116, 139, 0.5) !important;
 }
 
 .action-button:disabled {
@@ -387,11 +669,75 @@
 /* Panel de confirmación de selección */
 .selection-confirmation {
   background: rgba(40, 192, 240, 0.1);
-  border: 2px solid #28c0f0;
+  border: 2px solid #10dd88;
   border-radius: 12px;
   padding: 2rem;
   margin-top: 2rem;
   backdrop-filter: blur(10px);
+}
+
+/* Modo claro */
+:root[data-theme="light"] .selection-confirmation {
+  background: #ffffff !important;
+  border: 2px solid #94a3b8 !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.15) !important;
+  color: #000000 !important;
+}
+
+/* Forzar todos los textos dentro del panel de confirmación */
+:root[data-theme="light"] .proposal-review-container .selection-confirmation,
+:root[data-theme="light"] .proposal-review-container .selection-confirmation * {
+  color: #000000 !important;
+}
+
+:root[data-theme="light"] .proposal-review-container .selection-confirmation h3 {
+  color: #000000 !important;
+}
+
+:root[data-theme="light"] .proposal-review-container .selection-confirmation p {
+  color: #1e293b !important;
+}
+
+:root[data-theme="light"] .proposal-review-container .selection-confirmation strong {
+  color: #000000 !important;
+}
+
+:root[data-theme="light"] .proposal-review-container .selection-confirmation span {
+  color: #000000 !important;
+}
+
+/* Asegurar que todos los elementos dentro de selection-confirmation sean visibles */
+:root[data-theme="light"] .selection-confirmation,
+:root[data-theme="light"] .selection-confirmation * {
+  color: #000000 !important;
+}
+
+:root[data-theme="light"] .selection-confirmation h3 {
+  color: #000000 !important;
+  font-weight: 700 !important;
+  font-size: 1.5rem !important;
+}
+
+:root[data-theme="light"] .selection-confirmation p {
+  color: #1e293b !important;
+  font-weight: 500 !important;
+  font-size: 1rem !important;
+}
+
+:root[data-theme="light"] .selection-confirmation strong {
+  color: #000000 !important;
+  font-weight: 700 !important;
+  font-size: 1rem !important;
+}
+
+:root[data-theme="light"] .selection-confirmation span {
+  color: #000000 !important;
+  font-weight: 500 !important;
+}
+
+:root[data-theme="light"] .selection-confirmation a {
+  color: #0284c7 !important;
+  font-weight: 600 !important;
 }
 
 .confirmation-header {
@@ -400,9 +746,14 @@
 }
 
 .confirmation-header h3 {
-  color: #28c0f0;
+  color: #10dd88;
   margin-bottom: 0.5rem;
   font-size: 1.3rem;
+}
+
+/* Modo claro */
+:root[data-theme="light"] .confirmation-header h3 {
+  color: #0f172a !important;
 }
 
 .confirmation-header p {
@@ -410,11 +761,28 @@
   font-size: 1rem;
 }
 
+/* Modo claro */
+:root[data-theme="light"] .confirmation-header p {
+  color: #475569 !important;
+}
+
 .selected-proposal-summary {
   background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
+}
+
+/* Modo claro */
+:root[data-theme="light"] .selected-proposal-summary {
+  background: #ffffff !important;
+  border: 2px solid #94a3b8 !important;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.1) !important;
+  color: #000000 !important;
+}
+
+:root[data-theme="light"] .selected-proposal-summary * {
+  color: #000000 !important;
 }
 
 .summary-item {
@@ -426,10 +794,15 @@
 }
 
 .summary-item strong {
-  color: #28c0f0;
+  color: #10dd88;
   display: block;
   margin-bottom: 0.5rem;
   font-size: 0.9rem;
+}
+
+/* Modo claro */
+:root[data-theme="light"] .summary-item strong {
+  color: #0f172a !important;
 }
 
 .summary-item p {
@@ -438,8 +811,59 @@
   line-height: 1.4;
 }
 
+/* Modo claro */
+:root[data-theme="light"] .summary-item p {
+  color: #0f172a !important;
+  font-weight: 500 !important;
+}
+
+/* Asegurar que todos los textos dentro de summary-item sean visibles - MÁXIMA ESPECIFICIDAD */
+:root[data-theme="light"] .proposal-review-container .summary-item,
+:root[data-theme="light"] .proposal-review-container .selected-proposal-summary .summary-item,
+:root[data-theme="light"] .summary-item,
+:root[data-theme="light"] .selected-proposal-summary .summary-item {
+  color: #000000 !important;
+}
+
+:root[data-theme="light"] .proposal-review-container .summary-item *,
+:root[data-theme="light"] .proposal-review-container .selected-proposal-summary .summary-item *,
+:root[data-theme="light"] .summary-item *,
+:root[data-theme="light"] .selected-proposal-summary .summary-item * {
+  color: #000000 !important;
+}
+
+:root[data-theme="light"] .proposal-review-container .summary-item strong,
+:root[data-theme="light"] .proposal-review-container .selected-proposal-summary .summary-item strong,
+:root[data-theme="light"] .summary-item strong,
+:root[data-theme="light"] .selected-proposal-summary .summary-item strong {
+  color: #000000 !important;
+  font-weight: 700 !important;
+  font-size: 1.1rem !important;
+  display: block !important;
+  margin-bottom: 0.75rem !important;
+}
+
+:root[data-theme="light"] .proposal-review-container .summary-item p,
+:root[data-theme="light"] .proposal-review-container .selected-proposal-summary .summary-item p,
+:root[data-theme="light"] .summary-item p,
+:root[data-theme="light"] .selected-proposal-summary .summary-item p {
+  color: #1e293b !important;
+  font-weight: 600 !important;
+  font-size: 1rem !important;
+  margin: 0 !important;
+  line-height: 1.6 !important;
+}
+
+:root[data-theme="light"] .proposal-review-container .summary-item span,
+:root[data-theme="light"] .proposal-review-container .selected-proposal-summary .summary-item span,
+:root[data-theme="light"] .summary-item span,
+:root[data-theme="light"] .selected-proposal-summary .summary-item span {
+  color: #000000 !important;
+  font-weight: 600 !important;
+}
+
 .summary-item a {
-  color: #28c0f0;
+  color: #10dd88;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
@@ -447,8 +871,18 @@
   font-size: 0.9rem;
 }
 
+/* Modo claro */
+:root[data-theme="light"] .summary-item a {
+  color: #0284c7 !important;
+}
+
 .summary-item a:hover {
-  color: #1180b3;
+  color: #0ab86a;
+}
+
+/* Modo claro */
+:root[data-theme="light"] .summary-item a:hover {
+  color: #0369a1 !important;
 }
 
 .confirmation-actions {
@@ -479,6 +913,11 @@
   position: static !important;
 }
 
+/* Modo claro */
+:root[data-theme="light"] .proposal-review-container .loading-spinner {
+  color: #475569 !important;
+}
+
 .proposal-review-container .loading-spinner::before,
 .proposal-review-container .loading-spinner::after {
   display: none !important;
@@ -497,6 +936,11 @@
   position: static !important;
 }
 
+/* Modo claro */
+:root[data-theme="light"] .proposal-review-container .loading-spinner p {
+  color: #475569 !important;
+}
+
 .proposal-review-container .loading-spinner .spinner {
   width: 50px !important;
   height: 50px !important;
@@ -505,7 +949,7 @@
   min-height: 50px !important;
   max-height: 50px !important;
   border: 4px solid rgba(40, 192, 240, 0.2) !important;
-  border-top-color: #28c0f0 !important;
+  border-top-color: #10dd88 !important;
   border-radius: 50% !important;
   animation: spin 1s linear infinite !important;
   margin-bottom: 1rem !important;
@@ -558,6 +1002,11 @@
   color: #b0b0b0;
 }
 
+/* Modo claro */
+:root[data-theme="light"] .error-message {
+  color: #64748b !important;
+}
+
 .error-message h3 {
   color: #f44336;
   margin-bottom: 1rem;
@@ -567,6 +1016,11 @@
 .error-message p {
   margin-bottom: 2rem;
   font-size: 1rem;
+}
+
+/* Modo claro */
+:root[data-theme="light"] .error-message p {
+  color: #475569 !important;
 }
 
 /* Popups */
@@ -583,6 +1037,11 @@
   z-index: 1000;
 }
 
+/* Modo claro */
+:root[data-theme="light"] .popup-overlay {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
 .popup {
   background: #2a2a2a;
   border-radius: 12px;
@@ -592,6 +1051,13 @@
   text-align: center;
   border: 1px solid #404040;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+/* Modo claro */
+:root[data-theme="light"] .popup {
+  background: #ffffff !important;
+  border: 2px solid rgba(100, 116, 139, 0.3) !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.2) !important;
 }
 
 .popup-icon {
@@ -605,14 +1071,24 @@
   font-size: 1.3rem;
 }
 
+/* Modo claro */
+:root[data-theme="light"] .popup h3 {
+  color: #0f172a !important;
+}
+
 .popup p {
   color: #e1e1e1;
   margin: 0 0 1.5rem 0;
   line-height: 1.5;
 }
 
+/* Modo claro */
+:root[data-theme="light"] .popup p {
+  color: #475569 !important;
+}
+
 .popup-button {
-  background: #28c0f0;
+  background: #10dd88;
   color: #fff;
   border: none;
   padding: 0.8rem 2rem;
@@ -922,7 +1398,7 @@
 }
 
 .escrow-task-info h3 {
-  color: #28c0f0;
+  color: #10dd88;
   font-size: 1.1rem;
   font-weight: 600;
   margin: 0 0 1rem 0;
@@ -940,6 +1416,11 @@
 
 .escrow-task-details strong {
   color: #fff;
+}
+
+.escrow-task-xlm-note {
+  color: #ffa500;
+  margin-top: 0.5rem;
 }
 
 .escrow-steps {
@@ -964,7 +1445,7 @@
 .escrow-step.in-progress {
   background: rgba(40, 192, 240, 0.1);
   border: 1px solid rgba(40, 192, 240, 0.3);
-  color: #28c0f0;
+  color: #10dd88;
 }
 
 .escrow-step.completed {
@@ -1017,7 +1498,7 @@
 }
 
 .escrow-step-button {
-  background: linear-gradient(90deg, #28c0f0, #1180b3);
+  background: linear-gradient(90deg, #10dd88, #0ab86a);
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -1031,7 +1512,7 @@
 
 .escrow-step-button:hover:not(:disabled) {
   transform: translateY(-2px);
-  background: linear-gradient(90deg, #1180b3, #28c0f0);
+  background: linear-gradient(90deg, #0ab86a, #10dd88);
   box-shadow: 0 4px 12px rgba(40, 192, 240, 0.4);
 }
 
@@ -1079,7 +1560,7 @@
 
 .escrow-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #28c0f0 0%, #1180b3 100%);
+  background: linear-gradient(90deg, #10dd88 0%, #0ab86a 100%);
   border-radius: 4px;
   transition: width 0.3s ease;
 }
@@ -1145,7 +1626,7 @@
 
 .metamask-status.connected {
   background: rgba(40, 192, 240, 0.1);
-  border: 1px solid #28c0f0;
+  border: 1px solid #10dd88;
 }
 
 .metamask-status.error {
@@ -1156,4 +1637,84 @@
 .metamask-status.warning {
   background: rgba(255, 193, 7, 0.1);
   border: 1px solid #ffc107;
+}
+
+/* Desglose de pago dentro del popup escrow (sustituye estilos inline) */
+.escrow-breakdown-box {
+  margin-top: 0.5rem;
+  padding: 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(40, 192, 240, 0.1) 0%, rgba(17, 128, 179, 0.1) 100%);
+  border: 1px solid rgba(40, 192, 240, 0.3);
+}
+
+.escrow-breakdown-title {
+  font-weight: bold;
+  margin: 0 0 12px;
+  color: #10dd88;
+  font-size: 15px;
+}
+
+.escrow-breakdown-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.escrow-breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(40, 192, 240, 0.2);
+  font-size: 14px;
+}
+
+.escrow-breakdown-row span {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.escrow-breakdown-row strong {
+  font-size: 14px;
+  color: #fff;
+}
+
+.escrow-breakdown-total {
+  padding: 12px;
+  background: linear-gradient(90deg, rgba(40, 192, 240, 0.2) 0%, rgba(17, 128, 179, 0.2) 100%);
+  border-radius: 8px;
+  border: 1px solid rgba(40, 192, 240, 0.4);
+  margin-top: 8px;
+}
+
+.escrow-breakdown-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.escrow-breakdown-total-label {
+  font-weight: bold;
+  color: #10dd88;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.escrow-breakdown-total-amount {
+  font-size: 18px;
+  background: linear-gradient(90deg, #10dd88, #0ab86a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.escrow-breakdown-fee-note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  font-style: italic;
+  text-align: center;
 }

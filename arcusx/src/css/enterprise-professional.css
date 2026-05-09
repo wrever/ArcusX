@@ -1,0 +1,1490 @@
+/* ArcusX Empresas - sistema visual corporativo (solo host enterprise) */
+:root[data-app-variant="enterprise"] {
+  --ax-ent-bg: #f3f6fb;
+  --ax-ent-surface: #ffffff;
+  --ax-ent-surface-soft: #f8fafc;
+  --ax-ent-border: #dbe5f0;
+  --ax-ent-border-strong: #c5d4e6;
+  --ax-ent-text: #0f172a;
+  --ax-ent-text-soft: #475569;
+  --ax-ent-title: #0b3558;
+  --ax-ent-primary: #0f6ab4;
+  --ax-ent-primary-strong: #0a4e86;
+  --ax-ent-accent: #0d9488;
+  --ax-ent-success: #15803d;
+  --ax-ent-warning: #b45309;
+  --ax-ent-danger: #b91c1c;
+  --ax-ent-shadow: 0 14px 32px rgba(15, 23, 42, 0.08);
+  --ax-ent-shadow-soft: 0 8px 22px rgba(15, 23, 42, 0.06);
+  --ax-ent-shadow-hover: 0 18px 36px rgba(15, 23, 42, 0.12);
+}
+
+:root[data-app-variant="enterprise"] body {
+  background: var(--ax-ent-bg);
+  color: var(--ax-ent-text);
+}
+
+/* Navbar empresas */
+:root[data-app-variant="enterprise"] .empresas-navbar {
+  background: rgba(255, 255, 255, 0.94);
+  border-bottom: 1px solid var(--ax-ent-border);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(8px);
+}
+
+/* Menú móvil abierto: superficie sólida (Navbar.css ya quita blur en .empresas-navbar__links) */
+:root[data-app-variant="enterprise"] .empresas-navbar--open .empresas-navbar__links {
+  background: var(--ax-ent-surface);
+  border-bottom: 1px solid var(--ax-ent-border);
+}
+
+:root[data-app-variant="enterprise"] .empresas-navbar a,
+:root[data-app-variant="enterprise"] .empresas-navbar button {
+  color: var(--ax-ent-text);
+}
+
+/* CTA primario: el color global de enlaces no puede tapar el texto sobre fondo oscuro */
+:root[data-app-variant="enterprise"] .empresas-navbar__btn--solid,
+:root[data-app-variant="enterprise"] .empresas-navbar__btn--solid:link,
+:root[data-app-variant="enterprise"] .empresas-navbar__btn--solid:visited {
+  color: #ffffff !important;
+}
+
+/* Enlace “Sitio principal”: pill al estilo Empresas del sitio principal, tono institucional */
+:root[data-app-variant="enterprise"] .empresas-navbar__link--pill-accent,
+:root[data-app-variant="enterprise"] .empresas-navbar__link--pill-accent:link,
+:root[data-app-variant="enterprise"] .empresas-navbar__link--pill-accent:visited {
+  color: var(--ax-ent-primary-strong) !important;
+  border-color: rgba(15, 106, 180, 0.38);
+  background: rgba(15, 106, 180, 0.09);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.75) inset;
+}
+
+:root[data-app-variant="enterprise"] .empresas-navbar__link--pill-accent:hover {
+  color: var(--ax-ent-primary-strong) !important;
+  border-color: rgba(15, 106, 180, 0.55);
+  background: rgba(15, 106, 180, 0.14);
+  box-shadow:
+    0 0 22px rgba(15, 106, 180, 0.2),
+    0 1px 0 rgba(255, 255, 255, 0.85) inset;
+  filter: none;
+}
+
+/* Shell dashboard enterprise */
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise {
+  background: radial-gradient(circle at 12% 12%, #ffffff 0%, #f4f8fd 42%, #edf3fa 100%);
+  color: var(--ax-ent-text);
+  display: grid;
+  grid-template-columns: 270px minmax(0, 1fr);
+  gap: 0;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .dashboard-sidebar,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .dashboard-main {
+  background: transparent;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .dashboard-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  padding: 0.7rem 0 1.2rem;
+  border-right: 1px solid var(--ax-ent-border);
+  background: #ffffff;
+  box-shadow: 8px 0 22px rgba(15, 23, 42, 0.04);
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .sidebar-logo {
+  width: 220px;
+  height: 64px;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .sidebar-header,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .sidebar-user {
+  border-bottom: 1px solid var(--ax-ent-border);
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .sidebar-user {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .user-avatar {
+  box-shadow: 0 6px 16px rgba(15, 106, 180, 0.22);
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .user-name-display {
+  font-weight: 700;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .sidebar-nav ul li {
+  color: var(--ax-ent-text-soft);
+  border-radius: 10px;
+  margin: 0.12rem 0.45rem;
+  border: 1px solid transparent;
+  transition: all 0.22s ease;
+  min-height: 42px;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .sidebar-nav ul li:hover {
+  color: var(--ax-ent-text);
+  background: #eef4fb;
+  border-color: #d5e4f4;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .sidebar-nav ul li:hover span,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .sidebar-nav ul li:hover svg {
+  color: var(--ax-ent-text) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .sidebar-nav ul li.active {
+  color: var(--ax-ent-primary-strong);
+  background: linear-gradient(90deg, rgba(15, 106, 180, 0.14), rgba(15, 106, 180, 0.05));
+  border-left: 3px solid var(--ax-ent-primary);
+  font-weight: 700;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .sidebar-nav ul li.active span,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .sidebar-nav ul li.active svg {
+  color: var(--ax-ent-primary-strong) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .sidebar-nav .enterprise-create-nav {
+  background: linear-gradient(135deg, var(--ax-ent-primary), var(--ax-ent-primary-strong));
+  color: #ffffff;
+  border-color: var(--ax-ent-primary-strong);
+  font-weight: 700;
+  margin-bottom: 0.7rem;
+  box-shadow: 0 10px 20px rgba(15, 106, 180, 0.2);
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .sidebar-nav .enterprise-create-nav span,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .sidebar-nav .enterprise-create-nav svg {
+  color: #ffffff !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .sidebar-nav .enterprise-create-nav:hover,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .sidebar-nav .enterprise-create-nav.active {
+  background: linear-gradient(135deg, #0d5ea0, #0a4e86) !important;
+  border-color: #0a4e86 !important;
+  box-shadow: 0 12px 24px rgba(15, 106, 180, 0.26) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .sidebar-nav .enterprise-create-nav:hover span,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .sidebar-nav .enterprise-create-nav:hover svg,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .sidebar-nav .enterprise-create-nav.active span,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .sidebar-nav .enterprise-create-nav.active svg {
+  color: #ffffff !important;
+}
+
+/* Prioridad máxima para evitar herencia del estado active genérico */
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .sidebar-nav ul li.enterprise-create-nav.active svg,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .sidebar-nav ul li.enterprise-create-nav.active span,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .sidebar-nav ul li.enterprise-create-nav:hover svg,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .sidebar-nav ul li.enterprise-create-nav:hover span {
+  color: #ffffff !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .dashboard-header h1 {
+  color: var(--ax-ent-title);
+  letter-spacing: -0.02em;
+}
+
+/* Header dashboard enterprise */
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .dashboard-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--ax-ent-border);
+  border-radius: 14px;
+  padding: 0.9rem 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+  backdrop-filter: blur(6px);
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .dashboard-main {
+  padding: 1rem 1.1rem 1.5rem;
+  margin-left: 0 !important;
+  width: 100% !important;
+  min-width: 0;
+  max-width: none !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .dashboard-content--enterprise {
+  display: grid;
+  gap: 1rem;
+  width: 100%;
+  max-width: none;
+}
+
+/* Usar TODO el ancho util en enterprise (sin centrado estrecho heredado) */
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .dashboard-content {
+  width: 100% !important;
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  align-items: stretch !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .stats-cards,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .tasks-container,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .manage-tasks-container,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .notifications-container,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .wallet-container,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .settings-container,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .in-progress-container,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .support-container {
+  width: 100% !important;
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .dashboard-header {
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .dashboard-header h1 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.05;
+  max-width: 440px;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .user-menu .user-avatar {
+  width: 34px;
+  height: 34px;
+  font-size: 0.88rem;
+  border: 1px solid #bfdbfe;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  color: #1e3a8a;
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.2);
+}
+
+:root[data-app-variant="enterprise"] .enterprise-overview-panel {
+  display: grid;
+  grid-template-columns: minmax(360px, 1fr) auto;
+  align-items: center;
+  gap: 1.1rem;
+  padding: 1.1rem 1.2rem;
+  background: linear-gradient(125deg, #ffffff 0%, #f7fbff 72%, #edf5ff 100%);
+  border: 1px solid #cfe0f4;
+  border-radius: 16px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+:root[data-app-variant="enterprise"] .enterprise-overview-copy {
+  flex: 1;
+  min-width: 320px;
+}
+
+:root[data-app-variant="enterprise"] .enterprise-overview-kicker {
+  margin: 0 0 0.25rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #2563eb;
+  font-weight: 700;
+}
+
+:root[data-app-variant="enterprise"] .enterprise-overview-panel h2 {
+  margin: 0;
+  color: var(--ax-ent-title);
+  font-size: 1.9rem;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+:root[data-app-variant="enterprise"] .enterprise-overview-panel p {
+  margin: 0.25rem 0 0;
+  color: var(--ax-ent-text-soft);
+}
+
+:root[data-app-variant="enterprise"] .enterprise-overview-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  min-width: 360px;
+}
+
+:root[data-app-variant="enterprise"] .enterprise-overview-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  white-space: nowrap;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .notification-button {
+  background: var(--ax-ent-surface) !important;
+  color: var(--ax-ent-text-soft) !important;
+  border: 1px solid var(--ax-ent-border) !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .notification-button:hover,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .notification-button.active {
+  color: var(--ax-ent-primary) !important;
+  border-color: #bfdbfe !important;
+  background: #eff6ff !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .notification-button:hover svg,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .notification-button.active svg {
+  color: var(--ax-ent-primary) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .logout-button {
+  background: var(--ax-ent-surface) !important;
+  color: var(--ax-ent-text-soft) !important;
+  border: 1px solid var(--ax-ent-border) !important;
+}
+
+/* Tarjetas y superficies compartidas */
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .stat-card,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .tasks-list,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .manage-tasks-container,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .notifications-list,
+:root[data-app-variant="enterprise"] .create-task-form-card,
+:root[data-app-variant="enterprise"] .task-info-card,
+:root[data-app-variant="enterprise"] .proposals-section,
+:root[data-app-variant="enterprise"] .supervise-task-header,
+:root[data-app-variant="enterprise"] .task-details-section,
+:root[data-app-variant="enterprise"] .chat-section {
+  background: var(--ax-ent-surface) !important;
+  border: 1px solid var(--ax-ent-border) !important;
+  box-shadow: var(--ax-ent-shadow) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .stats-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .stat-card {
+  border-radius: 14px !important;
+  padding: 0.9rem !important;
+  min-height: 96px;
+  min-width: 0 !important;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: center;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
+  border: 1px solid #d9e6f5 !important;
+  box-shadow: var(--ax-ent-shadow-soft) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .stat-card:hover {
+  transform: translateY(-2px);
+  border-color: #bfd7f2 !important;
+  box-shadow: var(--ax-ent-shadow-hover) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .stat-icon {
+  width: 44px;
+  height: 44px;
+  margin-right: 0 !important;
+  background: #eaf3ff !important;
+  color: var(--ax-ent-primary-strong) !important;
+  border: 1px solid #c9ddf6 !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .stat-info h3 {
+  margin: 0 0 0.18rem;
+  font-size: 0.88rem;
+  line-height: 1.2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-height: 2.1em;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .stat-info p {
+  margin: 0;
+  font-size: 1.55rem;
+  line-height: 1.05;
+  color: #0f172a;
+  font-weight: 800;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .tasks-header,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .manage-tasks-container .section-header {
+  align-items: center !important;
+  gap: 0.9rem !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .tasks-header h2,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .manage-tasks-container .section-header h2 {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .user-task-item h3,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .user-task-item p {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .section-header {
+  margin-bottom: 1.25rem;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .section-header h2,
+:root[data-app-variant="enterprise"] .create-task-form-card h2,
+:root[data-app-variant="enterprise"] .proposals-header h2,
+:root[data-app-variant="enterprise"] .supervise-task-header h1 {
+  color: var(--ax-ent-title) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .stat-card h3,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .tasks-header h2,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .notifications-container h2,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .user-task-item h3 {
+  color: var(--ax-ent-text) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .stat-card p,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .task-item p,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .user-task-item p {
+  color: var(--ax-ent-text-soft) !important;
+}
+
+/* Botones CTA enterprise */
+:root[data-app-variant="enterprise"] .create-task-button,
+:root[data-app-variant="enterprise"] .submit-button,
+:root[data-app-variant="enterprise"] .btn-primary,
+:root[data-app-variant="enterprise"] .accept-button {
+  background: linear-gradient(135deg, var(--ax-ent-primary), var(--ax-ent-primary-strong)) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--ax-ent-primary-strong) !important;
+  box-shadow: 0 10px 24px rgba(15, 106, 180, 0.24) !important;
+}
+
+:root[data-app-variant="enterprise"] .create-task-button:hover,
+:root[data-app-variant="enterprise"] .submit-button:hover,
+:root[data-app-variant="enterprise"] .btn-primary:hover,
+:root[data-app-variant="enterprise"] .accept-button:hover {
+  filter: brightness(0.96);
+  transform: translateY(-1px);
+}
+
+:root[data-app-variant="enterprise"] .btn-secondary,
+:root[data-app-variant="enterprise"] .back-button {
+  background: var(--ax-ent-surface-soft) !important;
+  color: var(--ax-ent-text) !important;
+  border: 1px solid var(--ax-ent-border-strong) !important;
+}
+
+:root[data-app-variant="enterprise"] .reject-button {
+  background: linear-gradient(90deg, #ef4444, #dc2626) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+:root[data-app-variant="enterprise"] .reject-button:hover {
+  color: #ffffff !important;
+  background: linear-gradient(90deg, #dc2626, #b91c1c) !important;
+  filter: brightness(0.98);
+}
+
+:root[data-app-variant="enterprise"] .btn-secondary:hover,
+:root[data-app-variant="enterprise"] .back-button:hover {
+  background: #eef4fb !important;
+  color: var(--ax-ent-text) !important;
+  border-color: #c9ddf6 !important;
+}
+
+/* Wallet button (fix color incorrecto + variante enterprise) */
+:root[data-app-variant="enterprise"] .wallet-button-container .wallet-button {
+  background: linear-gradient(135deg, var(--ax-ent-primary), var(--ax-ent-primary-strong)) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--ax-ent-primary-strong) !important;
+  box-shadow: 0 10px 22px rgba(15, 106, 180, 0.22) !important;
+  min-width: 0 !important;
+  padding: 0.62rem 0.95rem !important;
+  border-radius: 10px !important;
+}
+
+:root[data-app-variant="enterprise"] .wallet-button-container .wallet-button.disconnected:hover {
+  box-shadow: 0 14px 28px rgba(15, 106, 180, 0.28) !important;
+  transform: translateY(-1px);
+}
+
+:root[data-app-variant="enterprise"] .wallet-button-container .wallet-button.connected {
+  background: #eef6ff !important;
+  color: var(--ax-ent-primary-strong) !important;
+  border: 1px solid #bfdbfe !important;
+  box-shadow: 0 8px 18px rgba(30, 64, 175, 0.15) !important;
+}
+
+:root[data-app-variant="enterprise"] .wallet-button-container .wallet-button.connected svg,
+:root[data-app-variant="enterprise"] .wallet-button-container .wallet-button.connected .wallet-address,
+:root[data-app-variant="enterprise"] .wallet-button-container .wallet-button.connected span {
+  color: var(--ax-ent-primary-strong) !important;
+}
+
+:root[data-app-variant="enterprise"] .wallet-button-container .wallet-button.connected .wallet-type-badge {
+  background: #dbeafe !important;
+  color: #1e3a8a !important;
+}
+
+:root[data-app-variant="enterprise"] .wallet-button-container .wallet-button.disconnected svg,
+:root[data-app-variant="enterprise"] .wallet-button-container .wallet-button.disconnected span {
+  color: #ffffff !important;
+}
+
+/* Language inline button en dashboard enterprise */
+:root[data-app-variant="enterprise"] .theme-language-buttons .lang-select--inline .lang-select-trigger {
+  background: var(--ax-ent-surface) !important;
+  color: var(--ax-ent-text-soft) !important;
+  border: 1px solid var(--ax-ent-border) !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+  min-height: 40px;
+  padding: 0.45rem 0.75rem !important;
+}
+
+:root[data-app-variant="enterprise"] .theme-language-buttons .lang-select--inline .lang-select-trigger:hover {
+  color: var(--ax-ent-primary) !important;
+  border-color: #bfdbfe !important;
+  background: #eff6ff !important;
+}
+
+:root[data-app-variant="enterprise"] .theme-language-buttons .lang-select--inline .lang-select-trigger:hover svg,
+:root[data-app-variant="enterprise"] .theme-language-buttons .lang-select--inline .lang-select-trigger:hover .lang-select-label,
+:root[data-app-variant="enterprise"] .theme-language-buttons .lang-select--inline .lang-select-trigger:hover .lang-select-chevron {
+  color: var(--ax-ent-primary) !important;
+}
+
+/* Listados y tarjetas de tareas */
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .task-item,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .user-task-item,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .notification-item {
+  background: var(--ax-ent-surface) !important;
+  border: 1px solid #d9e6f5 !important;
+  border-radius: 14px !important;
+  padding: 1rem !important;
+  box-shadow: var(--ax-ent-shadow-soft) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .task-item:hover,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .user-task-item:hover,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .notification-item:hover {
+  border-color: #bfd7f2 !important;
+  box-shadow: var(--ax-ent-shadow-hover) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .proposal-count {
+  background: #edf5ff !important;
+  color: #0a4e86 !important;
+  border: 1px solid #c9ddf6 !important;
+  text-align: center !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .tasks-container,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .manage-tasks-container,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .notifications-container,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .settings-container {
+  border-radius: 16px !important;
+  border: 1px solid #d9e6f5 !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
+  box-shadow: var(--ax-ent-shadow-soft) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .tasks-header h2,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .manage-tasks-container .section-header h2,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .notifications-container h2 {
+  color: #0b3558 !important;
+  letter-spacing: -0.02em;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .task-meta .difficulty,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .task-meta .category {
+  border: 1px solid #d9e6f5 !important;
+  background: #f4f8ff !important;
+  color: #1e3a8a !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .notification-dropdown {
+  border: 1px solid #d9e6f5 !important;
+  box-shadow: var(--ax-ent-shadow-hover) !important;
+  border-radius: 12px !important;
+}
+
+@media (max-width: 1200px) {
+  :root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise {
+    grid-template-columns: 250px minmax(0, 1fr);
+  }
+  :root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .stats-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  :root[data-app-variant="enterprise"] .enterprise-overview-panel {
+    grid-template-columns: 1fr;
+  }
+  :root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .dashboard-header h1 {
+    font-size: 1.5rem;
+    max-width: none;
+  }
+  :root[data-app-variant="enterprise"] .enterprise-overview-actions {
+    min-width: 0;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 900px) {
+  :root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise {
+    grid-template-columns: 1fr;
+  }
+  :root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .dashboard-sidebar {
+    position: relative;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--ax-ent-border);
+    background: #ffffff;
+  }
+  :root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .stats-cards {
+    grid-template-columns: 1fr;
+  }
+  :root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .dashboard-header {
+    grid-template-columns: 1fr;
+    gap: 0.7rem;
+  }
+  :root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .header-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  :root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .stat-info h3 {
+    white-space: normal;
+    text-overflow: initial;
+  }
+  :root[data-app-variant="enterprise"] .wallet-button-container .wallet-button span {
+    display: inline !important;
+  }
+}
+
+/* =========================================================
+   FIX: Restaurar posiciones como dashboard general
+   ========================================================= */
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .dashboard-wrapper {
+  display: flex !important;
+  flex: 1 !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .dashboard-sidebar {
+  width: 280px !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  height: 100vh !important;
+  padding-bottom: 1rem !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .dashboard-main {
+  margin-left: 280px !important;
+  width: calc(100% - 280px) !important;
+  padding: 2rem !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .dashboard-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+  max-width: 1400px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  border-radius: 0 !important;
+  position: relative;
+  z-index: 3000;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .dashboard-content {
+  width: 100% !important;
+  max-width: 1400px !important;
+  margin: 0 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  padding: 0 1rem !important;
+  box-sizing: border-box !important;
+  position: relative;
+  z-index: 1;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .notification-dropdown-container {
+  position: relative;
+  z-index: 4000;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .notification-dropdown {
+  z-index: 5000 !important;
+}
+
+/* ===== Proposals page polish (enterprise) ===== */
+:root[data-app-variant="enterprise"] .proposal-review-container {
+  background: #f4f8fd !important;
+}
+
+:root[data-app-variant="enterprise"] .proposal-review-content {
+  max-width: 1320px;
+}
+
+:root[data-app-variant="enterprise"] .proposal-review-container .back-button {
+  background: #ffffff !important;
+  color: #0b3558 !important;
+  border: 1px solid #c9ddf6 !important;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12) !important;
+  z-index: 6000 !important;
+}
+
+:root[data-app-variant="enterprise"] .proposal-review-container .back-button:hover {
+  background: #eff6ff !important;
+  color: #0a4e86 !important;
+  border-color: #93c5fd !important;
+}
+
+:root[data-app-variant="enterprise"] .proposal-review-container .back-button,
+:root[data-app-variant="enterprise"] .proposal-review-container .back-button span,
+:root[data-app-variant="enterprise"] .proposal-review-container .back-button svg {
+  color: #0b3558 !important;
+}
+
+:root[data-app-variant="enterprise"] .proposal-review-container .back-button:hover span,
+:root[data-app-variant="enterprise"] .proposal-review-container .back-button:hover svg {
+  color: #0a4e86 !important;
+}
+
+:root[data-app-variant="enterprise"] .task-info-card,
+:root[data-app-variant="enterprise"] .proposals-section,
+:root[data-app-variant="enterprise"] .proposal-card {
+  border: 1px solid #d9e6f5 !important;
+  box-shadow: var(--ax-ent-shadow-soft) !important;
+}
+
+:root[data-app-variant="enterprise"] .proposal-header {
+  align-items: flex-start;
+  gap: 0.8rem;
+}
+
+:root[data-app-variant="enterprise"] .status-badge {
+  border: 1px solid transparent;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+:root[data-app-variant="enterprise"] .status-badge.pending {
+  background: linear-gradient(135deg, #fff7ed, #ffedd5) !important;
+  color: #9a3412 !important;
+  border: 1px solid #fdba74 !important;
+  box-shadow: 0 6px 14px rgba(249, 115, 22, 0.2) !important;
+  border-radius: 999px !important;
+  padding: 0.32rem 0.85rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em !important;
+}
+
+:root[data-app-variant="enterprise"] .status-badge.accepted {
+  background: #ecfdf3 !important;
+  color: #166534 !important;
+  border-color: #86efac !important;
+}
+
+:root[data-app-variant="enterprise"] .proposal-message p,
+:root[data-app-variant="enterprise"] .applicant-email,
+:root[data-app-variant="enterprise"] .proposal-date {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+:root[data-app-variant="enterprise"] .proposal-wallet .wallet-address {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+:root[data-app-variant="enterprise"] .proposal-card.pending {
+  border-left: 4px solid #f59e0b !important;
+  background: #fffefb !important;
+}
+
+:root[data-app-variant="enterprise"] .applicant-avatar {
+  background: linear-gradient(135deg, #60a5fa, #2563eb) !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.3) !important;
+}
+
+:root[data-app-variant="enterprise"] .cost-info-box {
+  background: #fff7ed !important;
+  border: 1px solid #fed7aa !important;
+  border-radius: 10px !important;
+}
+
+:root[data-app-variant="enterprise"] .proposal-review-container .cost-info-box p {
+  color: #9a3412 !important;
+  font-size: 0.92rem !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+:root[data-app-variant="enterprise"] .proposal-review-container .cost-info-box p strong,
+:root[data-app-variant="enterprise"] .proposal-review-container .cost-info-box strong {
+  color: #9a3412 !important;
+}
+
+:root[data-app-variant="enterprise"] .proposal-review-container .cost-info-icon {
+  color: #d97706 !important;
+  font-size: 14px !important;
+}
+
+/* Quitar bloque extra enterprise para mantener layout base */
+:root[data-app-variant="enterprise"] .enterprise-overview-panel {
+  display: none !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .stats-cards {
+  width: 100% !important;
+  max-width: 1400px !important;
+  margin: 0 auto 2rem !important;
+  padding: 0 1rem !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .stats-cards.stats-cards--enterprise {
+  grid-template-columns: repeat(2, minmax(260px, 320px)) !important;
+  justify-content: center !important;
+}
+
+/* Stats enterprise: contenido centrado (icono + título + número) */
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .stats-cards.stats-cards--enterprise .stat-card {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  grid-template-columns: unset !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .stats-cards.stats-cards--enterprise .stat-info {
+  align-items: center !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+:root[data-app-variant="enterprise"] .logout-button:hover {
+  color: var(--ax-ent-danger) !important;
+  border-color: #fecaca !important;
+  background: #fff1f2 !important;
+}
+
+/* Formularios enterprise */
+:root[data-app-variant="enterprise"] .create-task-container,
+:root[data-app-variant="enterprise"] .proposal-review-container,
+:root[data-app-variant="enterprise"] .supervise-task-container {
+  background: var(--ax-ent-bg) !important;
+}
+
+:root[data-app-variant="enterprise"] .chat-send-btn svg,
+:root[data-app-variant="enterprise"] .chat-send-btn .chat-send-btn__icon {
+  color: #ffffff !important;
+  fill: currentColor !important;
+  opacity: 1 !important;
+}
+
+:root[data-app-variant="enterprise"] .form-group label,
+:root[data-app-variant="enterprise"] .task-description h3,
+:root[data-app-variant="enterprise"] .task-details-section h2 {
+  color: var(--ax-ent-text) !important;
+}
+
+:root[data-app-variant="enterprise"] .form-group input,
+:root[data-app-variant="enterprise"] .form-group select,
+:root[data-app-variant="enterprise"] .form-group textarea,
+:root[data-app-variant="enterprise"] .message-input {
+  background: #ffffff !important;
+  color: var(--ax-ent-text) !important;
+  border: 1px solid var(--ax-ent-border-strong) !important;
+}
+
+:root[data-app-variant="enterprise"] .form-group input:focus,
+:root[data-app-variant="enterprise"] .form-group select:focus,
+:root[data-app-variant="enterprise"] .form-group textarea:focus,
+:root[data-app-variant="enterprise"] .message-input:focus {
+  border-color: var(--ax-ent-primary) !important;
+  box-shadow: 0 0 0 3px rgba(15, 106, 180, 0.14) !important;
+}
+
+:root[data-app-variant="enterprise"] .user-limits-info,
+:root[data-app-variant="enterprise"] .net-amount-display,
+:root[data-app-variant="enterprise"] .cost-info-box,
+:root[data-app-variant="enterprise"] .info-box {
+  background: var(--ax-ent-surface-soft) !important;
+  border: 1px solid var(--ax-ent-border) !important;
+}
+
+:root[data-app-variant="enterprise"] .limit-item,
+:root[data-app-variant="enterprise"] .task-subtitle,
+:root[data-app-variant="enterprise"] .task-description p,
+:root[data-app-variant="enterprise"] .proposals-header p,
+:root[data-app-variant="enterprise"] .assigned-worker-info {
+  color: var(--ax-ent-text-soft) !important;
+}
+
+:root[data-app-variant="enterprise"] .price-tag {
+  background: #dbeafe !important;
+  color: #1e40af !important;
+}
+
+:root[data-app-variant="enterprise"] .category-tag {
+  background: #dbeafe !important;
+  color: #1e40af !important;
+}
+
+:root[data-app-variant="enterprise"] .messages-area {
+  background: #f8fbff !important;
+  border: 1px solid var(--ax-ent-border) !important;
+}
+
+/* =========================================================
+   Empresas: auditoría global — menos verde, contraste en CTAs
+   (solo :root[data-app-variant="enterprise"])
+   ========================================================= */
+
+/* Landing B2B: nieblas y acentos sin tinte verde duro */
+:root[data-app-variant="enterprise"] .ax-empresas {
+  --ax-emp-mist-brand: rgba(15, 106, 180, 0.07);
+}
+
+:root[data-app-variant="enterprise"] .ax-empresas__bg-accent {
+  background:
+    radial-gradient(ellipse 95% 60% at 88% -8%, var(--ax-emp-mist-trust), transparent 55%),
+    radial-gradient(ellipse 70% 55% at 5% 105%, rgba(15, 106, 180, 0.07), transparent 50%),
+    radial-gradient(ellipse 50% 40% at 50% 120%, rgba(15, 106, 180, 0.05), transparent 45%) !important;
+}
+
+:root[data-app-variant="enterprise"] .ax-empresas__section--security {
+  border-left-color: var(--ax-ent-primary) !important;
+  background: color-mix(in srgb, var(--bg-card) 96%, rgba(15, 106, 180, 0.04)) !important;
+}
+
+/* Dashboard: bloque propuestas y CTA crear tarea (quitaban verde fijo) */
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .proposal-count {
+  border: 1px solid rgba(15, 106, 180, 0.28) !important;
+  background: rgba(15, 106, 180, 0.08) !important;
+  color: var(--ax-ent-primary-strong) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .manage-tasks-container .create-task-button {
+  background: linear-gradient(90deg, #0f6ab4, #0a4e86) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 15px rgba(15, 106, 180, 0.35) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .manage-tasks-container .create-task-button:hover {
+  background: linear-gradient(90deg, #0a4e86, #083d66) !important;
+  color: #ffffff !important;
+}
+
+/* Tarjetas de tarea: dificultad “fácil” sin verde neón */
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .task-card-progress .difficulty-tag.facil {
+  background: rgba(59, 130, 246, 0.12) !important;
+  color: #1d4ed8 !important;
+  border: 1px solid rgba(59, 130, 246, 0.35) !important;
+}
+
+/* Crear tarea embebido: iconos y chevron coherentes con marca enterprise */
+:root[data-app-variant="enterprise"] .create-task-container .info-icon {
+  color: var(--ax-ent-primary) !important;
+}
+
+:root[data-app-variant="enterprise"] .create-task-container .form-group select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%230f6ab4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 1rem center !important;
+  background-size: 16px !important;
+}
+
+/* Filas de dos columnas: alinear la base de los campos (p. ej. pago + moneda) */
+:root[data-app-variant="enterprise"] .create-task-container .form-row {
+  align-items: end;
+}
+
+:root[data-app-variant="enterprise"] .create-task-container .success-message {
+  background: rgba(15, 106, 180, 0.08) !important;
+  border: 1px solid rgba(15, 106, 180, 0.28) !important;
+  color: var(--ax-ent-primary-strong) !important;
+}
+
+/* Propuestas: botones sobre gradiente / primario — texto siempre legible */
+:root[data-app-variant="enterprise"] .proposal-review-container .select-button,
+:root[data-app-variant="enterprise"] .proposal-review-container .accept-button {
+  background: linear-gradient(90deg, #0f6ab4, #0a4e86) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(15, 106, 180, 0.35) !important;
+}
+
+:root[data-app-variant="enterprise"] .proposal-review-container .select-button:hover,
+:root[data-app-variant="enterprise"] .proposal-review-container .accept-button:hover {
+  color: #ffffff !important;
+}
+
+/* La regla global .selection-confirmation * { color: #000 } rompe el contraste en botones de color */
+:root[data-app-variant="enterprise"] .proposal-review-container .selection-confirmation .action-button,
+:root[data-app-variant="enterprise"] .proposal-review-container .selection-confirmation .action-button span,
+:root[data-app-variant="enterprise"] .proposal-review-container .selection-confirmation .action-button svg {
+  color: #ffffff !important;
+}
+
+:root[data-app-variant="enterprise"] .proposal-review-container .selection-confirmation .reject-button {
+  background: linear-gradient(90deg, #dc2626, #b91c1c) !important;
+  color: #ffffff !important;
+}
+
+:root[data-app-variant="enterprise"] .proposal-review-container .selection-confirmation .cancel-button {
+  color: var(--ax-ent-text) !important;
+  background: #f1f5f9 !important;
+}
+
+:root[data-app-variant="enterprise"] .proposal-review-container .view-profile-button,
+:root[data-app-variant="enterprise"] .proposal-review-container .view-profile-button span,
+:root[data-app-variant="enterprise"] .proposal-review-container .view-profile-button svg {
+  background: var(--ax-ent-primary) !important;
+  color: #ffffff !important;
+}
+
+:root[data-app-variant="enterprise"] .proposal-review-container .view-profile-button:hover {
+  background: var(--ax-ent-primary-strong) !important;
+  color: #ffffff !important;
+}
+
+/* Freelancers (dashboard enterprise): sombras y “Contratar” legibles en modo claro */
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .freelancer-card-horizontal:hover {
+  box-shadow: 0 12px 32px rgba(15, 106, 180, 0.14) !important;
+  border-color: rgba(15, 106, 180, 0.35) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .freelancer-avatar-image,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .freelancer-avatar-placeholder {
+  box-shadow: 0 4px 12px rgba(15, 106, 180, 0.22) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .freelancer-view-profile-btn {
+  background: linear-gradient(135deg, #0f6ab4 0%, #0a4e86 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(15, 106, 180, 0.3) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .freelancer-view-profile-btn:hover {
+  background: linear-gradient(135deg, #0a4e86 0%, #083d66 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 22px rgba(15, 106, 180, 0.35) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .freelancer-hire-btn {
+  border-color: rgba(15, 106, 180, 0.45) !important;
+  background: rgba(15, 106, 180, 0.12) !important;
+  color: #0f172a !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .freelancer-hire-btn:hover {
+  border-color: rgba(15, 106, 180, 0.65) !important;
+  background: rgba(15, 106, 180, 0.18) !important;
+  color: #0b3558 !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .freelancer-badge.verified {
+  border-color: rgba(15, 106, 180, 0.4) !important;
+  background: rgba(15, 106, 180, 0.1) !important;
+  color: #0b3558 !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .freelancer-sub-row {
+  color: var(--ax-ent-text-soft) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .freelancer-wallet {
+  border-color: var(--ax-ent-border-strong) !important;
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .freelancer-metric {
+  border-color: var(--ax-ent-border) !important;
+  background: #f8fafc !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .metric-label {
+  color: #64748b !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .metric-value {
+  color: #0f172a !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .skill-chip {
+  border-color: var(--ax-ent-border) !important;
+  background: #ffffff !important;
+  color: #334155 !important;
+}
+
+/* Swap dentro del dashboard: título y acentos sin verde #10dd88 */
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .swap-page {
+  background: var(--ax-ent-bg) !important;
+  padding-top: 0 !important;
+  min-height: auto !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .swap-title {
+  background: linear-gradient(90deg, #0f6ab4, #0a4e86) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .swap-card {
+  border-color: rgba(15, 106, 180, 0.25) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .swap-card input:focus {
+  border-color: var(--ax-ent-primary) !important;
+  box-shadow: 0 0 0 2px rgba(15, 106, 180, 0.2) !important;
+}
+
+/* Swap (cualquier vista en host empresas): wallet con gradiente + texto negro era ilegible */
+:root[data-app-variant="enterprise"] .swap-action-container .wallet-button {
+  background: linear-gradient(90deg, #0f6ab4, #0a4e86) !important;
+  color: #ffffff !important;
+}
+
+:root[data-app-variant="enterprise"] .swap-action-container .wallet-button svg,
+:root[data-app-variant="enterprise"] .swap-action-container .wallet-button span {
+  color: #ffffff !important;
+}
+
+:root[data-app-variant="enterprise"] .swap-button.enabled {
+  background: linear-gradient(90deg, #0f6ab4, #0a4e86) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 16px rgba(15, 106, 180, 0.35) !important;
+}
+
+:root[data-app-variant="enterprise"] .swap-no-liquidity-title {
+  background: linear-gradient(135deg, #0f6ab4, #6366f1) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+/* Tutoriales (pestaña en dashboard enterprise) */
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .tutorial-watch-btn {
+  background: var(--ax-ent-primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(15, 106, 180, 0.3) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .tutorial-watch-btn:hover {
+  color: #ffffff !important;
+  background: var(--ax-ent-primary-strong) !important;
+  box-shadow: 0 4px 12px rgba(15, 106, 180, 0.25) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .tutorial-watch-btn svg {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .header-actions .create-task-button,
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .header-actions button[class*="create"] {
+  color: #ffffff !important;
+}
+
+/* Swap embebido: botón circular de invertir pares (sin verde marca general) */
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .swap-icon-button {
+  background: #ffffff !important;
+  border-color: rgba(15, 106, 180, 0.45) !important;
+  box-shadow: 0 4px 14px rgba(15, 106, 180, 0.2) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .swap-icon-button .swap-icon-symbol {
+  color: var(--ax-ent-primary-strong) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .swap-icon-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0f6ab4, #0a4e86) !important;
+  border-color: #0a4e86 !important;
+  box-shadow: 0 6px 18px rgba(15, 106, 180, 0.35) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .swap-icon-button:hover:not(:disabled) .swap-icon-symbol {
+  color: #ffffff !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .swap-error {
+  background: rgba(185, 28, 28, 0.08) !important;
+  border: 1px solid rgba(185, 28, 28, 0.35) !important;
+  color: #991b1b !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .swap-no-liquidity {
+  background: linear-gradient(135deg, rgba(15, 106, 180, 0.08), rgba(15, 106, 180, 0.04)) !important;
+  border: 2px solid rgba(15, 106, 180, 0.28) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .swap-no-liquidity::before {
+  background: linear-gradient(90deg, #0f6ab4, #2563eb, #0f6ab4) !important;
+}
+
+/* Popup proceso escrow (ProposalReview): paleta institucional en host empresas */
+:root[data-app-variant="enterprise"] .escrow-process-popup {
+  background: rgba(15, 23, 42, 0.82) !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-process-content {
+  background: linear-gradient(145deg, #f8fafc 0%, #eef4fb 100%) !important;
+  border: 1px solid var(--ax-ent-border) !important;
+  box-shadow: var(--ax-ent-shadow-hover) !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-process-title {
+  color: var(--ax-ent-title) !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-process-close {
+  color: var(--ax-ent-text-soft) !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-task-info {
+  background: rgba(15, 106, 180, 0.08) !important;
+  border: 1px solid rgba(15, 106, 180, 0.28) !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-task-info h3 {
+  color: var(--ax-ent-primary-strong) !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-task-details {
+  color: var(--ax-ent-text-soft) !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-task-details strong {
+  color: var(--ax-ent-text) !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-task-xlm-note {
+  color: #b45309 !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-step.pending {
+  background: #ffffff !important;
+  border: 1px solid var(--ax-ent-border) !important;
+  color: var(--ax-ent-text-soft) !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-step.in-progress {
+  background: rgba(15, 106, 180, 0.08) !important;
+  border: 1px solid rgba(15, 106, 180, 0.35) !important;
+  color: var(--ax-ent-primary-strong) !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-step.completed {
+  background: rgba(21, 128, 61, 0.1) !important;
+  border: 1px solid rgba(21, 128, 61, 0.35) !important;
+  color: #15803d !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-step-text h3 {
+  color: var(--ax-ent-text) !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-step-text p {
+  color: var(--ax-ent-text-soft) !important;
+  opacity: 1 !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-step-button {
+  background: linear-gradient(90deg, #0f6ab4, #0a4e86) !important;
+  color: #ffffff !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-step-button:hover:not(:disabled) {
+  background: linear-gradient(90deg, #0a4e86, #083d66) !important;
+  box-shadow: 0 4px 14px rgba(15, 106, 180, 0.35) !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-progress-fill {
+  background: linear-gradient(90deg, #0f6ab4, #2563eb) !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-process-note {
+  background: var(--ax-ent-surface-soft) !important;
+  color: var(--ax-ent-text-soft) !important;
+  border: 1px solid var(--ax-ent-border) !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-process-note strong {
+  color: var(--ax-ent-title) !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-breakdown-box {
+  background: rgba(15, 106, 180, 0.08) !important;
+  border: 1px solid rgba(15, 106, 180, 0.28) !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-breakdown-title {
+  color: var(--ax-ent-primary-strong) !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-breakdown-row {
+  border-bottom-color: rgba(15, 106, 180, 0.2) !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-breakdown-row span {
+  color: var(--ax-ent-text-soft) !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-breakdown-row strong {
+  color: var(--ax-ent-text) !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-breakdown-total {
+  background: rgba(15, 106, 180, 0.1) !important;
+  border: 1px solid rgba(15, 106, 180, 0.3) !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-breakdown-total-label {
+  color: var(--ax-ent-primary-strong) !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-breakdown-total-amount {
+  background: none !important;
+  -webkit-text-fill-color: var(--ax-ent-primary-strong) !important;
+  color: var(--ax-ent-primary-strong) !important;
+}
+
+:root[data-app-variant="enterprise"] .escrow-breakdown-fee-note {
+  color: var(--ax-ent-text-soft) !important;
+}
+
+/* Supervisar tarea: volver al dashboard + tarjeta “Estado de Blockchain” en azul institucional */
+:root[data-app-variant="enterprise"] .supervise-task-header__back {
+  width: 100%;
+  margin-bottom: 0.35rem;
+}
+
+:root[data-app-variant="enterprise"] .supervise-back-dashboard-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.05rem;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: #ffffff !important;
+  background: linear-gradient(135deg, var(--ax-ent-primary), var(--ax-ent-primary-strong));
+  box-shadow: 0 4px 14px rgba(15, 106, 180, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+:root[data-app-variant="enterprise"] .supervise-back-dashboard-btn:hover {
+  color: #ffffff !important;
+  background: linear-gradient(135deg, #0d5ea0, #0a4e86);
+  box-shadow: 0 6px 18px rgba(15, 106, 180, 0.35);
+}
+
+:root[data-app-variant="enterprise"] .supervise-task-container .blockchain-status {
+  background: linear-gradient(135deg, rgba(15, 106, 180, 0.12) 0%, rgba(15, 106, 180, 0.04) 100%) !important;
+  border: 2px solid rgba(15, 106, 180, 0.28) !important;
+}
+
+:root[data-app-variant="enterprise"] .supervise-task-container .blockchain-status::before {
+  background: linear-gradient(90deg, #0f6ab4, #2563eb, #0f6ab4) !important;
+}
+
+:root[data-app-variant="enterprise"] .supervise-task-container .blockchain-status h3::before {
+  filter: drop-shadow(0 2px 4px rgba(15, 106, 180, 0.35)) !important;
+}
+
+:root[data-app-variant="enterprise"] .supervise-task-container .status-badge.active {
+  background: linear-gradient(135deg, #0f6ab4, #0a4e86) !important;
+  color: #ffffff !important;
+  border: 2px solid rgba(15, 106, 180, 0.45) !important;
+}
+
+:root[data-app-variant="enterprise"] .supervise-task-container .status-badge.resolved {
+  background: linear-gradient(135deg, #64748b, #475569) !important;
+  color: #ffffff !important;
+  border: 2px solid rgba(71, 85, 105, 0.45) !important;
+}
+
+:root[data-app-variant="enterprise"] .supervise-task-container .loading-indicator {
+  background: rgba(15, 106, 180, 0.08) !important;
+  border: 1px solid rgba(15, 106, 180, 0.28) !important;
+}
+
+:root[data-app-variant="enterprise"] .supervise-task-container .loading-spinner {
+  border: 2px solid rgba(15, 106, 180, 0.35) !important;
+  border-top: 2px solid #0f6ab4 !important;
+}
+
+:root[data-app-variant="enterprise"] .supervise-task-container .loading-indicator span {
+  color: var(--ax-ent-primary-strong) !important;
+}
+
+/* —— Responsive: dashboard empresas (el bloque fijo del sidebar no debe dejar ~95px de ancho en móvil) —— */
+@media (max-width: 900px) {
+  :root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .dashboard-sidebar {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  :root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .dashboard-main {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding: 1rem max(0.65rem, env(safe-area-inset-left, 0px)) 1.25rem max(0.65rem, env(safe-area-inset-right, 0px)) !important;
+    box-sizing: border-box !important;
+  }
+
+  :root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .dashboard-content {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    padding-left: max(0.5rem, env(safe-area-inset-left, 0px)) !important;
+    padding-right: max(0.5rem, env(safe-area-inset-right, 0px)) !important;
+    box-sizing: border-box !important;
+  }
+}
+
+:root[data-app-variant="enterprise"] .dashboard-main,
+:root[data-app-variant="enterprise"] .dashboard-content {
+  min-width: 0;
+}

@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { FaArrowLeft } from 'react-icons/fa';
+import { FaArrowLeft, FaCommentAlt, FaLink, FaWallet, FaInfoCircle } from 'react-icons/fa';
 import axios from 'axios';
 import { API_URL } from '../config/database';
 import '../css/ApplyTask.css'; // Necesitas crear este archivo CSS
+import { useI18n } from '../i18n/I18nProvider';
+import { authService } from '../services/authService';
+import { useWallet } from '../hooks/useWallet';
 
 interface TaskData {
   id: number;
@@ -25,6 +28,8 @@ interface ApplicationData {
 }
 
 const ApplyTask = () => {
+  const { t } = useI18n();
+  const { address: connectedWallet } = useWallet();
   const { taskId } = useParams<{ taskId: string }>(); // Obtener el ID de la tarea de la URL
   const [task, setTask] = useState<TaskData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,10 +82,10 @@ const ApplyTask = () => {
         if (response.data) {
           setTask(response.data);
         } else {
-          setError('No se encontraron detalles para esta tarea.');
+          setError(t('apply.error.no.details'));
         }
       } catch (err: any) {
-        setError('Error al cargar los detalles de la tarea: ' + (err.response?.data?.message || err.message));
+        setError(t('apply.error.load') + ' ' + (err.response?.data?.message || err.message));
       } finally {
         setLoading(false);
       }
@@ -89,10 +94,38 @@ const ApplyTask = () => {
     if (taskId) {
       fetchTask();
     } else {
-      setError('ID de tarea no proporcionado.');
+      setError(t('apply.error.no.task.id'));
       setLoading(false);
     }
   }, [taskId]); // Ejecutar efecto cuando cambie el taskId de la URL
+
+  useEffect(() => {
+    let cancelled = false;
+    const fillRegisteredWallet = async () => {
+      if (!user?.id) return;
+      try {
+        const res = await authService.verifyWallet();
+        if (
+          cancelled ||
+          !res.success ||
+          !res.has_wallet ||
+          !res.wallet_address
+        ) {
+          return;
+        }
+        setApplicationData((prev) => ({
+          ...prev,
+          walletAddress: prev.walletAddress.trim() ? prev.walletAddress : res.wallet_address || ''
+        }));
+      } catch {
+        /* sin wallet registrada */
+      }
+    };
+    fillRegisteredWallet();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   // Manejar el envío del formulario de aplicación
   const handleApplicationSubmit = async (e: React.FormEvent) => {
@@ -102,14 +135,14 @@ const ApplyTask = () => {
     setSubmitting(true);
 
     if (!user || !user.id) {
-      setSubmitError('Debes estar logeado para aplicar a una tarea.');
+      setSubmitError(t('apply.error.login'));
       setShowErrorPopup(true);
       setSubmitting(false);
       return;
     }
 
     if (!task?.id) {
-        setSubmitError('No se pudo obtener el ID de la tarea para aplicar.');
+        setSubmitError(t('apply.error.no.task'));
         setShowErrorPopup(true);
         setSubmitting(false);
         return;
@@ -117,21 +150,21 @@ const ApplyTask = () => {
 
     // Validar campos requeridos
     if (!applicationData.message.trim()) {
-      setSubmitError('El mensaje de presentación es obligatorio.');
+      setSubmitError(t('apply.error.message.required'));
       setShowErrorPopup(true);
       setSubmitting(false);
       return;
     }
 
     if (!applicationData.walletAddress.trim()) {
-      setSubmitError('La dirección de wallet es obligatoria para recibir pagos.');
+      setSubmitError(t('apply.error.wallet.required'));
       setShowErrorPopup(true);
       setSubmitting(false);
       return;
     }
 
     if (!isValidStellarAddress(applicationData.walletAddress)) {
-      setSubmitError('La dirección de wallet Stellar no tiene un formato válido (debe empezar con G y tener 56 caracteres).');
+      setSubmitError(t('apply.error.wallet.invalid'));
       setShowErrorPopup(true);
       setSubmitting(false);
       return;
@@ -159,14 +192,14 @@ const ApplyTask = () => {
         });
         setShowSuccessPopup(true);
       } else {
-        setSubmitError('Respuesta inesperada al enviar la aplicación.');
+        setSubmitError(t('apply.error.unexpected'));
         setShowErrorPopup(true);
       }
 
     } catch (err: any) {
       
       // Mostrar mensaje de error más detallado
-      let errorMessage = 'Error al enviar la aplicación.';
+      let errorMessage = t('apply.error.send');
       if (err.response?.data) {
         if (err.response.data.message) {
           errorMessage = err.response.data.message;
@@ -199,7 +232,7 @@ const ApplyTask = () => {
   };
 
   if (loading) {
-    return <div className="apply-task-container">Cargando detalles de la tarea...</div>;
+    return <div className="apply-task-container">{t('apply.loading')}</div>;
   }
 
   if (error) {
@@ -207,14 +240,14 @@ const ApplyTask = () => {
   }
 
   if (!task) {
-      return <div className="apply-task-container">No se encontró la tarea.</div>;
+      return <div className="apply-task-container">{t('apply.error.not.found')}</div>;
   }
 
   return (
     <div className="apply-task-container">
        <Link to="/dashboard" className="back-button">
          <FaArrowLeft />
-         <span>Volver al Dashboard</span>
+         <span>{t('apply.back')}</span>
        </Link>
 
       <div className="apply-task-content">
@@ -231,83 +264,101 @@ const ApplyTask = () => {
 
           <div className="task-meta">
              <div className="meta-item">
-               <span className="meta-label">Categoría:</span>
+               <span className="meta-label">{t('apply.category')}</span>
                <span className="meta-value">{task.category}</span>
              </div>
              <div className="meta-item">
-               <span className="meta-label">Recompensa:</span>
-               <span className="meta-value" title="Recibirás exactamente este monto al completar la tarea">
+               <span className="meta-label">{t('apply.reward')}</span>
+               <span className="meta-value" title={t('apply.reward.tooltip')}>
                  {parseFloat(task.price).toFixed(2)} {task.currency}
                </span>
              </div>
              <div className="meta-item">
-               <span className="meta-label">Creador:</span>
+               <span className="meta-label">{t('apply.creator')}</span>
                <span className="meta-value">{task.creator_username}</span>
              </div>
              <div className="meta-item">
-               <span className="meta-label">Publicada:</span>
+               <span className="meta-label">{t('apply.published')}</span>
                <span className="meta-value">{new Date(task.created_at).toLocaleDateString()}</span>
              </div>
           </div>
         </div>
 
         <div className="application-form-card">
-          <h3>Aplicar a esta Tarea</h3>
+          <h3>{t('apply.title')}</h3>
            {submitMessage && <div className="success-message">{submitMessage}</div>}
            {submitError && <div className="error-message">{submitError}</div>}
           <form onSubmit={handleApplicationSubmit} className="application-form">
             <div className="form-group">
               <label htmlFor="applicationMessage">
-                Tu Mensaje / Carta de Presentación *
+                <FaCommentAlt style={{ marginRight: '6px', fontSize: '14px' }} />
+                {t('apply.message.label')}
               </label>
               <textarea
                 id="applicationMessage"
                 value={applicationData.message}
                 onChange={(e) => handleInputChange('message', e.target.value)}
                 rows={6}
-                placeholder="Explica por qué eres el candidato ideal para esta tarea..."
+                placeholder={t('apply.message.placeholder')}
                 required
               ></textarea>
             </div>
             
             <div className="form-group">
               <label htmlFor="portfolioUrl">
-                Enlace a Portafolio o CV (Opcional)
+                <FaLink style={{ marginRight: '6px', fontSize: '14px' }} />
+                {t('apply.portfolio.label')}
               </label>
               <input
                 type="url"
                 id="portfolioUrl"
                 value={applicationData.portfolioUrl}
                 onChange={(e) => handleInputChange('portfolioUrl', e.target.value)}
-                placeholder="https://tu-portfolio.com"
+                placeholder={t('apply.portfolio.placeholder')}
               />
             </div>
 
             <div className="form-group">
               <label htmlFor="walletAddress">
-                Dirección de Wallet Stellar (Freighter) *
+                <FaWallet style={{ marginRight: '6px', fontSize: '14px' }} />
+                {t('apply.wallet.label')}
               </label>
-              <input
-                type="text"
-                id="walletAddress"
-                value={applicationData.walletAddress}
-                onChange={(e) => handleInputChange('walletAddress', e.target.value)}
-                placeholder="G..."
-                required
-              />
+              <div className="apply-wallet-row">
+                <input
+                  type="text"
+                  id="walletAddress"
+                  value={applicationData.walletAddress}
+                  onChange={(e) => handleInputChange('walletAddress', e.target.value)}
+                  placeholder={t('apply.wallet.placeholder')}
+                  required
+                  autoComplete="off"
+                />
+                {connectedWallet && (
+                  <button
+                    type="button"
+                    className="apply-wallet-paste-btn"
+                    onClick={() => handleInputChange('walletAddress', connectedWallet)}
+                  >
+                    {t('apply.wallet.pasteConnected')}
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="form-info">
-              <h4> Información Importante</h4>
+              <h4>
+                <FaInfoCircle style={{ marginRight: '6px', fontSize: '14px' }} />
+                {t('apply.info.title')}
+              </h4>
               <ul>
-                <li>Una vez que el cliente acepte tu propuesta, se creará un contrato inteligente</li>
-                <li>El pago se liberará automáticamente al completar la tarea</li>
-                <li>Tu dirección de wallet debe ser válida para recibir {task.currency}</li>
+                <li>{t('apply.info.contract')}</li>
+                <li>{t('apply.info.payment')}</li>
+                <li>{t('apply.info.wallet')} {task.currency}</li>
               </ul>
             </div>
 
             <button type="submit" disabled={submitting}>
-              {submitting ? 'Enviando Aplicación...' : 'Enviar Aplicación'}
+              {submitting ? t('apply.submitting') : t('apply.submit')}
             </button>
           </form>
         </div>
@@ -319,10 +370,10 @@ const ApplyTask = () => {
         <div className="popup-overlay">
           <div className="popup success-popup">
             <div className="popup-icon"></div>
-            <h3>¡Aplicación Enviada Exitosamente!</h3>
-            <p>Tu propuesta ha sido enviada correctamente. El cliente revisará tu aplicación y te contactará si eres seleccionado.</p>
+            <h3>{t('apply.success.title')}</h3>
+            <p>{t('apply.success.message')}</p>
             <button onClick={handleSuccessPopupClose} className="popup-button success-button">
-              Entendido
+              {t('apply.success.button')}
             </button>
           </div>
         </div>
@@ -333,10 +384,10 @@ const ApplyTask = () => {
         <div className="popup-overlay">
           <div className="popup error-popup">
             <div className="popup-icon"></div>
-            <h3>Error al Enviar Aplicación</h3>
+            <h3>{t('apply.error.title')}</h3>
             <p>{submitError}</p>
             <button onClick={handleErrorPopupClose} className="popup-button error-button">
-              Entendido
+              {t('apply.error.button')}
             </button>
           </div>
         </div>

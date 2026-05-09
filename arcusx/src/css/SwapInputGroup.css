@@ -1,0 +1,151 @@
+/* ============================================
+   SWAP INPUT GROUP STYLES
+   ============================================ */
+
+.swap-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.swap-input-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.swap-input-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.swap-input-balance {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* Input Wrapper */
+.swap-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: var(--input-background);
+  border: 2px solid var(--input-border);
+  border-radius: 16px;
+  padding: 0.5rem 1rem;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.swap-input-wrapper:focus-within {
+  border-color: var(--primary-blue);
+  box-shadow: var(--shadow-blue);
+}
+
+.swap-input-container {
+  flex: 1;
+  position: relative;
+}
+
+.swap-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  padding: 0.5rem 0;
+}
+
+.swap-input::placeholder {
+  color: var(--text-muted);
+}
+
+.swap-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.swap-input-loading {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.spinner-small {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--primary-blue);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Token Selector */
+.swap-token-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--bg-tertiary);
+  border-radius: 12px;
+  min-width: 100px;
+  justify-content: center;
+}
+
+.swap-token-icon {
+  color: var(--primary-blue);
+  font-size: 1.2rem;
+}
+
+.swap-token-symbol {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Max Button */
+.swap-max-button {
+  align-self: flex-end;
+  padding: 0.25rem 0.75rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.swap-max-button:hover {
+  background: var(--bg-hover);
+  border-color: var(--primary-blue);
+  color: var(--primary-blue);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .swap-input {
+    font-size: 1.2rem;
+  }
+
+  .swap-token-selector {
+    min-width: 80px;
+    padding: 0.4rem 0.8rem;
+  }
+}
+
+/* Light Mode Overrides */
+:root[data-theme="light"] .swap-input-wrapper {
+  background: var(--input-background);
+  border-color: var(--input-border);
+}
+
+:root[data-theme="light"] .swap-input-wrapper:focus-within {
+  border-color: var(--primary-blue);
+  box-shadow: var(--shadow-blue);
+}

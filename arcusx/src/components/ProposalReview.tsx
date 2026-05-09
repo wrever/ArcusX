@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaUser, FaCalendarAlt, FaWallet, FaExternalLinkAlt, FaCheck, FaTimes, FaSpinner, FaEye, FaHome, FaFileAlt, FaCheckCircle } from 'react-icons/fa';
+import { FaArrowLeft, FaUser, FaCalendarAlt, FaWallet, FaExternalLinkAlt, FaCheck, FaTimes, FaSpinner, FaEye, FaHome, FaFileAlt, FaCheckCircle, FaUserCircle } from 'react-icons/fa';
 import axios from 'axios';
 import { API_URL } from '../config/database';
 import { useWallet } from '../hooks/useWallet';
-// Sistema antiguo de multisig eliminado - ahora usamos Trustless Work
+// Escrow Trustless Work (cliente aprueba y firma liberación; ver trustlessWorkEscrowService)
 
 // ============================================
 // SISTEMA TRUSTLESS WORK - IMPLEMENTADO
@@ -22,6 +22,8 @@ import {
 import { calculateCommissionFromWorkerAmount, calculateTotalWithCommission } from '../config/commission';
 import { usePlatformFee } from '../hooks/usePlatformFee';
 import EscrowProcessPopup from './EscrowProcessPopup';
+import { useI18n } from '../i18n/I18nProvider';
+import { devLog, devWarn } from '../utils/logger';
 import '../css/ProposalReview.css';
 
 interface TaskData {
@@ -58,6 +60,7 @@ interface ProposalData {
 const ProposalReview = () => {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
+  const { t } = useI18n();
 
     const [task, setTask] = useState<TaskData | null>(null);
     const [proposals, setProposals] = useState<ProposalData[]>([]);
@@ -83,7 +86,7 @@ const ProposalReview = () => {
     address,
     loading: walletLoading,
     isConnected,
-    connectFreighter,
+    connectWallet,
     kit
   } = useWallet();
 
@@ -117,7 +120,7 @@ const ProposalReview = () => {
 
         // Verificar si ya hay un escrow creado y un trabajador aceptado
         if (taskData.escrow_id && taskData.accepted_applicant_id) {
-          console.log('✅ Tarea ya tiene escrow completado. Cargando propuesta aceptada...');
+          devLog('Tarea ya tiene escrow completado. Cargando propuesta aceptada...');
           // Cargar la propuesta aceptada para mostrar en el popup de éxito
       const proposalsResponse = await axios.get(`${API_URL}/auth/get_task_proposals.php?task_id=${taskId}`);
       if (Array.isArray(proposalsResponse.data)) {
@@ -126,14 +129,14 @@ const ProposalReview = () => {
               (p: ProposalData) => p.applicant_id === taskData.accepted_applicant_id || p.status === 'accepted'
             );
             if (acceptedProposal) {
-              console.log('✅ Propuesta aceptada encontrada:', acceptedProposal.applicant_username);
+              devLog('Propuesta aceptada encontrada:', acceptedProposal.applicant_username);
               setSelectedProposal(acceptedProposal);
               // Mostrar popup de éxito automáticamente después de un pequeño delay para asegurar que el estado se actualice
               setTimeout(() => {
                 setShowSuccessPopup(true);
               }, 100);
             } else {
-              console.warn('⚠️ No se encontró la propuesta aceptada, pero hay escrow_id y accepted_applicant_id');
+              devWarn('No se encontró la propuesta aceptada, pero hay escrow_id y accepted_applicant_id');
               // Aún así mostrar el popup si hay escrow_id
               setTimeout(() => {
                 setShowSuccessPopup(true);
@@ -159,7 +162,7 @@ const ProposalReview = () => {
       }
 
     } catch (err: any) {
-      setError('Error al cargar los datos: ' + (err.response?.data?.message || err.message));
+      setError(t('proposals.error.load') + ' ' + (err.response?.data?.message || err.message));
     } finally {
       setLoading(false);
     }
@@ -187,14 +190,14 @@ const ProposalReview = () => {
     if (!selectedProposal) return;
     
     if (!user || !user.id) {
-      setPopupMessage('Debes estar logeado para realizar esta acción.');
+      setPopupMessage('Debes estar logueado para realizar esta acción.');
       setShowErrorPopup(true);
       return;
     }
 
     // Verificar wallet Stellar
       if (!isConnected) {
-        setPopupMessage('Debes conectar tu wallet Freighter para continuar.');
+        setPopupMessage('Debes conectar tu wallet Stellar para continuar.');
         setShowErrorPopup(true);
         return;
       }
@@ -218,11 +221,11 @@ const ProposalReview = () => {
   const handleCreateEscrow = async () => {
     try {
       if (!selectedProposal) {
-        return { success: false, error: 'No hay propuesta seleccionada' };
+        return { success: false, error: t('proposals.error.noProposal') };
       }
 
       if (!isConnected || !address) {
-        return { success: false, error: 'Debes conectar tu wallet Freighter primero' };
+        return { success: false, error: 'Debes conectar tu wallet Stellar primero' };
       }
 
       if (!kit) {
@@ -270,12 +273,12 @@ const ProposalReview = () => {
       
       const commission = escrowAmount - workerAmount; // Comisión que se deducirá
       
-      console.log('💰 Cálculo del escrow:');
-      console.log('  - Worker amount (lo que recibirá):', workerAmount);
-      console.log('  - Platform fee:', platformFee, `(${(platformFee * 100).toFixed(2)}%)`);
-      console.log('  - Escrow amount (calculado):', amount);
-      console.log('  - Commission (que se deducirá):', commission.toFixed(7));
-      console.log('  - Verificación: workerAmount recibido =', (amount * (1 - platformFee)).toFixed(7));
+      devLog('Cálculo del escrow:');
+      devLog('  - Worker amount (lo que recibirá):', workerAmount);
+      devLog('  - Platform fee:', platformFee, `(${(platformFee * 100).toFixed(2)}%)`);
+      devLog('  - Escrow amount (calculado):', amount);
+      devLog('  - Commission (que se deducirá):', commission.toFixed(7));
+      devLog('  - Verificación: workerAmount recibido =', (amount * (1 - platformFee)).toFixed(7));
 
       const result = await createTrustlessEscrow(
         {
@@ -295,15 +298,15 @@ const ProposalReview = () => {
       );
 
       if (!result.success) {
-        console.error('❌ Error al crear escrow:', result.error);
+        console.error('Error al crear escrow:', result.error);
         return {
           success: false,
-          error: result.error || 'Error al crear el escrow'
+          error: result.error || t('proposals.error.createEscrow')
         };
       }
 
       if (!result.contractId) {
-        console.error('❌ No se recibió contractId:', result);
+        console.error('No se recibió contractId:', result);
         return {
           success: false,
           error: 'No se pudo obtener el contractId del escrow creado'
@@ -342,7 +345,7 @@ const ProposalReview = () => {
           }
         }
       } catch (error: any) {
-        console.warn('⚠️ No se pudieron obtener datos completos del escrow:', error.message);
+        devWarn('No se pudieron obtener datos completos del escrow:', error.message);
         // Continuar de todas formas - usaremos los valores por defecto
       }
 
@@ -375,7 +378,7 @@ const ProposalReview = () => {
           });
         }
       } catch (error: any) {
-        console.error('❌ Error al guardar escrow en backend:', error);
+        console.error('Error al guardar escrow en backend:', error);
         // Continuar de todas formas - el escrow ya se creó en Trustless Work
       }
       
@@ -406,11 +409,11 @@ const ProposalReview = () => {
   const handleFundEscrow = async (escrowId: string) => {
     try {
       if (!selectedProposal) {
-        return { success: false, error: 'No hay propuesta seleccionada' };
+        return { success: false, error: t('proposals.error.noProposal') };
       }
 
       if (!isConnected || !address) {
-        return { success: false, error: 'Debes conectar tu wallet Freighter primero' };
+        return { success: false, error: 'Debes conectar tu wallet Stellar primero' };
       }
       
       if (!task) {
@@ -425,16 +428,16 @@ const ProposalReview = () => {
       // Por lo tanto, debemos fondear exactamente el mismo monto para que coincida
       const workerAmount = parseFloat(task.price);
       
-      // ⚠️ CRÍTICO: Usar el mismo platformFee que al crear el escrow
+      // CRÍTICO: Usar el mismo platformFee que al crear el escrow
       // Si el escrow tiene un platformFee guardado, usarlo; si no, usar el actual
       let feeToUse = platformFee;
       if (task.escrow_platform_fee !== undefined && task.escrow_platform_fee !== null) {
         feeToUse = typeof task.escrow_platform_fee === 'number' 
           ? task.escrow_platform_fee 
           : parseFloat(task.escrow_platform_fee);
-        console.log('💡 Usando platformFee del escrow guardado:', feeToUse);
+        devLog('Usando platformFee del escrow guardado:', feeToUse);
       } else {
-        console.log('💡 Usando platformFee actual:', feeToUse);
+        devLog('Usando platformFee actual:', feeToUse);
       }
       
       // Usar la misma fórmula que al crear el escrow
@@ -447,14 +450,14 @@ const ProposalReview = () => {
       const amountString = roundedAmount.toFixed(7);
       const amount = parseFloat(amountString); // Monto a fondear (debe coincidir con el amount del escrow)
       
-      console.log('💰 Cálculo del fondeo (DEBE SER IDÉNTICO AL CREAR):');
-      console.log('  - Worker amount (lo que recibirá):', workerAmount);
-      console.log('  - Platform fee usado:', feeToUse, `(${(feeToUse * 100).toFixed(2)}%)`);
-      console.log('  - Escrow amount calculado:', escrowAmount);
-      console.log('  - Rounded amount:', roundedAmount);
-      console.log('  - Amount string (7 decimales):', amountString);
-      console.log('  - Amount final a fondear:', amount);
-      console.log('  - Amount del escrow guardado (si existe):', task.escrow_amount);
+      devLog('Cálculo del fondeo (DEBE SER IDÉNTICO AL CREAR):');
+      devLog('  - Worker amount (lo que recibirá):', workerAmount);
+      devLog('  - Platform fee usado:', feeToUse, `(${(feeToUse * 100).toFixed(2)}%)`);
+      devLog('  - Escrow amount calculado:', escrowAmount);
+      devLog('  - Rounded amount:', roundedAmount);
+      devLog('  - Amount string (7 decimales):', amountString);
+      devLog('  - Amount final a fondear:', amount);
+      devLog('  - Amount del escrow guardado (si existe):', task.escrow_amount);
       
       if (isNaN(amount) || amount <= 0) {
           return {
@@ -505,22 +508,22 @@ const ProposalReview = () => {
                   // Caso donde se recibe un objeto con la propiedad contractIds
                   contractIdsArray = contractIds.contractIds;
                 } else {
-                  console.warn('⚠️ contractIds inválido en ProposalReview (tipo desconocido):', contractIds);
+                  devWarn('contractIds inválido en ProposalReview (tipo desconocido):', contractIds);
                   return [];
                 }
                 
-                console.log('🔍 ProposalReview wrapper recibió contractIds:', contractIdsArray);
+                devLog('ProposalReview wrapper recibió contractIds:', contractIdsArray);
                 
                 // Validar que contractIds sea un array válido y no esté vacío
                 if (!contractIdsArray || !Array.isArray(contractIdsArray) || contractIdsArray.length === 0) {
-                  console.warn('⚠️ contractIds inválido o vacío en ProposalReview:', contractIdsArray);
+                  devWarn('contractIds inválido o vacío en ProposalReview:', contractIdsArray);
                   return [];
                 }
                 
                 // Filtrar contractIds vacíos o inválidos
                 const validContractIds = contractIdsArray.filter(id => id && typeof id === 'string' && id.trim() !== '');
                 if (validContractIds.length === 0) {
-                  console.warn('⚠️ No hay contractIds válidos después de filtrar:', contractIdsArray);
+                  devWarn('No hay contractIds válidos después de filtrar:', contractIdsArray);
                   return [];
                 }
                 
@@ -532,7 +535,7 @@ const ProposalReview = () => {
                 // El resultado puede tener diferentes estructuras, devolvemos el resultado completo
                 return Array.isArray(result) ? result : (result as any)?.escrows || result || [];
               } catch (error: any) {
-                console.error('❌ Error en wrapper de getEscrowByContractIds:', error.message);
+                console.error('Error en wrapper de getEscrowByContractIds:', error.message);
                 return [];
               }
             }
@@ -547,14 +550,14 @@ const ProposalReview = () => {
               ? 120000 // 2 minutos si es error normalize
               : attempt === 1 ? 30000 : 60000; // 30s, 1min para otros errores
             
-            console.log(`⏳ Reintentando en ${delay / 1000} segundos... (intento ${attempt + 1}/${maxRetries})`);
+            devLog(`⏳ Reintentando en ${delay / 1000} segundos... (intento ${attempt + 1}/${maxRetries})`);
             await new Promise(resolve => setTimeout(resolve, delay));
           }
         } catch (error: any) {
           if (attempt === maxRetries) {
             result = {
               success: false,
-              error: error.message || 'Error al fondear el escrow después de múltiples intentos'
+              error: error.message || t('proposals.error.fundEscrow')
             };
             break;
           }
@@ -565,7 +568,7 @@ const ProposalReview = () => {
             ? 120000 // 2 minutos si es error normalize
             : attempt === 1 ? 30000 : 60000; // 30s, 1min para otros errores
           
-          console.log(`⏳ Reintentando en ${delay / 1000} segundos... (intento ${attempt + 1}/${maxRetries})`);
+          devLog(`⏳ Reintentando en ${delay / 1000} segundos... (intento ${attempt + 1}/${maxRetries})`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
@@ -574,7 +577,7 @@ const ProposalReview = () => {
       if (!result || !result.success) {
         return {
           success: false,
-          error: result?.error || 'Error al fondear el escrow después de múltiples intentos'
+          error: result?.error || t('proposals.error.fundEscrow')
         };
       }
       
@@ -600,7 +603,7 @@ const ProposalReview = () => {
     try {
       
       if (!selectedProposal) {
-        return { success: false, error: 'No hay propuesta seleccionada' };
+        return { success: false, error: t('proposals.error.noProposal') };
       }
       
       // Seleccionar propuesta en el backend
@@ -628,24 +631,24 @@ const ProposalReview = () => {
         // Verificar si la respuesta es exitosa (200-299)
         if (selectResponse.status < 200 || selectResponse.status >= 300) {
           const errorMessage = selectResponse.data?.message || 
-                             `Error al seleccionar trabajador. Status: ${selectResponse.status}`;
-          console.error('❌ Error al seleccionar propuesta:', errorMessage);
+                             t('proposals.error.selectWorker') + ' Status: ' + selectResponse.status;
+          console.error('Error al seleccionar propuesta:', errorMessage);
           // Continuar de todas formas - la transacción de Stellar ya se completó
         } else if (!selectResponse.data || selectResponse.data.success !== true) {
           const errorMessage = selectResponse.data?.message || 
-                             'Error al seleccionar trabajador. La respuesta no indica éxito.';
-          console.error('❌ Error al seleccionar propuesta:', errorMessage);
+                             t('proposals.error.selectWorker') + ' La respuesta no indica éxito.';
+          console.error('Error al seleccionar propuesta:', errorMessage);
           // Continuar de todas formas
         }
       } catch (error: any) {
-        console.error('❌ Error al seleccionar propuesta en backend:', error);
+        console.error('Error al seleccionar propuesta en backend:', error);
         // Continuar de todas formas - la transacción de Stellar ya se completó
       }
 
       return { success: true };
       
     } catch (error: any) {
-      return { success: false, error: error.message || 'Error seleccionando trabajador' };
+      return { success: false, error: error.message || t('proposals.error.selectWorker') };
     }
   };
 
@@ -695,8 +698,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
             return { success: true };
       }
 
-      // Conectar Freighter
-      await connectFreighter();
+      await connectWallet();
       
       // Esperar a que se conecte
       let attempts = 0;
@@ -716,7 +718,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
       }
       
       if (!connectedAddress) {
-        return { success: false, error: 'No se pudo conectar con Freighter' };
+        return { success: false, error: 'No se pudo conectar con la wallet Stellar' };
       }
 
       return { success: true };
@@ -767,7 +769,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
       <div className="proposal-review-container">
         <div className="loading-spinner">
           <div className="spinner"></div>
-          <p>Cargando propuestas...</p>
+          <p>{t('proposals.loading')}</p>
         </div>
       </div>
     );
@@ -777,11 +779,11 @@ El proyecto está activo y el trabajador puede comenzar.`);
     return (
       <div className="proposal-review-container">
         <div className="error-message">
-          <h3>Error</h3>
+          <h3>{t('common.error')}</h3>
           <p>{error}</p>
           <Link to="/dashboard" className="back-button">
             <FaArrowLeft />
-            <span>Volver al Dashboard</span>
+            <span>{t('apply.back')}</span>
           </Link>
         </div>
       </div>
@@ -792,11 +794,11 @@ El proyecto está activo y el trabajador puede comenzar.`);
     return (
       <div className="proposal-review-container">
         <div className="error-message">
-          <h3>Tarea no encontrada</h3>
-          <p>La tarea solicitada no existe o no tienes permisos para verla.</p>
+          <h3>{t('apply.error.not.found')}</h3>
+          <p>{t('proposals.task.notFound')}</p>
           <Link to="/dashboard" className="back-button">
             <FaArrowLeft />
-            <span>Volver al Dashboard</span>
+            <span>{t('apply.back')}</span>
           </Link>
         </div>
       </div>
@@ -807,7 +809,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
         <div className="proposal-review-container">
       <Link to="/dashboard" className="back-button">
                 <FaArrowLeft />
-        <span>Volver al Dashboard</span>
+        <span>{t('apply.back')}</span>
             </Link>
 
       <div className="proposal-review-content">
@@ -828,7 +830,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
           </div>
           
           <div className="task-description">
-            <h3>Descripción del Proyecto</h3>
+            <h3>{t('common.project.description')}</h3>
                     <p>{task.description}</p>
           </div>
 
@@ -838,17 +840,11 @@ El proyecto está activo y el trabajador puede comenzar.`);
         {!(task?.escrow_id && task?.accepted_applicant_id) && (
         <div className="proposals-section">
           <div className="proposals-header">
-            <h2>Propuestas Recibidas ({proposals.length})</h2>
-            <p>Revisa las propuestas de los trabajadores y selecciona al mejor candidato.</p>
-            <div className="cost-info-box" style={{
-              background: 'rgba(255, 165, 0, 0.1)',
-              border: '1px solid rgba(255, 165, 0, 0.3)',
-              borderRadius: '8px',
-              padding: '1rem',
-              marginTop: '1rem'
-            }}>
-              <p style={{ margin: 0, color: '#4ade80', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <FaCheckCircle style={{ fontSize: '14px' }} /> <strong>Sistema Multisig 2-de-2:</strong> Se crea una cuenta escrow única para cada tarea. Los fondos en USDC están seguros y requieren ambas firmas (cliente + trabajador) para liberar.
+            <h2>{t('proposals.title')} ({proposals.length})</h2>
+            <p>{t('proposals.subtitle')}</p>
+            <div className="cost-info-box">
+              <p>
+                <FaCheckCircle className="cost-info-icon" /> <strong>{t('proposals.escrow.trustless')}</strong>
               </p>
             </div>
           </div>
@@ -856,13 +852,14 @@ El proyecto está activo y el trabajador puede comenzar.`);
             {proposals.length === 0 ? (
             <div className="no-proposals">
               <div className="no-proposals-icon"><FaFileAlt /></div>
-              <h3>No hay propuestas aún</h3>
-              <p>Los trabajadores aún no han enviado propuestas para esta tarea.</p>
+              <h3>{t('proposals.empty.title')}</h3>
+              <p>{t('proposals.empty.desc')}</p>
             </div>
             ) : (
                 <div className="proposals-list">
               {proposals.map((proposal) => (
-                <div key={proposal.id} className={`proposal-card ${proposal.status}`}>
+                <div key={proposal.id} className="proposal-list-item">
+                <div className={`proposal-card ${proposal.status}`}>
                   <div className="proposal-header">
                     <div className="applicant-info">
                       <div className="applicant-avatar">
@@ -878,26 +875,26 @@ El proyecto está activo y el trabajador puede comenzar.`);
                     </div>
                     <div className="proposal-status">
                       {proposal.status === 'accepted' && (
-                        <span className="status-badge accepted">Aceptada</span>
+                        <span className="status-badge accepted">{t('proposals.status.accepted')}</span>
                       )}
                       {proposal.status === 'rejected' && (
-                        <span className="status-badge rejected">Rechazada</span>
+                        <span className="status-badge rejected">{t('proposals.status.rejected')}</span>
                       )}
                       {proposal.status === 'pending' && (
-                        <span className="status-badge pending">Pendiente</span>
+                        <span className="status-badge pending">{t('proposals.status.pending')}</span>
                       )}
                     </div>
                   </div>
 
                   <div className="proposal-content">
                     <div className="proposal-message">
-                      <h4>Mensaje del Trabajador</h4>
+                      <h4>{t('proposals.message.label')}</h4>
                             <p>{proposal.message}</p>
                     </div>
 
                             {proposal.portfolio_url && (
                       <div className="proposal-portfolio">
-                        <h4>Portfolio</h4>
+                        <h4>{t('proposals.view.portfolio')}</h4>
                         <a 
                           href={proposal.portfolio_url} 
                           target="_blank" 
@@ -905,18 +902,29 @@ El proyecto está activo y el trabajador puede comenzar.`);
                           className="portfolio-link"
                         >
                           <FaExternalLinkAlt />
-                          Ver Portfolio
+                          {t('proposals.view.portfolio')}
                         </a>
                       </div>
                     )}
 
                     <div className="proposal-wallet">
-                      <h4>Wallet Address</h4>
+                      <h4>{t('proposals.wallet.address')}</h4>
                       <div className="wallet-info">
                         <FaWallet />
                         <span className="wallet-address">{proposal.worker_wallet_address}</span>
                       </div>
                     </div>
+                  </div>
+
+                  <div className="proposal-footer">
+                    <Link
+                      to={`/profile/${proposal.applicant_id}`}
+                      state={{ from: `/proposals/${taskId}` }}
+                      className="view-profile-button"
+                    >
+                      <FaUserCircle />
+                      {t('proposals.view.publicProfile')}
+                    </Link>
                   </div>
 
                   {proposal.status === 'pending' && (
@@ -927,38 +935,37 @@ El proyecto está activo y el trabajador puede comenzar.`);
                         disabled={actionLoading}
                       >
                         <FaCheck />
-                        Seleccionar
+                        {t('proposals.select.button')}
                                 </button>
                     </div>
                             )}
                         </div>
-                    ))}
-                </div>
-            )}
 
-          {/* Panel de confirmación de selección - Ocultar si ya hay escrow completado */}
-          {!(task?.escrow_id && task?.accepted_applicant_id) && selectingProposal && selectedProposal && (
-            <div className="selection-confirmation">
+          {!(task?.escrow_id && task?.accepted_applicant_id) &&
+            selectingProposal &&
+            selectedProposal &&
+            Number(selectedProposal.id) === Number(proposal.id) && (
+            <div className="selection-confirmation selection-confirmation--below-card">
               <div className="confirmation-header">
-                <h3>Confirmar Selección</h3>
-                <p>Has seleccionado la propuesta de <strong>{selectedProposal.applicant_username}</strong></p>
+                <h3>{t('proposals.confirm.selection')}</h3>
+                <p>{t('proposals.confirm.selection.message')} <strong>{selectedProposal.applicant_username}</strong></p>
               </div>
               
               <div className="selected-proposal-summary">
                 <div className="summary-item">
-                  <strong>Mensaje:</strong>
+                  <strong>{t('proposals.label.message')}</strong>
                   <p>{selectedProposal.message}</p>
                 </div>
                 {selectedProposal.portfolio_url && (
                   <div className="summary-item">
-                    <strong>Portfolio:</strong>
+                    <strong>{t('proposals.view.portfolio')}:</strong>
                     <a href={selectedProposal.portfolio_url} target="_blank" rel="noopener noreferrer">
-                      <FaExternalLinkAlt /> Ver Portfolio
+                      <FaExternalLinkAlt /> {t('proposals.view.portfolio')}
                     </a>
                   </div>
                 )}
                 <div className="summary-item">
-                  <strong>Wallet:</strong>
+                  <strong>{t('proposals.label.wallet')}</strong>
                   <span className="wallet-address">{selectedProposal.worker_wallet_address}</span>
                 </div>
               </div>
@@ -974,7 +981,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
                   ) : (
                     <FaCheck />
                   )}
-                  {actionLoading ? 'Procesando...' : 'Aceptar Propuesta'}
+                  {actionLoading ? t('proposals.accept.processing') : t('proposals.accept.button')}
                 </button>
                 <button
                   className="action-button reject-button"
@@ -982,18 +989,23 @@ El proyecto está activo y el trabajador puede comenzar.`);
                   disabled={actionLoading}
                 >
                   <FaTimes />
-                  Cancelar Selección
+                  {t('proposals.cancel.selection')}
                 </button>
                 <button
                   className="action-button cancel-button"
                   onClick={handleCancelSelection}
                   disabled={actionLoading}
                 >
-                  Cancelar
+                  {t('common.cancel')}
                 </button>
               </div>
             </div>
           )}
+                </div>
+                    ))}
+                </div>
+            )}
+
         </div>
         )}
 
@@ -1034,7 +1046,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
               left: 0,
               right: 0,
               height: '4px',
-              background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+              background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
               borderRadius: '24px 24px 0 0'
             }}></div>
 
@@ -1056,7 +1068,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
             <h3 style={{
               fontSize: '32px',
               fontWeight: '700',
-              background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+              background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
@@ -1080,7 +1092,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
                     fontSize: '20px', 
                     marginBottom: '20px', 
                     fontWeight: '600',
-                    color: '#28c0f0'
+                    color: '#10dd88'
                   }}>
                     ¡Proceso Completado Exitosamente!
                   </p>
@@ -1151,9 +1163,9 @@ El proyecto está activo y el trabajador puede comenzar.`);
                           color: 'rgba(255, 255, 255, 0.8)',
                           margin: '4px 0'
                         }}>
-                          <strong style={{ color: '#28c0f0' }}>Wallet:</strong>{' '}
+                          <strong style={{ color: '#10dd88' }}>Wallet:</strong>{' '}
                           <code style={{ 
-                            color: '#28c0f0',
+                            color: '#10dd88',
                             background: 'rgba(40, 192, 240, 0.1)',
                             padding: '2px 6px',
                             borderRadius: '4px',
@@ -1185,9 +1197,9 @@ El proyecto está activo y el trabajador puede comenzar.`);
                           color: 'rgba(255, 255, 255, 0.6)',
                           margin: 0
                         }}>
-                          <strong style={{ color: '#28c0f0' }}>Contract ID:</strong>{' '}
+                          <strong style={{ color: '#10dd88' }}>{t('proposals.label.contractId')}</strong>{' '}
                           <code style={{ 
-                            color: '#28c0f0',
+                            color: '#10dd88',
                             background: 'rgba(40, 192, 240, 0.1)',
                             padding: '4px 8px',
                             borderRadius: '4px',
@@ -1205,7 +1217,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
                   <p style={{ 
                     fontSize: '18px',
                     fontWeight: '600',
-                    color: '#28c0f0',
+                    color: '#10dd88',
                     marginBottom: '16px'
                   }}>
                     <strong>¡Contrato escrow creado exitosamente!</strong>
@@ -1218,14 +1230,14 @@ El proyecto está activo y el trabajador puede comenzar.`);
                     textAlign: 'left'
                   }}>
                     <p style={{ margin: '8px 0', color: 'rgba(255, 255, 255, 0.9)' }}>
-                      <strong style={{ color: '#28c0f0' }}>Dirección del contrato:</strong>
+                      <strong style={{ color: '#10dd88' }}>{t('proposals.label.contractAddress')}</strong>
                     </p>
                     <code className="contract-address" style={{
                       display: 'block',
                       background: 'rgba(7, 35, 60, 0.5)',
                       padding: '12px',
                       borderRadius: '8px',
-                      color: '#28c0f0',
+                      color: '#10dd88',
                       fontSize: '14px',
                       wordBreak: 'break-all',
                       margin: '8px 0',
@@ -1234,10 +1246,10 @@ El proyecto está activo y el trabajador puede comenzar.`);
                       {popupMessage.split('Dirección del contrato: ')[1]?.split('\n')[0]}
                     </code>
                     <p style={{ margin: '8px 0', color: 'rgba(255, 255, 255, 0.9)' }}>
-                      <strong style={{ color: '#28c0f0' }}>Red:</strong> {popupMessage.split('Red: ')[1]?.split('\n')[0]}
+                      <strong style={{ color: '#10dd88' }}>{t('proposals.label.network')}</strong> {popupMessage.split('Red: ')[1]?.split('\n')[0]}
                     </p>
                     <p style={{ margin: '8px 0', color: 'rgba(255, 255, 255, 0.9)' }}>
-                      <strong style={{ color: '#28c0f0' }}>Estado:</strong> {popupMessage.split('Estado: ')[1]}
+                      <strong style={{ color: '#10dd88' }}>{t('proposals.label.status')}</strong> {popupMessage.split('Estado: ')[1]}
                     </p>
                   </div>
                 </div>
@@ -1252,7 +1264,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
                 onClick={handleGoToSupervise} 
                 className="popup-button success-button"
                 style={{
-                  background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                  background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
                   color: '#fff',
                   border: 'none',
                   padding: '16px 40px',
@@ -1277,7 +1289,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
                   e.currentTarget.style.boxShadow = '0 4px 16px rgba(40, 192, 240, 0.4)';
                 }}
               >
-                <FaEye style={{ marginRight: '8px' }} /> Supervisar Tarea
+                <FaEye style={{ marginRight: '8px' }} /> {t('proposals.supervise.button')}
               </button>
               <button 
                 onClick={handleGoToDashboard} 
@@ -1307,7 +1319,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
-                <FaHome style={{ marginRight: '8px' }} /> Ir al Dashboard
+                <FaHome style={{ marginRight: '8px' }} /> {t('proposals.dashboard.button')}
               </button>
             </div>
           </div>
@@ -1321,7 +1333,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
             <div className="popup-icon" style={{ color: '#ef4444', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '48px' }}>
               <FaTimes />
             </div>
-            <h3>Error</h3>
+            <h3>{t('common.error')}</h3>
             <p>{popupMessage}</p>
             <button onClick={handleErrorPopupClose} className="popup-button error-button">
               Entendido

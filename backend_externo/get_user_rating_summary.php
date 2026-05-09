@@ -13,107 +13,203 @@
  * - rating_distribution: array con distribución de ratings (1-5)
  */
 
-require_once 'admin_common.php';
+// CORS headers - DEBEN IR PRIMERO, ANTES DE CUALQUIER OTRO OUTPUT
+$allowed_origins = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'https://arcusx.pro',
+    'http://arcusx.pro'
+];
+$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
 
-header('Content-Type: application/json');
-
-// Manejar preflight OPTIONS
+// Manejar preflight OPTIONS request PRIMERO
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    if (in_array($origin, $allowed_origins)) {
+        header("Access-Control-Allow-Origin: $origin");
+        header("Access-Control-Allow-Credentials: true");
+    }
+    header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+    header("Access-Control-Max-Age: 3600");
+    header("Content-Length: 0");
     http_response_code(200);
     exit();
 }
 
-try {
-    // Obtener conexión y usuario
-    $conn = getDatabaseConnection();
-    $user = getCurrentUser($conn);
-    
-    if (!$user) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'No autorizado']);
-        exit();
+// Headers CORS para requests normales
+if (in_array($origin, $allowed_origins)) {
+    header("Access-Control-Allow-Origin: $origin");
+    header("Access-Control-Allow-Credentials: true");
+} else {
+    $_cors_origin = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header("Access-Control-Allow-Origin: ".$_cors_origin);
+}
+header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+header("Access-Control-Max-Age: 3600");
+header("Content-Type: application/json; charset=UTF-8");
+
+// Habilitar logs (pero NO mostrar errores en pantalla para evitar output antes de headers)
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
+error_reporting(E_ALL);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/php-error.log');
+
+require_once 'config.php';
+require_once 'vendor/autoload.php';
+
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
+
+// Definir la clave secreta (debe coincidir con ARCUSX_JWT_SECRET en config.php)
+$secret_key = $jwt_secret;
+
+// Función para obtener el ID del usuario logeado desde el token JWT
+function getLoggedInUserId($conn, $secret_key) {
+    $headers = getallheaders();
+    if (!isset($headers['Authorization'])) {
+        return null;
     }
-    
-    // Obtener user_id (del token o parámetro)
-    $userId = isset($_GET['user_id']) ? (int)$_GET['user_id'] : $user['id'];
-    
-    // Solo permitir que un usuario vea sus propios datos (a menos que sea admin)
-    if ($userId !== $user['id'] && !$user['is_admin']) {
-        http_response_code(403);
-        echo json_encode(['success' => false, 'message' => 'No tienes permiso para ver estos datos']);
-        exit();
+
+    $authHeader = $headers['Authorization'];
+    if (!preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+        return null;
     }
-    
-    // Obtener promedio y total de ratings
-    $summaryStmt = $conn->prepare("
-        SELECT 
-            AVG(rating) as average_rating,
-            COUNT(*) as total_ratings
-        FROM ratings
-        WHERE rated_id = ?
-    ");
-    $summaryStmt->bind_param("i", $userId);
-    $summaryStmt->execute();
-    $summaryResult = $summaryStmt->get_result();
-    $summaryData = $summaryResult->fetch_assoc();
-    
-    $averageRating = $summaryData['average_rating'] ? round((float)$summaryData['average_rating'], 2) : 0.00;
-    $totalRatings = (int)$summaryData['total_ratings'];
-    
-    // Obtener distribución de ratings (cuántos 5, 4, 3, 2, 1)
-    $distStmt = $conn->prepare("
-        SELECT 
-            rating,
-            COUNT(*) as count
-        FROM ratings
-        WHERE rated_id = ?
-        GROUP BY rating
-        ORDER BY rating DESC
-    ");
-    $distStmt->bind_param("i", $userId);
-    $distStmt->execute();
-    $distResult = $distStmt->get_result();
-    
-    $distribution = [
-        '5' => 0,
-        '4' => 0,
-        '3' => 0,
-        '2' => 0,
-        '1' => 0
-    ];
-    
-    while ($row = $distResult->fetch_assoc()) {
-        $distribution[(string)$row['rating']] = (int)$row['count'];
-    }
-    
-    // Obtener también desde la tabla users (puede estar más actualizado)
-    $userStmt = $conn->prepare("SELECT average_rating, total_ratings FROM users WHERE id = ?");
-    $userStmt->bind_param("i", $userId);
-    $userStmt->execute();
-    $userResult = $userStmt->get_result();
-    
-    if ($userRow = $userResult->fetch_assoc()) {
-        // Usar los valores de la tabla users si están disponibles
-        if ($userRow['average_rating'] !== null) {
-            $averageRating = round((float)$userRow['average_rating'], 2);
+
+    $jwt = $matches[1];
+
+    try {
+        $decoded = JWT::decode($jwt, new Key($secret_key, 'HS256'));
+        if (isset($decoded->data->id)) {
+            return (string) $decoded->data->id;
+        } else {
+            return null;
         }
-        if ($userRow['total_ratings'] !== null) {
-            $totalRatings = (int)$userRow['total_ratings'];
-        }
+    } catch (Exception $e) {
+        error_log("JWT Error in get_user_rating_summary.php: " . $e->getMessage());
+        return null;
     }
-    
-    echo json_encode([
-        'success' => true,
-        'average_rating' => $averageRating,
-        'total_ratings' => $totalRatings,
-        'rating_distribution' => $distribution
-    ]);
-    
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Error al obtener resumen de ratings: ' . $e->getMessage()
-    ]);
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    $loggedInUserId = getLoggedInUserId($conn, $secret_key);
+
+    if (is_null($loggedInUserId)) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Acceso no autorizado: Token JWT no proporcionado o inválido.']);
+        exit;
+    }
+
+    try {
+        // Obtener información del usuario autenticado para verificar si es admin
+        $userStmt = $conn->prepare("SELECT id, is_admin FROM users WHERE id = ?");
+        $userStmt->bind_param("i", $loggedInUserId);
+        $userStmt->execute();
+        $userResult = $userStmt->get_result();
+        
+        if ($userResult->num_rows === 0) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'Usuario no encontrado']);
+            exit;
+        }
+        
+        $user = $userResult->fetch_assoc();
+        $isAdmin = ($user['is_admin'] == 1);
+        
+        // Obtener user_id (del token o parámetro)
+        $userId = isset($_GET['user_id']) ? (int)$_GET['user_id'] : (int)$user['id'];
+        
+        // Solo permitir que un usuario vea sus propios datos (a menos que sea admin)
+        if ($userId !== (int)$user['id'] && !$isAdmin) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'No tienes permiso para ver estos datos']);
+            exit();
+        }
+        
+        // Obtener promedio y total de ratings
+        $summaryStmt = $conn->prepare("
+            SELECT 
+                AVG(rating) as average_rating,
+                COUNT(*) as total_ratings
+            FROM ratings
+            WHERE rated_id = ?
+        ");
+        $summaryStmt->bind_param("i", $userId);
+        $summaryStmt->execute();
+        $summaryResult = $summaryStmt->get_result();
+        $summaryData = $summaryResult->fetch_assoc();
+        
+        $averageRating = $summaryData['average_rating'] ? round((float)$summaryData['average_rating'], 2) : 0.00;
+        $totalRatings = (int)$summaryData['total_ratings'];
+        
+        // Obtener distribución de ratings (cuántos 5, 4, 3, 2, 1)
+        $distStmt = $conn->prepare("
+            SELECT 
+                rating,
+                COUNT(*) as count
+            FROM ratings
+            WHERE rated_id = ?
+            GROUP BY rating
+            ORDER BY rating DESC
+        ");
+        $distStmt->bind_param("i", $userId);
+        $distStmt->execute();
+        $distResult = $distStmt->get_result();
+        
+        $distribution = [
+            '5' => 0,
+            '4' => 0,
+            '3' => 0,
+            '2' => 0,
+            '1' => 0
+        ];
+        
+        while ($row = $distResult->fetch_assoc()) {
+            $distribution[(string)$row['rating']] = (int)$row['count'];
+        }
+        
+        // Obtener también desde la tabla users (puede estar más actualizado)
+        $userDataStmt = $conn->prepare("SELECT average_rating, total_ratings FROM users WHERE id = ?");
+        $userDataStmt->bind_param("i", $userId);
+        $userDataStmt->execute();
+        $userDataResult = $userDataStmt->get_result();
+        
+        if ($userRow = $userDataResult->fetch_assoc()) {
+            // Usar los valores de la tabla users si están disponibles
+            if ($userRow['average_rating'] !== null) {
+                $averageRating = round((float)$userRow['average_rating'], 2);
+            }
+            if ($userRow['total_ratings'] !== null) {
+                $totalRatings = (int)$userRow['total_ratings'];
+            }
+        }
+        
+        echo json_encode([
+            'success' => true,
+            'average_rating' => $averageRating,
+            'total_ratings' => $totalRatings,
+            'rating_distribution' => $distribution
+        ]);
+        
+    } catch (Exception $e) {
+        error_log("get_user_rating_summary.php - EXCEPCIÓN: " . $e->getMessage());
+        error_log("get_user_rating_summary.php - STACK TRACE: " . $e->getTraceAsString());
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Error al obtener resumen de ratings: ' . $e->getMessage()
+        ]);
+    } catch (Error $e) {
+        error_log("get_user_rating_summary.php - ERROR FATAL: " . $e->getMessage());
+        error_log("get_user_rating_summary.php - STACK TRACE: " . $e->getTraceAsString());
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Error fatal del servidor: ' . $e->getMessage()
+        ]);
+    }
+} else {
+    http_response_code(405);
+    echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+    exit();
+}

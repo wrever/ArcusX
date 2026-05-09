@@ -50,7 +50,7 @@ require __DIR__ . '/vendor/autoload.php';
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
-$secret_key = "SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY";
+$secret_key = $jwt_secret;
 
 // Función para obtener el ID del usuario logueado desde el token JWT
 function getLoggedInUserId($conn, $secret_key) {
@@ -99,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header("Content-Type: application/json; charset=UTF-8");
         }
         http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'Acceso no autorizado: Token JWT no proporcionado o inválido.']);
+        echo json_encode(['success' => false, 'message' => 'Acceso no autorizado: Token JWT no proporcionado o inválido.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
     
@@ -109,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!isset($data['task_id']) || !isset($data['proposal_id'])) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Faltan datos requeridos.']);
+        echo json_encode(['success' => false, 'message' => 'Faltan datos requeridos.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
 
@@ -140,7 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header("Content-Type: application/json; charset=UTF-8");
             }
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'escrow_id inválido']);
+            echo json_encode(['success' => false, 'message' => 'escrow_id inválido'], JSON_UNESCAPED_UNICODE);
             exit;
         }
     }
@@ -181,7 +181,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header("Content-Type: application/json; charset=UTF-8");
             }
             http_response_code(404);
-            echo json_encode(['success' => false, 'message' => 'Tarea o propuesta no encontrada']);
+            echo json_encode(['success' => false, 'message' => 'Tarea o propuesta no encontrada'], JSON_UNESCAPED_UNICODE);
             $conn->rollback();
             exit;
         }
@@ -199,7 +199,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header("Content-Type: application/json; charset=UTF-8");
             }
             http_response_code(400);
-            echo json_encode(['success' => false, 'message' => 'La tarea ya no está disponible. Estado actual: ' . $task_data['status']]);
+            echo json_encode(['success' => false, 'message' => 'La tarea ya no está disponible. Estado actual: ' . $task_data['status']], JSON_UNESCAPED_UNICODE);
             $conn->rollback();
             exit;
         }
@@ -237,7 +237,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header("Content-Type: application/json; charset=UTF-8");
             }
             http_response_code(404);
-            echo json_encode(['success' => false, 'message' => 'Tarea o propuesta no encontrada']);
+            echo json_encode(['success' => false, 'message' => 'Tarea o propuesta no encontrada'], JSON_UNESCAPED_UNICODE);
             $conn->rollback();
             exit;
         }
@@ -412,7 +412,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         http_response_code(200);
-        echo json_encode($response);
+        echo json_encode($response, JSON_UNESCAPED_UNICODE);
 
     } catch (Exception $e) {
         // Intentar hacer rollback si hay una transacción activa
@@ -442,7 +442,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode([
             'success' => false, 
             'message' => $e->getMessage()
-        ]);
+        ], JSON_UNESCAPED_UNICODE);
     }
 
     if (isset($conn) && $conn) {
@@ -451,7 +451,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 } else {
     http_response_code(405);
-    echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+    echo json_encode(['success' => false, 'message' => 'Método no permitido'], JSON_UNESCAPED_UNICODE);
     error_log("Method not allowed: " . $_SERVER['REQUEST_METHOD']);
 }
 ?>

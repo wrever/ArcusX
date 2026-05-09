@@ -1,6 +1,7 @@
 .rating-display {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
   gap: 0.5rem;
 }
 
@@ -51,6 +52,15 @@
 
 .rating-small .rating-value {
   font-size: 0.9rem;
+}
+
+.rating-small .rating-stars {
+  flex-shrink: 0;
+}
+
+.rating-small .rating-info {
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .rating-medium .rating-stars .star {

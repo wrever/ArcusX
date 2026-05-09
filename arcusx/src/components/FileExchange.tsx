@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { FaUpload, FaDownload, FaFile, FaTrash, FaSpinner } from 'react-icons/fa';
+import { FaUpload, FaDownload, FaFile, FaTrash, FaSpinner, FaFolderOpen } from 'react-icons/fa';
 import '../css/FileExchange.css';
+import { useI18n } from '../i18n/I18nProvider';
 
 interface FileItem {
   id: string;
@@ -28,6 +29,7 @@ const FileExchange: React.FC<FileExchangeProps> = ({
   files,
   onFilesChange
 }) => {
+  const { t } = useI18n();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -68,14 +70,14 @@ const FileExchange: React.FC<FileExchangeProps> = ({
             onFilesChange([...files, result.file]);
             setError(null);
           } else {
-            setError(result.message || 'Error al subir archivo');
+            setError(result.message || t('filex.error.upload'));
           }
         } else {
-          setError('Error al subir archivo');
+          setError(t('filex.error.upload'));
         }
       }
     } catch (err: any) {
-      setError('Error al subir archivos: ' + (err.message || 'Error desconocido'));
+      setError(t('filex.error.upload.multiple') + ': ' + (err.message || 'Error desconocido'));
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
@@ -102,7 +104,7 @@ const FileExchange: React.FC<FileExchangeProps> = ({
   };
 
   const deleteFile = async (fileId: string) => {
-    if (!window.confirm('¿Estás seguro de que quieres eliminar este archivo?')) {
+    if (!window.confirm(t('filex.delete.confirm'))) {
       return;
     }
 
@@ -122,13 +124,13 @@ const FileExchange: React.FC<FileExchangeProps> = ({
           onFilesChange(files.filter(file => file.id !== fileId));
           setError(null);
         } else {
-          setError(result.message || 'Error al eliminar archivo');
+          setError(result.message || t('filex.error.delete'));
         }
       } else {
-        setError('Error al eliminar archivo');
+        setError(t('filex.error.delete'));
       }
     } catch (err: any) {
-      setError('Error al eliminar archivo: ' + (err.message || 'Error desconocido'));
+      setError(t('filex.error.delete') + ': ' + (err.message || 'Error desconocido'));
     }
   };
 
@@ -140,7 +142,7 @@ const FileExchange: React.FC<FileExchangeProps> = ({
   return (
     <div className="file-exchange">
       <div className="file-exchange-header">
-        <h2>Intercambio de Archivos</h2>
+        <h2><FaFolderOpen aria-hidden="true" /> {t('filex.title')}</h2>
         <div className="file-actions">
           <input
             ref={fileInputRef}
@@ -156,7 +158,7 @@ const FileExchange: React.FC<FileExchangeProps> = ({
             className="upload-btn"
           >
             {uploading ? <FaSpinner className="spinner" /> : <FaUpload />}
-            {uploading ? 'Subiendo...' : 'Subir Archivos'}
+            {uploading ? t('filex.uploading') : t('filex.upload')}
           </button>
         </div>
       </div>
@@ -171,13 +173,13 @@ const FileExchange: React.FC<FileExchangeProps> = ({
         {false ? (
           <div className="loading-files">
             <FaSpinner className="spinner" />
-            <p>Cargando archivos...</p>
+            <p>{t('filex.loading')}</p>
           </div>
         ) : files.length === 0 ? (
           <div className="no-files">
             <FaFile className="no-files-icon" />
-            <p>Aún no existen archivos compartidos.</p>
-            <p className="file-info">Sube archivos para compartir con el equipo.</p>
+            <p>{t('filex.no.files')}</p>
+            <p className="file-info">{t('filex.no.files.info')}</p>
           </div>
         ) : (
           <div className="files-list">
@@ -198,7 +200,7 @@ const FileExchange: React.FC<FileExchangeProps> = ({
                   <button
                     onClick={() => downloadFile(file)}
                     className="download-btn"
-                    title="Descargar archivo"
+                    title={t('filex.download')}
                   >
                     <FaDownload />
                   </button>
@@ -206,7 +208,7 @@ const FileExchange: React.FC<FileExchangeProps> = ({
                     <button
                       onClick={() => deleteFile(file.id)}
                       className="delete-btn"
-                      title="Eliminar archivo"
+                      title={t('filex.delete')}
                     >
                       <FaTrash />
                     </button>

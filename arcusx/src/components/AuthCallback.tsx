@@ -1,106 +1,88 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
-import { supabase } from '../config/supabase';
+import { supabase, hasSupabase } from '../config/supabase';
+import { useI18n } from '../i18n/I18nProvider';
 import '../css/Login.css';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const retryCount = useRef(0);
+  const maxRetries = 2;
 
   useEffect(() => {
-    
-    // Escuchar cambios en el estado de autenticación
+    if (!hasSupabase) {
+      setError(t('auth.callback.error.auth'));
+      setLoading(false);
+      return;
+    }
+
+    const processSession = async (session: { user: unknown } | null) => {
+      if (!session?.user) return false;
+      try {
+        const result = await authService.handleSupabaseCallback();
+        if (result && result.user?.id) {
+          await new Promise(resolve => setTimeout(resolve, 300));
+          if (!localStorage.getItem('token')) {
+            setError(t('auth.callback.error.saveSession'));
+            setLoading(false);
+            return true;
+          }
+          window.location.href = '/dashboard';
+          return true;
+        }
+        setError(t('auth.callback.error.auth'));
+        setLoading(false);
+        return true;
+      } catch (err: unknown) {
+        const msg = err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+          : err instanceof Error ? err.message : t('auth.callback.error.process');
+        setError(String(msg));
+        setLoading(false);
+        return true;
+      }
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        if (session?.user) {
-          try {
-            // Sincronizar usuario con backend PHP para obtener token JWT
-            const result = await authService.handleSupabaseCallback();
-            
-            if (result && result.user?.id) {
-              // Esperar un momento para asegurar que el token esté guardado
-              await new Promise(resolve => setTimeout(resolve, 300));
-              
-              // Verificar que el token esté realmente guardado
-              const token = localStorage.getItem('token');
-              if (!token) {
-                setError('Error al guardar la sesión. Por favor, intenta iniciar sesión nuevamente.');
-                setLoading(false);
-                return;
-              }
-              
-              // Usar window.location para forzar recarga completa y asegurar que ProtectedRoute vea el token
-              window.location.href = '/dashboard';
-            } else {
-              setError('No se pudo completar la autenticación. Por favor, intenta iniciar sesión nuevamente.');
-              setLoading(false);
-            }
-          } catch (err: any) {
-            const errorMessage = err.response?.data?.message || err.message || 'Error al procesar la autenticación';
-            setError(errorMessage);
-            setLoading(false);
-          }
-        }
+        if (session?.user) await processSession(session);
       } else if (event === 'SIGNED_OUT') {
-        setError('Sesión cerrada. Por favor, inicia sesión nuevamente.');
+        setError(t('auth.callback.error.signedOut'));
         setLoading(false);
       }
     });
 
-    // También intentar obtener la sesión actual inmediatamente
     const checkSession = async () => {
       try {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          // No lanzar error aquí, esperar a onAuthStateChange
+        if (sessionError) return;
+        if (session?.user) {
+          await processSession(session);
           return;
         }
-        
-        if (session?.user) {
-          // Sincronizar usuario con backend PHP para obtener token JWT
-          const result = await authService.handleSupabaseCallback();
-          
-          if (result && result.user?.id) {
-            // Esperar un momento para asegurar que el token esté guardado
-            await new Promise(resolve => setTimeout(resolve, 300));
-            
-            // Verificar que el token esté realmente guardado
-            const token = localStorage.getItem('token');
-            if (!token) {
-              setError('Error al guardar la sesión. Por favor, intenta iniciar sesión nuevamente.');
-              setLoading(false);
-              return;
-            }
-            
-            // Usar window.location para forzar recarga completa y asegurar que ProtectedRoute vea el token
-            window.location.href = '/dashboard';
-          } else {
-            setError('No se pudo completar la autenticación. Por favor, intenta iniciar sesión nuevamente.');
-            setLoading(false);
-          }
+        retryCount.current += 1;
+        if (retryCount.current <= maxRetries) {
+          setTimeout(checkSession, 1500);
         } else {
-          // Esperar a que Supabase procese la URL
-          setTimeout(() => {
-            if (loading) {
-              checkSession();
-            }
-          }, 2000);
+          setLoading(false);
+          setError(t('auth.callback.error.noSession'));
         }
-      } catch (err: any) {
-        // No establecer error aquí, esperar a onAuthStateChange
+      } catch {
+        retryCount.current += 1;
+        if (retryCount.current > maxRetries) {
+          setLoading(false);
+          setError(t('auth.callback.error.process'));
+        }
       }
     };
 
     checkSession();
-
-    // Limpiar suscripción al desmontar
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [navigate, loading]);
+    return () => subscription.unsubscribe();
+  }, [t]);
 
   if (loading) {
     return (
@@ -108,8 +90,8 @@ const AuthCallback = () => {
         <div className="login-card">
           <div className="login-header">
             <div className="login-logo">ArcusX</div>
-            <h2>Completando autenticación...</h2>
-            <p>Por favor espera</p>
+            <h2>{t('auth.callback.completing')}</h2>
+            <p>{t('auth.callback.pleaseWait')}</p>
           </div>
         </div>
       </div>
@@ -122,14 +104,14 @@ const AuthCallback = () => {
         <div className="login-card">
           <div className="login-header">
             <div className="login-logo">ArcusX</div>
-            <h2>Error de autenticación</h2>
+            <h2>{t('auth.callback.errorTitle')}</h2>
             <div className="login-error">{error}</div>
             <button 
               className="login-button" 
               onClick={() => navigate('/login')}
               style={{ marginTop: '1rem' }}
             >
-              Volver al Login
+              {t('auth.callback.backToLogin')}
             </button>
           </div>
         </div>
@@ -143,8 +125,8 @@ const AuthCallback = () => {
       <div className="login-card">
         <div className="login-header">
           <div className="login-logo">ArcusX</div>
-          <h2>Completando autenticación...</h2>
-          <p>Por favor espera</p>
+          <h2>{t('auth.callback.completing')}</h2>
+          <p>{t('auth.callback.pleaseWait')}</p>
         </div>
       </div>
     </div>

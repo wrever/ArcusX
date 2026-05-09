@@ -1,6 +1,7 @@
-import { ReactNode, useEffect } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { ReactNode } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useI18n } from '../i18n/I18nProvider';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -8,14 +9,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { isAuthenticated, loading } = useAuth();
-  const navigate = useNavigate();
-
-  // Si el usuario cierra sesión, redirigir inmediatamente
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      navigate('/login', { replace: true });
-    }
-  }, [isAuthenticated, loading, navigate]);
+  const { t } = useI18n();
 
   // Mostrar loading mientras se verifica la autenticación
   if (loading) {
@@ -33,7 +27,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
           borderRadius: '12px',
           textAlign: 'center'
         }}>
-          <h3>Verificando autenticación...</h3>
+          <h3>{t('auth.verifying')}</h3>
         </div>
       </div>
     );

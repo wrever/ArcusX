@@ -7,14 +7,22 @@
  * Retorna notificaciones globales (user_id = NULL) y notificaciones individuales del usuario
  */
 
-require_once 'config.php';
-require_once 'vendor/autoload.php';
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/vendor/autoload.php';
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
+function fix_utf8_mojibake($str) {
+    if (!is_string($str) || $str === '') return $str;
+    $bytes = @mb_convert_encoding($str, 'ISO-8859-1', 'UTF-8');
+    if ($bytes === false) return $str;
+    if (!mb_check_encoding($bytes, 'UTF-8')) return $str;
+    return $bytes;
+}
+
 // Headers CORS
-header("Access-Control-Allow-Origin: *");
+$_cors_origin = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header("Access-Control-Allow-Origin: ".$_cors_origin);
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
 header("Content-Type: application/json; charset=UTF-8");
@@ -24,7 +32,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-$jwt_secret = "SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY";
 
 function getLoggedInUserId($conn, $secret_key) {
     $headers = getallheaders();
@@ -104,8 +111,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $notifications[] = [
             'id' => (int)$row['id'],
             'user_id' => $row['user_id'] ? (int)$row['user_id'] : null,
-            'title' => $row['title'],
-            'message' => $row['message'],
+            'title' => fix_utf8_mojibake($row['title'] ?? ''),
+            'message' => fix_utf8_mojibake($row['message'] ?? ''),
             'type' => $row['type'],
             'created_at' => $row['created_at'],
             'is_global' => (bool)$row['is_global'],

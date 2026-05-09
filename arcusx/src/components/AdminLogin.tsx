@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaLock, FaUser, FaEye, FaEyeSlash, FaShieldAlt, FaArrowLeft, FaKey } from 'react-icons/fa';
 import { adminLogin } from '../services/adminService';
+import { useI18n } from '../i18n/I18nProvider';
 import '../css/Login.css';
 import '../css/AdminLogin.css';
 
 const AdminLogin = () => {
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -19,7 +21,7 @@ const AdminLogin = () => {
     setLoading(true);
 
     if (!email || !password) {
-      setError('Por favor, completa todos los campos');
+      setError(t('admin.login.error.fields'));
       setLoading(false);
       return;
     }
@@ -31,10 +33,10 @@ const AdminLogin = () => {
         // Redirigir al panel de administración
         navigate('/admin/dashboard');
       } else {
-        setError(response.message || 'Error al iniciar sesión. Verifica tus credenciales.');
+        setError(response.message || t('admin.login.error.credentials'));
       }
     } catch (err: any) {
-      setError(err.message || 'Error de conexión. Por favor, intenta nuevamente.');
+      setError(err.message || t('admin.login.error.connection'));
     } finally {
       setLoading(false);
     }
@@ -48,7 +50,7 @@ const AdminLogin = () => {
 
       <Link to="/login" className="admin-back-button">
         <FaArrowLeft />
-        <span>Volver al login</span>
+        <span>{t('admin.login.back')}</span>
       </Link>
 
       <div className="admin-login-card">
@@ -60,9 +62,9 @@ const AdminLogin = () => {
             </div>
           </div>
           <h1 className="admin-title">
-            Panel de <span className="admin-title-highlight">Administración</span>
+            {t('admin.login.title.prefix')} <span className="admin-title-highlight">{t('admin.login.title.highlight')}</span>
           </h1>
-          <p className="admin-subtitle">Acceso exclusivo para administradores autorizados</p>
+          <p className="admin-subtitle">{t('admin.login.subtitle')}</p>
           <div className="admin-divider"></div>
         </div>
 
@@ -77,7 +79,7 @@ const AdminLogin = () => {
           <div className="admin-form-group">
             <label htmlFor="admin-email" className="admin-label">
               <FaUser className="admin-label-icon" />
-              <span>Email de Administrador</span>
+              <span>{t('admin.login.label.email')}</span>
             </label>
             <div className="admin-input-wrapper">
               <input
@@ -85,7 +87,7 @@ const AdminLogin = () => {
                 id="admin-email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@arcusx.pro"
+                placeholder={t('admin.login.placeholder.email')}
                 required
                 disabled={loading}
                 className="admin-input"
@@ -96,7 +98,7 @@ const AdminLogin = () => {
           <div className="admin-form-group">
             <label htmlFor="admin-password" className="admin-label">
               <FaLock className="admin-label-icon" />
-              <span>Contraseña</span>
+              <span>{t('admin.login.label.password')}</span>
             </label>
             <div className="admin-input-wrapper">
               <input
@@ -104,7 +106,7 @@ const AdminLogin = () => {
                 id="admin-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
+                placeholder={t('admin.login.placeholder.password')}
                 required
                 disabled={loading}
                 className="admin-input"
@@ -114,7 +116,7 @@ const AdminLogin = () => {
                 className="admin-password-toggle"
                 onClick={() => setShowPassword(!showPassword)}
                 disabled={loading}
-                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                aria-label={showPassword ? t('admin.login.aria.hidePassword') : t('admin.login.aria.showPassword')}
               >
                 {showPassword ? <FaEyeSlash /> : <FaEye />}
               </button>
@@ -129,12 +131,12 @@ const AdminLogin = () => {
             {loading ? (
               <>
                 <div className="admin-spinner"></div>
-                <span>Verificando credenciales...</span>
+                <span>{t('admin.login.submitting')}</span>
               </>
             ) : (
               <>
                 <FaKey />
-                <span>Acceder al Panel</span>
+                <span>{t('admin.login.accessPanel')}</span>
               </>
             )}
           </button>
@@ -143,7 +145,7 @@ const AdminLogin = () => {
         <div className="admin-login-footer">
           <div className="admin-security-note">
             <FaShieldAlt />
-            <span>Conexión segura y encriptada</span>
+            <span>{t('admin.login.secureNote')}</span>
           </div>
         </div>
       </div>

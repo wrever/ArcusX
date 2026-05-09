@@ -6,7 +6,15 @@
  * Headers: Authorization: Bearer {JWT_TOKEN} (opcional, para saber si es el dueño)
  */
 
-require_once 'config.php';
+require_once __DIR__ . '/config.php';
+
+function fix_utf8_mojibake($str) {
+    if (!is_string($str) || $str === '') return $str;
+    $bytes = @mb_convert_encoding($str, 'ISO-8859-1', 'UTF-8');
+    if ($bytes === false) return $str;
+    if (!mb_check_encoding($bytes, 'UTF-8')) return $str;
+    return $bytes;
+}
 
 $autoload_path = __DIR__ . '/vendor/autoload.php';
 if (!file_exists($autoload_path)) {
@@ -23,7 +31,7 @@ use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
 // Headers CORS
-header("Access-Control-Allow-Origin: *");
+$_cors_origin = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header("Access-Control-Allow-Origin: ".$_cors_origin);
 header("Access-Control-Allow-Methods: GET, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
 header("Access-Control-Max-Age: 3600");
@@ -34,7 +42,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-$jwt_secret = "SD5EHQUAHFWVLTFPBXYYA3OXXSVA26H4TSW4XB56JDPKLS6PPW3ZPAQY";
 
 /**
  * Obtener el ID del usuario autenticado desde el JWT
@@ -94,8 +101,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             error_log("Error asegurando columnas de perfil: " . $e->getMessage());
         }
 
+        // Verificar si existe columna skills
+        $checkSkillsColumn = $conn->query("SHOW COLUMNS FROM users LIKE 'skills'");
+        $hasSkillsColumn = $checkSkillsColumn && $checkSkillsColumn->num_rows > 0;
+        
         // Obtener datos básicos del usuario
-        $stmt = $conn->prepare("
+        $sqlSelect = "
             SELECT 
                 id,
                 username,
@@ -106,11 +117,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 public_profile,
                 created_at,
                 average_rating,
-                total_ratings
+                total_ratings"
+                . ($hasSkillsColumn ? ", skills" : "") . "
             FROM users
             WHERE id = ?
             LIMIT 1
-        ");
+        ";
+        $stmt = $conn->prepare($sqlSelect);
         if (!$stmt) {
             throw new Exception('Error al preparar consulta de usuario: ' . $conn->error);
         }
@@ -126,6 +139,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         }
         $user = $res->fetch_assoc();
         $stmt->close();
+
+        foreach (['username', 'bio'] as $k) {
+            if (isset($user[$k]) && is_string($user[$k])) $user[$k] = fix_utf8_mojibake($user[$k]);
+        }
 
         $isOwner = $currentUserId && $currentUserId === (int)$user['id'];
         $isPublic = isset($user['public_profile']) ? (int)$user['public_profile'] === 1 : true;
@@ -153,9 +170,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 $stmtP->execute();
                 $resP = $stmtP->get_result();
                 while ($row = $resP->fetch_assoc()) {
+                    foreach (['title', 'description', 'category'] as $k) {
+                        if (isset($row[$k]) && is_string($row[$k])) $row[$k] = fix_utf8_mojibake($row[$k]);
+                    }
                     $portfolio[] = $row;
                 }
                 $stmtP->close();
+            }
+        }
+
+        // Skills (si existe la columna)
+        $skills = [];
+        $checkSkills = $conn->query("SHOW COLUMNS FROM users LIKE 'skills'");
+        if ($checkSkills && $checkSkills->num_rows > 0) {
+            if (!empty($user['skills'])) {
+                $skillsData = json_decode($user['skills'], true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($skillsData)) {
+                    $skills = $skillsData;
+                } else {
+                    // Si no es JSON válido, asumir string separado por comas
+                    $skillsArray = array_filter(array_map('trim', explode(',', $user['skills'])));
+                    foreach ($skillsArray as $skillName) {
+                        $skills[] = ['name' => $skillName, 'level' => 'intermediate'];
+                    }
+                }
             }
         }
 
@@ -170,7 +208,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             'member_since' => $user['created_at'],
             'average_rating' => $user['average_rating'] !== null ? (float)$user['average_rating'] : 0.0,
             'total_ratings' => $user['total_ratings'] !== null ? (int)$user['total_ratings'] : 0,
-            'portfolio' => $portfolio
+            'portfolio' => $portfolio,
+            'skills' => $skills,
+            'verified' => false // Por ahora, se puede implementar después
         ];
 
         // Solo el dueño ve su email

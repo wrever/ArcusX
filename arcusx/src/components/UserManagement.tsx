@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaUsers, FaSearch, FaEdit, FaEye, FaCheckCircle, FaUserShield, FaUser, FaExclamationTriangle, FaTimesCircle } from 'react-icons/fa';
 import { getAdminUsers, getAdminUserDetails, updateAdminUser } from '../services/adminService';
+import { useI18n } from '../i18n/I18nProvider';
 import '../css/AdminPanel.css';
 
 interface UserManagementProps {
@@ -8,6 +9,7 @@ interface UserManagementProps {
 }
 
 const UserManagement: React.FC<UserManagementProps> = ({ onUpdate }) => {
+  const { t } = useI18n();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -337,17 +339,17 @@ const UserManagement: React.FC<UserManagementProps> = ({ onUpdate }) => {
                 disabled={page === 1}
                 className="admin-button secondary"
               >
-                Anterior
+                {t('freelancers.pagination.previous')}
               </button>
               <span>
-                Página {page} de {totalPages}
+                {t('admin.disputes.page').replace('{{page}}', String(page)).replace('{{total}}', String(totalPages))}
               </span>
               <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
                 className="admin-button secondary"
               >
-                Siguiente
+                {t('freelancers.pagination.next')}
               </button>
             </div>
           )}

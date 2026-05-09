@@ -1,13 +1,20 @@
 <?php
 // Required headers
-header("Access-Control-Allow-Origin: *"); // Permite solicitudes desde cualquier origen
+$_cors_origin = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header("Access-Control-Allow-Origin: ".$_cors_origin); // Permite solicitudes desde cualquier origen
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS"); // Incluye OPTIONS para pre-flight requests
 header("Access-Control-Max-Age: 3600"); // Cachea las opciones por 1 hora
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
-// Incluir el archivo de configuración de la base de datos.
-require_once 'config.php';
+require_once __DIR__ . '/config.php';
+
+function fix_utf8_mojibake($str) {
+    if (!is_string($str) || $str === '') return $str;
+    $bytes = @mb_convert_encoding($str, 'ISO-8859-1', 'UTF-8');
+    if ($bytes === false) return $str;
+    if (!mb_check_encoding($bytes, 'UTF-8')) return $str;
+    return $bytes;
+}
 
 // Asegurarse de que la solicitud es GET
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -71,18 +78,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     }
 
     $tasks = [];
+    $textKeys = ['title', 'subtitle', 'description', 'category', 'difficulty', 'currency', 'creator_username'];
     if ($result->num_rows > 0) {
-        // Recorrer los resultados y almacenarlos en un array
-        while($row = $result->fetch_assoc()) {
-            // No necesitamos has_accepted_proposal aquí, ya que todas son aceptadas por definición
-            // Podemos simplemente castear accepted_applicant_id a int si es necesario, aunque PHP suele manejarlo
-             $row['accepted_applicant_id'] = (int)$row['accepted_applicant_id']; // Asegurar que es un número
+        while ($row = $result->fetch_assoc()) {
+            $row['accepted_applicant_id'] = (int)$row['accepted_applicant_id'];
+            foreach ($textKeys as $k) {
+                if (isset($row[$k]) && is_string($row[$k])) $row[$k] = fix_utf8_mojibake($row[$k]);
+            }
             $tasks[] = $row;
         }
     }
 
-    // Devolver las tareas en formato JSON
-    http_response_code(200); // OK
+    http_response_code(200);
     echo json_encode($tasks);
 
     // Cerrar la conexión a la base de datos (si tu config.php no lo cierra automáticamente)

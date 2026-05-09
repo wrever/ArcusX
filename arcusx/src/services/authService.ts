@@ -1,17 +1,6 @@
 import axios from 'axios';
 import { API_URL } from '../config/database';
-import { supabase } from '../config/supabase';
-
-interface LoginData {
-  email: string;
-  password: string;
-}
-
-interface RegisterData {
-  username: string;
-  email: string;
-  password: string;
-}
+import { supabase, hasSupabase } from '../config/supabase';
 
 // Función para verificar si un token JWT ha expirado
 const isTokenExpired = (token: string): boolean => {
@@ -25,41 +14,20 @@ const isTokenExpired = (token: string): boolean => {
 };
 
 export const authService = {
-  async login(data: LoginData) {
-    try {
-      const response = await axios.post(`${API_URL}/auth/login.php`, data);
-      if (response.data.token) {
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-      }
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  },
-
-  async register(data: RegisterData) {
-    try {
-      const response = await axios.post(`${API_URL}/auth/register.php`, data);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  },
-
   async logout() {
-    // Cerrar sesión de Supabase si existe
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
+      if (hasSupabase) {
+        await supabase.auth.signOut();
       }
-    } catch (error) {
+    } catch {
+      // Ignorar errores de Supabase (ej. sin red o no configurado)
+    } finally {
+      // Siempre limpiar todo para que la sesión quede cerrada
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('supabase_access_token');
+      localStorage.removeItem('supabase.auth.token');
     }
-    
-    // Limpiar localStorage
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('supabase_access_token');
   },
 
   isAuthenticated() {
@@ -94,13 +62,11 @@ export const authService = {
 
   // Funciones para autenticación con Supabase OAuth
   async signInWithGoogle() {
+    if (!hasSupabase) {
+      throw new Error('Login con Google no está configurado. Configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.');
+    }
     try {
-      // Detectar si estamos en desarrollo o producción
-      const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      const redirectUrl = isDevelopment 
-        ? `${window.location.origin}/auth/callback`
-        : 'https://arcusx.pro/auth/callback';
-      
+      const redirectUrl = `${window.location.origin}/auth/callback`;
       
       // Usar skipBrowserRedirect para interceptar la URL
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -115,23 +81,8 @@ export const authService = {
         throw error;
       }
       
-      // Interceptar y corregir la URL antes de redirigir
       if (data?.url) {
-        let finalUrl = data.url;
-        
-        // Reemplazar cualquier referencia a localhost con arcusx.pro
-        finalUrl = finalUrl.replace(/http:\/\/localhost:\d+/g, 'https://arcusx.pro');
-        finalUrl = finalUrl.replace(/https?:\/\/localhost:\d+/g, 'https://arcusx.pro');
-        
-        // Asegurar que el redirect_uri en los query params también sea correcto
-        const urlObj = new URL(finalUrl);
-        const redirectUri = urlObj.searchParams.get('redirect_uri');
-        if (redirectUri && redirectUri.includes('localhost')) {
-          urlObj.searchParams.set('redirect_uri', redirectUrl);
-          finalUrl = urlObj.toString();
-        }
-        
-        window.location.href = finalUrl;
+        window.location.href = data.url;
       }
       
       return data;
@@ -141,13 +92,11 @@ export const authService = {
   },
 
   async signInWithGitHub() {
+    if (!hasSupabase) {
+      throw new Error('Login con GitHub no está configurado. Configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.');
+    }
     try {
-      // Detectar si estamos en desarrollo o producción
-      const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      const redirectUrl = isDevelopment 
-        ? `${window.location.origin}/auth/callback`
-        : 'https://arcusx.pro/auth/callback';
-      
+      const redirectUrl = `${window.location.origin}/auth/callback`;
       
       // Usar skipBrowserRedirect para interceptar la URL
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -162,26 +111,8 @@ export const authService = {
         throw error;
       }
       
-      // Interceptar y corregir la URL antes de redirigir
       if (data?.url) {
-        let finalUrl = data.url;
-        
-        // Solo corregir si estamos en producción
-        if (!isDevelopment) {
-          // Reemplazar cualquier referencia a localhost con arcusx.pro
-          finalUrl = finalUrl.replace(/http:\/\/localhost:\d+/g, 'https://arcusx.pro');
-          finalUrl = finalUrl.replace(/https?:\/\/localhost:\d+/g, 'https://arcusx.pro');
-          
-          // Asegurar que el redirect_uri en los query params también sea correcto
-          const urlObj = new URL(finalUrl);
-          const redirectUri = urlObj.searchParams.get('redirect_uri');
-          if (redirectUri && redirectUri.includes('localhost')) {
-            urlObj.searchParams.set('redirect_uri', redirectUrl);
-            finalUrl = urlObj.toString();
-          }
-        }
-        
-        window.location.href = finalUrl;
+        window.location.href = data.url;
       }
       
       return data;
@@ -191,9 +122,8 @@ export const authService = {
   },
 
   async handleSupabaseCallback() {
+    if (!hasSupabase) return null;
     try {
-      // Sincronizar usuario con backend PHP para obtener token JWT
-      // La sesión ya fue obtenida en AuthCallback.tsx
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error) {
@@ -235,5 +165,23 @@ export const authService = {
     } catch (error) {
       return null;
     }
+  },
+
+  async registerWallet(walletAddress: string): Promise<{ success: boolean; wallet_address?: string; already_registered?: boolean; message?: string }> {
+    const token = localStorage.getItem('token');
+    const response = await axios.post(
+      `${API_URL}/register_wallet.php`,
+      { wallet_address: walletAddress },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return response.data;
+  },
+
+  async verifyWallet(): Promise<{ success: boolean; has_wallet: boolean; wallet_address?: string | null }> {
+    const token = localStorage.getItem('token');
+    const response = await axios.get(`${API_URL}/verify_wallet.php`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
   }
 }; 

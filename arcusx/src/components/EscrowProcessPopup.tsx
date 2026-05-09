@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaWallet, FaFileContract, FaCoins, FaCheckCircle, FaSpinner, FaTimes, FaHome, FaDollarSign } from 'react-icons/fa';
 import { usePlatformFee } from '../hooks/usePlatformFee';
+import { useI18n } from '../i18n/I18nProvider';
 
 interface ProcessStep {
   id: string;
@@ -43,6 +44,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
   onConnectWallet
 }) => {
   const navigate = useNavigate();
+  const { t } = useI18n();
   // Obtener platform fee para calcular el total con comisión
   const { platformFee } = usePlatformFee();
   
@@ -65,35 +67,35 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
   const [steps, setSteps] = useState<ProcessStep[]>([
     {
       id: 'connect',
-      title: 'Conectar Wallet',
-      description: 'Conecta tu wallet Freighter para continuar',
+      title: t('escrow.step.connect.title'),
+      description: t('escrow.step.connect.description'),
       icon: <FaWallet />,
       status: 'pending',
-      buttonText: 'Conectar Wallet'
+      buttonText: t('escrow.step.connect.button')
     },
     {
       id: 'create',
-      title: 'Crear Contrato',
-      description: 'Crea la cuenta escrow única en Stellar',
+      title: t('escrow.step.create.title'),
+      description: t('escrow.step.create.description'),
       icon: <FaFileContract />,
       status: 'pending',
-      buttonText: 'Crear y Firmar Contrato'
+      buttonText: t('escrow.step.create.button')
     },
     {
       id: 'fund',
-      title: 'Enviar Dinero',
-      description: `Envía ${formattedTotal} USDC al contrato escrow`,
+      title: t('escrow.step.fund.title'),
+      description: t('escrow.step.fund.description.short').replace('{{total}}', formattedTotal),
       icon: <FaCoins />,
       status: 'pending',
-      buttonText: 'Enviar Dinero'
+      buttonText: t('escrow.step.fund.button')
     },
     {
       id: 'complete',
-      title: 'Proceso Completado',
-      description: 'El trabajador ha sido seleccionado exitosamente',
+      title: t('escrow.step.complete.title'),
+      description: t('escrow.step.complete.description'),
       icon: <FaCheckCircle />,
       status: 'pending',
-      buttonText: 'Ir a Supervisar'
+      buttonText: t('escrow.go.supervise')
     }
   ]);
 
@@ -116,13 +118,13 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
         // Si el paso ya está completado o en progreso, NO cambiar el status
         return {
           ...step,
-          description: `Envía ${formattedTotal} USDC al contrato escrow (incluye ${formattedCommission} USDC de comisión de plataforma)`
+          description: t('escrow.step.fund.description').replace('{{total}}', formattedTotal).replace('{{commission}}', formattedCommission)
           // NO tocar step.status - preservar el progreso
         };
       }
       return step;
     }));
-  }, [formattedTotal, formattedCommission]);
+  }, [formattedTotal, formattedCommission, t]);
 
   // Verificar cuando todos los 4 pasos estén completados y mostrar popup de éxito
   useEffect(() => {
@@ -249,7 +251,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
         {/* Header */}
         <div className="escrow-process-header">
           <h2 className="escrow-process-title">
-            Proceso de Selección de Trabajador
+            {t('escrow.popup.title')}
           </h2>
           <button
             onClick={onClose}
@@ -261,13 +263,13 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
 
         {/* Task Info */}
         <div className="escrow-task-info">
-          <h3>Detalles de la Tarea</h3>
+          <h3>{t('escrow.task.details')}</h3>
           <div className="escrow-task-details">
-            <p><strong>Trabajador:</strong> {contributorName}</p>
-            <p><strong>Dirección:</strong> {contributorAddress.slice(0, 6)}...{contributorAddress.slice(-4)}</p>
-            <p><strong>Monto de la tarea:</strong> {taskPrice} USDC</p>
-            <p style={{ color: '#ffa500', marginTop: '0.5rem' }}>
-              <strong> Nota:</strong> Se requiere una pequeña cantidad de XLM para fees de transacción de Stellar (~0.0001 XLM)
+            <p><strong>{t('escrow.task.worker')}:</strong> {contributorName}</p>
+            <p><strong>{t('escrow.task.address')}:</strong> {contributorAddress.slice(0, 6)}...{contributorAddress.slice(-4)}</p>
+            <p><strong>{t('escrow.task.amount')}:</strong> {taskPrice} USDC</p>
+            <p className="escrow-task-xlm-note">
+              <strong>{t('escrow.task.xlm.note')}</strong>
             </p>
           </div>
         </div>
@@ -302,13 +304,13 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
                   
                   {step.status === 'in_progress' && (
                     <div className="escrow-step-status">
-                      Procesando...
+                      {t('escrow.status.processing')}
                     </div>
                   )}
                   
                   {step.status === 'completed' && (
                     <div className="escrow-step-status">
-                      Completado
+                      {t('escrow.status.completed')}
                     </div>
                   )}
                   
@@ -317,7 +319,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
                       onClick={() => handleStepAction(index)}
                       className="escrow-step-button error"
                     >
-                      Reintentar
+                      {t('escrow.retry')}
                     </button>
                   )}
                 </div>
@@ -329,7 +331,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
         {/* Progress Indicator */}
         <div className="escrow-progress">
           <div className="escrow-progress-header">
-            <span>Progreso</span>
+            <span>{t('common.progress')}</span>
             <span>
               {(() => {
                 // Calcular pasos completados basado en el estado real, no en currentStep
@@ -360,100 +362,31 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
 
         {/* Info */}
         <div className="escrow-process-note">
-          <p> <strong>Nota:</strong> Este proceso requiere 2 transacciones:</p>
-          <p>1. Crear el contrato escrow</p>
-          <p>2. Enviar el dinero al contrato</p>
-          <div style={{ 
-            marginTop: '0.5rem', 
-            padding: '16px', 
-            background: 'linear-gradient(135deg, rgba(40, 192, 240, 0.1) 0%, rgba(17, 128, 179, 0.1) 100%)',
-            borderRadius: '12px', 
-            border: '1px solid rgba(40, 192, 240, 0.3)'
-          }}>
-            <p style={{ 
-              fontWeight: 'bold', 
-              marginBottom: '12px',
-              color: '#28c0f0',
-              fontSize: '15px'
-            }}>
-               Desglose del pago:
-            </p>
-            <div style={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              gap: '8px',
-              marginBottom: '12px'
-            }}>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '8px 0',
-                borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
-              }}>
-                <span style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.8)' }}>
-                  Pago al trabajador:
-                </span>
-                <strong style={{ fontSize: '14px', color: '#fff' }}>
-                  {formattedWorkerAmount} USDC
-                </strong>
+          <p><strong>{t('common.nota')}</strong> {t('escrow.popup.note.twoTx')}</p>
+          <p>1. {t('escrow.popup.step1.create')}</p>
+          <p>2. {t('escrow.popup.step2.fund')}</p>
+          <div className="escrow-breakdown-box">
+            <p className="escrow-breakdown-title">{t('escrow.popup.breakdown')}</p>
+            <div className="escrow-breakdown-rows">
+              <div className="escrow-breakdown-row">
+                <span>{t('escrow.popup.workerPayment')}</span>
+                <strong>{formattedWorkerAmount} USDC</strong>
               </div>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '8px 0',
-                borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
-              }}>
-                <span style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.8)' }}>
-                  Comisión de plataforma ({platformFeePercent}%):
+              <div className="escrow-breakdown-row">
+                <span>
+                  {t('escrow.popup.commission')} ({platformFeePercent}%):
                 </span>
-                <strong style={{ fontSize: '14px', color: '#fff' }}>
-                  {formattedCommission} USDC
-                </strong>
+                <strong>{formattedCommission} USDC</strong>
               </div>
             </div>
-            <div style={{ 
-              padding: '12px',
-              background: 'linear-gradient(90deg, rgba(40, 192, 240, 0.2) 0%, rgba(17, 128, 179, 0.2) 100%)',
-              borderRadius: '8px',
-              border: '1px solid rgba(40, 192, 240, 0.4)',
-              marginTop: '8px'
-            }}>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <span style={{ 
-                  fontWeight: 'bold', 
-                  color: '#28c0f0', 
-                  fontSize: '16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}>
+            <div className="escrow-breakdown-total">
+              <div className="escrow-breakdown-total-row">
+                <span className="escrow-breakdown-total-label">
                   <FaDollarSign /> Total a enviar:
                 </span>
-                <strong style={{ 
-                  fontSize: '18px', 
-                  background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text'
-                }}>
-                  {formattedTotal} USDC
-                </strong>
+                <strong className="escrow-breakdown-total-amount">{formattedTotal} USDC</strong>
               </div>
-              <p style={{ 
-                margin: '8px 0 0 0', 
-                fontSize: '12px', 
-                color: 'rgba(255, 255, 255, 0.6)', 
-                fontStyle: 'italic',
-                textAlign: 'center'
-              }}>
-                + fees de XLM (~0.0001 XLM)
-              </p>
+              <p className="escrow-breakdown-fee-note">+ fees de XLM (~0.0001 XLM)</p>
             </div>
           </div>
         </div>
@@ -492,7 +425,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
               left: 0,
               right: 0,
               height: '4px',
-              background: 'linear-gradient(90deg, #28c0f0, #1180b3)'
+              background: 'linear-gradient(90deg, #10dd88, #0ab86a)'
             }} />
             
             <div style={{
@@ -506,14 +439,14 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
             <h3 style={{
               fontSize: '28px',
               fontWeight: 'bold',
-              background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+              background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
               marginBottom: '20px',
               marginTop: 0
             }}>
-              ¡Proceso Completado Exitosamente!
+              {t('escrow.success.full.title')}
             </h3>
             
             <div style={{
@@ -527,7 +460,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
                 fontWeight: '500',
                 color: 'rgba(255, 255, 255, 0.8)'
               }}>
-                El trabajador ha sido seleccionado y el escrow está configurado correctamente
+                {t('escrow.success.subtitle')}
               </p>
               
               <div style={{
@@ -548,7 +481,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
                 }}>
                   <span style={{ fontSize: '18px' }}></span>
                   <strong style={{ fontSize: '15px', color: '#fff' }}>
-                    Contrato escrow creado
+                    {t('escrow.success.contract.created')}
                   </strong>
                 </div>
                 <div style={{ 
@@ -561,7 +494,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
                 }}>
                   <span style={{ fontSize: '18px' }}></span>
                   <strong style={{ fontSize: '15px', color: '#fff' }}>
-                    Fondos enviados al escrow
+                    {t('escrow.success.funds.sent')}
                   </strong>
                 </div>
                 <div style={{ 
@@ -572,7 +505,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
                 }}>
                   <span style={{ fontSize: '18px' }}></span>
                   <strong style={{ fontSize: '15px', color: '#fff' }}>
-                    Trabajador seleccionado
+                    {t('escrow.success.worker.selected')}
                   </strong>
                 </div>
                 {escrowId && (
@@ -586,9 +519,9 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
                       color: 'rgba(255, 255, 255, 0.6)',
                       margin: 0
                     }}>
-                      <strong style={{ color: '#28c0f0' }}>Contract ID:</strong>{' '}
+                      <strong style={{ color: '#10dd88' }}>{t('escrow.success.contract')}:</strong>{' '}
                       <code style={{ 
-                        color: '#28c0f0',
+                        color: '#10dd88',
                         background: 'rgba(40, 192, 240, 0.1)',
                         padding: '4px 8px',
                         borderRadius: '4px',
@@ -606,7 +539,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
               <button 
                 onClick={handleGoToSupervise}
                 style={{
-                  background: 'linear-gradient(90deg, #28c0f0, #1180b3)',
+                  background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
                   color: '#fff',
                   border: 'none',
                   padding: '14px 32px',
@@ -619,17 +552,17 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
                   boxShadow: '0 4px 12px rgba(40, 192, 240, 0.3)'
                 }}
                 onMouseOver={(e) => {
-                  e.currentTarget.style.background = 'linear-gradient(90deg, #1180b3, #28c0f0)';
+                  e.currentTarget.style.background = 'linear-gradient(90deg, #0ab86a, #10dd88)';
                   e.currentTarget.style.transform = 'translateY(-2px)';
                   e.currentTarget.style.boxShadow = '0 6px 16px rgba(40, 192, 240, 0.4)';
                 }}
                 onMouseOut={(e) => {
-                  e.currentTarget.style.background = 'linear-gradient(90deg, #28c0f0, #1180b3)';
+                  e.currentTarget.style.background = 'linear-gradient(90deg, #10dd88, #0ab86a)';
                   e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.boxShadow = '0 4px 12px rgba(40, 192, 240, 0.3)';
                 }}
               >
-                Supervisar Tarea
+                {t('escrow.supervise.task')}
               </button>
               <button 
                 onClick={handleSuccessPopupClose}
@@ -654,7 +587,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
-                <FaHome style={{ marginRight: '8px' }} /> Ir al Dashboard
+                <FaHome style={{ marginRight: '8px' }} /> {t('proposals.dashboard.button')}
               </button>
             </div>
           </div>

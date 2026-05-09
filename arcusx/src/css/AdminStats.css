@@ -23,7 +23,7 @@
   align-items: center;
   gap: 8px;
   padding: 12px 20px;
-  background: linear-gradient(135deg, #28c0f0, #1180b3);
+  background: linear-gradient(135deg, #10dd88, #0ab86a);
   color: white;
   border: none;
   border-radius: 8px;
@@ -160,7 +160,7 @@
 
 .config-icon {
   font-size: 24px;
-  color: #28c0f0;
+  color: #10dd88;
 }
 
 .config-content h4 {
@@ -173,7 +173,7 @@
 .config-value {
   font-size: 18px;
   font-weight: 700;
-  color: #28c0f0;
+  color: #10dd88;
   margin: 0 0 4px 0;
 }
 
@@ -190,7 +190,7 @@
 }
 
 .config-value-link:hover .config-value {
-  color: #28c0f0;
+  color: #10dd88;
   text-decoration: underline;
 }
 
@@ -308,7 +308,7 @@
 
 .revenue-icon {
   font-size: 32px;
-  color: #28c0f0;
+  color: #10dd88;
   flex-shrink: 0;
 }
 
@@ -334,7 +334,7 @@
 .revenue-value {
   font-size: 24px;
   font-weight: 700;
-  color: #28c0f0;
+  color: #10dd88;
   margin: 0 0 4px 0;
 }
 
@@ -353,7 +353,7 @@
 }
 
 .revenue-value-link:hover .revenue-value {
-  color: #28c0f0;
+  color: #10dd88;
   text-decoration: underline;
 }
 
@@ -370,7 +370,7 @@
   font-weight: 600;
 }
 
-/* Trustless Work Configuration */
+/* Configuración API escrow */
 .trustless-work-config {
   margin-bottom: 40px;
   padding: 24px;
@@ -393,7 +393,7 @@
   content: '';
   width: 4px;
   height: 24px;
-  background: linear-gradient(135deg, #28c0f0, #1180b3);
+  background: linear-gradient(135deg, #10dd88, #0ab86a);
   border-radius: 2px;
 }
 
@@ -455,7 +455,7 @@
 }
 
 .action-button.primary {
-  background: linear-gradient(135deg, #28c0f0, #1180b3);
+  background: linear-gradient(135deg, #10dd88, #0ab86a);
   color: white;
   box-shadow: 0 4px 15px rgba(40, 192, 240, 0.3);
 }

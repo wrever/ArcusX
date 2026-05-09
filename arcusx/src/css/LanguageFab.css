@@ -1,0 +1,157 @@
+/* Base: trigger button */
+.lang-select-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.18));
+  background: var(--bg-card, rgba(20, 20, 25, 0.88));
+  color: var(--text-primary, #fff);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.lang-select-trigger:hover {
+  background: var(--bg-hover, rgba(25, 25, 32, 0.92));
+  border-color: var(--border-color-hover, rgba(255, 255, 255, 0.28));
+}
+
+.lang-select-icon {
+  display: inline-flex;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.lang-select-label {
+  letter-spacing: 0.02em;
+}
+
+.lang-select-chevron {
+  font-size: 10px;
+  opacity: 0.8;
+  margin-left: 2px;
+}
+
+/* Dropdown */
+.lang-select {
+  position: relative;
+}
+
+.lang-select-dropdown {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 6px;
+  min-width: 100%;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.18));
+  background: var(--bg-card, rgba(20, 20, 25, 0.96));
+  backdrop-filter: blur(12px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lang-select-option {
+  padding: 10px 14px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-primary, #fff);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.lang-select-option:hover {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.1));
+}
+
+.lang-select-option.active {
+  background: var(--primary-blue, #3b82f6);
+  color: #fff;
+}
+
+/* Variant: FAB (floating) */
+.lang-select--fab {
+  position: fixed;
+  left: 80px;
+  bottom: 18px;
+  z-index: 9998;
+}
+
+/* Landing Empresas (subdominio o /empresas): idioma alineado a la izquierda del viewport */
+.lang-select--fab.lang-select--fab--enterprise-left {
+  left: 18px;
+  right: auto;
+}
+
+.lang-select--fab .lang-select-trigger {
+  padding: 12px 14px;
+  border-radius: 999px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+}
+
+.lang-select--fab .lang-select-trigger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.42);
+}
+
+.lang-select--fab .lang-select-trigger:active {
+  transform: translateY(0) scale(0.99);
+}
+
+.lang-select--fab .lang-select-label {
+  font-size: 12px;
+}
+
+/* FAB: dropdown opens above */
+.lang-select--fab .lang-select-dropdown {
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 8px;
+}
+
+/* Variant: Inline (header/toolbar) */
+.lang-select--inline {
+  display: inline-block;
+}
+
+.lang-select--inline .lang-select-trigger {
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+.lang-select--inline .lang-select-dropdown {
+  bottom: auto;
+  top: 100%;
+  margin-top: 6px;
+  margin-bottom: 0;
+}
+
+/* Ocultar FAB cuando hay modal de wallet abierto */
+body:has(.wallet-popup-overlay) .lang-select--fab {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
+}
+
+@media (max-width: 480px) {
+  .lang-select--fab .lang-select-trigger {
+    padding: 12px;
+    gap: 6px;
+  }
+  .lang-select--fab .lang-select-label {
+    font-size: 11px;
+  }
+}

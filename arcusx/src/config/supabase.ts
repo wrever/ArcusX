@@ -1,16 +1,31 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://atgsesbstjleabesclzs.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0Z3Nlc2JzdGpsZWFiZXNjbHpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NTY3NzgsImV4cCI6MjA3ODAzMjc3OH0.RjwwgXaHHQ-Pz69qeZfXKRc0AuuNdAm3wjecY0xB-YY';
+// Leer de .env (desarrollo) o de lo embebido en el build (producción: npm run build debe ejecutarse CON .env o .env.production)
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    flowType: 'pkce',
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-    storage: window.localStorage,
-    storageKey: 'supabase.auth.token'
+const hasValidUrl = Boolean(supabaseUrl && !supabaseUrl.includes('your-project'));
+const hasValidKey = Boolean(supabaseAnonKey && supabaseAnonKey.length > 20);
+export const hasSupabase = hasValidUrl && hasValidKey;
+
+if (import.meta.env.DEV && !hasSupabase && (supabaseUrl || supabaseAnonKey)) {
+  console.warn(
+    'ArcusX Supabase: URL o anon key inválidos o incompletos. Login con Google/GitHub no funcionará. Revisa VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en arcusx/.env'
+  );
+}
+
+export const supabase: SupabaseClient = createClient(
+  hasSupabase ? supabaseUrl : 'https://placeholder.supabase.co',
+  hasSupabase ? supabaseAnonKey : 'placeholder-anon-key',
+  {
+    auth: {
+      flowType: 'pkce',
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      storage: window.localStorage,
+      storageKey: 'supabase.auth.token'
+    }
   }
-});
+);
 

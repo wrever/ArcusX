@@ -1,0 +1,663 @@
+/* FreelancersList.css - Estilos para lista de freelancers */
+
+.freelancers-list-container {
+  width: 100%;
+  padding: 0;
+  color: var(--text-primary);
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Contenedor con texto visible en modo claro */
+:root[data-theme="light"] .freelancers-list-container {
+  color: #000000 !important;
+}
+
+/* Header */
+.freelancers-list-header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.freelancers-title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+/* Título visible en modo claro */
+:root[data-theme="light"] .freelancers-title {
+  color: #000000 !important;
+}
+
+/* Filters */
+.freelancers-filters {
+  background: var(--bg-card);
+  backdrop-filter: blur(10px);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 0 auto 2rem auto;
+  max-width: 1200px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
+}
+
+/* Filtros con fondo blanco y bordes visibles en modo claro */
+:root[data-theme="light"] .freelancers-filters {
+  background: #ffffff !important;
+  border-color: rgba(100, 116, 139, 0.4) !important;
+  border-width: 2px !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  flex: 0 1 auto;
+  width: 150px;
+  max-width: 180px;
+  box-sizing: border-box;
+  position: static;
+  flex-shrink: 0;
+}
+
+.filter-group label {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Labels visibles en modo claro */
+:root[data-theme="light"] .filter-group label {
+  color: #000000 !important;
+}
+
+.search-group {
+  position: relative;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 250px;
+  max-width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filter-group.search-group {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 250px;
+  max-width: 100%;
+}
+
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Icono de búsqueda visible en modo claro */
+:root[data-theme="light"] .search-icon {
+  color: #64748b !important;
+}
+
+.search-input,
+.filter-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  padding-left: 2.5rem;
+  background: var(--input-background);
+  border: 2px solid var(--input-border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+}
+
+/* Inputs con fondo blanco y texto negro en modo claro */
+:root[data-theme="light"] .search-input,
+:root[data-theme="light"] .filter-input {
+  background: #ffffff !important;
+  border-color: rgba(100, 116, 139, 0.4) !important;
+  border-width: 2px !important;
+  color: #000000 !important;
+}
+
+.search-input:focus,
+.filter-input:focus {
+  outline: none;
+  border-color: var(--primary-blue);
+  background: var(--input-background);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+:root[data-theme="light"] .search-input:focus,
+:root[data-theme="light"] .filter-input:focus {
+  background: #ffffff !important;
+  border-color: var(--primary-blue) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+}
+
+.search-input::placeholder,
+.filter-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Placeholders visibles en modo claro */
+:root[data-theme="light"] .search-input::placeholder,
+:root[data-theme="light"] .filter-input::placeholder {
+  color: #94a3b8 !important;
+}
+
+.sort-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.sort-select {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  background: var(--input-background);
+  border: 2px solid var(--input-border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* Select con fondo blanco y texto negro en modo claro */
+:root[data-theme="light"] .sort-select {
+  background: #ffffff !important;
+  border-color: rgba(100, 116, 139, 0.4) !important;
+  border-width: 2px !important;
+  color: #000000 !important;
+}
+
+:root[data-theme="light"] .sort-select option {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+.sort-select:focus {
+  outline: none;
+  border-color: var(--primary-blue);
+  background: var(--input-background);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+:root[data-theme="light"] .sort-select:focus {
+  background: #ffffff !important;
+  border-color: var(--primary-blue) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+}
+
+.sort-order-btn {
+  padding: 0.75rem;
+  background: var(--input-background);
+  border: 2px solid var(--input-border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-width: 44px;
+  box-sizing: border-box;
+}
+
+/* Botón de ordenamiento con fondo blanco y iconos negros en modo claro */
+:root[data-theme="light"] .sort-order-btn {
+  background: #ffffff !important;
+  border-color: rgba(100, 116, 139, 0.4) !important;
+  border-width: 2px !important;
+  color: #000000 !important;
+}
+
+:root[data-theme="light"] .sort-order-btn svg {
+  color: #000000 !important;
+}
+
+.sort-order-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--primary-blue);
+  color: var(--primary-blue);
+}
+
+:root[data-theme="light"] .sort-order-btn:hover {
+  background: #f1f5f9 !important;
+  border-color: var(--primary-blue) !important;
+  color: var(--primary-blue) !important;
+}
+
+:root[data-theme="light"] .sort-order-btn:hover svg {
+  color: var(--primary-blue) !important;
+}
+
+
+/* Grid de freelancers - Lista vertical para tarjetas horizontales */
+.freelancers-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  width: 100%;
+}
+
+/* Loading y Error */
+.loading-container,
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.spinner-icon {
+  font-size: 2.5rem;
+  color: var(--primary-blue);
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-overlay {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.loading-container p,
+.error-message {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  margin: 0.5rem 0;
+}
+
+/* Textos de loading/error visibles en modo claro */
+:root[data-theme="light"] .loading-container p,
+:root[data-theme="light"] .error-message {
+  color: #475569 !important;
+}
+
+.retry-button {
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--primary-blue);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.retry-button:hover {
+  background: var(--secondary-blue);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(40, 192, 240, 0.3);
+}
+
+.no-freelancers {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--text-secondary);
+}
+
+/* Mensaje de sin resultados visible en modo claro */
+:root[data-theme="light"] .no-freelancers {
+  color: #475569 !important;
+}
+
+.no-freelancers p {
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Paginación */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 2rem;
+  flex-wrap: wrap;
+}
+
+.pagination-btn {
+  padding: 0.6rem 1rem;
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* Botones de paginación con fondo blanco y bordes visibles en modo claro */
+:root[data-theme="light"] .pagination-btn {
+  background: #ffffff !important;
+  border-color: rgba(100, 116, 139, 0.4) !important;
+  border-width: 2px !important;
+  color: #000000 !important;
+}
+
+:root[data-theme="light"] .pagination-btn svg {
+  color: #000000 !important;
+}
+
+.pagination-btn:hover:not(:disabled):not(.active) {
+  background: var(--bg-hover);
+  border-color: var(--primary-blue);
+  color: var(--primary-blue);
+}
+
+:root[data-theme="light"] .pagination-btn:hover:not(:disabled):not(.active) {
+  background: #f1f5f9 !important;
+  border-color: var(--primary-blue) !important;
+  color: var(--primary-blue) !important;
+}
+
+:root[data-theme="light"] .pagination-btn:hover:not(:disabled):not(.active) svg {
+  color: var(--primary-blue) !important;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-btn.active {
+  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+  border-color: var(--primary-blue);
+  color: white;
+}
+
+:root[data-theme="light"] .pagination-btn.active {
+  background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%) !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme="light"] .pagination-btn.active svg {
+  color: #ffffff !important;
+}
+
+.pagination-nav {
+  padding: 0.6rem 1.25rem;
+}
+
+.pagination-ellipsis {
+  padding: 0.6rem 0.5rem;
+  color: var(--text-muted);
+}
+
+/* Elipsis visible en modo claro */
+:root[data-theme="light"] .pagination-ellipsis {
+  color: #94a3b8 !important;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .freelancers-grid {
+    gap: 1.25rem;
+  }
+
+  .filter-row {
+    justify-content: center;
+    align-items: flex-end;
+    gap: 1rem;
+  }
+
+  .filter-group {
+    flex: 0 1 auto;
+    width: 140px;
+    max-width: 160px;
+  }
+  
+  .search-group {
+    flex: 1 1 auto;
+    min-width: 250px;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 1024px) {
+  .freelancers-filters {
+    max-width: 100%;
+    padding: 1.25rem;
+    box-sizing: border-box;
+  }
+
+  .filter-row {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .filter-group {
+    flex: 0 1 auto;
+    width: 140px;
+    max-width: 160px;
+    box-sizing: border-box;
+  }
+
+  .search-group {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 250px;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .filter-group.search-group {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 250px;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 768px) {
+  .freelancers-list-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .freelancers-title {
+    font-size: 1.75rem;
+  }
+
+
+  .freelancers-filters {
+    padding: 1.25rem;
+    box-sizing: border-box;
+  }
+
+  .filter-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .filter-group {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .search-group {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .filter-group.search-group {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .search-input,
+  .filter-input {
+    padding: 0.7rem 1rem;
+    padding-left: 2.5rem;
+    font-size: 0.9rem;
+  }
+
+  .sort-select {
+    padding: 0.7rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .sort-order-btn {
+    padding: 0.7rem;
+    min-width: 44px;
+  }
+
+  .freelancers-grid {
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .freelancers-list-header {
+    margin-bottom: 1rem;
+  }
+
+  .freelancers-title {
+    font-size: 1.5rem;
+  }
+
+  .freelancers-filters {
+    padding: 1rem;
+    box-sizing: border-box;
+  }
+
+  .filter-row {
+    gap: 0.75rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .filter-group {
+    box-sizing: border-box;
+  }
+  
+  .search-group {
+    box-sizing: border-box;
+  }
+
+  .filter-group label {
+    font-size: 0.8rem;
+  }
+
+  .search-input,
+  .filter-input {
+    padding: 0.65rem 0.9rem;
+    padding-left: 2.25rem;
+    font-size: 0.85rem;
+  }
+
+  .search-icon {
+    left: 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .sort-select {
+    padding: 0.65rem 0.9rem;
+    font-size: 0.85rem;
+  }
+
+  .sort-order-btn {
+    padding: 0.65rem;
+    min-width: 40px;
+  }
+
+  .freelancers-grid {
+    gap: 1rem;
+  }
+
+  .pagination {
+    gap: 0.25rem;
+  }
+
+  .pagination-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    min-width: 36px;
+  }
+
+  .pagination-nav {
+    padding: 0.5rem 1rem;
+  }
+
+  .pagination-nav span {
+    display: none;
+  }
+}
+

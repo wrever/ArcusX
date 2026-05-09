@@ -1,0 +1,117 @@
+/* ============================================
+   SWAP PAGE STYLES
+   ============================================ */
+
+.swap-page {
+  width: 100%;
+  min-height: 100vh;
+  background: var(--gradient-secondary);
+  padding: 120px 1rem 4rem 1rem; /* Top padding para navbar fijo + espacio extra */
+  position: relative;
+}
+
+.swap-page-container {
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding-bottom: 2rem; /* Espacio extra en la parte inferior */
+}
+
+/* Header Section */
+.swap-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding-top: 1rem;
+}
+
+.swap-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.swap-subtitle {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Info Section */
+.swap-info-section {
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
+.swap-info-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-md);
+}
+
+.swap-info-card h3 {
+  font-size: 1.2rem;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+
+.swap-info-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.swap-info-list li {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  padding-left: 1.5rem;
+  position: relative;
+}
+
+.swap-info-list li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--primary-blue);
+  font-weight: bold;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .swap-page {
+    padding: 100px 0.5rem 3rem 0.5rem; /* Ajuste para mobile manteniendo espacio del navbar */
+  }
+
+  .swap-title {
+    font-size: 2rem;
+  }
+
+  .swap-subtitle {
+    font-size: 1rem;
+  }
+
+  .swap-header {
+    margin-bottom: 1.5rem;
+    padding-top: 0.5rem;
+  }
+}
+
+/* Light Mode Overrides */
+:root[data-theme="light"] .swap-title {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

@@ -1,25 +1,147 @@
-import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useState, useEffect, lazy, Suspense } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { TrustlessWorkConfig } from '@trustless-work/escrow';
 import { TRUSTLESS_WORK_API_KEY, TRUSTLESS_WORK_BASE_URL } from './config/trustlessWork';
 import Navbar from './components/Navbar';
+import EmpresasNavbar from './components/EmpresasNavbar';
+import { isEnterpriseLandingHost } from './config/enterpriseSite';
+import LanguageFab from './components/LanguageFab';
+import ThemeToggle from './components/ThemeToggle';
 import Hero from './components/Hero';
 import Login from './components/Login';
 import Register from './components/Register';
 import AuthCallback from './components/AuthCallback';
-import Dashboard from './dashboard';
 import Preloader from './components/Preloader';
-import CreateTask from './components/CreateTask';
-import ApplyTask from './components/ApplyTask';
-import ProposalReview from './components/ProposalReview';
-import SuperviseTask from './components/SuperviseTask';
-import AdminPanel from './components/AdminPanel';
 import AdminLogin from './components/AdminLogin';
 import AdminRoute from './components/AdminRoute';
 import ProtectedRoute from './components/ProtectedRoute';
 import UserProfile from './components/UserProfile';
-import EditProfile from './components/EditProfile';
 import './App.css';
+import './css/enterprise-professional.css';
+
+// Code splitting - Lazy load de componentes pesados
+const Dashboard = lazy(() => import('./dashboard'));
+const CreateTask = lazy(() => import('./components/CreateTask'));
+const ApplyTask = lazy(() => import('./components/ApplyTask'));
+const ProposalReview = lazy(() => import('./components/ProposalReview'));
+const SuperviseTask = lazy(() => import('./components/SuperviseTask'));
+const AdminPanel = lazy(() => import('./components/AdminPanel'));
+const EditProfile = lazy(() => import('./components/EditProfile'));
+const SwapPage = lazy(() => import('./pages/SwapPage'));
+const TutorialsPage = lazy(() => import('./pages/TutorialsPage'));
+const EmpresasPage = lazy(() => import('./pages/EmpresasPage'));
+const SupportChatButton = lazy(() => import('./components/SupportChatButton'));
+
+function HomeRoute() {
+  if (isEnterpriseLandingHost()) {
+    return (
+      <>
+        <EmpresasNavbar />
+        <EmpresasPage />
+      </>
+    );
+  }
+  return (
+    <>
+      <Navbar />
+      <Hero />
+    </>
+  );
+}
+
+function EmpresasRoute() {
+  if (isEnterpriseLandingHost()) {
+    return <Navigate to="/" replace />;
+  }
+  return (
+    <>
+      <Navbar />
+      <EmpresasPage />
+    </>
+  );
+}
+
+function AppContent({ isLoading }: { isLoading: boolean }) {
+  const location = useLocation();
+  // Normalizar path (en cPanel a veces la URL puede ser /index.html o con trailing slash)
+  const path = location.pathname.replace(/\/index\.html$/i, '').replace(/\/$/, '') || '/';
+  const isRoot = path === '/' || path === '';
+  /** FAB idioma a la izquierda solo en landing empresas.* (/) y login/registro ahí. En /empresas del sitio público va posición por defecto (hueco para tema). */
+  const isEnterpriseLangFabLeft =
+    (isEnterpriseLandingHost() && isRoot) || (isEnterpriseLandingHost() && path === '/login');
+  // Páginas donde va el FAB de idioma/tema (flotante). Robusto para cPanel: considerar raíz cualquier path vacío o "/"
+  const isPublicLanding =
+    isRoot ||
+    path === '/swap' ||
+    path === '/tutoriales' ||
+    path === '/login' ||
+    path === '/register' ||
+    path === '/empresas';
+  // Si no estamos en una ruta de app (dashboard, profile, etc.), mostrar FAB por si cPanel devuelve un path distinto
+  const isAppRoute = path.startsWith('/dashboard') || path.startsWith('/admin') || path.startsWith('/profile') || path.startsWith('/create-task') || path.startsWith('/apply-task') || path.startsWith('/proposals') || path.startsWith('/supervise-task') || path.startsWith('/auth');
+  const showFloatingButtons = isPublicLanding || (!isAppRoute && path.length <= 20);
+  const showSupportButton = isRoot && !isEnterpriseLandingHost();
+
+  return (
+    <>
+      <LanguageFab
+        visible={showFloatingButtons}
+        fabAlign={isEnterpriseLangFabLeft ? 'enterprise-left' : 'default'}
+      />
+      <ThemeToggle visible={showFloatingButtons && !isEnterpriseLandingHost()} />
+      {/* Botón flotante de soporte - visible solo en la página principal */}
+      {showSupportButton && (
+        <Suspense fallback={null}>
+          <SupportChatButton />
+        </Suspense>
+      )}
+      {isLoading ? (
+        <Preloader />
+      ) : (
+        <div className="app">
+          <Suspense fallback={<Preloader />}>
+            <Routes>
+              <Route path="/" element={<HomeRoute />} />
+              <Route
+                path="/login"
+                element={
+                  isEnterpriseLandingHost() ? (
+                    <>
+                      <EmpresasNavbar />
+                      <Login />
+                    </>
+                  ) : (
+                    <Login />
+                  )
+                }
+              />
+              <Route
+                path="/register"
+                element={isEnterpriseLandingHost() ? <Navigate to="/login" replace /> : <Register />}
+              />
+              <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/create-task" element={<ProtectedRoute><CreateTask /></ProtectedRoute>} />
+              <Route path="/apply-task/:taskId" element={<ProtectedRoute><ApplyTask /></ProtectedRoute>} />
+              <Route path="/proposals/:taskId" element={<ProtectedRoute><ProposalReview /></ProtectedRoute>} />
+              <Route path="/supervise-task/:taskId/:acceptedApplicantId" element={<ProtectedRoute><SuperviseTask /></ProtectedRoute>} />
+              <Route path="/profile/:userId" element={<UserProfile />} />
+              <Route path="/dashboard/settings/profile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
+              <Route path="/swap" element={<><Navbar /><SwapPage /></>} />
+              <Route path="/tutoriales" element={<><Navbar /><TutorialsPage /></>} />
+              <Route path="/empresas" element={<EmpresasRoute />} />
+              <Route path="/landing" element={<Navigate to="/empresas" replace />} />
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin/dashboard" element={<AdminRoute><AdminPanel isAdmin={true} /></AdminRoute>} />
+              <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
+        </div>
+      )}
+    </>
+  );
+}
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -35,34 +157,7 @@ function App() {
   return (
     <TrustlessWorkConfig baseURL={TRUSTLESS_WORK_BASE_URL} apiKey={TRUSTLESS_WORK_API_KEY}>
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        {isLoading ? (
-          <Preloader />
-        ) : (
-          <div className="app">
-            <Routes>
-              <Route path="/" element={
-                <>
-                  <Navbar />
-                  <Hero />
-                </>
-              } />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/auth/callback" element={<AuthCallback />} />
-              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/create-task" element={<ProtectedRoute><CreateTask /></ProtectedRoute>} />
-              <Route path="/apply-task/:taskId" element={<ProtectedRoute><ApplyTask /></ProtectedRoute>} />
-              <Route path="/proposals/:taskId" element={<ProtectedRoute><ProposalReview /></ProtectedRoute>} />
-              <Route path="/supervise-task/:taskId/:acceptedApplicantId" element={<ProtectedRoute><SuperviseTask /></ProtectedRoute>} />
-              <Route path="/profile/:userId" element={<UserProfile />} />
-              <Route path="/dashboard/settings/profile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
-              <Route path="/admin/login" element={<AdminLogin />} />
-              <Route path="/admin/dashboard" element={<AdminRoute><AdminPanel isAdmin={true} /></AdminRoute>} />
-              <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </div>
-        )}
+        <AppContent isLoading={isLoading} />
       </Router>
     </TrustlessWorkConfig>
   );

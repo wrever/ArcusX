@@ -1,13 +1,20 @@
 <?php
 // Required headers for CORS
-header("Access-Control-Allow-Origin: *"); // Permite solicitudes desde cualquier origen
+$_cors_origin = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header("Access-Control-Allow-Origin: ".$_cors_origin); // Permite solicitudes desde cualquier origen
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS"); // Incluye OPTIONS para pre-flight requests
 header("Access-Control-Max-Age: 3600"); // Cachea las opciones por 1 hora
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
-// Incluir el archivo de configuración de la base de datos.
-require_once 'config.php'; // Asegúrate de que la ruta a config.php es correcta
+require_once __DIR__ . '/config.php';
+
+function fix_utf8_mojibake($str) {
+    if (!is_string($str) || $str === '') return $str;
+    $bytes = @mb_convert_encoding($str, 'ISO-8859-1', 'UTF-8');
+    if ($bytes === false) return $str;
+    if (!mb_check_encoding($bytes, 'UTF-8')) return $str;
+    return $bytes;
+}
 
 // Asegurarse de que la solicitud es GET y que se recibe el user_id
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -47,11 +54,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     }
 
     if ($result->num_rows === 1) {
-        // Usuario encontrado: devolver sus detalles en formato JSON
         $user = $result->fetch_assoc();
-        // Asegurar que el ID sea string para consistencia con el frontend
         $user['id'] = strval($user['id']);
-        http_response_code(200); // OK
+        if (isset($user['username']) && is_string($user['username'])) {
+            $user['username'] = fix_utf8_mojibake($user['username']);
+        }
+        http_response_code(200);
         echo json_encode($user);
     } else {
         // Usuario no encontrado

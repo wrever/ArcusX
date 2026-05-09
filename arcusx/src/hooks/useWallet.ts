@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import {
   StellarWalletsKit,
   WalletNetwork,
-  FreighterModule
+  FreighterModule,
+  xBullModule
 } from '@creit.tech/stellar-wallets-kit';
 import { Networks } from '@stellar/stellar-sdk';
+import { authService } from '../services/authService';
 
 interface WalletState {
   isConnected: boolean;
@@ -29,15 +31,18 @@ export const useWallet = () => {
 
   const [kit, setKit] = useState<StellarWalletsKit | null>(null);
 
-  // Inicializar el kit al montar el componente - SOLO FREIGHTER
   useEffect(() => {
     const initializeKit = async () => {
       try {
+        const saved = localStorage.getItem('stellar_wallet');
+        const savedWalletId = saved ? (JSON.parse(saved).walletId ?? 'freighter') : 'freighter';
+
         const stellarKit = new StellarWalletsKit({
-          network: WalletNetwork.TESTNET, // Cambiar a MAINNET en producción
-          selectedWalletId: 'freighter', // SOLO FREIGHTER
+          network: WalletNetwork.TESTNET,
+          selectedWalletId: savedWalletId,
           modules: [
-            new FreighterModule() // SOLO FREIGHTER
+            new FreighterModule(),
+            new xBullModule()
           ],
         });
         setKit(stellarKit);
@@ -53,54 +58,63 @@ export const useWallet = () => {
   }, []);
 
 
-  // Función para conectar Freighter directamente
-  const connectFreighter = async () => {
+  const connectWalletById = async (walletId: string) => {
     if (!kit) {
-      setWalletState(prev => ({
-        ...prev,
-        error: 'Kit de wallets no inicializado'
-      }));
+      setWalletState(prev => ({ ...prev, error: 'Kit de wallets no inicializado' }));
       return;
     }
 
     setWalletState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      // Intentar conectar directamente con Freighter
-      kit.setWallet('freighter');
+      const savedWallet = localStorage.getItem('stellar_wallet');
+      const wasAlreadyConnected = savedWallet && JSON.parse(savedWallet).connected;
+
+      kit.setWallet(walletId);
       const { address } = await kit.getAddress();
-      
+
       setWalletState(prev => ({
         ...prev,
         isConnected: true,
         address,
-        walletId: 'freighter',
+        walletId,
         walletType: 'stellar',
         loading: false,
         error: null
       }));
 
-      // Guardar en localStorage
       localStorage.setItem('stellar_wallet', JSON.stringify({
         address,
-        walletId: 'freighter',
+        walletId,
         connected: true,
         walletType: 'stellar'
       }));
 
+      // Sync wallet address to backend if user is logged in
+      const token = localStorage.getItem('token');
+      if (token) {
+        authService.registerWallet(address).catch(() => {});
+      }
+
+      if (!wasAlreadyConnected) {
+        window.location.reload();
+      }
     } catch (error: any) {
       setWalletState(prev => ({
         ...prev,
         loading: false,
-        error: error.message || 'Error al conectar Freighter. Asegúrate de tener Freighter instalado.'
+        error: error.message || `Error al conectar ${walletId}.`
       }));
     }
   };
 
-  // Función connectWallet ahora solo conecta Freighter (no abre modal)
+  const connectFreighter = () => connectWalletById('freighter');
+  const connectXBull = () => connectWalletById('xbull');
+
   const connectWallet = async () => {
-    // Redirigir a connectFreighter para mantener consistencia
-    await connectFreighter();
+    const savedWallet = localStorage.getItem('stellar_wallet');
+    const preferredWalletId = savedWallet ? (JSON.parse(savedWallet).walletId ?? 'freighter') : 'freighter';
+    await connectWalletById(preferredWalletId);
   };
 
   const disconnectWallet = () => {
@@ -123,9 +137,8 @@ export const useWallet = () => {
       throw new Error('Wallet no conectada');
     }
 
-    // Asegurar que siempre use Freighter
-    if (walletState.walletId !== 'freighter') {
-      kit.setWallet('freighter');
+    if (walletState.walletId) {
+      kit.setWallet(walletState.walletId);
     }
 
     try {
@@ -170,6 +183,7 @@ export const useWallet = () => {
     ...walletState,
     connectWallet,
     connectFreighter,
+    connectXBull,
     disconnectWallet,
     signTransaction,
     kit

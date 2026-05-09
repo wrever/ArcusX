@@ -55,11 +55,21 @@ header("Content-Type: application/json; charset=UTF-8");
 ob_end_clean();
 
 try {
-    require_once 'config.php'; // Incluye la configuración de la base de datos
+    // __DIR__ asegura cargar el config de la misma carpeta que este script (api/auth en producción)
+    require_once __DIR__ . '/config.php';
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['message' => 'Error de conexión a la base de datos']);
+    echo json_encode(['message' => 'Error de conexión a la base de datos'], JSON_UNESCAPED_UNICODE);
     exit;
+}
+
+// Corregir mojibake: datos que se guardaron como Latin-1 pero son bytes UTF-8 (ej. programaciÃ³n → programación)
+function fix_utf8_mojibake($str) {
+    if (!is_string($str) || $str === '') return $str;
+    $bytes = @mb_convert_encoding($str, 'ISO-8859-1', 'UTF-8');
+    if ($bytes === false) return $str;
+    if (!mb_check_encoding($bytes, 'UTF-8')) return $str;
+    return $bytes;
 }
 
 // Asegurarse de que la solicitud es GET
@@ -78,8 +88,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $bindParams = [];
     $types = '';
 
-    // Condiciones base
-    $where[] = "t.accepted_applicant_id IS NULL";
+    // Condiciones base: mismas que get_public_stats (status literal para evitar diferencias por servidor)
+    $where[] = "(t.accepted_applicant_id IS NULL OR t.accepted_applicant_id = 0)";
     $where[] = "t.status = 'open'";
 
     // Búsqueda por texto (título o descripción)
@@ -137,13 +147,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $orderBy = "t.created_at DESC";
             break;
         case 'popularity':
-            // Ordenar por número de propuestas (más populares primero)
-            $orderBy = "(SELECT COUNT(*) FROM applications a WHERE a.task_id = t.id) DESC, t.created_at DESC";
+            $orderBy = "t.created_at DESC";
             break;
     }
 
-    // Preparar la consulta SQL
-    // Usar IFNULL para manejar columnas que pueden no existir
+    // Consulta sin subquery a applications (evita fallos si la tabla no existe o hay restricciones)
     $sql = "SELECT
             t.id,
             t.title,
@@ -153,16 +161,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             t.currency,
             t.difficulty,
             t.category,
-            u.username AS creator_username,
+            IFNULL(u.username, '') AS creator_username,
             u.id AS creator_id,
-            IFNULL(u.average_rating, NULL) AS creator_rating,
-            IFNULL(u.total_ratings, NULL) AS creator_total_ratings,
+            u.average_rating AS creator_rating,
+            u.total_ratings AS creator_total_ratings,
             t.created_at,
             t.status,
-            (SELECT COUNT(*) FROM applications a WHERE a.task_id = t.id) AS proposal_count
+            0 AS proposal_count
         FROM
             tasks t
-        JOIN
+        LEFT JOIN
             users u ON t.user_id = u.id
         $whereClause
         ORDER BY
@@ -174,10 +182,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         if ($stmt) {
             $stmt->bind_param($types, ...$bindParams);
             $stmt->execute();
+            // get_result() requiere mysqlnd; sin él hace fatal en PHP 8.2 → respuesta vacía
+            if (!method_exists($stmt, 'get_result')) {
+                http_response_code(500);
+                $j = json_encode(['message' => 'Servidor requiere mysqlnd para filtros. Recarga sin filtros.']);
+                header('Content-Length: ' . strlen($j));
+                echo $j;
+                $stmt->close();
+                $conn->close();
+                exit;
+            }
             $result = $stmt->get_result();
+            if ($result === false) {
+                http_response_code(500);
+                $j = json_encode(['message' => 'Error al obtener resultados.']);
+                header('Content-Length: ' . strlen($j));
+                echo $j;
+                $stmt->close();
+                $conn->close();
+                exit;
+            }
         } else {
             http_response_code(500);
-            echo json_encode(['message' => 'Error al preparar consulta: ' . $conn->error, 'sql_error' => $conn->error]);
+            echo json_encode(['message' => 'Error al preparar consulta: ' . $conn->error, 'sql_error' => $conn->error], JSON_UNESCAPED_UNICODE);
             if (isset($stmt)) {
                 $stmt->close();
             }
@@ -188,22 +215,80 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $result = $conn->query($sql);
         if ($result === false) {
             http_response_code(500);
-            echo json_encode(['message' => 'Error en consulta: ' . $conn->error, 'sql_error' => $conn->error]);
+            echo json_encode(['message' => 'Error en consulta: ' . $conn->error, 'sql_error' => $conn->error], JSON_UNESCAPED_UNICODE);
             $conn->close();
             exit;
         }
     }
 
     $tasks = [];
+    $textKeys = ['title', 'subtitle', 'description', 'category', 'difficulty', 'currency', 'creator_username'];
     if ($result->num_rows > 0) {
-        // Recorrer los resultados y almacenar los resultados en un array
-        while($row = $result->fetch_assoc()) {
+        while ($row = $result->fetch_assoc()) {
+            foreach ($textKeys as $k) {
+                if (isset($row[$k]) && is_string($row[$k])) {
+                    $row[$k] = fix_utf8_mojibake($row[$k]);
+                }
+            }
             $tasks[] = $row;
         }
     }
 
-    // Devolver las tareas en formato JSON
-    echo json_encode($tasks);
+    // Si la consulta principal devolvió 0 filas, intentar consulta mínima (solo columnas esenciales)
+    if (count($tasks) === 0 && empty($bindParams)) {
+        $sqlMin = "SELECT t.id, t.title, t.description, t.price, t.category, t.difficulty, t.created_at, t.status,
+            u.id AS creator_id, IFNULL(u.username, '') AS creator_username
+            FROM tasks t
+            LEFT JOIN users u ON t.user_id = u.id
+            WHERE (t.accepted_applicant_id IS NULL OR t.accepted_applicant_id = 0) AND t.status = 'open'
+            ORDER BY t.created_at DESC";
+        $resMin = @$conn->query($sqlMin);
+        if ($resMin && $resMin->num_rows > 0) {
+            while ($row = $resMin->fetch_assoc()) {
+                $row['subtitle'] = isset($row['subtitle']) ? fix_utf8_mojibake($row['subtitle']) : '';
+                $row['currency'] = isset($row['currency']) ? fix_utf8_mojibake($row['currency']) : 'USDC';
+                $row['creator_rating'] = $row['creator_rating'] ?? null;
+                $row['creator_total_ratings'] = $row['creator_total_ratings'] ?? null;
+                $row['proposal_count'] = 0;
+                foreach (['title', 'description', 'category', 'difficulty', 'creator_username'] as $k) {
+                    if (isset($row[$k]) && is_string($row[$k])) $row[$k] = fix_utf8_mojibake($row[$k]);
+                }
+                $tasks[] = $row;
+            }
+        }
+    }
+
+    // Si sigue vacío y piden debug, incluir diagnóstico
+    if (count($tasks) === 0 && isset($_GET['debug']) && $_GET['debug'] === '1') {
+        $openCount = 0;
+        $countResult = $conn->query("SELECT COUNT(*) AS c FROM tasks WHERE (accepted_applicant_id IS NULL OR accepted_applicant_id = 0) AND status = 'open'");
+        if ($countResult && $row = $countResult->fetch_assoc()) {
+            $openCount = (int) $row['c'];
+        }
+        $tasks = [
+            'tasks' => [],
+            'debug' => [
+                'open_count' => $openCount,
+                'db' => $conn->get_server_info(),
+                'hint' => $openCount > 0 ? 'Hay tareas open pero la consulta devolvió 0.' : 'No hay tareas open en esta BD.',
+            ],
+        ];
+    }
+
+    // JSON con caracteres UTF-8 sin escapar (tildes y ñ correctos en el frontend)
+    $json = json_encode($tasks, JSON_UNESCAPED_UNICODE);
+    if ($json === false) {
+        $json = '[]';
+        if (function_exists('error_log')) {
+            error_log('get_tasks.php json_encode error: ' . json_last_error_msg());
+        }
+    }
+    header('Content-Length: ' . strlen($json));
+    echo $json;
+    while (ob_get_level()) {
+        ob_end_flush();
+    }
+    flush();
 
     // Cerrar la conexión a la base de datos
     if (isset($stmt)) {
@@ -214,6 +299,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 } else {
     // Si la solicitud no es GET, devolver método no permitido
     http_response_code(405); // Method Not Allowed
-    echo json_encode(['message' => 'Método no permitido']);
+    echo json_encode(['message' => 'Método no permitido'], JSON_UNESCAPED_UNICODE);
 }
 ?>

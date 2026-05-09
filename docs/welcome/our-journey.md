@@ -4,7 +4,8 @@ ArcusX was born from the need to create a fairer, more efficient, and accessible
 
 ## Origins
 
-The project began in 2024 with the vision of leveraging blockchain technology to solve fundamental problems in the traditional freelancing market. We identified three main issues:
+ArcusX was born in 2024 as an experimental idea. By late 2025, it had evolved into a clear idea and vision of what we wanted to build, shaped by our experiences in the Stellar ecosystem and in building products for the community. We spent a long time refining the concept to ensure its success before starting official development.
+The project is built on the vision of leveraging blockchain technology to solve fundamental problems in the traditional freelancing market. We identified three main issues:
 
 1. Excessively high commissions that significantly reduced workers' income
 2. Slow payments and bureaucratic processes that created friction
