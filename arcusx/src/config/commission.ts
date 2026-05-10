@@ -5,8 +5,11 @@
  * La comisión se retiene en el escrow y puede ser retirada manualmente
  */
 
-// Valor por defecto (0.3%) - se usa solo si no se puede obtener del backend
-export const DEFAULT_COMMISSION_RATE = 0.003; // 0.3%
+// Valor por defecto (3%) - se usa solo si no se puede obtener del backend
+export const DEFAULT_COMMISSION_RATE = 0.03; // 3%
+
+// Fee para usuarios CertiX Verified (KYC gratuito incluido)
+export const CERTIX_COMMISSION_RATE = 0.015; // 1.5%
 
 /**
  * Calcula la comisión sobre un monto dado usando el fee del backend

@@ -122,7 +122,7 @@ API routes live under `CertiX/src/app/api/`: `certificate/upload`, `certificate/
 
 ## Platform Fee
 
-The platform fee is **1%** (`PLATFORM_FEE_BPS = 1.0` in `config/trustlessWork.ts`). Any reference to 0.3% in comments or UI is outdated. CertiX Verified subscribers (tier $49/yr) get a discounted 0.5% fee.
+The platform fee is **3%** (`PLATFORM_FEE_BPS = 3.0` in `config/trustlessWork.ts`). CertiX Verified users (KYC gratuito incluido en su plan) pagan **1.5%** (`PLATFORM_FEE_BPS_CERTIX = 1.5` / `CERTIX_COMMISSION_RATE = 0.015`). Cualquier referencia a 1% o 0.3% en comentarios o UI está desactualizada.
 
 ## Switching from Testnet to Mainnet
 
