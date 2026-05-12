@@ -35,15 +35,10 @@ register_shutdown_function(function () use ($log_file) {
     }
 });
 
-$_cors_origin = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header("Access-Control-Allow-Origin: ".$_cors_origin);
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-header("Content-Type: application/json; charset=UTF-8");
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
+require_once __DIR__ . '/cors.php';
+arcusx_cors_handle_preflight('GET, POST, PUT, DELETE, OPTIONS');
+arcusx_cors_apply('GET, POST, PUT, DELETE, OPTIONS');
+header('Content-Type: application/json; charset=UTF-8');
 
 try {
     require_once __DIR__ . '/config.php';
@@ -66,37 +61,14 @@ function fix_utf8_mojibake($str) {
 }
 
 $autoload_path = __DIR__ . '/vendor/autoload.php';
-if (file_exists($autoload_path)) {
-    require $autoload_path;
-    use Firebase\JWT\JWT;
-    use Firebase\JWT\Key;
+if (!file_exists($autoload_path)) {
+    _manage_portfolio_log('Falta vendor/autoload.php');
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Error de configuración del servidor.'], JSON_UNESCAPED_UNICODE);
+    exit();
 }
-
-
-function getLoggedInUserIdPortfolio($secret_key) {
-    if (!class_exists('Firebase\\JWT\\JWT')) {
-        return null;
-    }
-    $headers = function_exists('getallheaders') ? getallheaders() : [];
-    $authHeader = isset($headers['Authorization']) ? $headers['Authorization'] : '';
-    if (empty($authHeader) && isset($_SERVER['HTTP_AUTHORIZATION'])) {
-        $authHeader = $_SERVER['HTTP_AUTHORIZATION'];
-    }
-    if (preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-        $jwt = $matches[1];
-        try {
-            JWT::$leeway = 300;
-            $decoded = JWT::decode($jwt, new Key($secret_key, 'HS256'));
-            if (isset($decoded->data->id)) {
-                return (int)$decoded->data->id;
-            }
-        } catch (Exception $e) {
-            error_log("JWT error en manage_portfolio.php: " . $e->getMessage());
-            return null;
-        }
-    }
-    return null;
-}
+require $autoload_path;
+require_once __DIR__ . '/auth_bearer.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -135,8 +107,8 @@ if ($method === 'GET') {
 
         // Si el perfil es privado, solo el dueño (con token) puede ver su portfolio
         if (!$publicProfile) {
-            $currentUserId = getLoggedInUserIdPortfolio($jwt_secret);
-            if (!$currentUserId || $currentUserId !== $targetUserId) {
+            $currentUserId = arcusx_jwt_user_id();
+            if ($currentUserId === null || $currentUserId !== $targetUserId) {
                 http_response_code(403);
                 echo json_encode(['success' => false, 'message' => 'Este perfil es privado'], JSON_UNESCAPED_UNICODE);
                 $conn->close();
@@ -191,8 +163,8 @@ if ($method === 'GET') {
 }
 
 // Para POST/PUT/DELETE se requiere usuario autenticado
-$userId = getLoggedInUserIdPortfolio($jwt_secret);
-if (!$userId) {
+$userId = arcusx_jwt_user_id();
+if ($userId === null) {
     http_response_code(401);
     echo json_encode(['success' => false, 'message' => 'Acceso no autorizado: Token requerido'], JSON_UNESCAPED_UNICODE);
     $conn->close();

@@ -4,16 +4,8 @@
  * Login simplificado para administradores - JWT propio; verifica que sea admin
  */
 
-// Manejar OPTIONS preflight
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    $_cors_o = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header('Access-Control-Allow-Origin: '.$_cors_o);
-    header('Access-Control-Allow-Methods: POST, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
-    header('Access-Control-Max-Age: 3600');
-    header('Content-Length: 0');
-    http_response_code(200);
-    exit(0);
-}
+require_once __DIR__ . '/cors.php';
+arcusx_cors_handle_preflight('POST, OPTIONS');
 
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
@@ -25,7 +17,7 @@ require_once 'config.php';
 $autoload_path = __DIR__ . '/vendor/autoload.php';
 if (!file_exists($autoload_path)) {
     http_response_code(500);
-    $_cors_o = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header('Access-Control-Allow-Origin: '.$_cors_o);
+    arcusx_cors_apply('POST, OPTIONS');
     header('Content-Type: application/json');
     echo json_encode([
         'message' => 'Error en el servidor: Falta la carpeta de dependencias (vendor).',
@@ -46,7 +38,7 @@ $expirationTime = $issuedAt + (3600 * 24 * 7); // 7 días
 $issuer = "arcusx.pro";
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $_cors_o = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header('Access-Control-Allow-Origin: '.$_cors_o);
+    arcusx_cors_apply('POST, OPTIONS');
     header('Content-Type: application/json');
 
     $raw_data = file_get_contents('php://input');
@@ -145,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $conn->close();
 
 } else {
-    $_cors_o = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header('Access-Control-Allow-Origin: '.$_cors_o);
+    arcusx_cors_apply('POST, OPTIONS');
     header('Content-Type: application/json');
     http_response_code(405);
     echo json_encode(['message' => 'Método no permitido.']);

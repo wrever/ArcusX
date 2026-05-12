@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { API_URL } from '../config/database';
 import { supabase, hasSupabase } from '../config/supabase';
+import { ensureArcusxSupabaseUserLink } from './arcusxMessagingSupabase';
 
 // Función para verificar si un token JWT ha expirado
 const isTokenExpired = (token: string): boolean => {
@@ -146,6 +147,9 @@ export const authService = {
         localStorage.setItem('user', JSON.stringify(syncResponse.data.user));
         // Guardar también el access_token de Supabase por si lo necesitamos
         localStorage.setItem('supabase_access_token', session.access_token);
+        if (hasSupabase && syncResponse.data.user?.id != null) {
+          void ensureArcusxSupabaseUserLink(Number(syncResponse.data.user.id));
+        }
         return syncResponse.data;
       }
       

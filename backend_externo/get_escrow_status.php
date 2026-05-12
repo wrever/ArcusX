@@ -1,64 +1,19 @@
 <?php
 // get_escrow_status.php
 
-// CORS headers
-$allowed_origins = [
-    'http://localhost:5173',
-    'https://arcusx.pro',
-    'http://arcusx.pro'
-];
-$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
-if (in_array($origin, $allowed_origins)) {
-    header("Access-Control-Allow-Origin: $origin");
-    header("Access-Control-Allow-Credentials: true");
-}
-header("Access-Control-Allow-Methods: GET, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-header("Access-Control-Max-Age: 3600");
-header("Content-Type: application/json; charset=UTF-8");
-
-// Manejar preflight OPTIONS request
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
-
+require_once __DIR__ . '/cors.php';
+arcusx_cors_handle_preflight('GET, OPTIONS');
 require_once 'config.php';
 require __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/auth_bearer.php';
 
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
-
-$secret_key = $jwt_secret;
-
-// Función para obtener el ID del usuario logueado desde el token JWT
-function getLoggedInUserId($conn, $secret_key) {
-    $headers = getallheaders();
-    if (!isset($headers['Authorization'])) {
-        return null;
-    }
-    $authHeader = $headers['Authorization'];
-    if (!preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-        return null;
-    }
-    $jwt = $matches[1];
-    try {
-        $decoded = JWT::decode($jwt, new Key($secret_key, 'HS256'));
-        if (isset($decoded->data->id)) {
-            return (string) $decoded->data->id;
-        } else {
-            return null;
-        }
-    } catch (Exception $e) {
-        error_log("JWT Error in get_escrow_status.php: " . $e->getMessage());
-        return null;
-    }
-}
+arcusx_cors_apply('GET, OPTIONS');
+header('Content-Type: application/json; charset=UTF-8');
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $loggedInUserId = getLoggedInUserId($conn, $secret_key);
+    $loggedInUserId = arcusx_jwt_user_id();
 
-    if (is_null($loggedInUserId)) {
+    if ($loggedInUserId === null) {
         http_response_code(401);
         echo json_encode(['success' => false, 'message' => 'Acceso no autorizado']);
         exit;

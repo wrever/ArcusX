@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
-import { FaArrowLeft, FaUser, FaCheckCircle, FaBriefcase, FaStar, FaDollarSign, FaTasks, FaLock } from 'react-icons/fa';
+import { useParams, Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { FaArrowLeft, FaUser, FaCheckCircle, FaBriefcase, FaStar, FaDollarSign, FaTasks, FaLock, FaPlus } from 'react-icons/fa';
 import { getUserProfile, getUserPublicStats } from '../services/profileService';
 import type { UserProfile as UserProfileType, UserStatistics } from '../types/profile';
 import RatingDisplay from './RatingDisplay';
@@ -17,6 +17,8 @@ const UserProfile = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const isHireMode = searchParams.get('hire') === '1';
   const returnTo = (location.state as { from?: string } | null)?.from;
   const { theme } = useTheme();
   const { t, lang } = useI18n();
@@ -144,7 +146,43 @@ const UserProfile = () => {
         />
       )}
       <div className="user-profile-container">
-        {/* Header con botón de volver */}
+        {/* Banner de contratación rápida */}
+      {isHireMode && !isOwner && profile && (
+        <div className="hire-banner">
+          <div className="hire-banner-content">
+            <div className="hire-banner-text">
+              <p className="hire-banner-title">
+                {t('hire.banner.title').replace('{{username}}', profile.username)}
+              </p>
+              <p className="hire-banner-body">
+                {t('hire.banner.body').replace(/\{\{username\}\}/g, profile.username)}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="hire-banner-cta"
+              onClick={() => {
+                const params = new URLSearchParams();
+                params.set('for_user', String(userId));
+                params.set('hire_username', encodeURIComponent(profile.username));
+                navigate(
+                  { pathname: '/create-task', search: params.toString() },
+                  {
+                    state: {
+                      hireContext: { userId: parseInt(userId!, 10), username: profile.username },
+                    },
+                  }
+                );
+              }}
+            >
+              <FaPlus style={{ marginRight: '8px' }} />
+              {t('hire.banner.cta')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Header con botón de volver */}
         <div className="profile-header-nav">
         <button type="button" onClick={handleBack} className="back-button">
           <FaArrowLeft />

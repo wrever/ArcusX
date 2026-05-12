@@ -2,6 +2,12 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios'; // Importar axios
 import { API_URL } from '../config/database'; // Asegúrate de que la ruta a tu config.js es correcta
+import { hasSupabase } from '../config/supabase';
+import {
+  fetchTaskMessagesSupabase,
+  sendTaskMessageSupabase,
+  ensureArcusxSupabaseUserLink,
+} from '../services/arcusxMessagingSupabase';
 import '../css/SuperviseTask.css';
 import { jwtDecode } from "jwt-decode"; // Importar jwtDecode
 import { useWallet } from '../hooks/useWallet';
@@ -476,15 +482,32 @@ const SuperviseTask = () => {
             setLoadingMessages(true);
         }
         try {
-            const response = await axios.get(`${API_URL}/auth/get_messages.php?task_id=${taskId}`);
-            
-            if (response.data && Array.isArray(response.data)) {
-                const formattedMessages: Message[] = response.data.map(msg => ({
+            if (!hasSupabase) {
+                if (!silent) {
+                    setError(t('common.error.supabaseMessaging'));
+                }
+                setMessages([]);
+            } else {
+                try {
+                    const raw = localStorage.getItem('user');
+                    const u = raw ? JSON.parse(raw) : null;
+                    if (u?.id != null) {
+                        void ensureArcusxSupabaseUserLink(Number(u.id));
+                    }
+                } catch {
+                    /* ignore */
+                }
+                const tid = parseInt(String(taskId), 10);
+                const rows = await fetchTaskMessagesSupabase(tid);
+                const formattedMessages: Message[] = rows.map((msg) => ({
                     ...msg,
                     id: String(msg.id),
                     task_id: String(msg.task_id),
                     sender_id: String(msg.sender_id),
-                    receiver_id: String(msg.receiver_id)
+                    receiver_id: String(msg.receiver_id),
+                    message: String((msg as { message?: string }).message ?? ''),
+                    is_read: (msg as { is_read?: boolean | number }).is_read ? 1 : 0,
+                    created_at: String((msg as { created_at?: string }).created_at ?? ''),
                 }));
                 setMessages((prev) => {
                     if (
@@ -504,8 +527,6 @@ const SuperviseTask = () => {
                     }
                     return formattedMessages;
                 });
-            } else {
-                 setMessages([]);
             }
         } catch (error) {
              if (!silent) {
@@ -849,50 +870,43 @@ const SuperviseTask = () => {
         setSendingMessage(true);
         setError(null);
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                setError(t('supervise.error.noToken'));
-                setSendingMessage(false);
+            if (!hasSupabase) {
+                setError(t('common.error.supabaseMessaging'));
                 return;
             }
 
-            // Asegurarse de que los IDs son números para el backend
-            const senderIdNum = parseInt(currentUser.id, 10);
-            const taskIdNum = parseInt(taskId, 10); // Asegurarse de que el taskId es un número
+            try {
+                const raw = localStorage.getItem('user');
+                const u = raw ? JSON.parse(raw) : null;
+                if (u?.id != null) {
+                    void ensureArcusxSupabaseUserLink(Number(u.id));
+                }
+            } catch {
+                /* ignore */
+            }
 
-            // Determinar el receiver_id dinámicamente
-            // Si el current user es el creador de la tarea, el receptor es el trabajador
-            // Si el current user es el trabajador, el receptor es el creador
+            const taskIdNum = parseInt(taskId, 10);
+
             let actualReceiverId = 0;
-            if (currentUser.id === task.user_id) { // Si el usuario actual es el creador de la tarea
-                actualReceiverId = parseInt(acceptedApplicantId, 10); // El receptor es el trabajador aceptado
-            } else if (currentUser.id === worker.id) { // Si el usuario actual es el trabajador
-                actualReceiverId = parseInt(task.user_id, 10); // El receptor es el creador de la tarea
+            if (currentUser.id === task.user_id) {
+                actualReceiverId = parseInt(acceptedApplicantId, 10);
+            } else if (currentUser.id === worker.id) {
+                actualReceiverId = parseInt(task.user_id, 10);
             } else {
                 setError(t('supervise.error.unauthorizedSend'));
-                setSendingMessage(false);
                 return;
             }
-            
-            const response = await axios.post(`${API_URL}/auth/send_message.php`, 
-                {
-                    task_id: taskIdNum,
-                    sender_id: senderIdNum,
-                    receiver_id: actualReceiverId,
-                message: newMessage.trim()
-                },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                }
-            );
-            
-            if (response.data.success) {
+
+            const result = await sendTaskMessageSupabase({
+                task_id: taskIdNum,
+                receiver_mysql_id: actualReceiverId,
+                body: newMessage.trim(),
+            });
+            if (result.success) {
                 setNewMessage('');
                 void fetchMessages({ silent: true });
             } else {
-                setError(t('supervise.error.messageNotSent') + ' ' + (response.data.message || t('supervise.error.sendMessage')));
+                setError(t('supervise.error.messageNotSent') + ' ' + (result.message || t('supervise.error.sendMessage')));
             }
         } catch (err: any) {
             setError(t('supervise.error.sendMessage') + ' ' + (err.response?.data?.message || err.message));

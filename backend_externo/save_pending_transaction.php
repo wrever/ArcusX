@@ -16,37 +16,8 @@ error_reporting(E_ALL);
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/php-error.log');
 
-// CORS headers - DEBEN IR PRIMERO, ANTES DE CUALQUIER OTRO OUTPUT
-$allowed_origins = [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'https://arcusx.pro',
-    'http://arcusx.pro'
-];
-$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
-
-// Manejar preflight OPTIONS request PRIMERO
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    if (in_array($origin, $allowed_origins)) {
-        header("Access-Control-Allow-Origin: $origin");
-        header("Access-Control-Allow-Credentials: true");
-    }
-    header("Access-Control-Allow-Methods: POST, OPTIONS");
-    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-    header("Access-Control-Max-Age: 3600");
-    http_response_code(200);
-    exit();
-}
-
-// Headers CORS para requests normales
-if (in_array($origin, $allowed_origins)) {
-    header("Access-Control-Allow-Origin: $origin");
-    header("Access-Control-Allow-Credentials: true");
-}
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-header("Access-Control-Max-Age: 3600");
-header("Content-Type: application/json; charset=UTF-8");
+require_once __DIR__ . '/cors.php';
+arcusx_cors_handle_preflight('POST, OPTIONS');
 
 require_once __DIR__ . '/config.php';
 $autoload_path = __DIR__ . '/vendor/autoload.php';
@@ -57,38 +28,15 @@ if (!file_exists($autoload_path)) {
     exit;
 }
 require $autoload_path;
+require_once __DIR__ . '/auth_bearer.php';
 
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
-
-$secret_key = $jwt_secret;
-
-function getLoggedInUserId($conn, $secret_key) {
-    $headers = function_exists('getallheaders') ? getallheaders() : [];
-    if (!isset($headers['Authorization'])) {
-        return null;
-    }
-    $authHeader = $headers['Authorization'];
-    if (!preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-        return null;
-    }
-    $jwt = $matches[1];
-    try {
-        $decoded = JWT::decode($jwt, new Key($secret_key, 'HS256'));
-        if (isset($decoded->data->id)) {
-            return (string) $decoded->data->id;
-        }
-        return null;
-    } catch (Exception $e) {
-        error_log("JWT Error in save_pending_transaction.php: " . $e->getMessage());
-        return null;
-    }
-}
+arcusx_cors_apply('POST, OPTIONS');
+header('Content-Type: application/json; charset=UTF-8');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $loggedInUserId = getLoggedInUserId($conn, $secret_key);
+    $loggedInUserId = arcusx_jwt_user_id();
 
-    if (is_null($loggedInUserId)) {
+    if ($loggedInUserId === null) {
         http_response_code(401);
         echo json_encode(['success' => false, 'message' => 'Acceso no autorizado']);
         exit;
@@ -103,15 +51,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($conn) && $conn) $conn->close();
     exit;
 } else {
-    // Asegurar que los headers CORS se envíen incluso para métodos no permitidos
     if (!headers_sent()) {
-        if (in_array($origin, $allowed_origins)) {
-            header("Access-Control-Allow-Origin: $origin");
-            header("Access-Control-Allow-Credentials: true");
-        }
-        header("Content-Type: application/json; charset=UTF-8");
+        arcusx_cors_apply('POST, OPTIONS');
+        header('Content-Type: application/json; charset=UTF-8');
     }
-    
+
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Método no permitido']);
 }

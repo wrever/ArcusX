@@ -2,37 +2,8 @@
 // delete_scheduled_tasks.php
 // Script para eliminar tareas programadas después de 24 horas
 
-// CORS headers - DEBEN IR PRIMERO, ANTES DE CUALQUIER OTRO OUTPUT
-$allowed_origins = [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'https://arcusx.pro',
-    'http://arcusx.pro'
-];
-$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
-
-// Manejar preflight OPTIONS request PRIMERO
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    if (in_array($origin, $allowed_origins)) {
-        header("Access-Control-Allow-Origin: $origin");
-        header("Access-Control-Allow-Credentials: true");
-    }
-    header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-    header("Access-Control-Max-Age: 3600");
-    http_response_code(200);
-    exit();
-}
-
-// Headers CORS para requests normales
-if (in_array($origin, $allowed_origins)) {
-    header("Access-Control-Allow-Origin: $origin");
-    header("Access-Control-Allow-Credentials: true");
-}
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-header("Access-Control-Max-Age: 3600");
-header("Content-Type: application/json; charset=UTF-8");
+require_once __DIR__ . '/cors.php';
+arcusx_cors_handle_preflight('GET, POST, OPTIONS');
 
 // Habilitar logs (pero NO mostrar errores en pantalla para evitar output antes de headers)
 ini_set('display_errors', 0);
@@ -43,37 +14,18 @@ ini_set('error_log', __DIR__ . '/php-error.log');
 
 require_once 'config.php';
 require_once 'vendor/autoload.php';
+require_once __DIR__ . '/auth_bearer.php';
 
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
-
-$secret_key = $jwt_secret;
-
-// Función para obtener el ID del usuario logueado desde el token JWT
-function getLoggedInUserId($conn, $secret_key) {
-    $headers = getallheaders();
-    $authHeader = isset($headers['Authorization']) ? $headers['Authorization'] : '';
-
-    if (preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-        $jwt = $matches[1];
-        if (!$jwt) return null;
-        try {
-            $decoded = JWT::decode($jwt, new Key($secret_key, 'HS256'));
-            return $decoded->data->id;
-        } catch (Exception $e) {
-            error_log("JWT Error: " . $e->getMessage());
-            return null;
-        }
-    }
-    return null;
-}
+arcusx_cors_apply('GET, POST, OPTIONS');
+header('Content-Type: application/json; charset=UTF-8');
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $loggedInUserId = getLoggedInUserId($conn, $secret_key);
-    
+    $jwtUid = arcusx_jwt_user_id();
+    $loggedInUserId = $jwtUid !== null ? (string) $jwtUid : null;
+
     // Verificar si es una petición de cron (puede ejecutarse sin autenticación)
     $isCronRequest = isset($_GET['cron_token']) && $_GET['cron_token'] === 'arcusx_scheduled_deletion_2025';
-    
+
     // Si no hay usuario logueado y no es una petición de cron, rechazar
     if (!$loggedInUserId && !$isCronRequest) {
         http_response_code(401);

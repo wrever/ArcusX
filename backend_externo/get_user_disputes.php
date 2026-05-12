@@ -3,54 +3,25 @@
  * Endpoint para obtener disputas del usuario que requieren su firma
  * GET /api/auth/get_user_disputes.php
  * Headers: Authorization: Bearer {JWT_TOKEN}
- * 
+ *
  * Retorna disputas resueltas donde el usuario es cliente o trabajador
  * y necesita firmar una transacción para liberar fondos
  */
 
+require_once __DIR__ . '/cors.php';
+arcusx_cors_handle_preflight('GET, OPTIONS');
 require_once 'config.php';
 require_once 'vendor/autoload.php';
+require_once __DIR__ . '/auth_bearer.php';
 
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
-
+arcusx_cors_apply('GET, OPTIONS');
 header('Content-Type: application/json; charset=UTF-8');
 
-// Headers CORS
-$_cors_origin = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header("Access-Control-Allow-Origin: ".$_cors_origin);
-header("Access-Control-Allow-Methods: GET, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
-
-
-function getLoggedInUserId($conn, $secret_key) {
-    $headers = getallheaders();
-    $authHeader = isset($headers['Authorization']) ? $headers['Authorization'] : '';
-    
-    if (preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-        $jwt = $matches[1];
-        try {
-            JWT::$leeway = 300;
-            $decoded = JWT::decode($jwt, new Key($secret_key, 'HS256'));
-            if (isset($decoded->data->id)) {
-                return (int)$decoded->data->id;
-            }
-        } catch (Exception $e) {
-            error_log("JWT Error en get_user_disputes.php: " . $e->getMessage());
-            return null;
-        }
-    }
-    return null;
-}
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $userId = getLoggedInUserId($conn, $jwt_secret);
-    
-    if (!$userId) {
+    $userId = arcusx_jwt_user_id();
+
+    if ($userId === null) {
         http_response_code(401);
         echo json_encode([
             'success' => false,

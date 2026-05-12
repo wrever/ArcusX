@@ -30,6 +30,10 @@
   backdrop-filter: blur(20px);
 }
 
+.popup-container.popup-container--extra {
+  max-width: min(520px, 94vw);
+}
+
 @keyframes popupSlideIn {
   from {
     opacity: 0;

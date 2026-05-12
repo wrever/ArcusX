@@ -439,3 +439,22 @@
 .apply-wallet-paste-btn:hover {
   background: rgba(16, 221, 136, 0.22);
 }
+
+.apply-hire-ref-banner {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(16, 221, 136, 0.45);
+  background: rgba(16, 221, 136, 0.1);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+:root[data-theme="light"] .apply-hire-ref-banner {
+  background: rgba(10, 184, 106, 0.08);
+  border-color: rgba(10, 184, 106, 0.35);
+  color: #0f172a;
+}

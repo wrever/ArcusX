@@ -68,6 +68,20 @@ try {
             $response = handleGetEscrows($conn, $user, $params);
             break;
         
+        case 'get_escrow_details':
+            $params = array_merge($_GET, $_POST);
+            $response = handleGetEscrowDetails($conn, $user, $params);
+            break;
+        
+        case 'get_commission_balance':
+            $response = handleGetCommissionBalance($conn, $user);
+            break;
+        
+        case 'withdraw_commission':
+            $data = json_decode(file_get_contents('php://input'), true) ?: [];
+            $response = handleWithdrawCommission($conn, $user, $data);
+            break;
+        
         case 'update_task':
             $data = json_decode(file_get_contents('php://input'), true) ?: [];
             $response = handleUpdateTask($conn, $user, $data);

@@ -10,6 +10,8 @@ interface PopupProps {
   message: string;
   buttonText: string;
   onButtonClick: () => void;
+  /** Contenido extra entre el mensaje y el botón principal (p. ej. copiar enlace). */
+  children?: React.ReactNode;
 }
 
 const Popup: React.FC<PopupProps> = ({
@@ -19,13 +21,14 @@ const Popup: React.FC<PopupProps> = ({
   title,
   message,
   buttonText,
-  onButtonClick
+  onButtonClick,
+  children
 }) => {
   if (!isOpen) return null;
 
   return (
     <div className="popup-overlay">
-      <div className="popup-container">
+      <div className={`popup-container${children ? ' popup-container--extra' : ''}`}>
         <button className="popup-close" onClick={onClose}>
           <FaTimes />
         </button>
@@ -41,7 +44,7 @@ const Popup: React.FC<PopupProps> = ({
           
           <h3 className="popup-title">{title}</h3>
           <p className="popup-message">{message}</p>
-          
+          {children}
           <button 
             className={`popup-button ${type === 'success' ? 'success-button' : 'error-button'}`}
             onClick={onButtonClick}

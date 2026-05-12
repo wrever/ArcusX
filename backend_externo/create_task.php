@@ -12,40 +12,10 @@
  * - Al crear escrow: amount = 10, commission = 0.05, totalToFund = 10.05
  */
 
-// CORS headers - DEBEN IR PRIMERO, ANTES DE CUALQUIER OTRO OUTPUT
-$allowed_origins = [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'https://arcusx.pro',
-    'http://arcusx.pro'
-];
-$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
-
-// Manejar preflight OPTIONS request PRIMERO
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    if (in_array($origin, $allowed_origins)) {
-        header("Access-Control-Allow-Origin: $origin");
-        header("Access-Control-Allow-Credentials: true");
-    }
-    header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-    header("Access-Control-Max-Age: 3600");
-    header("Content-Length: 0");
-    http_response_code(200);
-    exit();
-}
-
-// Headers CORS para requests normales
-if (in_array($origin, $allowed_origins)) {
-    header("Access-Control-Allow-Origin: $origin");
-    header("Access-Control-Allow-Credentials: true");
-} else {
-    $_cors_origin = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header("Access-Control-Allow-Origin: ".$_cors_origin);
-}
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-header("Access-Control-Max-Age: 3600");
-header("Content-Type: application/json; charset=UTF-8");
+require_once __DIR__ . '/cors.php';
+arcusx_cors_handle_preflight('GET, POST, OPTIONS');
+arcusx_cors_apply('GET, POST, OPTIONS');
+header('Content-Type: application/json; charset=UTF-8');
 
 // Habilitar logs (pero NO mostrar errores en pantalla para evitar output antes de headers)
 ini_set('display_errors', 0);
@@ -111,13 +81,55 @@ try {
         exit();
     }
 
-    // Preparar la consulta SQL usando prepared statements
-    $stmt = $conn->prepare("INSERT INTO tasks (title, subtitle, description, price, currency, difficulty, category, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-    if (!$stmt) {
-        throw new Exception('Error al preparar la consulta: ' . $conn->error);
+    $hasPrivateCols = false;
+    $pc = $conn->query("SHOW COLUMNS FROM tasks LIKE 'is_private_invite'");
+    if ($pc && $pc->num_rows > 0) {
+        $hasPrivateCols = true;
     }
-    
-    $stmt->bind_param("sssdsssi", $title, $subtitle, $description, $price, $currency, $difficulty, $category, $userId);
+
+    $isPrivateInvite = 0;
+    $invitedUserId = null;
+    if ($hasPrivateCols && !empty($data['is_private_invite']) && ($data['is_private_invite'] === true || $data['is_private_invite'] === 1 || $data['is_private_invite'] === '1')) {
+        $isPrivateInvite = 1;
+        if (!isset($data['invited_user_id'])) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Oferta privada: falta invited_user_id.']);
+            exit();
+        }
+        $invitedUserId = intval($data['invited_user_id']);
+        if ($invitedUserId <= 0 || $invitedUserId === $userId) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'invited_user_id inválido o igual al creador.']);
+            exit();
+        }
+        $chkInv = $conn->query("SELECT id FROM users WHERE id = $invitedUserId");
+        if (!$chkInv || $chkInv->num_rows === 0) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'message' => 'El freelancer invitado no existe.']);
+            exit();
+        }
+    }
+
+    // Preparar la consulta SQL usando prepared statements
+    if ($hasPrivateCols && $isPrivateInvite === 1) {
+        $stmt = $conn->prepare("INSERT INTO tasks (title, subtitle, description, price, currency, difficulty, category, user_id, invited_user_id, is_private_invite) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)");
+        if (!$stmt) {
+            throw new Exception('Error al preparar la consulta: ' . $conn->error);
+        }
+        $stmt->bind_param("sssdsssii", $title, $subtitle, $description, $price, $currency, $difficulty, $category, $userId, $invitedUserId);
+    } elseif ($hasPrivateCols) {
+        $stmt = $conn->prepare("INSERT INTO tasks (title, subtitle, description, price, currency, difficulty, category, user_id, invited_user_id, is_private_invite) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, 0)");
+        if (!$stmt) {
+            throw new Exception('Error al preparar la consulta: ' . $conn->error);
+        }
+        $stmt->bind_param("sssdsssi", $title, $subtitle, $description, $price, $currency, $difficulty, $category, $userId);
+    } else {
+        $stmt = $conn->prepare("INSERT INTO tasks (title, subtitle, description, price, currency, difficulty, category, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        if (!$stmt) {
+            throw new Exception('Error al preparar la consulta: ' . $conn->error);
+        }
+        $stmt->bind_param("sssdsssi", $title, $subtitle, $description, $price, $currency, $difficulty, $category, $userId);
+    }
 
     // Ejecutar la consulta
     if ($stmt->execute()) {
@@ -214,18 +226,7 @@ try {
 
 } catch (Exception $e) {
     error_log('Error en create_task.php: ' . $e->getMessage());
-    
-    // Asegurar que los headers CORS se envíen incluso en errores
-    if (in_array($origin, $allowed_origins)) {
-        header("Access-Control-Allow-Origin: $origin");
-        header("Access-Control-Allow-Credentials: true");
-    } else {
-        $_cors_origin = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header("Access-Control-Allow-Origin: ".$_cors_origin);
-    }
-    header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-    header("Content-Type: application/json; charset=UTF-8");
-    
+
     http_response_code(500);
     echo json_encode([
         'success' => false,

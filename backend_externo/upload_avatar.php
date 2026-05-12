@@ -7,6 +7,8 @@
  * Campo: file (imagen)
  */
 
+require_once __DIR__ . '/cors.php';
+arcusx_cors_handle_preflight('POST, OPTIONS');
 require_once 'config.php';
 
 $autoload_path = __DIR__ . '/vendor/autoload.php';
@@ -19,44 +21,10 @@ if (!file_exists($autoload_path)) {
     exit();
 }
 require $autoload_path;
+require_once __DIR__ . '/auth_bearer.php';
 
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
-
-$_cors_origin = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header("Access-Control-Allow-Origin: ".$_cors_origin);
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-header("Content-Type: application/json; charset=UTF-8");
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
-
-
-function getLoggedInUserIdForAvatar($secret_key) {
-    $headers = getallheaders();
-    $authHeader = isset($headers['Authorization']) ? $headers['Authorization'] : '';
-
-    if (empty($authHeader) && isset($_SERVER['HTTP_AUTHORIZATION'])) {
-        $authHeader = $_SERVER['HTTP_AUTHORIZATION'];
-    }
-
-    if (preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-        $jwt = $matches[1];
-        try {
-            JWT::$leeway = 300;
-            $decoded = JWT::decode($jwt, new Key($secret_key, 'HS256'));
-            if (isset($decoded->data->id)) {
-                return (int)$decoded->data->id;
-            }
-        } catch (Exception $e) {
-            error_log("JWT Error en upload_avatar.php: " . $e->getMessage());
-            return null;
-        }
-    }
-    return null;
-}
+arcusx_cors_apply('POST, OPTIONS');
+header('Content-Type: application/json; charset=UTF-8');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -67,8 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit();
 }
 
-$userId = getLoggedInUserIdForAvatar($jwt_secret);
-if (!$userId) {
+$userId = arcusx_jwt_user_id();
+if ($userId === null) {
     http_response_code(401);
     echo json_encode([
         'success' => false,

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import '../css/Navbar.css';
 import logoDark from '../images/arcus-logo.png';
 import logoLight from '../images/arcusxlogoclaro.png';
@@ -15,6 +15,7 @@ const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { pathname } = useLocation();
+  const [searchParams] = useSearchParams();
   const { isAuthenticated, logout } = useAuth();
   const { t } = useI18n();
   const { theme } = useTheme();
@@ -114,11 +115,35 @@ const Navbar = () => {
                 <>
                   <Link
                     to="/dashboard"
-                    className={`nav-button login${path.startsWith('/dashboard') ? ' nav-button--active' : ''}`}
+                    className={`nav-button login${
+                      path.startsWith('/dashboard') &&
+                      !(path === '/dashboard' && searchParams.get('tab') === 'private-offers')
+                        ? ' nav-button--active'
+                        : ''
+                    }`}
                     onClick={closeMenu}
-                    aria-current={path.startsWith('/dashboard') ? 'page' : undefined}
+                    aria-current={
+                      path.startsWith('/dashboard') &&
+                      !(path === '/dashboard' && searchParams.get('tab') === 'private-offers')
+                        ? 'page'
+                        : undefined
+                    }
                   >
                     {t('nav.dashboard')}
+                  </Link>
+                  <Link
+                    to="/dashboard?tab=private-offers"
+                    className={`nav-button login${
+                      path === '/dashboard' && searchParams.get('tab') === 'private-offers'
+                        ? ' nav-button--active'
+                        : ''
+                    }`}
+                    onClick={closeMenu}
+                    aria-current={
+                      path === '/dashboard' && searchParams.get('tab') === 'private-offers' ? 'page' : undefined
+                    }
+                  >
+                    {t('nav.privateOffers')}
                   </Link>
                   <button type="button" onClick={handleLogout} className="nav-button register">
                     {t('nav.logout')}

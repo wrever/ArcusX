@@ -19,7 +19,7 @@
 | Usuarios | `get_user_profile`, `update_user_profile`, `update_user`, `get_user_details`, `get_user_public_stats`, `get_user_earnings_summary`, `get_user_rating_summary`, `register_wallet`, `verify_wallet` |
 | Ratings | `create_rating`, `get_ratings` |
 | Notificaciones | `get_notifications`, `mark_notification_read` |
-| Stats | `get_stats`, `get_public_stats`, `task_stats`, `get_completed_tasks_count` |
+| Stats landing | Supabase: `get_landing_oauth_user_count`, `get_landing_open_tasks_count`, `get_landing_completed_volume_usdc`, tabla `arcusx_tasks_landing_mirror` (sembrar desde MySQL). Sin Supabase: `get_landing_market_stats.php`. Admin: `get_stats`, `task_stats`, `get_completed_tasks_count` |
 | Límites | `check_user_limits`, `get_user_limits`, `set_cooldown`, `delete_scheduled_tasks` |
 | Fees/TX | `get_platform_fee`, `get_user_transactions` |
 | Admin | `admin.php`, `admin_common.php`, `admin_actions.php` |

@@ -5,20 +5,11 @@
  * Maneja: CORS, autenticación, utilidades, configuración de errores
  */
 
-// Función helper para obtener el origen permitido (desarrollo o producción)
-function getAllowedOrigin() {
-    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-    $allowedOrigins = [
-        'http://localhost:5173',  // Desarrollo local
-        'https://arcusx.pro',      // Producción
-    ];
-    
-    if (in_array($origin, $allowedOrigins)) {
-        return $origin;
-    }
-    
-    // Por defecto, usar producción
-    return 'https://arcusx.pro';
+require_once __DIR__ . '/cors.php';
+
+/** @deprecated Usar arcusx_cors_origin_for_request() en código nuevo */
+function getAllowedOrigin(): string {
+    return arcusx_cors_origin_for_request();
 }
 
 /**

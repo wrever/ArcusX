@@ -1,95 +1,30 @@
 <?php
 // register_wallet.php
+require_once __DIR__ . '/cors.php';
+arcusx_cors_handle_preflight('POST, OPTIONS');
 
-// CORS headers - DEBEN IR PRIMERO, ANTES DE CUALQUIER OTRO OUTPUT
-$allowed_origins = [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'https://arcusx.pro',
-    'http://arcusx.pro'
-];
-$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
-
-// Manejar preflight OPTIONS request PRIMERO
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    if (in_array($origin, $allowed_origins)) {
-        header("Access-Control-Allow-Origin: $origin");
-        header("Access-Control-Allow-Credentials: true");
-    }
-    header("Access-Control-Allow-Methods: POST, OPTIONS");
-    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-    header("Access-Control-Max-Age: 3600");
-    http_response_code(200);
-    exit();
-}
-
-// Headers CORS para requests normales
-if (in_array($origin, $allowed_origins)) {
-    header("Access-Control-Allow-Origin: $origin");
-    header("Access-Control-Allow-Credentials: true");
-}
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-header("Access-Control-Max-Age: 3600");
-header("Content-Type: application/json; charset=UTF-8");
-
-// Habilitar logs
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
 error_reporting(E_ALL);
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/php-error.log');
-error_log("=== Iniciando register_wallet.php ===");
-error_log("REQUEST_METHOD: " . $_SERVER['REQUEST_METHOD']);
-error_log("REQUEST_URI: " . $_SERVER['REQUEST_URI']);
-error_log("ORIGIN: " . $origin);
 
 require_once 'config.php';
 require __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/auth_bearer.php';
 
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
+arcusx_cors_apply('POST, OPTIONS');
+header('Content-Type: application/json; charset=UTF-8');
 
-$secret_key = $jwt_secret;
-
-// Función para obtener el ID del usuario logueado desde el token JWT
-function getLoggedInUserId($conn, $secret_key) {
-    $headers = getallheaders();
-    if (!isset($headers['Authorization'])) {
-        error_log('Auth header missing');
-        return null;
-    }
-    $authHeader = $headers['Authorization'];
-    if (!preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-        error_log('Auth header format incorrect');
-        return null;
-    }
-    $jwt = $matches[1];
-    try {
-        $decoded = JWT::decode($jwt, new Key($secret_key, 'HS256'));
-        error_log('Decoded JWT: ' . print_r($decoded, true));
-        if (isset($decoded->data->id)) {
-            return (string) $decoded->data->id;
-        } else {
-            error_log('User ID not found in JWT payload');
-            return null;
-        }
-    } catch (\Firebase\JWT\ExpiredException $e) {
-        error_log('JWT Expired: ' . $e->getMessage());
-        return null;
-    } catch (\Firebase\JWT\SignatureInvalidException $e) {
-        error_log('JWT Signature Invalid: ' . $e->getMessage());
-        return null;
-    } catch (Exception $e) {
-        error_log('Error decoding token: ' . $e->getMessage());
-        return null;
-    }
-}
+error_log('=== Iniciando register_wallet.php ===');
+error_log('REQUEST_METHOD: ' . ($_SERVER['REQUEST_METHOD'] ?? ''));
+error_log('REQUEST_URI: ' . ($_SERVER['REQUEST_URI'] ?? ''));
+error_log('ORIGIN: ' . ($_SERVER['HTTP_ORIGIN'] ?? ''));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $loggedInUserId = getLoggedInUserId($conn, $secret_key);
+    $loggedInUserId = arcusx_jwt_user_id();
 
-    if (is_null($loggedInUserId)) {
+    if ($loggedInUserId === null) {
         http_response_code(401);
         echo json_encode(['success' => false, 'message' => 'Acceso no autorizado: Token JWT no proporcionado o inválido.']);
         exit;

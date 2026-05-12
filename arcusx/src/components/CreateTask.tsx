@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { FaArrowLeft, FaClock, FaExclamationTriangle, FaCheckCircle, FaFileAlt, FaCreditCard, FaHeading, FaAlignLeft, FaDollarSign, FaTag, FaLayerGroup, FaInfoCircle } from 'react-icons/fa';
 import '../css/CreateTask.css';
 import axios from 'axios';
@@ -20,16 +20,63 @@ interface CreateTaskProps {
   embedded?: boolean;
 }
 
+interface HireContext {
+  userId: number;
+  username: string;
+  skill?: string;
+}
+
+/** Sugiere categoría de tarea en base a la primera skill del freelancer (valores backend: Desarrollo, …). */
+function suggestCategoryFromSkill(skill: string | undefined): string {
+  if (!skill?.trim()) return 'Desarrollo';
+  const s = skill.toLowerCase();
+  if (/figma|diseño|design|ui|ux|photoshop|illustrator|marca|vector|grafic|sketch|canva/i.test(s)) return 'Diseño';
+  if (/seo|social|ads|marketing|growth|campaign|email|community/i.test(s)) return 'Marketing';
+  if (/stellar|blockchain|web3|solidity|smart|bitcoin|ethereum|defi|nft|rust|soroban/i.test(s)) return 'Blockchain';
+  if (/writing|copy|blog|video|content|editorial|redacción|redacao/i.test(s)) return 'Contenido';
+  if (/react|node|php|python|java|dev|api|sql|mongo|web|typescript|javascript|laravel|docker|aws|linux|git/i.test(s)) {
+    return 'Desarrollo';
+  }
+  return 'Desarrollo';
+}
+
 const CreateTask = ({ embedded = false }: CreateTaskProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { t } = useI18n();
+
+  const hireContextFromQuery = useMemo((): HireContext | null => {
+    const uid = searchParams.get('for_user');
+    const uname = searchParams.get('hire_username');
+    const skillRaw = searchParams.get('hire_skill');
+    if (!uid || !uname) return null;
+    const id = parseInt(uid, 10);
+    if (Number.isNaN(id) || id <= 0) return null;
+    try {
+      const username = decodeURIComponent(uname);
+      const skill = skillRaw ? decodeURIComponent(skillRaw) : undefined;
+      return { userId: id, username, skill };
+    } catch {
+      return null;
+    }
+  }, [searchParams]);
+
+  const stateHire = (location.state as { hireContext?: HireContext } | null)?.hireContext ?? null;
+  const hireContext = stateHire ?? hireContextFromQuery;
+
+  const initialCategory = suggestCategoryFromSkill(hireContext?.skill);
+  const initialDescription = hireContext
+    ? t('hire.context.desc.prefix').replace('{{username}}', hireContext.username)
+    : '';
+
   const [formData, setFormData] = useState({
     title: '',
-    description: '',
+    description: initialDescription,
     price: '',
-    currency: 'USDC', // Moneda por defecto (USD Coin)
+    currency: 'USDC',
     difficulty: 'Fácil',
-    category: 'Desarrollo',
+    category: initialCategory,
     subtitle: ''
   });
   
@@ -48,6 +95,9 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
   const [popupType, setPopupType] = useState<'success' | 'error'>('success');
   const [popupTitle, setPopupTitle] = useState('');
   const [popupMessage, setPopupMessage] = useState('');
+  /** URL absoluta a postular (con ?ref=hire); null si no hay task_id. */
+  const [postCreateApplyUrl, setPostCreateApplyUrl] = useState<string | null>(null);
+  const [copyLinkFeedback, setCopyLinkFeedback] = useState<'success' | 'error' | null>(null);
 
   // Obtener el usuario logeado
   const storedUser = localStorage.getItem('user');
@@ -157,6 +207,7 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
 
   // Función para mostrar popup de éxito
   const showSuccessPopup = (title: string, message: string) => {
+    setCopyLinkFeedback(null);
     setPopupType('success');
     setPopupTitle(title);
     setPopupMessage(message);
@@ -165,6 +216,8 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
 
   // Función para mostrar popup de error
   const showErrorPopup = (title: string, message: string) => {
+    setPostCreateApplyUrl(null);
+    setCopyLinkFeedback(null);
     setPopupType('error');
     setPopupTitle(title);
     setPopupMessage(message);
@@ -174,16 +227,71 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
   // Función para cerrar popup
   const closePopup = () => {
     setShowPopup(false);
+    setPostCreateApplyUrl(null);
+    setCopyLinkFeedback(null);
   };
+
+  const handleCopyApplyLink = useCallback(async () => {
+    if (!postCreateApplyUrl) return;
+    try {
+      await navigator.clipboard.writeText(postCreateApplyUrl);
+      setCopyLinkFeedback('success');
+    } catch {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = postCreateApplyUrl;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        setCopyLinkFeedback('success');
+      } catch {
+        setCopyLinkFeedback('error');
+      }
+    }
+    window.setTimeout(() => setCopyLinkFeedback(null), 2800);
+  }, [postCreateApplyUrl]);
 
   // Función para manejar el botón del popup
   const handlePopupButton = () => {
     if (popupType === 'success') {
+      setPostCreateApplyUrl(null);
+      setCopyLinkFeedback(null);
       navigate('/dashboard');
     } else {
-      // Solo cerrar el popup si es error
       closePopup();
     }
+  };
+
+  const applyCreatedTaskSuccess = (data: { task_id?: number | string; message?: string }) => {
+    const raw = data?.task_id;
+    const taskId = raw != null && raw !== '' ? Number(raw) : NaN;
+    const applyUrl =
+      !Number.isNaN(taskId) && taskId > 0
+        ? `${window.location.origin}/apply-task/${taskId}?ref=hire`
+        : null;
+    setPostCreateApplyUrl(applyUrl);
+
+    const baseMsg = t('create.task.created.message');
+    const shareHint = hireContext
+      ? t('hire.success.share.hint').replace(/\{\{username\}\}/g, hireContext.username)
+      : t('create.success.share.hint');
+    showSuccessPopup(t('create.task.created.title'), `${baseMsg}\n\n${shareHint}`);
+
+    setFormData({
+      title: '',
+      description: hireContext
+        ? t('hire.context.desc.prefix').replace('{{username}}', hireContext.username)
+        : '',
+      price: '',
+      currency: 'USDC',
+      difficulty: 'Fácil',
+      category: suggestCategoryFromSkill(hireContext?.skill),
+      subtitle: ''
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -215,21 +323,15 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
       // Enviar los datos de la tarea a la API PHP
       const response = await axios.post(`${API_URL}/auth/create_task.php`, {
         ...formData,
-        user_id: user.id
+        user_id: user.id,
+        ...(hireContext
+          ? { is_private_invite: 1, invited_user_id: hireContext.userId }
+          : {}),
       });
 
       // Verificar si la respuesta es exitosa (200-299) o si tiene el mensaje de éxito
-      if (response.status >= 200 && response.status < 300 && response.data && response.data.message) {
-        showSuccessPopup('¡Tarea Creada!', 'Tu tarea ha sido publicada exitosamente. Los trabajadores podrán verla y aplicar.');
-        setFormData({
-          title: '',
-          description: '',
-          price: '',
-          currency: 'USDC',
-          difficulty: 'Fácil',
-          category: 'Desarrollo',
-          subtitle: ''
-        });
+      if (response.status >= 200 && response.status < 300 && response.data?.success && response.data?.message) {
+        applyCreatedTaskSuccess(response.data);
         
         // Recargar límites del usuario (con manejo de errores)
         try {
@@ -254,17 +356,8 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
 
     } catch (err: any) {
       // Si el error es 201 (Created), la tarea se creó exitosamente
-      if (err.response && err.response.status === 201) {
-        showSuccessPopup('¡Tarea Creada!', 'Tu tarea ha sido publicada exitosamente. Los trabajadores podrán verla y aplicar.');
-        setFormData({
-          title: '',
-          description: '',
-          price: '',
-          currency: 'USDC',
-          difficulty: 'Fácil',
-          category: 'Desarrollo',
-          subtitle: ''
-        });
+      if (err.response && err.response.status === 201 && err.response.data?.success) {
+        applyCreatedTaskSuccess(err.response.data);
         
         // Recargar límites
         try {
@@ -290,7 +383,20 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
 
       <div className="create-task-form-card">
         <h2>{t('create.title')}</h2>
-        
+
+        {/* Contexto de contratación rápida */}
+        {hireContext && (
+          <div className="hire-context-chip">
+            <span className="hire-context-chip-dot" />
+            {t('hire.context.chip').replace('{{username}}', hireContext.username)}
+          </div>
+        )}
+        {hireContext && (
+          <p className="hire-context-private-hint" style={{ marginTop: '0.75rem', fontSize: '0.9rem', opacity: 0.9 }}>
+            {t('hire.context.private').replace(/\{\{username\}\}/g, hireContext.username)}
+          </p>
+        )}
+
         {/* Mostrar límites del usuario */}
         {userLimits ? (
           <div className="user-limits-info">
@@ -579,8 +685,35 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
         type={popupType}
         title={popupTitle}
         message={popupMessage}
-        buttonText={popupType === 'success' ? 'Entendido' : 'Entiendo'}
+        buttonText={popupType === 'success' ? t('create.popup.ok') : t('create.popup.dismiss')}
         onButtonClick={handlePopupButton}
+        children={
+          popupType === 'success' && postCreateApplyUrl ? (
+            <div className="hire-success-extras">
+              <label className="hire-success-label" htmlFor="hire-apply-url">
+                {t('create.success.apply.link.label')}
+              </label>
+              <div className="hire-success-url-row">
+                <input
+                  id="hire-apply-url"
+                  readOnly
+                  className="hire-success-url-input"
+                  value={postCreateApplyUrl}
+                  onFocus={(e) => e.target.select()}
+                />
+                <button type="button" className="hire-success-copy-btn" onClick={handleCopyApplyLink}>
+                  {t('create.success.copy.button')}
+                </button>
+              </div>
+              {copyLinkFeedback === 'success' && (
+                <p className="hire-copy-feedback hire-copy-feedback--ok">{t('create.success.copy.done')}</p>
+              )}
+              {copyLinkFeedback === 'error' && (
+                <p className="hire-copy-feedback hire-copy-feedback--err">{t('create.success.copy.fail')}</p>
+              )}
+            </div>
+          ) : undefined
+        }
       />
     </div>
   );

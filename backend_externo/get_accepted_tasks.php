@@ -1,12 +1,10 @@
 <?php
 // Required headers
-$_cors_origin = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header("Access-Control-Allow-Origin: ".$_cors_origin); // Permite solicitudes desde cualquier origen
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS"); // Incluye OPTIONS para pre-flight requests
-header("Access-Control-Max-Age: 3600"); // Cachea las opciones por 1 hora
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
-
+require_once __DIR__ . '/cors.php';
+arcusx_cors_handle_preflight('GET, POST, OPTIONS');
 require_once __DIR__ . '/config.php';
+arcusx_cors_apply('GET, POST, OPTIONS');
+header('Content-Type: application/json; charset=UTF-8');
 
 function fix_utf8_mojibake($str) {
     if (!is_string($str) || $str === '') return $str;

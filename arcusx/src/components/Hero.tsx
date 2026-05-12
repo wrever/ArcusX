@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { FaRocket, FaUsers, FaLaptopCode, FaMoneyBillWave, FaArrowRight, FaLock, FaBolt, FaCheck, FaMapMarkedAlt, FaChevronDown, FaSearch, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import axios from 'axios';
 import { API_URL } from '../config/database';
+import { hasSupabase, supabase } from '../config/supabase';
 import '../css/Hero.css';
 import { useI18n } from '../i18n/I18nProvider';
 import Footer from './Footer';
@@ -22,6 +23,20 @@ interface TaskResult {
   proposal_count?: number;
 }
 
+/** Hero landing: <10 valor exacto; ≥10 prefijo + y piso a decenas (199 → +190). */
+function formatHeroLandingCount(n: number): string {
+  const v = Math.max(0, Math.floor(Number(n) || 0));
+  if (v < 10) return String(v);
+  return `+${Math.floor(v / 10) * 10}`;
+}
+
+/** Misma regla en dólares enteros (647 → +$640; 5 → $5). */
+function formatHeroLandingMoney(usdc: number): string {
+  const v = Math.max(0, Math.round(Number(usdc) || 0));
+  if (v < 10) return `$${v}`;
+  return `+$${Math.floor(v / 10) * 10}`;
+}
+
 const viewportScroll = { once: true, amount: 0.2 };
 const viewportScrollSoft = { once: true, amount: 0.15 };
 
@@ -38,8 +53,11 @@ const Hero = () => {
   const carouselTrackRef = useRef<HTMLDivElement>(null);
   const [carouselTasks, setCarouselTasks] = useState<TaskResult[]>([]);
   const [loadingCarousel, setLoadingCarousel] = useState(true);
-  /* Mockup stats para la landing (sin fetch) */
-  const heroStats = { openTasks: 10, totalUsers: 210, totalVolumeUsdc: 600 };
+  const [publicStats, setPublicStats] = useState<{
+    open_tasks: number;
+    total_users: number;
+    total_volume_usdc: number;
+  } | null>(null);
 
   // Carrusel infinito: muchas copias de la lista para sensación de “millones de opciones”; el scroll avanza y al pasar un bloque se reubica sin que se note
   const REPEAT_COPIES = 8;
@@ -64,6 +82,71 @@ const Hero = () => {
       }
     };
     fetchCarouselTasks();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadPublicStats = async () => {
+      let open_tasks = 0;
+      let total_users = 0;
+      let total_volume_usdc = 0;
+
+      if (hasSupabase) {
+        try {
+          const [uRes, oRes, vRes] = await Promise.all([
+            supabase.rpc('get_landing_oauth_user_count'),
+            supabase.rpc('get_landing_open_tasks_count'),
+            supabase.rpc('get_landing_completed_volume_usdc'),
+          ]);
+          if (cancelled) return;
+          const parseRpcInt = (data: unknown): number | null => {
+            if (data == null) return null;
+            const n = typeof data === 'string' ? parseInt(data, 10) : Number(data);
+            return !Number.isNaN(n) && n >= 0 ? n : null;
+          };
+          if (!uRes.error) {
+            const n = parseRpcInt(uRes.data);
+            if (n != null) total_users = n;
+          }
+          if (!oRes.error) {
+            const n = parseRpcInt(oRes.data);
+            if (n != null) open_tasks = n;
+          }
+          if (!vRes.error) {
+            const n = parseRpcInt(vRes.data);
+            if (n != null) total_volume_usdc = n;
+          }
+        } catch {
+          /* 0 */
+        }
+      } else {
+        try {
+          const res = await axios.get<{
+            success?: boolean;
+            open_tasks?: number;
+            total_users?: number;
+            total_volume_usdc?: number;
+          }>(`${API_URL}/auth/get_landing_market_stats.php`);
+          if (cancelled) return;
+          const d = res.data;
+          if (d && d.success !== false) {
+            open_tasks = Number(d.open_tasks) || 0;
+            total_users = Number(d.total_users) || 0;
+            total_volume_usdc = Number(d.total_volume_usdc) || 0;
+          }
+        } catch {
+          /* valores en 0 */
+        }
+      }
+
+      if (!cancelled) {
+        setPublicStats({ open_tasks, total_users, total_volume_usdc });
+      }
+    };
+    loadPublicStats();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -244,17 +327,23 @@ const Hero = () => {
             {/* Stats arriba del buscador (lupa) */}
             <div className="landing-hero-trust" role="list" aria-label={t('hero.stats.aria')}>
               <span className="landing-hero-stat-item" role="listitem">
-                <span className="landing-hero-stat">+{heroStats.openTasks}</span>
+                <span className="landing-hero-stat">
+                  {formatHeroLandingCount(publicStats?.open_tasks ?? 0)}
+                </span>
                 <span className="landing-hero-stat-desc">{t('hero.stats.tasks')}</span>
               </span>
               <span className="landing-hero-stat-sep" aria-hidden="true">·</span>
               <span className="landing-hero-stat-item" role="listitem">
-                <span className="landing-hero-stat">+{heroStats.totalUsers}</span>
+                <span className="landing-hero-stat">
+                  {formatHeroLandingCount(publicStats?.total_users ?? 0)}
+                </span>
                 <span className="landing-hero-stat-desc">{t('hero.stats.users')}</span>
               </span>
               <span className="landing-hero-stat-sep" aria-hidden="true">·</span>
               <span className="landing-hero-stat-item" role="listitem">
-                <span className="landing-hero-stat">+${heroStats.totalVolumeUsdc}</span>
+                <span className="landing-hero-stat">
+                  {formatHeroLandingMoney(publicStats?.total_volume_usdc ?? 0)}
+                </span>
                 <span className="landing-hero-stat-desc">{t('hero.stats.payments.processed')}</span>
               </span>
             </div>

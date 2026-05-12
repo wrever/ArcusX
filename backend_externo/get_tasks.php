@@ -1,7 +1,7 @@
 <?php
 /**
  * get_tasks.php
- * 
+ *
  * NOTA: El campo 'price' en la respuesta representa el monto que recibirá el trabajador (workerAmount).
  * El frontend interpreta este valor como el pago exacto que recibirá el trabajador.
  */
@@ -12,44 +12,14 @@ error_reporting(E_ALL);
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/php-error.log');
 
+require_once __DIR__ . '/cors.php';
+arcusx_cors_handle_preflight('GET, POST, OPTIONS');
+
 // Iniciar output buffering para capturar cualquier output inesperado
 ob_start();
 
-// CORS headers - DEBEN IR PRIMERO, ANTES DE CUALQUIER OTRO OUTPUT
-$allowed_origins = [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'https://arcusx.pro',
-    'http://arcusx.pro'
-];
-$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
-
-// Manejar preflight OPTIONS request PRIMERO
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    // Limpiar cualquier output previo
-    while (ob_get_level() > 0) {
-        ob_end_clean();
-    }
-    if (in_array($origin, $allowed_origins)) {
-        header("Access-Control-Allow-Origin: $origin");
-        header("Access-Control-Allow-Credentials: true");
-    }
-    header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-    header("Access-Control-Max-Age: 3600");
-    http_response_code(200);
-    exit();
-}
-
-// Headers CORS para requests normales
-if (in_array($origin, $allowed_origins)) {
-    header("Access-Control-Allow-Origin: $origin");
-    header("Access-Control-Allow-Credentials: true");
-}
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-header("Access-Control-Max-Age: 3600");
-header("Content-Type: application/json; charset=UTF-8");
+arcusx_cors_apply('GET, POST, OPTIONS');
+header('Content-Type: application/json; charset=UTF-8');
 
 // Limpiar buffer antes de require
 ob_end_clean();
@@ -88,9 +58,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $bindParams = [];
     $types = '';
 
-    // Condiciones base: mismas que get_public_stats (status literal para evitar diferencias por servidor)
+    // Condiciones base: mismas que get_landing_market_stats (status literal para evitar diferencias por servidor)
     $where[] = "(t.accepted_applicant_id IS NULL OR t.accepted_applicant_id = 0)";
     $where[] = "t.status = 'open'";
+
+    $hasPrivateInviteCol = false;
+    $privCol = @$conn->query("SHOW COLUMNS FROM tasks LIKE 'is_private_invite'");
+    if ($privCol && $privCol->num_rows > 0) {
+        $hasPrivateInviteCol = true;
+        $where[] = "COALESCE(t.is_private_invite, 0) = 0";
+    }
 
     // Búsqueda por texto (título o descripción)
     if (!empty($search)) {
@@ -236,11 +213,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     // Si la consulta principal devolvió 0 filas, intentar consulta mínima (solo columnas esenciales)
     if (count($tasks) === 0 && empty($bindParams)) {
+        $privWhere = $hasPrivateInviteCol ? 'AND COALESCE(t.is_private_invite, 0) = 0' : '';
         $sqlMin = "SELECT t.id, t.title, t.description, t.price, t.category, t.difficulty, t.created_at, t.status,
             u.id AS creator_id, IFNULL(u.username, '') AS creator_username
             FROM tasks t
             LEFT JOIN users u ON t.user_id = u.id
             WHERE (t.accepted_applicant_id IS NULL OR t.accepted_applicant_id = 0) AND t.status = 'open'
+            $privWhere
             ORDER BY t.created_at DESC";
         $resMin = @$conn->query($sqlMin);
         if ($resMin && $resMin->num_rows > 0) {
