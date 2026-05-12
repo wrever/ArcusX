@@ -1,37 +1,10 @@
 <?php
 // select_proposal.php
 
-// CORS headers - DEBEN IR PRIMERO, ANTES DE CUALQUIER OTRO OUTPUT
-$allowed_origins = [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'https://arcusx.pro',
-    'http://arcusx.pro'
-];
-$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
-
-// Manejar preflight OPTIONS request PRIMERO
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    if (in_array($origin, $allowed_origins)) {
-        header("Access-Control-Allow-Origin: $origin");
-        header("Access-Control-Allow-Credentials: true");
-    }
-    header("Access-Control-Allow-Methods: POST, OPTIONS");
-    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-    header("Access-Control-Max-Age: 3600");
-    http_response_code(200);
-    exit();
-}
-
-// Headers CORS para requests normales
-if (in_array($origin, $allowed_origins)) {
-    header("Access-Control-Allow-Origin: $origin");
-    header("Access-Control-Allow-Credentials: true");
-}
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-header("Access-Control-Max-Age: 3600");
-header("Content-Type: application/json; charset=UTF-8");
+require_once __DIR__ . '/cors.php';
+arcusx_cors_handle_preflight('POST, OPTIONS');
+arcusx_cors_apply('POST, OPTIONS');
+header('Content-Type: application/json; charset=UTF-8');
 
 // Habilitar logs (pero NO mostrar errores en pantalla para evitar output antes de headers)
 ini_set('display_errors', 0); // Cambiado a 0 para evitar output antes de headers
@@ -42,67 +15,25 @@ ini_set('error_log', __DIR__ . '/php-error.log');
 error_log("=== Iniciando select_proposal.php ===");
 error_log("REQUEST_METHOD: " . $_SERVER['REQUEST_METHOD']);
 error_log("REQUEST_URI: " . $_SERVER['REQUEST_URI']);
-error_log("ORIGIN: " . $origin);
+error_log('ORIGIN: ' . ($_SERVER['HTTP_ORIGIN'] ?? ''));
 
 require_once 'config.php';
 require __DIR__ . '/vendor/autoload.php';
-
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
-
-$secret_key = $jwt_secret;
-
-// Función para obtener el ID del usuario logueado desde el token JWT
-function getLoggedInUserId($conn, $secret_key) {
-    $headers = getallheaders();
-    if (!isset($headers['Authorization'])) {
-        error_log('Auth header missing');
-        return null;
-    }
-    $authHeader = $headers['Authorization'];
-    if (!preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-        error_log('Auth header format incorrect');
-        return null;
-    }
-    $jwt = $matches[1];
-    try {
-        $decoded = JWT::decode($jwt, new Key($secret_key, 'HS256'));
-        error_log('Decoded JWT: ' . print_r($decoded, true));
-        if (isset($decoded->data->id)) {
-            return (string) $decoded->data->id;
-        } else {
-            error_log('User ID not found in JWT payload');
-            return null;
-        }
-    } catch (\Firebase\JWT\ExpiredException $e) {
-        error_log('JWT Expired: ' . $e->getMessage());
-        return null;
-    } catch (\Firebase\JWT\SignatureInvalidException $e) {
-        error_log('JWT Signature Invalid: ' . $e->getMessage());
-        return null;
-    } catch (Exception $e) {
-        error_log('Error decoding token: ' . $e->getMessage());
-        return null;
-    }
-}
+require_once __DIR__ . '/auth_bearer.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $loggedInUserId = getLoggedInUserId($conn, $secret_key);
-
-    if (is_null($loggedInUserId)) {
+    $jwtUid = arcusx_jwt_user_id();
+    if ($jwtUid === null) {
         error_log("ERROR: Token JWT inválido o no proporcionado");
         if (!headers_sent()) {
-            if (in_array($origin, $allowed_origins)) {
-                header("Access-Control-Allow-Origin: $origin");
-                header("Access-Control-Allow-Credentials: true");
-            }
             header("Content-Type: application/json; charset=UTF-8");
         }
         http_response_code(401);
         echo json_encode(['success' => false, 'message' => 'Acceso no autorizado: Token JWT no proporcionado o inválido.'], JSON_UNESCAPED_UNICODE);
         exit;
     }
-    
+    $loggedInUserId = (string) $jwtUid;
+
     error_log("Usuario autenticado: " . $loggedInUserId);
 
     $data = json_decode(file_get_contents('php://input'), true);
@@ -133,10 +64,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$isStellarAddress && !$isTrustlessContractId) {
             error_log("Error: escrow_id inválido (no es dirección Stellar ni contractId de Trustless Work): $escrowId");
             if (!headers_sent()) {
-                if (in_array($origin, $allowed_origins)) {
-                    header("Access-Control-Allow-Origin: $origin");
-                    header("Access-Control-Allow-Credentials: true");
-                }
                 header("Content-Type: application/json; charset=UTF-8");
             }
             http_response_code(400);
@@ -174,10 +101,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt_debug->close();
             
             if (!headers_sent()) {
-                if (in_array($origin, $allowed_origins)) {
-                    header("Access-Control-Allow-Origin: $origin");
-                    header("Access-Control-Allow-Credentials: true");
-                }
                 header("Content-Type: application/json; charset=UTF-8");
             }
             http_response_code(404);
@@ -192,10 +115,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($task_data['status'] !== 'open' && $task_data['status'] !== 'assigned') {
             error_log("ERROR: Tarea no está en estado válido. Estado actual: " . $task_data['status']);
             if (!headers_sent()) {
-                if (in_array($origin, $allowed_origins)) {
-                    header("Access-Control-Allow-Origin: $origin");
-                    header("Access-Control-Allow-Credentials: true");
-                }
                 header("Content-Type: application/json; charset=UTF-8");
             }
             http_response_code(400);
@@ -230,10 +149,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt_debug_prop->close();
             
             if (!headers_sent()) {
-                if (in_array($origin, $allowed_origins)) {
-                    header("Access-Control-Allow-Origin: $origin");
-                    header("Access-Control-Allow-Credentials: true");
-                }
                 header("Content-Type: application/json; charset=UTF-8");
             }
             http_response_code(404);
@@ -404,10 +319,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Asegurar que los headers se envíen correctamente
         if (!headers_sent()) {
-            if (in_array($origin, $allowed_origins)) {
-                header("Access-Control-Allow-Origin: $origin");
-                header("Access-Control-Allow-Credentials: true");
-            }
             header("Content-Type: application/json; charset=UTF-8");
         }
         
@@ -431,10 +342,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Asegurar que los headers CORS se envíen incluso en caso de error
         // Pero solo si no se han enviado headers aún
         if (!headers_sent()) {
-            if (in_array($origin, $allowed_origins)) {
-                header("Access-Control-Allow-Origin: $origin");
-                header("Access-Control-Allow-Credentials: true");
-            }
             header("Content-Type: application/json; charset=UTF-8");
         }
         

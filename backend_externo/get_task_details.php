@@ -2,40 +2,10 @@
 // get_task_details.php
 // Obtiene detalles de una tarea y maneja operaciones de archivos
 
-// CORS headers - DEBEN IR PRIMERO, ANTES DE CUALQUIER OTRO OUTPUT
-$allowed_origins = [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'https://arcusx.pro',
-    'http://arcusx.pro'
-];
-$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
-
-// Manejar preflight OPTIONS request PRIMERO
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    if (in_array($origin, $allowed_origins)) {
-        header("Access-Control-Allow-Origin: $origin");
-        header("Access-Control-Allow-Credentials: true");
-    }
-    header("Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS");
-    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-    header("Access-Control-Max-Age: 3600");
-    header("Content-Length: 0");
-    http_response_code(200);
-    exit();
-}
-
-// Headers CORS para requests normales
-if (in_array($origin, $allowed_origins)) {
-    header("Access-Control-Allow-Origin: $origin");
-    header("Access-Control-Allow-Credentials: true");
-} else {
-    $_cors_origin = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header("Access-Control-Allow-Origin: ".$_cors_origin);
-}
-header("Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-header("Access-Control-Max-Age: 3600");
-header("Content-Type: application/json; charset=UTF-8");
+require_once __DIR__ . '/cors.php';
+arcusx_cors_handle_preflight('GET, POST, DELETE, OPTIONS');
+arcusx_cors_apply('GET, POST, DELETE, OPTIONS');
+header('Content-Type: application/json; charset=UTF-8');
 
 // Habilitar logs (pero NO mostrar errores en pantalla para evitar output antes de headers)
 ini_set('display_errors', 0);
@@ -76,7 +46,7 @@ try {
     switch ($_SERVER['REQUEST_METHOD']) {
         case 'GET':
             if (isset($_GET['action']) && $_GET['action'] === 'download') {
-                handleFileDownload($task_id, $allowed_origins, $origin);
+                handleFileDownload($task_id);
             } else {
                 handleGetTaskDetails($task_id);
             }
@@ -91,18 +61,7 @@ try {
 
 } catch (Exception $e) {
     error_log('Error en get_task_details.php: ' . $e->getMessage());
-    
-    // Asegurar que los headers CORS se envíen incluso en errores
-    if (in_array($origin, $allowed_origins)) {
-        header("Access-Control-Allow-Origin: $origin");
-        header("Access-Control-Allow-Credentials: true");
-    } else {
-        $_cors_origin = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header("Access-Control-Allow-Origin: ".$_cors_origin);
-    }
-    header("Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS");
-    header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-    header("Content-Type: application/json; charset=UTF-8");
-    
+
     http_response_code(500);
     echo json_encode([
         'success' => false,
@@ -498,19 +457,14 @@ function handleFileDelete($task_id) {
 /**
  * Maneja la descarga de archivos (GET con action=download)
  */
-function handleFileDownload($task_id, $allowed_origins, $origin) {
+function handleFileDownload($task_id) {
     global $conn;
     
     $file_id = isset($_GET['file_id']) ? $_GET['file_id'] : null;
     
     if (!$file_id) {
-        // Headers CORS para respuesta de error
-        if (in_array($origin, $allowed_origins)) {
-            header("Access-Control-Allow-Origin: $origin");
-            header("Access-Control-Allow-Credentials: true");
-        }
         header("Content-Type: application/json; charset=UTF-8");
-        
+
         http_response_code(400);
         echo json_encode(['success' => false, 'message' => 'file_id es requerido'], JSON_UNESCAPED_UNICODE);
         return;
@@ -534,13 +488,8 @@ function handleFileDownload($task_id, $allowed_origins, $origin) {
         $task = $result->fetch_assoc();
         
         if (!$task) {
-            // Headers CORS para respuesta de error
-            if (in_array($origin, $allowed_origins)) {
-                header("Access-Control-Allow-Origin: $origin");
-                header("Access-Control-Allow-Credentials: true");
-            }
             header("Content-Type: application/json; charset=UTF-8");
-            
+
             http_response_code(404);
             echo json_encode(['success' => false, 'message' => 'Tarea no encontrada'], JSON_UNESCAPED_UNICODE);
             $stmt->close();
@@ -563,13 +512,8 @@ function handleFileDownload($task_id, $allowed_origins, $origin) {
         }
         
         if (!$file_info) {
-            // Headers CORS para respuesta de error
-            if (in_array($origin, $allowed_origins)) {
-                header("Access-Control-Allow-Origin: $origin");
-                header("Access-Control-Allow-Credentials: true");
-            }
             header("Content-Type: application/json; charset=UTF-8");
-            
+
             http_response_code(404);
             echo json_encode(['success' => false, 'message' => 'Archivo no encontrado'], JSON_UNESCAPED_UNICODE);
             $stmt->close();
@@ -580,24 +524,13 @@ function handleFileDownload($task_id, $allowed_origins, $origin) {
         // Verificar que el archivo existe físicamente
         $file_path = '../../files/' . $file_info['filename'];
         if (!file_exists($file_path)) {
-            // Headers CORS para respuesta de error
-            if (in_array($origin, $allowed_origins)) {
-                header("Access-Control-Allow-Origin: $origin");
-                header("Access-Control-Allow-Credentials: true");
-            }
             header("Content-Type: application/json; charset=UTF-8");
-            
+
             http_response_code(404);
             echo json_encode(['success' => false, 'message' => 'Archivo no encontrado en el servidor'], JSON_UNESCAPED_UNICODE);
             $stmt->close();
             $conn->close();
             return;
-        }
-        
-        // Headers CORS para descarga
-        if (in_array($origin, $allowed_origins)) {
-            header("Access-Control-Allow-Origin: $origin");
-            header("Access-Control-Allow-Credentials: true");
         }
         
         // Configurar headers para descarga
@@ -616,13 +549,8 @@ function handleFileDownload($task_id, $allowed_origins, $origin) {
     } catch (Exception $e) {
         error_log('Error en handleFileDownload: ' . $e->getMessage());
         
-        // Headers CORS para respuesta de error
-        if (in_array($origin, $allowed_origins)) {
-            header("Access-Control-Allow-Origin: $origin");
-            header("Access-Control-Allow-Credentials: true");
-        }
         header("Content-Type: application/json; charset=UTF-8");
-        
+
         http_response_code(500);
         echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
     }

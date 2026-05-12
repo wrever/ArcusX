@@ -457,44 +457,42 @@ export async function getAdminNotifications(params: {
 }
 
 /**
- * Obtener detalles de un escrow
- * TODO: Implementar en backend (admin.php)
+ * Detalle de un escrow por contract id (misma forma que una fila de get_escrows).
  */
-/*
 export async function getAdminEscrowDetails(escrowId: string): Promise<any> {
   const queryParams = new URLSearchParams();
   queryParams.append('escrow_id', escrowId);
   const data = await adminApiCall('get_escrow_details', 'GET', undefined, queryParams);
   return data.escrow;
 }
-*/
 
 /**
- * Obtener balance de comisiones acumuladas
- * TODO: Implementar en backend (admin.php)
+ * Comisiones acumuladas estimadas en base de datos (tareas completadas + escrow completed).
  */
-/*
 export async function getAdminCommissionBalance(): Promise<{
   total_commission_usdc: number;
   escrows_with_commission: number;
   commission_wallet: string;
 }> {
   const data = await adminApiCall('get_commission_balance');
-  return data;
+  return {
+    total_commission_usdc: Number(data.total_commission_usdc) || 0,
+    escrows_with_commission: Number(data.escrows_with_commission) || 0,
+    commission_wallet: String(data.commission_wallet ?? ''),
+  };
 }
-*/
 
 /**
- * Retirar comisiones acumuladas
- * TODO: Implementar en backend (admin.php)
+ * Retiro on-chain: el backend aún no firma transacciones; llamar lanzará error con mensaje claro.
  */
-/*
 export async function withdrawAdminCommission(amount?: number): Promise<{
   tx_hash: string;
   amount_withdrawn: number;
 }> {
   const data = await adminApiCall('withdraw_commission', 'POST', { amount });
-  return data;
+  return {
+    tx_hash: String(data.tx_hash ?? ''),
+    amount_withdrawn: Number(data.amount_withdrawn) || 0,
+  };
 }
-*/
 

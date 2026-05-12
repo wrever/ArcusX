@@ -6,6 +6,79 @@
  * NO hace echo, header() ni exit() - eso lo maneja admin.php
  */
 
+/**
+ * @return array [platformFee, hasEscrowAmount, hasEscrowPlatformFee]
+ */
+function admin_get_platform_fee_and_task_escrow_flags($conn) {
+    $platformFee = 0.003;
+    try {
+        $checkTable = $conn->query("SHOW TABLES LIKE 'system_config'");
+        if ($checkTable !== false && $checkTable->num_rows > 0) {
+            $feeResult = $conn->query("SELECT config_value FROM system_config WHERE config_key = 'platform_fee'");
+            if ($feeResult !== false && $feeResult->num_rows > 0) {
+                $feeRow = $feeResult->fetch_assoc();
+                $feeValue = $feeRow['config_value'];
+                $platformFee = is_numeric($feeValue) ? (float)$feeValue : 0.003;
+            }
+        }
+    } catch (Exception $e) {
+        error_log('Error al obtener platform_fee: ' . $e->getMessage());
+        $platformFee = 0.003;
+    }
+    $checkEscrowAmount = $conn->query("SHOW COLUMNS FROM tasks LIKE 'escrow_amount'");
+    $hasEscrowAmount = $checkEscrowAmount && $checkEscrowAmount->num_rows > 0;
+    $checkEscrowPlatformFee = $conn->query("SHOW COLUMNS FROM tasks LIKE 'escrow_platform_fee'");
+    $hasEscrowPlatformFee = $checkEscrowPlatformFee && $checkEscrowPlatformFee->num_rows > 0;
+    return [$platformFee, $hasEscrowAmount, $hasEscrowPlatformFee];
+}
+
+/**
+ * SQL: suma comisiones USDC (pago cliente − worker) en tareas completadas con escrow completed.
+ */
+function admin_sql_total_commission_usdc($platformFee, $hasEscrowAmount, $hasEscrowPlatformFee) {
+    $platformFeeEscaped = (float)$platformFee;
+    if ($hasEscrowAmount) {
+        if ($hasEscrowPlatformFee) {
+            return "
+                SELECT COALESCE(
+                    CAST(SUM(
+                        CAST(COALESCE(
+                            escrow_amount,
+                            CAST(price AS DECIMAL(18,8)) / (1 - COALESCE(escrow_platform_fee, " . $platformFeeEscaped . "))
+                        ) AS DECIMAL(18,8)) - CAST(price AS DECIMAL(18,8))
+                    ) AS DECIMAL(18,8)),
+                    0
+                ) as total
+                FROM tasks
+                WHERE status = 'completed' AND escrow_status = 'completed'
+            ";
+        }
+        return "
+            SELECT COALESCE(
+                CAST(SUM(
+                    CAST(COALESCE(
+                        escrow_amount,
+                        CAST(price AS DECIMAL(18,8)) / (1 - " . $platformFeeEscaped . ")
+                    ) AS DECIMAL(18,8)) - CAST(price AS DECIMAL(18,8))
+                ) AS DECIMAL(18,8)),
+                0
+            ) as total
+            FROM tasks
+            WHERE status = 'completed' AND escrow_status = 'completed'
+        ";
+    }
+    return "
+        SELECT COALESCE(
+            CAST(SUM(
+                CAST(price AS DECIMAL(18,8)) / (1 - " . $platformFeeEscaped . ") - CAST(price AS DECIMAL(18,8))
+            ) AS DECIMAL(18,8)),
+            0
+        ) as total
+        FROM tasks
+        WHERE status = 'completed' AND escrow_status = 'completed'
+    ";
+}
+
 // ========== ESTADÍSTICAS ==========
 
 /**
@@ -50,35 +123,8 @@ function handleGetStats($conn, $user) {
     }
     $stats['total_escrows'] = (int)$result->fetch_assoc()['total'];
     
-    // Obtener platform fee configurado (por defecto 0.3% = 0.003)
-    $platformFee = 0.003; // Valor por defecto
-    try {
-        $checkTable = $conn->query("SHOW TABLES LIKE 'system_config'");
-        if ($checkTable !== false && $checkTable->num_rows > 0) {
-            $feeResult = $conn->query("SELECT config_value FROM system_config WHERE config_key = 'platform_fee'");
-            if ($feeResult !== false && $feeResult->num_rows > 0) {
-                $feeRow = $feeResult->fetch_assoc();
-                $feeValue = $feeRow['config_value'];
-                // Convertir a float si es string
-                $platformFee = is_numeric($feeValue) ? (float)$feeValue : 0.003;
-            }
-        }
-    } catch (Exception $e) {
-        // Si hay error al obtener el fee, usar el valor por defecto
-        error_log('Error al obtener platform_fee en handleGetStats: ' . $e->getMessage());
-        $platformFee = 0.003;
-    }
-    
-    // Volumen total (suma de lo que pagaron los clientes)
-    // CORRECCIÓN: Usar escrow_amount si existe, sino calcular: price / (1 - platformFee)
-    // Porque price es el workerAmount, y el cliente paga: workerAmount / (1 - platformFee)
+    list($platformFee, $hasEscrowAmount, $hasEscrowPlatformFee) = admin_get_platform_fee_and_task_escrow_flags($conn);
     $platformFeeEscaped = (float)$platformFee;
-    
-    // Verificar si las columnas existen
-    $checkEscrowAmount = $conn->query("SHOW COLUMNS FROM tasks LIKE 'escrow_amount'");
-    $hasEscrowAmount = $checkEscrowAmount && $checkEscrowAmount->num_rows > 0;
-    $checkEscrowPlatformFee = $conn->query("SHOW COLUMNS FROM tasks LIKE 'escrow_platform_fee'");
-    $hasEscrowPlatformFee = $checkEscrowPlatformFee && $checkEscrowPlatformFee->num_rows > 0;
     
     // Construir consulta de volumen según columnas disponibles
     if ($hasEscrowAmount) {
@@ -125,50 +171,7 @@ function handleGetStats($conn, $user) {
     $stats['total_volume_usdc'] = (float)$result->fetch_assoc()['total'];
     
     // Comisiones totales (diferencia entre lo que pagó el cliente y lo que recibió el trabajador)
-    // CORRECCIÓN: Fees = SUM(escrow_amount - price) = SUM(lo que pagó el cliente - lo que recibió el trabajador)
-    // IMPORTANTE: Usar CAST para preservar precisión decimal completa
-    if ($hasEscrowAmount) {
-        if ($hasEscrowPlatformFee) {
-            $feesQuery = "
-                SELECT COALESCE(
-                    CAST(SUM(
-                        CAST(COALESCE(
-                            escrow_amount, 
-                            CAST(price AS DECIMAL(18,8)) / (1 - COALESCE(escrow_platform_fee, " . $platformFeeEscaped . "))
-                        ) AS DECIMAL(18,8)) - CAST(price AS DECIMAL(18,8))
-                    ) AS DECIMAL(18,8)), 
-                    0
-                ) as total 
-                FROM tasks 
-                WHERE status = 'completed' AND escrow_status = 'completed'
-            ";
-        } else {
-            $feesQuery = "
-                SELECT COALESCE(
-                    CAST(SUM(
-                        CAST(COALESCE(
-                            escrow_amount, 
-                            CAST(price AS DECIMAL(18,8)) / (1 - " . $platformFeeEscaped . ")
-                        ) AS DECIMAL(18,8)) - CAST(price AS DECIMAL(18,8))
-                    ) AS DECIMAL(18,8)), 
-                    0
-                ) as total 
-                FROM tasks 
-                WHERE status = 'completed' AND escrow_status = 'completed'
-            ";
-        }
-    } else {
-        $feesQuery = "
-            SELECT COALESCE(
-                CAST(SUM(
-                    CAST(price AS DECIMAL(18,8)) / (1 - " . $platformFeeEscaped . ") - CAST(price AS DECIMAL(18,8))
-                ) AS DECIMAL(18,8)), 
-                0
-            ) as total 
-            FROM tasks 
-            WHERE status = 'completed' AND escrow_status = 'completed'
-        ";
-    }
+    $feesQuery = admin_sql_total_commission_usdc($platformFee, $hasEscrowAmount, $hasEscrowPlatformFee);
     
     $commissionResult = $conn->query($feesQuery);
     if ($commissionResult === false) {
@@ -900,6 +903,94 @@ function handleGetEscrows($conn, $user, $params) {
             'total_pages' => ceil($total / $limit)
         ]
     ];
+}
+
+/**
+ * Detalle de un escrow por escrow_id (misma forma que una fila de get_escrows).
+ */
+function handleGetEscrowDetails($conn, $user, $params) {
+    $escrowId = isset($params['escrow_id']) ? trim((string)$params['escrow_id']) : '';
+    if ($escrowId === '') {
+        throw new Exception('escrow_id requerido');
+    }
+    $stmt = $conn->prepare("SELECT 
+                t.escrow_id,
+                t.id as task_id,
+                t.title as task_title,
+                t.price as task_price,
+                t.currency as task_currency,
+                t.escrow_status,
+                t.status as task_status,
+                t.escrow_created_at,
+                t.escrow_completed_at,
+                t.created_at as task_created_at,
+                u_client.username as client_username,
+                u_client.id as client_id,
+                u_worker.username as worker_username,
+                u_worker.id as worker_id
+            FROM tasks t
+            LEFT JOIN users u_client ON t.user_id = u_client.id
+            LEFT JOIN users u_worker ON t.accepted_applicant_id = u_worker.id
+            WHERE t.escrow_id = ?
+            LIMIT 1");
+    $stmt->bind_param('s', $escrowId);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    if ($res->num_rows === 0) {
+        $stmt->close();
+        throw new Exception('Escrow no encontrado');
+    }
+    $escrow = $res->fetch_assoc();
+    $stmt->close();
+    logAdminAction($conn, $user['id'], 'get_escrow_details', 'escrow', null, ['escrow_id' => $escrowId]);
+    return ['success' => true, 'escrow' => $escrow];
+}
+
+/**
+ * Comisiones acumuladas estimadas en DB; wallet opcional (system_config platform_wallet / commission_wallet).
+ */
+function handleGetCommissionBalance($conn, $user) {
+    list($platformFee, $hasEscrowAmount, $hasEscrowPlatformFee) = admin_get_platform_fee_and_task_escrow_flags($conn);
+    $sql = admin_sql_total_commission_usdc($platformFee, $hasEscrowAmount, $hasEscrowPlatformFee);
+    $r = $conn->query($sql);
+    if ($r === false) {
+        throw new Exception('Error al calcular comisiones: ' . $conn->error);
+    }
+    $row = $r->fetch_assoc();
+    $total = isset($row['total']) && is_numeric($row['total']) ? (float)$row['total'] : 0.0;
+    $cntR = $conn->query("SELECT COUNT(*) as c FROM tasks WHERE status = 'completed' AND escrow_status = 'completed' AND escrow_id IS NOT NULL AND TRIM(escrow_id) <> ''");
+    $escrowsWithCommission = ($cntR && $cntR->num_rows) ? (int)$cntR->fetch_assoc()['c'] : 0;
+    $commission_wallet = '';
+    $wt = $conn->query("SHOW TABLES LIKE 'system_config'");
+    if ($wt && $wt->num_rows > 0) {
+        $wk = $conn->query("SELECT config_value FROM system_config WHERE config_key = 'platform_wallet' LIMIT 1");
+        if ($wk && $wk->num_rows > 0) {
+            $commission_wallet = (string)($wk->fetch_assoc()['config_value'] ?? '');
+        }
+        if ($commission_wallet === '') {
+            $wk2 = $conn->query("SELECT config_value FROM system_config WHERE config_key = 'commission_wallet' LIMIT 1");
+            if ($wk2 && $wk2->num_rows > 0) {
+                $commission_wallet = (string)($wk2->fetch_assoc()['config_value'] ?? '');
+            }
+        }
+    }
+    logAdminAction($conn, $user['id'], 'get_commission_balance', 'finance', null, []);
+    return [
+        'success' => true,
+        'total_commission_usdc' => $total,
+        'escrows_with_commission' => $escrowsWithCommission,
+        'commission_wallet' => $commission_wallet,
+    ];
+}
+
+/**
+ * Retiro on-chain no implementado (evita operaciones firmadas sin infraestructura segura).
+ */
+function handleWithdrawCommission($conn, $user, $data) {
+    logAdminAction($conn, $user['id'], 'withdraw_commission', 'finance', null, [
+        'amount' => isset($data['amount']) ? $data['amount'] : null,
+    ]);
+    throw new Exception('El retiro automático de comisiones no está habilitado. Opera desde la wallet de plataforma en Stellar o Trustless Work; este endpoint queda reservado para una futura integración firmada en backend.');
 }
 
 /**

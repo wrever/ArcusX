@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { FaArrowLeft, FaCommentAlt, FaLink, FaWallet, FaInfoCircle } from 'react-icons/fa';
 import axios from 'axios';
 import { API_URL } from '../config/database';
@@ -30,7 +30,9 @@ interface ApplicationData {
 const ApplyTask = () => {
   const { t } = useI18n();
   const { address: connectedWallet } = useWallet();
-  const { taskId } = useParams<{ taskId: string }>(); // Obtener el ID de la tarea de la URL
+  const { taskId } = useParams<{ taskId: string }>();
+  const [searchParams] = useSearchParams();
+  const isHireInviteLink = searchParams.get('ref') === 'hire';
   const [task, setTask] = useState<TaskData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -251,6 +253,11 @@ const ApplyTask = () => {
        </Link>
 
       <div className="apply-task-content">
+        {isHireInviteLink && (
+          <div className="apply-hire-ref-banner" role="status">
+            {t('hire.apply.ref.banner')}
+          </div>
+        )}
         <div className="task-details-card">
           <div className="task-header">
             <h2>{task.title}</h2>

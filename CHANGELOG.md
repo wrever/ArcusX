@@ -13,6 +13,22 @@ Las entradas siguen espíritu **[Keep a Changelog](https://keepachangelog.com/es
 
 ---
 
+## 2026-05-09 — Semana 2: JWT unificado y wallet en perfil
+
+### Cambiado
+
+- **`backend_externo`:** la autenticación por JWT de la app (Bearer) se centraliza en **`auth_bearer.php`** (`arcusx_jwt_user_id`, etc.) en los endpoints que aún duplicaban `JWT::decode`; el panel admin sigue usando su validación en **`admin_common.php`**.
+- **`get_platform_fee.php`:** deja de cargar `vendor` solo para JWT no usado; respuesta GET sin dependencia de Firebase.
+- **`confirm_escrow_signature.php`:** solo respuesta **410 Gone**; eliminado código inalcanzable tras `exit`.
+- **`manage_portfolio.php`:** carga correcta de `vendor` + `auth_bearer` (sin `use` inválido dentro de `if`).
+
+### Añadido
+
+- **`EditProfile`:** sección Stellar (verificar / registrar wallet) con i18n **`edit.wallet.*`**.
+- **Flujo «contratar / encargar tarea» (freelancers):** query `for_user` / `hire_username` / `hire_skill` en **`/create-task`** como respaldo al refrescar; sugerencia de **categoría** desde la skill; popup de éxito con **enlace a postular** (`/apply-task/{id}?ref=hire`) y **copiar al portapapeles**; **`Popup`** admite contenido extra; **`FreelancerCard`** y **`UserProfile`** (banner) navegan con `state` + query; **`ApplyTask`** muestra aviso si `ref=hire`. Ver **`docs/plans/freelancer-hire-flow-improvement.md`**.
+
+---
+
 ## 2026-05-07 — Estabilidad backend, OAuth, enterprise, wallet e i18n
 
 **Commit de referencia:** `109916f` (*week 1 & progress of week 2*).

@@ -1,63 +1,17 @@
 <?php
-header('Content-Type: application/json');
-$_cors_origin = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header('Access-Control-Allow-Origin: '.$_cors_origin);
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
+require_once __DIR__ . '/cors.php';
+arcusx_cors_handle_preflight('POST, OPTIONS');
+require_once 'config.php';
+require __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/auth_bearer.php';
 
-// Manejar preflight OPTIONS
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
+arcusx_cors_apply('POST, OPTIONS');
+header('Content-Type: application/json; charset=UTF-8');
 
-// Solo permitir POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['message' => 'Método no permitido']);
     exit;
-}
-
-// Incluir configuración de base de datos
-require_once 'config.php';
-require __DIR__ . '/vendor/autoload.php';
-
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
-
-$secret_key = $jwt_secret;
-
-// Función para obtener usuario del JWT (igual que en select_proposal.php)
-function getLoggedInUserId($conn, $secret_key) {
-    $headers = getallheaders();
-    if (!isset($headers['Authorization'])) {
-        error_log('Auth header missing');
-        return null;
-    }
-    $authHeader = $headers['Authorization'];
-    if (!preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-        error_log('Auth header format incorrect');
-        return null;
-    }
-    $jwt = $matches[1];
-    try {
-        $decoded = JWT::decode($jwt, new Key($secret_key, 'HS256'));
-        error_log('Decoded JWT: ' . print_r($decoded, true));
-        if (isset($decoded->data->id)) {
-            return (string) $decoded->data->id;
-        } else {
-            error_log('User ID not found in JWT payload');
-            return null;
-        }
-    } catch (\Firebase\JWT\ExpiredException $e) {
-        error_log('JWT Expired: ' . $e->getMessage());
-        return null;
-    } catch (\Firebase\JWT\SignatureInvalidException $e) {
-        error_log('JWT Signature Invalid: ' . $e->getMessage());
-        return null;
-    } catch (Exception $e) {
-        error_log('Error decoding token: ' . $e->getMessage());
-        return null;
-    }
 }
 
 // Función para validar dirección Stellar
@@ -113,19 +67,18 @@ try {
     
     // Verificar autenticación
     error_log("Verificando autenticación...");
-    $clientId = getLoggedInUserId($conn, $secret_key);
-    error_log("Client ID obtenido: " . ($clientId ? $clientId : 'NULL') . " (tipo: " . gettype($clientId) . ")");
-    
-    if (!$clientId) {
+    $jwtUid = arcusx_jwt_user_id();
+    error_log("Client ID obtenido: " . ($jwtUid !== null ? (string) $jwtUid : 'NULL'));
+
+    if ($jwtUid === null) {
         error_log("ERROR: Token de autenticación inválido");
         http_response_code(401);
         echo json_encode(['message' => 'Token de autenticación inválido']);
         exit;
     }
-    
-    // Asegurar que clientId sea string para comparación consistente
-    $clientId = (string)$clientId;
-    
+
+    $clientId = (string) $jwtUid;
+
     if ($isSignatureConfirmation) {
         // CONFIRMAR FIRMA DEL CONTRATO
         // Verificar que la tarea existe y pertenece al cliente

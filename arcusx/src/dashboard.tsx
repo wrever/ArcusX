@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { FaUser, FaTasks, FaWallet, FaChartLine, FaBell, FaCog, FaSignOutAlt, FaPlus, FaTimes, FaExclamationTriangle, FaUsers, FaCheckCircle, FaGlobe, FaLock, FaStar, FaGraduationCap, FaExchangeAlt, FaQuestionCircle } from 'react-icons/fa';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { FaUser, FaTasks, FaWallet, FaChartLine, FaBell, FaCog, FaSignOutAlt, FaPlus, FaTimes, FaExclamationTriangle, FaUsers, FaCheckCircle, FaGlobe, FaLock, FaStar, FaGraduationCap, FaExchangeAlt, FaQuestionCircle, FaEnvelope } from 'react-icons/fa';
 import ThemeToggle from './components/ThemeToggle';
 import LanguageFab from './components/LanguageFab';
 import { FiMenu } from 'react-icons/fi';
@@ -16,7 +16,7 @@ import { useScheduledTaskDeletion } from './hooks/useScheduledTaskDeletion';
 import DashboardFooter from './components/DashboardFooter';
 import CreateTask from './components/CreateTask';
 // import PendingNotificationsPopup from './components/PendingNotificationsPopup'; // Popup eliminado
-import { getUserNotifications, Notification, markNotificationAsRead as markNotificationAsReadService } from './services/notificationService';
+import { getUserNotifications, Notification, markNotificationAsRead as markNotificationAsReadService, dismissNotification } from './services/notificationService';
 import { getUserDisputes, UserDispute } from './services/disputeService';
 import { getUserTransactions, getUserEarningsSummary, Transaction } from './services/transactionService';
 import { getUserProfile, getUserPublicStats } from './services/profileService';
@@ -32,6 +32,9 @@ import SupportPage from './pages/SupportPage';
 import { getAvatarUrl } from './utils/avatarUtils';
 import { useTheme } from './contexts/ThemeContext';
 import { useEnterpriseMode } from './hooks/useEnterpriseMode';
+import { hasSupabase } from './config/supabase';
+import { ensureArcusxSupabaseUserLink } from './services/arcusxMessagingSupabase';
+import { fetchPrivateOffers, type PrivateOfferTask } from './services/privateOffersService';
 
 interface UserData {
   id: number;
@@ -91,9 +94,13 @@ const Dashboard = () => {
   
   // Nuevo estado para tareas completadas
   const [completedTasksCount, setCompletedTasksCount] = useState<number>(0);
-  
-  
-  
+
+  const [privateOffers, setPrivateOffers] = useState<PrivateOfferTask[]>([]);
+  const [loadingPrivateOffers, setLoadingPrivateOffers] = useState(false);
+  const [privateOffersError, setPrivateOffersError] = useState<string>('');
+
+  const [searchParams] = useSearchParams();
+
   // Estado para notificaciones
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
@@ -121,6 +128,34 @@ const Dashboard = () => {
   
   const navigate = useNavigate();
   const { logout, user } = useAuth();
+
+  useEffect(() => {
+    if (!user?.id || !hasSupabase) return;
+    void ensureArcusxSupabaseUserLink(Number(user.id));
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (activeTab !== 'private-offers' || !user?.id) return;
+    let cancelled = false;
+    setLoadingPrivateOffers(true);
+    setPrivateOffersError('');
+    fetchPrivateOffers()
+      .then((rows) => {
+        if (!cancelled) setPrivateOffers(rows);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setPrivateOffersError(err instanceof Error ? err.message : String(err));
+          setPrivateOffers([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingPrivateOffers(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, user?.id]);
   
   // Estado para transacciones reales
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -154,6 +189,7 @@ const Dashboard = () => {
     'create-task',
     'manage-tasks',
     'freelancers',
+    'private-offers',
     'swap',
     'tutorials',
     'notifications',
@@ -161,6 +197,12 @@ const Dashboard = () => {
     'support'
   ];
   const showEnterpriseTab = (tab: string) => !enterprise || allowedEnterpriseTabs.includes(tab);
+
+  useEffect(() => {
+    if (searchParams.get('tab') === 'private-offers' && showEnterpriseTab('private-offers')) {
+      setActiveTab('private-offers');
+    }
+  }, [searchParams, enterprise]);
 
   // Si cambian condiciones de modo, mantener al usuario en un tab permitido
   useEffect(() => {
@@ -589,12 +631,16 @@ const Dashboard = () => {
     }
   };
   
-  const deleteNotification = (notificationId: number) => {
+  const deleteNotification = async (notificationId: number) => {
     const notification = notifications.find(n => n.id === notificationId);
-    setNotifications(prev => 
-      prev.filter(notification => notification.id !== notificationId)
+    try {
+      await dismissNotification(notificationId);
+    } catch {
+      return;
+    }
+    setNotifications(prev =>
+      prev.filter(n => n.id !== notificationId)
     );
-    // Si era no leída, reducir contador
     if (notification && !notification.is_read) {
       setUnreadCount(prev => Math.max(0, prev - 1));
     }
@@ -795,6 +841,11 @@ const Dashboard = () => {
                 <FaUsers /> <span>{t('dashboard.tabs.freelancers')}</span>
               </li>
             )}
+            {showEnterpriseTab('private-offers') && (
+              <li className={activeTab === 'private-offers' ? 'active' : ''} onClick={() => setActiveTab('private-offers')}>
+                <FaEnvelope /> <span>{t('dashboard.tabs.privateOffers')}</span>
+              </li>
+            )}
             {showEnterpriseTab('wallet') && (
               <li className={activeTab === 'wallet' ? 'active' : ''} onClick={() => setActiveTab('wallet')}>
                 <FaWallet /> <span>{t('dashboard.tabs.wallet')}</span>
@@ -844,6 +895,7 @@ const Dashboard = () => {
             {activeTab === 'in-progress' && t('dashboard.title.in.progress')}
             {activeTab === 'manage-tasks' && t('dashboard.title.manage.tasks')}
             {activeTab === 'freelancers' && t('dashboard.title.freelancers')}
+            {activeTab === 'private-offers' && t('dashboard.title.privateOffers')}
             {activeTab === 'tutorials' && t('dashboard.title.tutorials')}
             {activeTab === 'swap' && t('dashboard.title.swap')}
             {activeTab === 'support' && t('dashboard.title.support')}
@@ -1553,6 +1605,78 @@ const Dashboard = () => {
           {/* Freelancers Tab */}
           {activeTab === 'freelancers' && (
             <FreelancersList />
+          )}
+
+          {activeTab === 'private-offers' && (
+            <div className="tasks-container">
+              <p className="task-description" style={{ marginBottom: '1.25rem', maxWidth: '42rem' }}>
+                {t('dashboard.privateOffers.intro')}
+              </p>
+              {loadingPrivateOffers && (
+                <p style={{ color: 'rgba(255, 255, 255, 0.75)' }}>{t('dashboard.privateOffers.loading')}</p>
+              )}
+              {privateOffersError && (
+                <p className="error-message" role="alert">
+                  {privateOffersError}
+                </p>
+              )}
+              {!loadingPrivateOffers && !privateOffersError && privateOffers.length === 0 && (
+                <p style={{ color: 'rgba(255, 255, 255, 0.75)' }}>{t('dashboard.privateOffers.empty')}</p>
+              )}
+              {!loadingPrivateOffers && privateOffers.length > 0 && (
+                <div className="tasks-grid">
+                  {privateOffers.map((task) => (
+                    <div key={task.id} className="task-card">
+                      <div className="task-header">
+                        <h3>{task.title}</h3>
+                        <span className={`task-difficulty ${String(task.difficulty).toLowerCase()}`}>
+                          {task.difficulty}
+                        </span>
+                      </div>
+                      <p className="task-description">{task.subtitle || task.description?.slice(0, 160)}</p>
+                      <div className="task-details">
+                        <div className="task-detail">
+                          <span className="task-detail-label">{t('dashboard.tasks.reward')}</span>
+                          <span className="task-detail-value">
+                            {parseFloat(String(task.price)).toFixed(2)} {task.currency}
+                          </span>
+                        </div>
+                        <div className="task-detail">
+                          <span className="task-detail-label">{t('dashboard.tasks.creator')}</span>
+                          <div className="task-creator-wrap">
+                            <Link
+                              to={`/profile/${task.creator_id ?? task.id}`}
+                              className="task-creator-link"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {task.creator_username}
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                      {task.my_application_count > 0 && (
+                        <p
+                          style={{
+                            margin: '0 0 0.75rem',
+                            fontSize: '0.85rem',
+                            color: 'var(--primary-green, #10dd88)',
+                          }}
+                        >
+                          {t('dashboard.privateOffers.applied')}
+                        </p>
+                      )}
+                      <button
+                        type="button"
+                        className="task-button"
+                        onClick={() => navigate(`/apply-task/${task.id}?ref=hire`)}
+                      >
+                        {t('dashboard.privateOffers.review')}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
           
           {/* Swap Tab */}

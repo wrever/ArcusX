@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaUser, FaEnvelope, FaLock, FaSave, FaTimes, FaUpload, FaGlobe, FaUnlock, FaLock as FaLockIcon } from 'react-icons/fa';
+import { FaArrowLeft, FaUser, FaEnvelope, FaLock, FaSave, FaTimes, FaUpload, FaGlobe, FaUnlock, FaLock as FaLockIcon, FaWallet } from 'react-icons/fa';
 import { getUserProfile, updateUserProfile, updateUserBasicData, uploadAvatar } from '../services/profileService';
+import { authService } from '../services/authService';
+import { useWallet } from '../hooks/useWallet';
 import type { UserProfile, Skill } from '../types/profile';
 import { getAvatarUrl } from '../utils/avatarUtils';
 import { useI18n } from '../i18n/I18nProvider';
@@ -14,10 +16,14 @@ interface StoredUser {
   avatar_url?: string;
 }
 
+/** Formato cuenta propia Stellar (misma regla que `register_wallet.php`). */
+const STELLAR_G_ADDRESS = /^G[A-Z0-9]{55}$/;
+
 const EditProfile: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useI18n();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { address: connectedWalletAddress, isConnected: walletConnected } = useWallet();
 
   const [user, setUser] = useState<StoredUser | null>(null);
   const [, setProfile] = useState<UserProfile | null>(null);
@@ -75,6 +81,14 @@ const EditProfile: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  /** `undefined` = aún no consultado al backend; `null` = sin wallet; string = dirección. */
+  const [registeredWallet, setRegisteredWallet] = useState<string | null | undefined>(undefined);
+  const [walletInput, setWalletInput] = useState('');
+  const [walletVerifyLoading, setWalletVerifyLoading] = useState(false);
+  const [walletSaving, setWalletSaving] = useState(false);
+  const [walletMessage, setWalletMessage] = useState<string | null>(null);
+  const [walletErrorLocal, setWalletErrorLocal] = useState<string | null>(null);
+
   // Cargar datos del usuario y perfil
   useEffect(() => {
     const loadData = async () => {
@@ -115,6 +129,23 @@ const EditProfile: React.FC = () => {
           setSelectedSkills(profileData.skills || []);
         } catch (e) {
           // Si falla, usar datos básicos del localStorage
+        }
+
+        setWalletVerifyLoading(true);
+        setWalletErrorLocal(null);
+        try {
+          const w = await authService.verifyWallet();
+          if (w.success && w.has_wallet && w.wallet_address) {
+            setRegisteredWallet(w.wallet_address);
+            setWalletInput(w.wallet_address);
+          } else {
+            setRegisteredWallet(null);
+            setWalletInput('');
+          }
+        } catch {
+          setRegisteredWallet(null);
+        } finally {
+          setWalletVerifyLoading(false);
         }
       } catch (e) {
         navigate('/login');
@@ -263,6 +294,47 @@ const EditProfile: React.FC = () => {
   const getSkillLevel = (skillName: string): Skill['level'] => {
     const skill = selectedSkills.find(s => s.name === skillName);
     return skill?.level || 'beginner';
+  };
+
+  const handleUseConnectedWallet = () => {
+    setWalletErrorLocal(null);
+    setWalletMessage(null);
+    if (!walletConnected || !connectedWalletAddress) {
+      setWalletErrorLocal(t('edit.wallet.error.connect'));
+      return;
+    }
+    setWalletInput(connectedWalletAddress);
+  };
+
+  const handleRegisterWallet = async () => {
+    setWalletErrorLocal(null);
+    setWalletMessage(null);
+    const trimmed = walletInput.trim();
+    if (!STELLAR_G_ADDRESS.test(trimmed)) {
+      setWalletErrorLocal(t('edit.wallet.error.format'));
+      return;
+    }
+    try {
+      setWalletSaving(true);
+      const res = await authService.registerWallet(trimmed);
+      if (res.success) {
+        const addr = res.wallet_address ?? trimmed;
+        setRegisteredWallet(addr);
+        setWalletInput(addr);
+        setWalletMessage(t('edit.wallet.success'));
+      } else {
+        setWalletErrorLocal(res.message || t('edit.wallet.error.generic'));
+      }
+    } catch (err: unknown) {
+      const ax = err as { response?: { data?: { message?: string } } };
+      const message =
+        ax?.response?.data?.message ||
+        (err instanceof Error ? err.message : null) ||
+        t('edit.wallet.error.generic');
+      setWalletErrorLocal(message);
+    } finally {
+      setWalletSaving(false);
+    }
   };
 
   if (loading || !user) {
@@ -490,6 +562,68 @@ const EditProfile: React.FC = () => {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Wallet Stellar (pagos) */}
+          <div className="form-section">
+            <h2>
+              <FaWallet style={{ marginRight: 8, verticalAlign: 'middle' }} aria-hidden />
+              {t('edit.section.wallet')}
+            </h2>
+            <p className="section-help">{t('edit.wallet.help')}</p>
+            {walletVerifyLoading ? (
+              <p className="section-help">{t('edit.wallet.loading')}</p>
+            ) : registeredWallet ? (
+              <div className="form-group">
+                <label htmlFor="registeredWallet">{t('edit.wallet.registered')}</label>
+                <input
+                  id="registeredWallet"
+                  type="text"
+                  readOnly
+                  value={registeredWallet}
+                  className="wallet-readonly"
+                />
+              </div>
+            ) : (
+              <>
+                {walletMessage ? (
+                  <div className="edit-profile-alert success">{walletMessage}</div>
+                ) : null}
+                {walletErrorLocal ? (
+                  <div className="edit-profile-alert error">{walletErrorLocal}</div>
+                ) : null}
+                <div className="form-group">
+                  <label htmlFor="walletAddress">{t('edit.wallet.placeholder')}</label>
+                  <input
+                    id="walletAddress"
+                    type="text"
+                    autoComplete="off"
+                    spellCheck={false}
+                    maxLength={56}
+                    value={walletInput}
+                    onChange={e => setWalletInput(e.target.value)}
+                    placeholder={t('edit.wallet.placeholder')}
+                  />
+                </div>
+                <div className="form-group edit-profile-wallet-actions">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={handleUseConnectedWallet}
+                  >
+                    {t('edit.wallet.useConnected')}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={walletSaving}
+                    onClick={handleRegisterWallet}
+                  >
+                    {walletSaving ? t('edit.wallet.saving') : t('edit.wallet.register')}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Sección 4: Seguridad */}

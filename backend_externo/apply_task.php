@@ -1,18 +1,10 @@
 <?php
+require_once __DIR__ . '/cors.php';
+arcusx_cors_handle_preflight('POST, OPTIONS');
 require_once 'config.php'; // Incluye la configuración de la base de datos
 
-// Headers CORS
-$_cors_origin = (function(){ $o=$_SERVER["HTTP_ORIGIN"]??""; return in_array($o,["http://localhost:5173","http://localhost:5174","https://arcusx.pro","http://arcusx.pro"],true)?$o:"https://arcusx.pro"; })(); header("Access-Control-Allow-Origin: ".$_cors_origin);
-header("Content-Type: application/json; charset=UTF-8");
-header("Access-Control-Allow-Methods: POST, OPTIONS");
-header("Access-Control-Max-Age: 3600");
-header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
-
-// Manejar peticiones OPTIONS (preflight)
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
+arcusx_cors_apply('POST, OPTIONS');
+header('Content-Type: application/json; charset=UTF-8');
 
 // Asegurarse de que la solicitud es POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -127,6 +119,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     $task_data = $check_task->fetch_assoc();
+
+    $privCol = $conn->query("SHOW COLUMNS FROM tasks LIKE 'is_private_invite'");
+    if ($privCol && $privCol->num_rows > 0) {
+        $tp = $conn->query("SELECT COALESCE(is_private_invite,0) AS pi, invited_user_id FROM tasks WHERE id = $taskId LIMIT 1");
+        if ($tp && $tp->num_rows > 0) {
+            $pr = $tp->fetch_assoc();
+            if ((int) ($pr['pi'] ?? 0) === 1 && isset($pr['invited_user_id']) && (int) $pr['invited_user_id'] > 0) {
+                if ((int) $pr['invited_user_id'] !== (int) $applicantId) {
+                    http_response_code(403);
+                    echo json_encode(['message' => 'Esta tarea es una oferta privada; solo el freelancer invitado puede postular.'], JSON_UNESCAPED_UNICODE);
+                    exit;
+                }
+            }
+        }
+    }
     
     // Validar que el aplicante no sea el creador de la tarea
     if ($task_data['user_id'] == $applicantId) {

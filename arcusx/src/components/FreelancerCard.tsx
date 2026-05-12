@@ -4,8 +4,8 @@
  */
 
 import { memo, useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { FaCheckCircle, FaStar } from 'react-icons/fa';
+import { Link, useNavigate } from 'react-router-dom';
+import { FaCheckCircle, FaStar, FaPlus } from 'react-icons/fa';
 import RatingDisplay from './RatingDisplay';
 import { useI18n } from '../i18n/I18nProvider';
 import type { Freelancer } from '../types/freelancer';
@@ -19,6 +19,7 @@ interface FreelancerCardProps {
 
 const FreelancerCard = memo(({ freelancer }: FreelancerCardProps) => {
   const { t } = useI18n();
+  const navigate = useNavigate();
 
   const getInitials = (name: string): string => {
     if (!name) return '??';
@@ -53,6 +54,27 @@ const FreelancerCard = memo(({ freelancer }: FreelancerCardProps) => {
   }, [freelancer.skills]);
 
   const profileUrl = `/profile/${freelancer.id}`;
+
+  const handleHire = () => {
+    const firstSkill = skills.visible[0];
+    const skillLabel = typeof firstSkill === 'string' ? firstSkill : (firstSkill && typeof firstSkill === 'object' && 'name' in firstSkill ? (firstSkill as { name: string }).name : undefined);
+    const params = new URLSearchParams();
+    params.set('for_user', String(freelancer.id));
+    params.set('hire_username', encodeURIComponent(freelancer.username));
+    if (skillLabel) params.set('hire_skill', encodeURIComponent(skillLabel));
+    navigate(
+      { pathname: '/create-task', search: params.toString() },
+      {
+        state: {
+          hireContext: {
+            userId: freelancer.id,
+            username: freelancer.username,
+            skill: skillLabel,
+          },
+        },
+      }
+    );
+  };
 
   return (
     <div className="freelancer-card-horizontal" aria-label={`Freelancer ${freelancer.username}`}>
@@ -118,9 +140,10 @@ const FreelancerCard = memo(({ freelancer }: FreelancerCardProps) => {
         <Link to={profileUrl} className="freelancer-view-profile-btn">
           {t('freelancers.card.view.profile')}
         </Link>
-        <Link to={`${profileUrl}?hire=1`} className="freelancer-hire-btn">
+        <button type="button" onClick={handleHire} className="freelancer-hire-btn">
+          <FaPlus style={{ marginRight: '6px', fontSize: '12px' }} />
           {t('freelancers.card.hire')}
-        </Link>
+        </button>
       </div>
     </div>
   );
