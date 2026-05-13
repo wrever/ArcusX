@@ -2,7 +2,8 @@
 /**
  * get_freelancers.php
  * Endpoint para obtener lista de freelancers con perfiles públicos
- * GET /api/auth/get_freelancers.php?page=1&limit=20&search=nombre&min_rating=4&min_tasks=5&sort_by=rating&sort_order=desc
+ * GET /api/auth/get_freelancers.php?page=1&limit=20&search=nombre&min_rating=4&min_tasks=5&sort_by=rating&sort_order=desc&prefer_profile=1
+ * prefer_profile=1: ordena primero por perfil completo (foto, bio, skills) y luego por sort_by (p. ej. landing sin KYC).
  * Headers: Authorization: Bearer {JWT_TOKEN} (opcional)
  */
 
@@ -10,14 +11,6 @@ require_once __DIR__ . '/cors.php';
 arcusx_cors_handle_preflight('GET, OPTIONS');
 
 require_once __DIR__ . '/config.php';
-
-function fix_utf8_mojibake($str) {
-    if (!is_string($str) || $str === '') return $str;
-    $bytes = @mb_convert_encoding($str, 'ISO-8859-1', 'UTF-8');
-    if ($bytes === false) return $str;
-    if (!mb_check_encoding($bytes, 'UTF-8')) return $str;
-    return $bytes;
-}
 
 arcusx_cors_apply('GET, OPTIONS');
 header('Content-Type: application/json; charset=UTF-8');
@@ -34,6 +27,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $minRating = isset($_GET['min_rating']) ? (float)$_GET['min_rating'] : 0;
         $minTasks = isset($_GET['min_tasks']) ? max(0, (int)$_GET['min_tasks']) : 0;
         
+        // Priorizar perfiles con foto/bio/skills (p. ej. carrusel landing; no implica KYC)
+        $preferProfile = isset($_GET['prefer_profile']) && ($_GET['prefer_profile'] === '1' || $_GET['prefer_profile'] === 'true');
+
         // Parámetros de ordenamiento
         $sortBy = isset($_GET['sort_by']) ? $_GET['sort_by'] : 'rating';
         $sortOrder = isset($_GET['sort_order']) && strtoupper($_GET['sort_order']) === 'ASC' ? 'ASC' : 'DESC';
@@ -45,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         }
 
         // Obtener platform fee para cálculos
-        $platformFee = 0.003; // default 0.3%
+        $platformFee = 0.03; // default 3%
         try {
             $feeRes = $conn->query("SHOW TABLES LIKE 'system_config'");
             if ($feeRes && $feeRes->num_rows > 0) {
@@ -146,10 +142,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $total = (int)$countRow['total'];
         $stmtCount->close();
 
-        // Verificar si existe columna skills en users
+        // Verificar si existe columna skills en users (antes del ORDER BY del listado)
         $checkSkills = $conn->query("SHOW COLUMNS FROM users LIKE 'skills'");
         $hasSkillsColumn = $checkSkills && $checkSkills->num_rows > 0;
-        
+
         // Query principal para obtener freelancers
         $skillsSelect = $hasSkillsColumn ? ", u.skills" : "";
         $sqlSelect = "
@@ -189,7 +185,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             default:
                 $orderColumn = 'average_rating';
         }
-        $sqlSelect .= " ORDER BY " . $orderColumn . " " . $sortOrder;
+
+        $sqlSelect .= ' ORDER BY ';
+        if ($preferProfile) {
+            // Peso fuerte: foto y bio primero; skills como refuerzo. Luego el criterio habitual (rating, etc.).
+            $profileScore = "(CASE WHEN u.avatar_url IS NOT NULL AND TRIM(u.avatar_url) != '' THEN 1 ELSE 0 END) * 1000"
+                . " + (CASE WHEN u.bio IS NOT NULL AND TRIM(COALESCE(u.bio, '')) != '' THEN 1 ELSE 0 END) * 500";
+            if ($hasSkillsColumn) {
+                $profileScore .= " + (CASE WHEN u.skills IS NOT NULL AND TRIM(COALESCE(u.skills, '')) != '' AND TRIM(u.skills) != '[]' THEN 1 ELSE 0 END) * 200";
+            }
+            $sqlSelect .= $profileScore . ' DESC, ' . $orderColumn . ' ' . $sortOrder . ', tasks_completed DESC';
+        } else {
+            $sqlSelect .= $orderColumn . ' ' . $sortOrder;
+        }
 
         // Agregar paginación
         $sqlSelect .= " LIMIT ? OFFSET ?";
@@ -258,7 +266,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 'limit' => $limit,
                 'total_pages' => $totalPages
             ]
-        ]);
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
     } catch (Exception $e) {
         error_log("Error en get_freelancers.php: " . $e->getMessage());

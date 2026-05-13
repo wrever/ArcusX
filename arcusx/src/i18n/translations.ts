@@ -179,6 +179,12 @@ export const translations: Record<Lang, Record<string, string>> = {
     'hero.carousel.empty': 'No hay tareas disponibles en este momento.',
     'hero.carousel.prev': 'Anterior',
     'hero.carousel.next': 'Siguiente',
+    'hero.freelancer.carousel.aria': 'Carrusel de freelancers para contratar',
+    'hero.freelancer.carousel.loading': 'Cargando talento...',
+    'hero.freelancer.carousel.empty': 'Aún no hay perfiles públicos para mostrar.',
+    'hero.freelancer.carousel.meta': '★ {{rating}} · {{tasks}} tareas',
+    'hero.freelancer.carousel.bioFallback':
+      '¿Velocidad y tranquilidad? Al contratarme por ArcusX vas con todo seguro: trabajos rápidos, escrow en USDC sobre Stellar y sin custodia de fondos. Publica la tarea y cerramos alcance y pago en minutos.',
     'hero.cta.title': '¿Listo para comenzar tu viaje freelance?',
     'hero.cta.desc': 'Únete a miles de personas que ya están ganando dinero y desarrollando sus habilidades en ArcusX',
     'hero.cta.button': 'Crear Cuenta Gratis',
@@ -188,7 +194,7 @@ export const translations: Record<Lang, Record<string, string>> = {
 
     // Landing redesign
     'landing.hero.tagline': 'Trabajo real. Pago real. En minutos.',
-    'landing.trust.line': 'Stellar · USDC · Escrow on-chain · 0.5% · Sin custodia de fondos',
+    'landing.trust.line': 'Stellar · USDC · Escrow on-chain · 3% · Sin custodia de fondos',
     'landing.how.title': 'En 3 pasos',
     'landing.how.step1': 'Publica',
     'landing.how.step2': 'Trabajan',
@@ -306,15 +312,16 @@ export const translations: Record<Lang, Record<string, string>> = {
     'features.card4.title': 'Pagos Seguros con Escrow',
     'features.card4.desc':
       'Recibe pagos puntuales en USDC (Stellar). Los fondos quedan en escrow hasta que, en la app, se confirme la entrega y el cliente apruebe y firme la liberación on-chain.',
-    'features.card4.bullet': '0.5% comisión · Sin custodia de fondos',
+    'features.card4.bullet': '3% comisión · Sin custodia de fondos',
 
     // Roadmap section
     'roadmap.title': 'Roadmap',
-    'roadmap.subtitle': 'Hitos y fases de desarrollo de la plataforma.',
+    'roadmap.subtitle':
+      'Hitos hacia la infraestructura de ejecución de tareas B2B, con backend unificado en Supabase.',
     'roadmap.phase.mvp': 'MVP completo',
     'roadmap.phase.mvp.date': 'Q4 2025',
     'roadmap.mvp.1': 'Diseño completo de la plataforma y experiencia de usuario',
-    'roadmap.mvp.2': 'Arquitectura y flujos (escrow, pagos, disputas, admin)',
+    'roadmap.mvp.2': 'Arquitectura y flujos (escrow, pagos, disputas, admin y visión B2B)',
     'roadmap.mvp.3': 'Definición de stack, integraciones y roadmap de desarrollo',
     'roadmap.phase.done': 'Tranche 1 · Completado',
     'roadmap.phase.done.date': 'Q1 2026',
@@ -327,16 +334,19 @@ export const translations: Record<Lang, Record<string, string>> = {
     'roadmap.done.1': 'Funcionalidades completas: escrow, pagos USDC y disputas',
     'roadmap.done.2': 'Freelancers públicos, tutoriales, swap integrado (XLM ↔ USDC) y ratings',
     'roadmap.done.3': 'Panel de administración, UI/UX responsive, SEO y optimización',
-    'roadmap.now.1': 'Badges, achievements, rankings y leaderboards',
-    'roadmap.now.2': 'Referidos, suscripciones y bot de chat con preguntas predefinidas',
-    'roadmap.now.3': 'Analytics para admins y migración parcial backend (Node.js, PostgreSQL)',
-    'roadmap.now.4': 'Optimización Mobile y PWA',
+    'roadmap.now.1':
+      'Backend en Supabase: Postgres, RLS, Auth y Edge Functions como APIs y webhooks (sync con escrow y proveedores)',
+    'roadmap.now.2':
+      'Modelo B2B: empresas, roles y ciclo de ejecución de tareas (postulación → contrato → supervisión → liberación)',
+    'roadmap.now.3':
+      'Robustez del pipeline: hitos, evidencias, notificaciones en tiempo real y trazabilidad operativa',
+    'roadmap.now.4': 'Badges y rankings, referidos, suscripciones, bot FAQ, analytics admin; mobile y PWA',
     'roadmap.next.1': 'Traducción automática de tareas (ES/EN)',
-    'roadmap.next.2': 'Migración completa backend e infraestructura (Redis, CDN)',
+    'roadmap.next.2': 'CDN para assets, observabilidad, backups y políticas de datos sobre el stack Supabase',
     'roadmap.next.3': 'Migración a Stellar Mainnet y auditoría de seguridad',
-    'roadmap.vision.1': 'Next.js, PWA y actualizaciones en tiempo real (WebSockets)',
+    'roadmap.vision.1': 'PWA y Realtime (Supabase) para colaboración en tareas y paneles empresa',
     'roadmap.vision.2': 'Multi-asset, indexer propio (consultas rápidas on-chain) y batch transactions (varias ops en una tx)',
-    'roadmap.vision.3': 'Arquitectura escalable y microservicios',
+    'roadmap.vision.3': 'APIs públicas y ecosistema de integraciones/partners sobre la misma base de datos',
 
     // Team section
     'team.title': 'Nuestro Equipo',
@@ -776,6 +786,15 @@ export const translations: Record<Lang, Record<string, string>> = {
     'dashboard.notifications.mark.all.read': 'Marcar todo como leído',
     'dashboard.notifications.mark.read': 'Marcar como leída',
     'dashboard.notifications.delete': 'Eliminar',
+    'dashboard.notifications.delete.failed':
+      'No se pudo ocultar la notificación. Si el problema continúa, recarga la página o vuelve a iniciar sesión.',
+    'dashboard.notifications.delete.failed.session':
+      'No hay sesión activa con Supabase. Cierra sesión y entra de nuevo con Google o GitHub.',
+    'dashboard.notifications.delete.failed.link':
+      'Tu cuenta aún no está enlazada al sistema de notificaciones. Recarga el panel o vuelve a iniciar sesión.',
+    'dashboard.notifications.delete.failed.rpc':
+      'Falta la función de ocultar en el proyecto Supabase (migración arcusx_notification_dismissals). Un administrador debe aplicarla en Supabase.',
+    'dashboard.notifications.delete.error.close': 'Cerrar aviso',
     'dashboard.notifications.filter.all': 'Todas',
     'dashboard.notifications.filter.unread': 'No leídas',
     'dashboard.notifications.filter.success': 'Éxito',
@@ -1397,7 +1416,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     'support.faq.payments.followup.wallets': 'Puedes usar cualquier wallet compatible con Stellar. Las más populares son: Freighter (extensión de navegador, recomendada), xBull, Albedo, Rabet y Lobstr. Todas estas wallets son seguras y te permiten recibir USDC en la red Stellar.',
     'support.faq.payments.followup.time': 'Los pagos se procesan en 3-5 segundos una vez que el cliente aprueba el trabajo completado. Esto es mucho más rápido que los métodos tradicionales que pueden tardar días o semanas. La confirmación es casi instantánea gracias a la tecnología de Stellar.',
     'support.faq.payments.followup.currency': 'Todos los pagos se realizan en USDC (USD Coin) en la blockchain de Stellar. USDC es una moneda estable vinculada al dólar estadounidense, lo que significa que 1 USDC siempre vale 1 USD. Esto protege tu dinero de la volatilidad de las criptomonedas.',
-    'support.faq.payments.followup.cost': 'No hay costo adicional por recibir pagos. La plataforma cobra una comisión del 0.5% al cliente cuando se crea el escrow, pero tú recibes el 100% del monto acordado. Los únicos costos son las tarifas mínimas de la red Stellar (menos de un centavo por transacción).',
+    'support.faq.payments.followup.cost': 'No hay costo adicional por recibir pagos. La plataforma cobra una comisión del 3% al cliente cuando se crea el escrow, pero tú recibes el 100% del monto acordado. Los únicos costos son las tarifas mínimas de la red Stellar (menos de un centavo por transacción).',
 
     // Support Bot FAQs - Escrow
     'support.faq.escrow.question': 'Sistema de Escrow',
@@ -1409,10 +1428,10 @@ export const translations: Record<Lang, Record<string, string>> = {
     'support.faq.escrow.related.1': '¿Es seguro el sistema de escrow?',
     'support.faq.escrow.related.2': '¿Cuánto cuesta usar el escrow?',
     'support.faq.escrow.related.3': '¿Qué pasa si el cliente no aprueba?',
-    'support.faq.escrow.followup.how': 'Cuando un cliente acepta tu propuesta, se crea automáticamente un contrato inteligente en la blockchain de Stellar. El cliente deposita el monto acordado más la comisión de plataforma (0.5%) en este contrato. Los fondos quedan bloqueados de forma segura. Una vez que completas el trabajo y el cliente lo aprueba, los fondos se liberan automáticamente a tu wallet. Todo el proceso es transparente y verificable en la blockchain.',
+    'support.faq.escrow.followup.how': 'Cuando un cliente acepta tu propuesta, se crea automáticamente un contrato inteligente en la blockchain de Stellar. El cliente deposita el monto acordado más la comisión de plataforma (3%) en este contrato. Los fondos quedan bloqueados de forma segura. Una vez que completas el trabajo y el cliente lo aprueba, los fondos se liberan automáticamente a tu wallet. Todo el proceso es transparente y verificable en la blockchain.',
     'support.faq.escrow.followup.safe':
       'Sí. El modelo es no custodial: la liberación la autoriza el cliente al aprobar el trabajo y firmar; la plataforma no controla las claves de las partes. Las transacciones son verificables en la blockchain de Stellar.',
-    'support.faq.escrow.followup.cost': 'La plataforma cobra una comisión del 0.5% al cliente cuando se crea el escrow. Esta comisión se calcula sobre el monto total de la tarea y se deposita junto con el pago del trabajador. El trabajador recibe el 100% del monto acordado, sin deducciones. Esta es una de las comisiones más bajas del mercado, comparado con plataformas tradicionales que cobran entre 10% y 20%.',
+    'support.faq.escrow.followup.cost': 'La plataforma cobra una comisión del 3% al cliente cuando se crea el escrow. Esta comisión se calcula sobre el monto total de la tarea y se deposita junto con el pago del trabajador. El trabajador recibe el 100% del monto acordado, sin deducciones. Esta es una de las comisiones más bajas del mercado, comparado con plataformas tradicionales que cobran entre 10% y 20%.',
     'support.faq.escrow.followup.not.approved': 'Si el cliente no aprueba el trabajo, puedes iniciar una disputa. Un administrador de la plataforma revisará el caso, examinará la evidencia proporcionada por ambas partes y tomará una decisión justa. El administrador puede distribuir los fondos de manera equitativa o decidir a favor de una de las partes basándose en la evidencia presentada.',
 
     // Support Bot FAQs - Disputes
@@ -1508,16 +1527,16 @@ export const translations: Record<Lang, Record<string, string>> = {
 
     // Support Bot FAQs - Fees
     'support.faq.fees.question': 'Comisiones y Tarifas',
-    'support.faq.fees.answer': 'ArcusX tiene una de las comisiones más bajas del mercado: solo 0.5% por transacción. Esta comisión se cobra al cliente cuando se crea el escrow, no al trabajador. El trabajador recibe el 100% del monto acordado. Además, hay tarifas mínimas de la red Stellar (menos de un centavo) que se aplican a todas las transacciones blockchain. Comparado con plataformas tradicionales que cobran entre 10% y 20%, ArcusX es extremadamente competitivo.',
-    'support.faq.fees.detailed': 'La estructura de comisiones de ArcusX está diseñada para ser justa y transparente. La plataforma cobra una comisión del 0.5% al cliente cuando se crea un escrow. Esta comisión se calcula sobre el monto total de la tarea y se deposita junto con el pago del trabajador en el contrato inteligente. Lo importante es que el trabajador recibe el 100% del monto acordado - no hay deducciones de su pago. Además de la comisión de plataforma, hay tarifas mínimas de la red Stellar que se aplican a todas las transacciones. Estas tarifas son extremadamente bajas (menos de un centavo) y se usan para mantener la red funcionando. No hay tarifas ocultas, costos de registro, o cargos mensuales.',
+    'support.faq.fees.answer': 'ArcusX tiene una de las comisiones más bajas del mercado: solo 3% por transacción. Esta comisión se cobra al cliente cuando se crea el escrow, no al trabajador. El trabajador recibe el 100% del monto acordado. Además, hay tarifas mínimas de la red Stellar (menos de un centavo) que se aplican a todas las transacciones blockchain. Comparado con plataformas tradicionales que cobran entre 10% y 20%, ArcusX es extremadamente competitivo.',
+    'support.faq.fees.detailed': 'La estructura de comisiones de ArcusX está diseñada para ser justa y transparente. La plataforma cobra una comisión del 3% al cliente cuando se crea un escrow. Esta comisión se calcula sobre el monto total de la tarea y se deposita junto con el pago del trabajador en el contrato inteligente. Lo importante es que el trabajador recibe el 100% del monto acordado - no hay deducciones de su pago. Además de la comisión de plataforma, hay tarifas mínimas de la red Stellar que se aplican a todas las transacciones. Estas tarifas son extremadamente bajas (menos de un centavo) y se usan para mantener la red funcionando. No hay tarifas ocultas, costos de registro, o cargos mensuales.',
     'support.faq.fees.related.0': '¿Cuánto cuesta usar ArcusX?',
     'support.faq.fees.related.1': '¿Quién paga las comisiones?',
     'support.faq.fees.related.2': '¿Hay tarifas ocultas?',
     'support.faq.fees.related.3': '¿Cómo se compara con otras plataformas?',
-    'support.faq.fees.followup.cost': 'ArcusX es completamente gratuito para registrarse y usar. La única comisión es del 0.5% que se cobra al cliente cuando se crea un escrow. Esta es una de las comisiones más bajas del mercado. No hay costos de registro, suscripciones mensuales, o tarifas ocultas.',
-    'support.faq.fees.followup.who': 'La comisión de plataforma (0.5%) la paga el cliente cuando se crea el escrow. El trabajador recibe el 100% del monto acordado sin ninguna deducción. Esto significa que si acordaste recibir 100 USDC por una tarea, recibirás exactamente 100 USDC.',
-    'support.faq.fees.followup.hidden': 'No, no hay tarifas ocultas. ArcusX es completamente transparente sobre todos los costos. La única comisión es el 0.5% que se muestra claramente cuando se crea una tarea. Además, hay tarifas mínimas de la red Stellar (menos de un centavo) que se aplican a todas las transacciones blockchain, pero estas son estándar y no son controladas por ArcusX.',
-    'support.faq.fees.followup.compare': 'ArcusX tiene una de las comisiones más bajas del mercado. Plataformas tradicionales como Upwork cobran entre 10% y 20% dependiendo del monto, mientras que Fiverr cobra 20% a los vendedores. Con solo 0.5%, ArcusX es hasta 40 veces más barato que las alternativas tradicionales.',
+    'support.faq.fees.followup.cost': 'ArcusX es completamente gratuito para registrarse y usar. La única comisión es del 3% que se cobra al cliente cuando se crea un escrow. Esta es una de las comisiones más bajas del mercado. No hay costos de registro, suscripciones mensuales, o tarifas ocultas.',
+    'support.faq.fees.followup.who': 'La comisión de plataforma (3%) la paga el cliente cuando se crea el escrow. El trabajador recibe el 100% del monto acordado sin ninguna deducción. Esto significa que si acordaste recibir 100 USDC por una tarea, recibirás exactamente 100 USDC.',
+    'support.faq.fees.followup.hidden': 'No, no hay tarifas ocultas. ArcusX es completamente transparente sobre todos los costos. La única comisión es el 3% que se muestra claramente cuando se crea una tarea. Además, hay tarifas mínimas de la red Stellar (menos de un centavo) que se aplican a todas las transacciones blockchain, pero estas son estándar y no son controladas por ArcusX.',
+    'support.faq.fees.followup.compare': 'La comisión de ArcusX es del 3% al cliente sobre el escrow (el trabajador recibe el 100% acordado). Muchas plataformas retienen alrededor de 10–20% al freelancer (p. ej. Fiverr) o cobran tasas altas al contratar; por eso ArcusX suele seguir siendo muy competitiva.',
 
     // Support Bot FAQs - Security
     'support.faq.security.question': 'Seguridad y Privacidad',
@@ -1776,6 +1795,12 @@ export const translations: Record<Lang, Record<string, string>> = {
     'hero.carousel.empty': 'No tasks available at the moment.',
     'hero.carousel.prev': 'Previous',
     'hero.carousel.next': 'Next',
+    'hero.freelancer.carousel.aria': 'Freelancers you can hire — carousel',
+    'hero.freelancer.carousel.loading': 'Loading talent...',
+    'hero.freelancer.carousel.empty': 'No public profiles to show yet.',
+    'hero.freelancer.carousel.meta': '★ {{rating}} · {{tasks}} jobs',
+    'hero.freelancer.carousel.bioFallback':
+      'Want fast and safe? Hire me on ArcusX: quick turnarounds, USDC escrow on Stellar, non-custodial funds. Post the task and we lock scope and payout in minutes.',
     'hero.cta.title': 'Ready to start your freelance journey?',
     'hero.cta.desc': 'Join thousands of people already earning money and developing their skills on ArcusX',
     'hero.cta.button': 'Create Free Account',
@@ -1784,7 +1809,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     'landing.trust.aria': 'Technology and security',
 
     'landing.hero.tagline': 'Real work. Real pay. In minutes.',
-    'landing.trust.line': 'Stellar · USDC · On-chain escrow · 0.5% · Non-custodial',
+    'landing.trust.line': 'Stellar · USDC · On-chain escrow · 3% · Non-custodial',
     'landing.how.title': 'In 3 steps',
     'landing.how.step1': 'Post',
     'landing.how.step2': 'Work',
@@ -1904,15 +1929,16 @@ export const translations: Record<Lang, Record<string, string>> = {
     'features.card4.title': 'Secure Payments with Escrow',
     'features.card4.desc':
       'Receive timely USDC (Stellar) payments. Funds stay in escrow until delivery is confirmed in the app and the client approves and signs the on-chain release.',
-    'features.card4.bullet': '0.5% fee · Non-custodial',
+    'features.card4.bullet': '3% fee · Non-custodial',
 
     // Roadmap section
     'roadmap.title': 'Roadmap',
-    'roadmap.subtitle': 'Platform development milestones and phases.',
+    'roadmap.subtitle':
+      'Milestones toward B2B task execution infrastructure, with a unified Supabase backend.',
     'roadmap.phase.mvp': 'Complete MVP',
     'roadmap.phase.mvp.date': 'Q4 2025',
     'roadmap.mvp.1': 'Full platform design and user experience',
-    'roadmap.mvp.2': 'Architecture and flows (escrow, payments, disputes, admin)',
+    'roadmap.mvp.2': 'Architecture and flows (escrow, payments, disputes, admin and B2B vision)',
     'roadmap.mvp.3': 'Stack definition, integrations and development roadmap',
     'roadmap.phase.done': 'Tranche 1 · Completed',
     'roadmap.phase.done.date': 'Q1 2026',
@@ -1925,16 +1951,19 @@ export const translations: Record<Lang, Record<string, string>> = {
     'roadmap.done.1': 'Complete features: escrow, USDC payments and disputes',
     'roadmap.done.2': 'Public freelancers, tutorials, integrated swap (XLM ↔ USDC) and ratings',
     'roadmap.done.3': 'Admin panel, responsive UI/UX, SEO and optimization',
-    'roadmap.now.1': 'Badges, achievements, rankings and leaderboards',
-    'roadmap.now.2': 'Referrals, subscriptions and chat bot with predefined questions',
-    'roadmap.now.3': 'Analytics for admins and partial backend migration (Node.js, PostgreSQL)',
-    'roadmap.now.4': 'Mobile optimization and PWA',
+    'roadmap.now.1':
+      'Supabase backend: Postgres, RLS, Auth and Edge Functions for APIs and webhooks (escrow and provider sync)',
+    'roadmap.now.2':
+      'B2B model: organizations, roles and full task execution lifecycle (apply → contract → supervision → release)',
+    'roadmap.now.3':
+      'Pipeline hardening: milestones, evidence, realtime notifications and operational traceability',
+    'roadmap.now.4': 'Badges and rankings, referrals, subscriptions, FAQ bot, admin analytics; mobile and PWA',
     'roadmap.next.1': 'Automatic task translation (ES/EN)',
-    'roadmap.next.2': 'Full backend migration and infrastructure (Redis, CDN)',
+    'roadmap.next.2': 'CDN for assets, observability, backups and data policies on the Supabase stack',
     'roadmap.next.3': 'Stellar Mainnet migration and security audit',
-    'roadmap.vision.1': 'Next.js, PWA and real-time updates (WebSockets)',
+    'roadmap.vision.1': 'PWA and Supabase Realtime for task collaboration and enterprise dashboards',
     'roadmap.vision.2': 'Multi-asset, own indexer (fast on-chain queries) and batch transactions (multiple ops in one tx)',
-    'roadmap.vision.3': 'Scalable architecture and microservices',
+    'roadmap.vision.3': 'Public APIs and an integration/partner ecosystem on the same data foundation',
 
     // Team section
     'team.title': 'Our Team',
@@ -2374,6 +2403,15 @@ export const translations: Record<Lang, Record<string, string>> = {
     'dashboard.notifications.mark.all.read': 'Mark all as read',
     'dashboard.notifications.mark.read': 'Mark as read',
     'dashboard.notifications.delete': 'Delete',
+    'dashboard.notifications.delete.failed':
+      'Could not dismiss the notification. Try refreshing the page or signing in again.',
+    'dashboard.notifications.delete.failed.session':
+      'No active Supabase session. Sign out and sign in again with Google or GitHub.',
+    'dashboard.notifications.delete.failed.link':
+      'Your account is not linked to the notification system yet. Reload the dashboard or sign in again.',
+    'dashboard.notifications.delete.failed.rpc':
+      'The dismiss function is missing on Supabase (arcusx_notification_dismissals migration). An admin needs to apply it.',
+    'dashboard.notifications.delete.error.close': 'Dismiss message',
     'dashboard.notifications.filter.all': 'All',
     'dashboard.notifications.filter.unread': 'Unread',
     'dashboard.notifications.filter.success': 'Success',
@@ -2995,7 +3033,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     'support.faq.payments.followup.wallets': 'You can use any Stellar-compatible wallet. The most popular ones are: Freighter (browser extension, recommended), xBull, Albedo, Rabet, and Lobstr. All these wallets are secure and allow you to receive USDC on the Stellar network.',
     'support.faq.payments.followup.time': 'Payments are processed in 3-5 seconds once the client approves the completed work. This is much faster than traditional methods that can take days or weeks. Confirmation is almost instantaneous thanks to Stellar technology.',
     'support.faq.payments.followup.currency': 'All payments are made in USDC (USD Coin) on the Stellar blockchain. USDC is a stablecoin pegged to the US dollar, meaning 1 USDC is always worth 1 USD. This protects your money from cryptocurrency volatility.',
-    'support.faq.payments.followup.cost': 'There is no additional cost to receive payments. The platform charges a 0.5% commission to the client when the escrow is created, but you receive 100% of the agreed amount. The only costs are minimal Stellar network fees (less than a penny per transaction).',
+    'support.faq.payments.followup.cost': 'There is no additional cost to receive payments. The platform charges a 3% commission to the client when the escrow is created, but you receive 100% of the agreed amount. The only costs are minimal Stellar network fees (less than a penny per transaction).',
 
     // Support Bot FAQs - Escrow
     'support.faq.escrow.question': 'Escrow System',
@@ -3007,10 +3045,10 @@ export const translations: Record<Lang, Record<string, string>> = {
     'support.faq.escrow.related.1': 'Is the escrow system safe?',
     'support.faq.escrow.related.2': 'How much does it cost to use escrow?',
     'support.faq.escrow.related.3': 'What happens if the client does not approve?',
-    'support.faq.escrow.followup.how': 'When a client accepts your proposal, a smart contract is automatically created on the Stellar blockchain. The client deposits the agreed amount plus the platform commission (0.5%) into this contract. Funds are securely locked. Once you complete the work and the client approves it, funds are automatically released to your wallet. The entire process is transparent and verifiable on the blockchain.',
+    'support.faq.escrow.followup.how': 'When a client accepts your proposal, a smart contract is automatically created on the Stellar blockchain. The client deposits the agreed amount plus the platform commission (3%) into this contract. Funds are securely locked. Once you complete the work and the client approves it, funds are automatically released to your wallet. The entire process is transparent and verifiable on the blockchain.',
     'support.faq.escrow.followup.safe':
       'Yes. The model is non-custodial: release is authorized when the client approves work and signs; the platform does not control parties’ keys. Transactions are verifiable on the Stellar blockchain.',
-    'support.faq.escrow.followup.cost': 'The platform charges a 0.5% commission to the client when the escrow is created. This commission is calculated on the total task amount and is deposited along with the worker payment. The worker receives 100% of the agreed amount, with no deductions. This is one of the lowest commissions in the market, compared to traditional platforms that charge between 10% and 20%.',
+    'support.faq.escrow.followup.cost': 'The platform charges a 3% commission to the client when the escrow is created. This commission is calculated on the total task amount and is deposited along with the worker payment. The worker receives 100% of the agreed amount, with no deductions. This is one of the lowest commissions in the market, compared to traditional platforms that charge between 10% and 20%.',
     'support.faq.escrow.followup.not.approved': 'If the client does not approve the work, you can initiate a dispute. A platform administrator will review the case, examine the evidence provided by both parties, and make a fair decision. The administrator can distribute funds equitably or decide in favor of one party based on the evidence presented.',
 
     // Support Bot FAQs - Disputes
@@ -3106,16 +3144,16 @@ export const translations: Record<Lang, Record<string, string>> = {
 
     // Support Bot FAQs - Fees
     'support.faq.fees.question': 'Commissions and Fees',
-    'support.faq.fees.answer': 'ArcusX has one of the lowest commissions in the market: only 0.5% per transaction. This commission is charged to the client when the escrow is created, not to the worker. The worker receives 100% of the agreed amount. Additionally, there are minimal Stellar network fees (less than a penny) that apply to all blockchain transactions. Compared to traditional platforms that charge between 10% and 20%, ArcusX is extremely competitive.',
-    'support.faq.fees.detailed': 'ArcusX commission structure is designed to be fair and transparent. The platform charges a 0.5% commission to the client when an escrow is created. This commission is calculated on the total task amount and is deposited along with the worker payment in the smart contract. What is important is that the worker receives 100% of the agreed amount - there are no deductions from their payment. In addition to the platform commission, there are minimal Stellar network fees that apply to all transactions. These fees are extremely low (less than a penny) and are used to keep the network running. There are no hidden fees, registration costs, or monthly charges.',
+    'support.faq.fees.answer': 'ArcusX has one of the lowest commissions in the market: only 3% per transaction. This commission is charged to the client when the escrow is created, not to the worker. The worker receives 100% of the agreed amount. Additionally, there are minimal Stellar network fees (less than a penny) that apply to all blockchain transactions. Compared to traditional platforms that charge between 10% and 20%, ArcusX is extremely competitive.',
+    'support.faq.fees.detailed': 'ArcusX commission structure is designed to be fair and transparent. The platform charges a 3% commission to the client when an escrow is created. This commission is calculated on the total task amount and is deposited along with the worker payment in the smart contract. What is important is that the worker receives 100% of the agreed amount - there are no deductions from their payment. In addition to the platform commission, there are minimal Stellar network fees that apply to all transactions. These fees are extremely low (less than a penny) and are used to keep the network running. There are no hidden fees, registration costs, or monthly charges.',
     'support.faq.fees.related.0': 'How much does it cost to use ArcusX?',
     'support.faq.fees.related.1': 'Who pays the commissions?',
     'support.faq.fees.related.2': 'Are there hidden fees?',
     'support.faq.fees.related.3': 'How does it compare to other platforms?',
-    'support.faq.fees.followup.cost': 'ArcusX is completely free to register and use. The only commission is 0.5% charged to the client when an escrow is created. This is one of the lowest commissions in the market. There are no registration costs, monthly subscriptions, or hidden fees.',
-    'support.faq.fees.followup.who': 'The platform commission (0.5%) is paid by the client when the escrow is created. The worker receives 100% of the agreed amount with no deduction. This means if you agreed to receive 100 USDC for a task, you will receive exactly 100 USDC.',
-    'support.faq.fees.followup.hidden': 'No, there are no hidden fees. ArcusX is completely transparent about all costs. The only commission is 0.5% which is clearly shown when creating a task. Additionally, there are minimal Stellar network fees (less than a penny) that apply to all blockchain transactions, but these are standard and not controlled by ArcusX.',
-    'support.faq.fees.followup.compare': 'ArcusX has one of the lowest commissions in the market. Traditional platforms like Upwork charge between 10% and 20% depending on the amount, while Fiverr charges 20% to sellers. With only 0.5%, ArcusX is up to 40 times cheaper than traditional alternatives.',
+    'support.faq.fees.followup.cost': 'ArcusX is completely free to register and use. The only commission is 3% charged to the client when an escrow is created. This is one of the lowest commissions in the market. There are no registration costs, monthly subscriptions, or hidden fees.',
+    'support.faq.fees.followup.who': 'The platform commission (3%) is paid by the client when the escrow is created. The worker receives 100% of the agreed amount with no deduction. This means if you agreed to receive 100 USDC for a task, you will receive exactly 100 USDC.',
+    'support.faq.fees.followup.hidden': 'No, there are no hidden fees. ArcusX is completely transparent about all costs. The only commission is 3% which is clearly shown when creating a task. Additionally, there are minimal Stellar network fees (less than a penny) that apply to all blockchain transactions, but these are standard and not controlled by ArcusX.',
+    'support.faq.fees.followup.compare': 'ArcusX charges a 3% platform fee to the client on escrow; the worker still receives 100% of the agreed amount. Many traditional platforms keep roughly 10–20% from freelancers (e.g. Fiverr), so ArcusX typically remains very competitive.',
 
     // Support Bot FAQs - Security
     'support.faq.security.question': 'Security and Privacy',
@@ -3373,6 +3411,12 @@ export const translations: Record<Lang, Record<string, string>> = {
     'hero.carousel.empty': 'Nenhuma tarefa disponível no momento.',
     'hero.carousel.prev': 'Anterior',
     'hero.carousel.next': 'Próximo',
+    'hero.freelancer.carousel.aria': 'Carrossel de freelancers para contratar',
+    'hero.freelancer.carousel.loading': 'Carregando talentos...',
+    'hero.freelancer.carousel.empty': 'Ainda não há perfis públicos para exibir.',
+    'hero.freelancer.carousel.meta': '★ {{rating}} · {{tasks}} tarefas',
+    'hero.freelancer.carousel.bioFallback':
+      'Rapidez com segurança? Contrate-me na ArcusX: entregas ágeis, escrow em USDC na Stellar, sem custódia de fundos. Publique a tarefa e fechamos escopo e pagamento em minutos.',
     'hero.cta.title': 'Pronto para começar sua jornada freelance?',
     'hero.cta.desc': 'Junte-se a milhares de pessoas que já estão ganhando e desenvolvendo suas habilidades na ArcusX',
     'hero.cta.button': 'Criar Conta Grátis',
@@ -3381,7 +3425,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     'landing.trust.aria': 'Tecnologia e segurança',
 
     'landing.hero.tagline': 'Trabalho real. Pagamento real. Em minutos.',
-    'landing.trust.line': 'Stellar · USDC · Escrow on-chain · 0,5% · Sem custódia de fundos',
+    'landing.trust.line': 'Stellar · USDC · Escrow on-chain · 3% · Sem custódia de fundos',
     'landing.how.title': 'Em 3 passos',
     'landing.how.step1': 'Publique',
     'landing.how.step2': 'Trabalham',
@@ -3497,14 +3541,15 @@ export const translations: Record<Lang, Record<string, string>> = {
     'features.card4.title': 'Pagamentos Seguros com Escrow',
     'features.card4.desc':
       'Receba pagamentos em dia em USDC (Stellar). Os fundos ficam em escrow até a confirmação na app e o cliente aprovar e assinar a liberação on-chain.',
-    'features.card4.bullet': '0,5% de taxa · Sem custódia de fundos',
+    'features.card4.bullet': '3% de taxa · Sem custódia de fundos',
 
     'roadmap.title': 'Roadmap',
-    'roadmap.subtitle': 'Marcos e fases de desenvolvimento da plataforma.',
+    'roadmap.subtitle':
+      'Marcos para infraestrutura B2B de execução de tarefas, com backend unificado no Supabase.',
     'roadmap.phase.mvp': 'MVP completo',
     'roadmap.phase.mvp.date': 'Q4 2025',
     'roadmap.mvp.1': 'Design completo da plataforma e experiência do usuário',
-    'roadmap.mvp.2': 'Arquitetura e fluxos (escrow, pagamentos, disputas, admin)',
+    'roadmap.mvp.2': 'Arquitetura e fluxos (escrow, pagamentos, disputas, admin e visão B2B)',
     'roadmap.mvp.3': 'Definição de stack, integrações e roadmap de desenvolvimento',
     'roadmap.phase.done': 'Tranche 1 · Concluído',
     'roadmap.phase.done.date': 'Q1 2026',
@@ -3517,16 +3562,19 @@ export const translations: Record<Lang, Record<string, string>> = {
     'roadmap.done.1': 'Funcionalidades completas: escrow, pagamentos USDC e disputas',
     'roadmap.done.2': 'Freelancers públicos, tutoriais, swap integrado (XLM ↔ USDC) e avaliações',
     'roadmap.done.3': 'Painel de administração, UI/UX responsiva, SEO e otimização',
-    'roadmap.now.1': 'Badges, conquistas, rankings e leaderboards',
-    'roadmap.now.2': 'Indicações, assinaturas e bot de chat com perguntas pré-definidas',
-    'roadmap.now.3': 'Analytics para admins e migração parcial do backend (Node.js, PostgreSQL)',
-    'roadmap.now.4': 'Otimização mobile e PWA',
+    'roadmap.now.1':
+      'Backend Supabase: Postgres, RLS, Auth e Edge Functions como APIs e webhooks (sync com escrow e provedores)',
+    'roadmap.now.2':
+      'Modelo B2B: empresas, papéis e ciclo de execução de tarefas (candidatura → contrato → supervisão → liberação)',
+    'roadmap.now.3':
+      'Robustez do pipeline: marcos, evidências, notificações em tempo real e rastreabilidade operacional',
+    'roadmap.now.4': 'Badges e rankings, indicações, assinaturas, bot FAQ, analytics admin; mobile e PWA',
     'roadmap.next.1': 'Tradução automática de tarefas (ES/EN)',
-    'roadmap.next.2': 'Migração completa do backend e infraestrutura (Redis, CDN)',
+    'roadmap.next.2': 'CDN para assets, observabilidade, backups e políticas de dados no stack Supabase',
     'roadmap.next.3': 'Migração para Stellar Mainnet e auditoria de segurança',
-    'roadmap.vision.1': 'Next.js, PWA e atualizações em tempo real (WebSockets)',
-    'roadmap.vision.2': 'Multi-asset, indexer próprio e transações em lote',
-    'roadmap.vision.3': 'Arquitetura escalável e microserviços',
+    'roadmap.vision.1': 'PWA e Realtime (Supabase) para colaboração em tarefas e painéis corporativos',
+    'roadmap.vision.2': 'Multi-asset, indexer próprio (consultas on-chain rápidas) e transações em lote',
+    'roadmap.vision.3': 'APIs públicas e ecossistema de integrações/parceiros na mesma base de dados',
 
     'team.title': 'Nosso Time',
     'team.desc': 'Um time apaixonado por revolucionar o futuro do trabalho na América Latina',
@@ -3961,6 +4009,15 @@ export const translations: Record<Lang, Record<string, string>> = {
     'dashboard.notifications.mark.all.read': 'Marcar todas como lidas',
     'dashboard.notifications.mark.read': 'Marcar como lida',
     'dashboard.notifications.delete': 'Excluir',
+    'dashboard.notifications.delete.failed':
+      'Não foi possível ocultar a notificação. Atualize a página ou entre novamente.',
+    'dashboard.notifications.delete.failed.session':
+      'Não há sessão ativa com o Supabase. Saia e entre novamente com Google ou GitHub.',
+    'dashboard.notifications.delete.failed.link':
+      'Sua conta ainda não está vinculada ao sistema de notificações. Recarregue o painel ou entre novamente.',
+    'dashboard.notifications.delete.failed.rpc':
+      'Falta a função de ocultar no projeto Supabase (migração arcusx_notification_dismissals). Um administrador deve aplicá-la.',
+    'dashboard.notifications.delete.error.close': 'Fechar aviso',
     'dashboard.notifications.filter.all': 'Todas',
     'dashboard.notifications.filter.unread': 'Não lidas',
     'dashboard.notifications.filter.success': 'Sucesso',
@@ -4576,7 +4633,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     'support.faq.payments.followup.wallets': 'Você pode usar qualquer carteira compatível com Stellar. As mais usadas: Freighter (extensão, recomendada), xBull, Albedo, Rabet e Lobstr. Todas permitem receber USDC na rede Stellar.',
     'support.faq.payments.followup.time': 'Os pagamentos são processados em 3-5 segundos após o cliente aprovar o trabalho. Muito mais rápido que métodos tradicionais. A confirmação é quase instantânea graças à Stellar.',
     'support.faq.payments.followup.currency': 'Todos os pagamentos são em USDC (USD Coin) na blockchain Stellar. USDC é uma stablecoin atrelada ao dólar; 1 USDC vale 1 USD. Isso protege seu dinheiro da volatilidade.',
-    'support.faq.payments.followup.cost': 'Não há custo extra para receber. A plataforma cobra 0,5% do cliente ao criar o escrow; você recebe 100% do valor acordado. Só há as taxas mínimas da rede Stellar (menos de um centavo).',
+    'support.faq.payments.followup.cost': 'Não há custo extra para receber. A plataforma cobra 3% do cliente ao criar o escrow; você recebe 100% do valor acordado. Só há as taxas mínimas da rede Stellar (menos de um centavo).',
     'support.faq.escrow.question': 'Sistema de Escrow',
     'support.faq.escrow.answer':
       'A ArcusX usa contratos inteligentes na Stellar: ao aceitar sua proposta, o cliente financia o escrow em USDC. Os fundos ficam bloqueados até o cliente aprovar a entrega e assinar a liberação com a carteira. A ArcusX não custodia chaves nem fundos. Ao concluir esse fluxo, você recebe o pagamento na carteira.',
@@ -4586,10 +4643,10 @@ export const translations: Record<Lang, Record<string, string>> = {
     'support.faq.escrow.related.1': 'O escrow é seguro?',
     'support.faq.escrow.related.2': 'Quanto custa usar o escrow?',
     'support.faq.escrow.related.3': 'E se o cliente não aprovar?',
-    'support.faq.escrow.followup.how': 'Quando o cliente aceita sua proposta, um contrato inteligente é criado na Stellar. O cliente deposita o valor acordado mais a taxa da plataforma (0,5%). Os fundos ficam bloqueados. Ao concluir e o cliente aprovar, os fundos são liberados para sua carteira. Tudo é transparente e verificável na blockchain.',
+    'support.faq.escrow.followup.how': 'Quando o cliente aceita sua proposta, um contrato inteligente é criado na Stellar. O cliente deposita o valor acordado mais a taxa da plataforma (3%). Os fundos ficam bloqueados. Ao concluir e o cliente aprovar, os fundos são liberados para sua carteira. Tudo é transparente e verificável na blockchain.',
     'support.faq.escrow.followup.safe':
       'Sim. O modelo é não custodial: a liberação é autorizada pelo cliente ao aprovar o trabalho e assinar; a plataforma não controla as chaves das partes. As transações são verificáveis na Stellar.',
-    'support.faq.escrow.followup.cost': 'A plataforma cobra 0,5% do cliente ao criar o escrow. O trabalhador recebe 100% do valor acordado, sem deduções. É uma das taxas mais baixas do mercado.',
+    'support.faq.escrow.followup.cost': 'A plataforma cobra 3% do cliente ao criar o escrow. O trabalhador recebe 100% do valor acordado, sem deduções. É uma das taxas mais baixas do mercado.',
     'support.faq.escrow.followup.not.approved': 'Se o cliente não aprovar, você pode abrir uma disputa. Um administrador analisa o caso, a evidência de ambas as partes e toma uma decisão justa. Pode distribuir os fundos de forma equitativa ou a favor de uma das partes.',
     'support.faq.disputes.question': 'Disputas',
     'support.faq.disputes.answer': 'Se surgir um problema, qualquer parte pode abrir uma disputa. Um administrador analisa o caso, a evidência (mensagens, arquivos, trabalho entregue) e decide de forma justa. As disputas são resolvidas de forma transparente.',
@@ -4669,16 +4726,16 @@ export const translations: Record<Lang, Record<string, string>> = {
     'support.faq.registration.followup.auth': 'O login é só OAuth. Senha, recuperação e 2FA ficam na conta Google ou GitHub.',
     'support.faq.registration.followup.info': 'Precisa de uma conta Google ou GitHub ativa. A ArcusX obtém e-mail e nome via OAuth ao sincronizar o usuário.',
     'support.faq.fees.question': 'Taxas e Comissões',
-    'support.faq.fees.answer': 'A ArcusX cobra uma das taxas mais baixas do mercado: apenas 0,5% por transação. Essa taxa é cobrada do cliente ao criar o escrow; o trabalhador recebe 100% do valor acordado. Além disso, há as taxas mínimas da rede Stellar (menos de um centavo).',
-    'support.faq.fees.detailed': 'A ArcusX cobra 0,5% do cliente ao criar o escrow; essa taxa é sobre o valor total da tarefa e é depositada junto com o pagamento do trabalhador. O trabalhador recebe 100% do valor acordado, sem deduções. Além disso há as taxas mínimas da rede Stellar (menos de um centavo). Não há taxas ocultas, custo de cadastro ou mensalidade.',
+    'support.faq.fees.answer': 'A ArcusX cobra uma das taxas mais baixas do mercado: apenas 3% por transação. Essa taxa é cobrada do cliente ao criar o escrow; o trabalhador recebe 100% do valor acordado. Além disso, há as taxas mínimas da rede Stellar (menos de um centavo).',
+    'support.faq.fees.detailed': 'A ArcusX cobra 3% do cliente ao criar o escrow; essa taxa é sobre o valor total da tarefa e é depositada junto com o pagamento do trabalhador. O trabalhador recebe 100% do valor acordado, sem deduções. Além disso há as taxas mínimas da rede Stellar (menos de um centavo). Não há taxas ocultas, custo de cadastro ou mensalidade.',
     'support.faq.fees.related.0': 'Quanto custa usar a ArcusX?',
     'support.faq.fees.related.1': 'Quem paga as taxas?',
     'support.faq.fees.related.2': 'Há taxas ocultas?',
     'support.faq.fees.related.3': 'Como se compara a outras plataformas?',
-    'support.faq.fees.followup.cost': 'A ArcusX é gratuita para cadastro e uso. A única taxa é 0,5% cobrada do cliente ao criar o escrow. É uma das mais baixas do mercado. Não há custo de cadastro, assinatura mensal ou taxas ocultas.',
-    'support.faq.fees.followup.who': 'A taxa da plataforma (0,5%) é paga pelo cliente ao criar o escrow. O trabalhador recebe 100% do valor acordado, sem dedução. Se combinou 100 USDC, recebe exatamente 100 USDC.',
-    'support.faq.fees.followup.hidden': 'Não, não há taxas ocultas. A ArcusX é transparente sobre todos os custos. A única taxa é o 0,5% mostrado ao criar a tarefa. Há também as taxas mínimas da rede Stellar (menos de um centavo), padrão da rede.',
-    'support.faq.fees.followup.compare': 'A ArcusX tem uma das taxas mais baixas do mercado. Plataformas tradicionais cobram entre 10% e 20%. Com apenas 0,5%, a ArcusX é muito mais barata.',
+    'support.faq.fees.followup.cost': 'A ArcusX é gratuita para cadastro e uso. A única taxa é 3% cobrada do cliente ao criar o escrow. É uma das mais baixas do mercado. Não há custo de cadastro, assinatura mensal ou taxas ocultas.',
+    'support.faq.fees.followup.who': 'A taxa da plataforma (3%) é paga pelo cliente ao criar o escrow. O trabalhador recebe 100% do valor acordado, sem dedução. Se combinou 100 USDC, recebe exatamente 100 USDC.',
+    'support.faq.fees.followup.hidden': 'Não, não há taxas ocultas. A ArcusX é transparente sobre todos os custos. A única taxa é o 3% mostrado ao criar a tarefa. Há também as taxas mínimas da rede Stellar (menos de um centavo), padrão da rede.',
+    'support.faq.fees.followup.compare': 'A ArcusX cobra 3% de taxa da plataforma do cliente no escrow; o trabalhador continua recebendo 100% do valor acordado. Muitas plataformas retêm cerca de 10–20% do freelancer (ex.: Fiverr), então a ArcusX costuma seguir muito competitiva.',
     'support.faq.security.question': 'Segurança e Privacidade',
     'support.faq.security.answer': 'A ArcusX prioriza a segurança dos seus dados. Usamos autenticação JWT, criptografia e todos os pagamentos passam por contratos inteligentes na Stellar. A plataforma não acessa seus fundos em escrow e as transações são verificáveis na blockchain.',
     'support.faq.security.detailed': 'A ArcusX usa várias camadas de proteção: autenticação JWT, criptografia para dados sensíveis e contratos inteligentes descentralizados para pagamentos. Os fundos em escrow estão protegidos; a plataforma não pode acessar, congelar ou interferir. As transações ficam na blockchain Stellar, pública e imutável. Sua informação pessoal é privada; você escolhe o que é público no perfil. Pode deixar o perfil privado se não quiser que outros vejam.',

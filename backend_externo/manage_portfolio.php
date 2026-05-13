@@ -52,14 +52,6 @@ try {
     exit();
 }
 
-function fix_utf8_mojibake($str) {
-    if (!is_string($str) || $str === '') return $str;
-    $bytes = @mb_convert_encoding($str, 'ISO-8859-1', 'UTF-8');
-    if ($bytes === false) return $str;
-    if (!mb_check_encoding($bytes, 'UTF-8')) return $str;
-    return $bytes;
-}
-
 $autoload_path = __DIR__ . '/vendor/autoload.php';
 if (!file_exists($autoload_path)) {
     _manage_portfolio_log('Falta vendor/autoload.php');

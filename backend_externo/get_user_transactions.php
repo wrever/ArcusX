@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $offset = ($page - 1) * $limit;
         
         // Obtener platform fee
-        $platformFee = 0.003; // Valor por defecto
+        $platformFee = 0.03; // Valor por defecto (3%)
         try {
             $checkTable = $conn->query("SHOW TABLES LIKE 'system_config'");
             if ($checkTable !== false && $checkTable->num_rows > 0) {
@@ -97,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 if ($feeResult !== false && $feeResult->num_rows > 0) {
                     $feeRow = $feeResult->fetch_assoc();
                     $feeValue = $feeRow['config_value'];
-                    $platformFee = is_numeric($feeValue) ? (float)$feeValue : 0.003;
+                    $platformFee = is_numeric($feeValue) ? (float)$feeValue : 0.03;
                 }
             }
         } catch (Exception $e) {

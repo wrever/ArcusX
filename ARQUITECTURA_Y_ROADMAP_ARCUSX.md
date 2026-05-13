@@ -1,8 +1,12 @@
 # ArcusX Technical Architecture
 
+### Resumen ejecutivo (posicionamiento)
+
+ArcusX deja de encuadrarse solo como un **marketplace genérico de startup** (listados, rating y “comprar servicio” sin más) para posicionarse como **infraestructura de ejecución de trabajos**: ciclo de tarea con trazabilidad, custodia on-chain y reglas claras de contratación. Todo vive en **un solo ecosistema**: la superficie **empresas (B2B)** es una **rama** del mismo producto (subdominio y flujos propios de organización), que **confluye con el marketplace** en publicación, postulación y escrow. Los usuarios se modelan como **una identidad** (`user_id` / Supabase Auth) con **membresías y roles** (persona natural, miembro u owner de cuenta empresa); más adelante **KYC** (público general) y **KYB** (empresa) actualizarán **niveles de confianza** sin duplicar cuentas. La evolución formal del backend apunta a **Supabase** (PostgreSQL, RLS, Realtime, Storage, **Edge Functions como APIs y webhooks**) como plano de datos y orquestación; **Trustless Work + Stellar** siguen siendo la capa de **custodia y liquidación** que la base de datos no sustituye.
+
 ### Overview
 
-ArcusX is a decentralized freelancing platform that connects clients with workers through smart contract-based escrow on the Stellar blockchain. The platform uses Trustless Work to create 2-of-2 multisig escrow contracts, ensuring secure and transparent USDC payments. It provides a full workflow: task creation, proposals, worker selection, escrow funding, milestone approval and fund release, plus integrated XLM and USDC swap via Soroswap. The **landing page** includes a hero with a **task carousel** (infinite marquee loading tasks from the backend) and a **keyword search** ("Buscar tareas") that filters tasks client-side and hides the carousel while the user is searching. The platform offers a REST API for all business operations and a React-based front end for user interaction.
+ArcusX is a decentralized freelancing platform that connects clients with workers through smart contract-based escrow on the Stellar blockchain. The platform uses Trustless Work to create 2-of-2 multisig escrow contracts, ensuring secure and transparent USDC payments. It provides a full workflow: task creation, proposals, worker selection, escrow funding, milestone approval and fund release, plus integrated XLM and USDC swap via Soroswap. The **landing page** includes a hero with a **task carousel** (infinite marquee loading tasks from the backend) and a **keyword search** ("Buscar tareas") that filters tasks client-side and hides the carousel while the user is searching. **Enterprise traffic** can use a separate landing surface (same codebase, host-based routing) while sharing marketplace rules where tasks meet supply and demand. Today, business operations are exposed mainly through a **PHP REST API** and a React front end; the **target architecture** consolidates application data and APIs on **Supabase** (see [Database](#3-database) and [Authentication](#6-authentication-and-user-management)) while preserving the escrow boundary above.
 
 ### Components
 
@@ -80,13 +84,12 @@ The frontend is responsible for rendering the user interface and coordinating us
     const result = await soroswapService.submitTransaction(signedXdr);
 
     ```
-4. **Session and Auth**: Supabase handles OAuth (Google, GitHub) and email/password login; the backend issues a JWT for API access. The frontend stores the token and user in localStorage and sends the Authorization header on each request.
+4. **Session and Auth**: End users sign in with **Supabase OAuth** (e.g. Google, GitHub); the frontend syncs the session to the PHP backend (`sync_supabase_user`), which issues an **app JWT** for legacy REST calls. The frontend stores token and user in `localStorage` and sends `Authorization: Bearer` on API requests. **Admin** uses a separate login flow. There is **no** end-user email/password product flow in the current app (only OAuth).
   ```tsx
-  const response = await authService.login({ email, password });
+  // After Supabase OAuth + sync_supabase_user
   localStorage.setItem('token', response.token);
   localStorage.setItem('user', JSON.stringify(response.user));
   axios.defaults.headers.common['Authorization'] = `Bearer ${response.token}`;
-
   ```
 5. **Landing and Hero (Task Carousel and Search)**:
   - **Hero layout**: The landing page hero shows a title, description, trust strip (stats: tasks available, active users, payments processed), and below that a **task carousel** with a **search** input.
@@ -105,7 +108,10 @@ The frontend is responsible for rendering the user interface and coordinating us
 
 The backend API provides REST endpoints for authentication, tasks, proposals, escrow metadata, messages, disputes, ratings, user profiles, notifications, and admin operations. It does not hold private keys; it stores task, application, and escrow metadata and coordinates with the frontend for on-chain operations. All protected endpoints validate a JWT issued after login or OAuth sync.
 
-- **Technologies**: PHP 7.4+, MySQL/MariaDB, JWT (Firebase JWT), Supabase (OAuth sync)
+**Transition note:** The current production path is **flat PHP files + MySQL**. The **target** is to migrate domain logic and reads/writes gradually to **Supabase** (Postgres + RLS + Edge Functions for secrets, webhooks to Trustless Work, and versioned HTTP surfaces), reducing bespoke PHP over time while keeping escrow signing in the browser.
+
+- **Technologies (current)**: PHP 7.4+, MySQL/MariaDB, JWT (Firebase JWT), Supabase client OAuth + sync
+- **Technologies (target)**: Supabase Postgres, Row Level Security, Auth, Realtime, Storage, Edge Functions; optional CDN in front of static assets
 - **Responsibilities**:
   - Validate JWT and authorize requests.
   - CRUD for users, tasks, applications, messages, disputes, ratings, notifications.
@@ -115,7 +121,7 @@ The backend API provides REST endpoints for authentication, tasks, proposals, es
 
 ### Endpoints
 
-- **Auth**: POST /register, POST /login, POST /register_wallet, GET /verify_wallet, POST /sync_supabase_user
+- **Auth**: POST /sync_supabase_user (OAuth user sync + JWT); wallet verify/register endpoints; **admin**: POST /admin_login (end-user email/password register/login for the marketplace were removed in favor of OAuth)
 - **Tasks**: GET /get_tasks, POST /create_task, GET /get_task_details, GET /get_user_tasks, POST /cancel_task, POST /complete_task, GET /get_accepted_tasks, GET /task_stats, GET /get_stats
 - **Proposals**: POST /apply_task, GET /get_task_proposals, POST /select_proposal
 - **Escrow coordination**: POST /create_escrow (metadata), GET /get_escrow_status, POST /get_escrow_secret, POST /save_escrow_secret, POST /save_pending_transaction, POST /submit_complete_transaction, GET /get_pending_transaction
@@ -129,12 +135,12 @@ The backend API provides REST endpoints for authentication, tasks, proposals, es
 
 ### Key Processes
 
-1. **Authentication**: Login (email/password) and OAuth callback sync with Supabase; the backend issues a JWT containing user_id. Register and update user (profile, wallet) validate input and optionally require JWT for updates.
+1. **Authentication**: OAuth via Supabase, then `sync_supabase_user` creates/updates the user row and returns a JWT with `user_id`. Profile and wallet updates validate input and require JWT. Admin uses dedicated endpoints.
 2. **Task and Proposal Lifecycle**: Create task with user limits and cooldown checks; list tasks with filters and pagination; get task details. Apply to task (create application); get proposals for a task; select proposal (backend updates task and application status; frontend performs escrow creation and funding).
 3. **Escrow Coordination**: Endpoints save or retrieve escrow secret, get escrow status, save pending transaction XDR, and submit complete transaction (task completion). These support the frontend's Trustless Work flow without handling private keys.
-4. **Platform Fee and Limits**: The platform fee is configurable (e.g. 0.5%); the backend serves it to the frontend for escrow amount calculation. Task creation respects daily and weekly limits per user; limits are checked before creating a task.
+4. **Platform Fee and Limits**: The platform fee is configurable in app config (currently **3%** on escrow release in the Trustless Work integration; always confirm `config/trustlessWork.ts` / backend fee source). The backend serves it to the frontend for escrow amount calculation. Task creation respects daily and weekly limits per user; limits are checked before creating a task.
   ```php
-  $platformFee = getPlatformFeeFromConfig(); // e.g. 0.005 for 0.5%
+  $platformFee = getPlatformFeeFromConfig(); // e.g. 0.03 for 3%
   $escrowAmount = $workerAmount / (1 - $platformFee);
   $limitCheck = checkUserLimits($userId);
   if (!$limitCheck->canCreate) {
@@ -148,12 +154,16 @@ The backend API provides REST endpoints for authentication, tasks, proposals, es
 
 ## 3. Database
 
-MySQL stores users, tasks, applications, messages, disputes, ratings, notifications, and escrow-related metadata (e.g. contract_id, escrow_status, escrow_amount, platform_fee). The database supports efficient querying for the Backend API and reporting.
+**Current state:** MySQL stores users, tasks, applications, messages, disputes, ratings, notifications, and escrow-related metadata (e.g. contract_id, escrow_status, escrow_amount, platform_fee). The database supports efficient querying for the Backend API and reporting.
 
-- **Technologies**: MySQL / MariaDB
+**Target state:** **Supabase (PostgreSQL)** as the primary application database: relational model for tasks and execution state, **RLS** for multi-tenant and B2B isolation (`organization_id` / membership), **Realtime** for in-app updates where appropriate, **Storage** for evidence and attachments, and **Edge Functions** for operations that must not run in the client (webhooks, provider secrets). Migrations under `supabase/migrations/` introduce pieces of this model incrementally (e.g. messaging/notifications experiments); broader domain migration should follow **clear ownership per migration** so parallel initiatives (e.g. scoped vendor work) do not collide on the same tables without review.
+
+- **Technologies (current)**: MySQL / MariaDB  
+- **Technologies (target)**: PostgreSQL (Supabase), RLS policies, optional read replicas via Supabase tiering  
 - **Responsibilities**:
-  - Store and manage relational data for the platform.
+  - Store and manage relational data for the platform (tasks, applications, org structure, audit fields).
   - Provide efficient query mechanisms for listing, filtering, and joining (tasks, proposals, user stats, disputes).
+  - Enforce access at the row level for B2B (who can see or mutate which task under which org).
 
 ### Data Structures
 
@@ -278,6 +288,8 @@ MySQL stores users, tasks, applications, messages, disputes, ratings, notificati
 - Tasks to Disputes (one-to-one when disputed)
 - Users to Ratings (given and received)
 - Users to Notifications (one-to-many)
+
+**B2B (to be modeled explicitly in Postgres):** Organizations ↔ members (many-to-many with roles); tasks optionally **owned by an organization** as well as a creating user; policies for who may publish, invite, or approve on behalf of the company. The marketplace remains the shared surface: visibility rules and escrow mechanics stay aligned whether the poster is an individual client or an org.
 
 ---
 
@@ -430,13 +442,15 @@ The platform includes a native swap experience so users can convert XLM to USDC 
 
 ### Overview
 
-Authentication combines Supabase (OAuth and email/password) with backend-issued JWTs. The backend can sync user identity from Supabase and enforce wallet verification. By centralizing login and JWT issuance in the backend, the frontend can call all protected API endpoints with a single token.
+End-user authentication is **Supabase OAuth-first** (Google, GitHub). The PHP backend **syncs** the Supabase identity and issues an **application JWT** for existing REST endpoints. Wallet verification ties the same user to Stellar for escrow. **Enterprise (B2B)** should reuse the **same auth user** and express “acts as company” via **organization membership and roles** in Postgres (not a second unrelated identity silo), so future **KYC** (natural person) and **KYB** (legal entity) attach verification levels to users and orgs without merging duplicate accounts later.
 
 ### Login and Registration
 
-**Email/password**: The user submits email and password to the backend login endpoint; the backend validates credentials (or delegates to Supabase) and returns a JWT containing user_id. Registration creates a user record and optionally links to Supabase.
+**OAuth (Google, GitHub)**: The user signs in via Supabase; the frontend receives a Supabase session. The backend endpoint `sync_supabase_user` creates or updates the user row from the Supabase identity and returns a JWT for API access.
 
-**OAuth (Google, GitHub)**: The user signs in via Supabase OAuth; the frontend receives a Supabase session. The backend provides a sync endpoint (e.g. sync_supabase_user) that creates or updates a user record from the Supabase identity and returns a JWT for API access.
+**Admin**: Separate admin login (not the same OAuth flow as freelancers/clients).
+
+**Email/password (marketplace end users)**: Not part of the current product flow; registration/login endpoints for generic email/password were removed in favor of OAuth-only for the main app.
 
 ### Wallet Verification
 
@@ -444,7 +458,7 @@ Users connect Freighter and submit their Stellar wallet address to the backend. 
 
 ### Integration with API
 
-**JWT issuance**: After login or OAuth sync, the backend returns a JWT signed with a server-side secret. The payload includes at least user_id and expiration.
+**JWT issuance**: After OAuth sync (`sync_supabase_user`) or admin login, the backend returns a JWT signed with a server-side secret. The payload includes at least user_id and expiration.
 
 **JWT validation**: All protected endpoints read the Authorization Bearer token header, decode the JWT, and verify the signature and expiration. The user_id from the token is used for authorization (e.g. only the task owner can select a proposal).
 
@@ -459,42 +473,47 @@ $userId = $decoded->user_id;
 
 ### Benefits
 
-- **Single sign-on**: Users can log in with email/password or OAuth and receive one JWT for all API calls.
+- **Single identity**: One OAuth-backed user can later hold both freelancer activity and org memberships without duplicate logins.
 - **Wallet linkage**: Wallet verification ties the user's identity to a Stellar address for payments and escrow.
-- **Security**: Private keys never leave the user's wallet; the backend only stores public addresses and metadata.
+- **Security**: Private keys never leave the user's wallet; servers store public addresses and metadata; secrets for providers live in Edge Functions or vault patterns on Supabase, not in the client.
+
+### API surface (formal infrastructure)
+
+- **PostgREST** (built into Supabase): secure CRUD where **RLS** encodes authorization.
+- **Edge Functions**: HTTP endpoints for **webhooks** (e.g. Trustless Work callbacks), privileged checks, and **future public/partner APIs** with stable contracts.
+- **Legacy REST (PHP)**: shrinks as domains move to Postgres + policies + functions.
 
 ---
 
 ## Roadmap
 
-**Tranche 1 - MVP and Core (Q1 2026) - Completed**
+Aligned with the public landing roadmap and the strategic shift to **task-execution infrastructure** + **Supabase**, not a generic “Redis + random Node rewrite”.
 
-- Public freelancer profiles and portfolio
-- Tutorials and onboarding content
-- Soroswap swap integration (XLM and USDC)
-- Full ratings and review flow
-- UI/UX and responsive design improvements
-- SEO and performance optimization
+**Tranche 1 · Completado (Q1 2026)**
 
-**Tranche 2 - Advanced Features (Q2 2026)**
+- Escrow Trustless Work, USDC, disputas; flujo completo tarea → postulación → contrato → supervisión → liberación
+- Freelancers públicos, tutoriales, Soroswap (XLM ↔ USDC), ratings
+- Panel admin, responsive, SEO
 
-- Badges and achievements
-- Rankings and leaderboards
-- Subscriptions and referrals
-- Messaging improvements
-- Support bot with predefined FAQs
-- Admin analytics
-- Partial backend migration (Node.js/TypeScript, PostgreSQL)
-- Mobile optimization and PWA
+**Tranche 2 · En curso (Q2 2026)**
 
-**Tranche 3 - Scale and Mainnet (Q3-Q4 2026)**
+- **Supabase**: Postgres, RLS, Auth; **Edge Functions** como APIs y webhooks (sync escrow/proveedores)
+- **B2B**: empresas, roles, ciclo de ejecución integrado con el marketplace compartido
+- **Pipeline**: hitos, evidencias, notificaciones en tiempo real, trazabilidad operativa
+- Producto y growth: badges/rankings, referidos, suscripciones, bot FAQ, analytics admin; mobile y PWA
+- **Parallel work**: iniciativas acotadas (p. ej. mensajería/notificaciones por migraciones Supabase con alcance contractual explícito) deben respetar prefijos/revisiones para no bloquear el núcleo B2B
 
-- Task translation (ES/EN) via translation API
-- Full backend migration from MySQL to PostgreSQL
-- Redis, CDN, load balancing
-- Stellar Mainnet migration
-- Testing and security audit
-- Post-mainnet optimizations
+**Tranche 3 · Próximo (Q3–Q4 2026)**
+
+- Traducción automática de tareas (ES/EN)
+- CDN, observabilidad, backups y políticas de datos sobre el **stack Supabase**
+- Stellar **Mainnet** y auditoría de seguridad
+
+**Visión 2026+**
+
+- PWA y Realtime (Supabase) para colaboración en tareas y paneles empresa
+- Multi-asset, indexer propio, batch transactions donde aplique
+- **APIs públicas** y ecosistema de integraciones/partners sobre la misma base de datos
 
 ---
 
@@ -540,7 +559,7 @@ sequenceDiagram
 
 ## Practical Considerations
 
-1. **Escrow amounts**: The formula workerAmount / (1 - platformFee) ensures the worker receives exactly the agreed amount after the platform fee is deducted on release.
+1. **Escrow amounts**: The formula `workerAmount / (1 - platformFee)` ensures the worker receives exactly the agreed amount after the platform fee is deducted on release (fee today: **3%** in app config unless changed).
 2. **Wallet and trustline**: Users must connect Freighter and have a USDC trustline before funding escrows; the UI guides or links to setup.
 3. **Backend and keys**: The backend never stores or uses private keys; all Stellar transactions are built and signed in the frontend.
 4. **Disputes**: Dispute resolution requires an admin (or designated) signer to complete the 2-of-2 distribution; the backend records the resolution and optionally the tx hash.
@@ -550,7 +569,7 @@ sequenceDiagram
 
 ## Future Expansions
 
-The current architecture supports the full freelancing flow with escrow, swap, and admin tools. Future expansions may include: multi-milestone escrows, additional Stellar assets, native Soroban contracts for custom logic, an optional indexer for faster queries, and deeper integration with Stellar ecosystem products. The separation of frontend (signing), backend (metadata and auth), and blockchain (Trustless Work, Soroswap) will be preserved to maintain security and clarity.
+The current architecture supports the full freelancing flow with escrow, swap, and admin tools. Future expansions may include: multi-milestone escrows, additional Stellar assets, native Soroban contracts for custom logic, an optional indexer for faster queries, and deeper integration with Stellar ecosystem products. **KYC/KYB** layers will attach to users and organizations for higher-trust publishing and payment thresholds. The separation of **frontend (signing)**, **data plane (Supabase + RLS)**, **Edge Functions (privileged APIs)**, and **blockchain (Trustless Work, Soroswap)** will be preserved to maintain security and clarity.
 
 ---
 
@@ -558,16 +577,18 @@ The current architecture supports the full freelancing flow with escrow, swap, a
 
 - **Escrow**: A contract that holds funds until conditions (e.g. milestone approval) are met; in ArcusX, implemented via Trustless Work 2-of-2 multisig.
 - **Trustless Work**: Service and contracts for 2-of-2 multisig escrow on Stellar/Soroban; used for single-release escrows in ArcusX.
-- **JWT**: JSON Web Token; used for API authentication after login or OAuth sync.
+- **JWT**: JSON Web Token; used for API authentication after OAuth sync with the PHP API (interim) and/or Supabase session patterns as migration progresses.
 - **USDC**: USD Coin on Stellar; the primary payment asset for tasks and escrows.
 - **Soroswap**: AMM and API for swapping assets on Stellar (e.g. XLM and USDC); integrated in ArcusX for the in-app swap experience.
 - **Freighter**: Stellar wallet extension used for signing transactions in the browser.
 - **SCF**: Stellar Community Fund.
 - **TVL**: Total Value Locked (used in DeFi contexts; not primary in ArcusX but relevant for swap/liquidity descriptions).
-- **API**: Application Programming Interface; in this document, the REST API provided by the backend.
+- **API**: Application Programming Interface; REST (PHP) today; PostgREST + Edge Functions as the formal surface on Supabase.
+- **B2B / Enterprise branch**: Same ecosystem; orgs, roles, and policies distinct from pure C2C marketplace listing, converging on shared tasks and escrow.
+- **KYC / KYB**: Know Your Customer / Know Your Business; future verification pipelines for individuals vs legal entities on top of the same identity model.
 
 ---
 
-**Document version**: 1.1  
-**Last updated**: February 2026
+**Document version**: 1.2  
+**Last updated**: May 2026
 

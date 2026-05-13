@@ -98,8 +98,8 @@ Critical escrow rules (documented in the service file header):
 | File | Purpose |
 |------|---------|
 | `config/database.ts` | Backend API base URL (defaults to arcusx.pro/api) |
-| `config/trustlessWork.ts` | Trustless Work API key, env, platform/admin wallets, `PLATFORM_FEE_BPS = 1.0` |
-| `config/commission.ts` | Fee tier structures (including CertiX Verified discount tiers) |
+| `config/trustlessWork.ts` | Trustless Work API key, env, platform/admin wallets, `PLATFORM_FEE_BPS = 3.0` (3% en el flujo de escrow) |
+| `config/commission.ts` | `DEFAULT_COMMISSION_RATE = 0.03`; preferir fee desde `system_config.platform_fee` / API |
 | `config/supabase.ts` | Supabase client (graceful no-op if unconfigured) |
 | `config/usdc.ts` | USDC issuer address |
 
@@ -122,7 +122,7 @@ API routes live under `CertiX/src/app/api/`: `certificate/upload`, `certificate/
 
 ## Platform Fee
 
-The platform fee is **3%** (`PLATFORM_FEE_BPS = 3.0` in `config/trustlessWork.ts`). CertiX Verified users (KYC gratuito incluido en su plan) pagan **1.5%** (`PLATFORM_FEE_BPS_CERTIX = 1.5` / `CERTIX_COMMISSION_RATE = 0.015`). Cualquier referencia a 1% o 0.3% en comentarios o UI está desactualizada.
+The platform fee is **3%** (`PLATFORM_FEE_BPS = 3.0` in `config/trustlessWork.ts`; `DEFAULT_COMMISSION_RATE = 0.03` in `config/commission.ts`). Defaults en PHP (`get_platform_fee.php`, etc.) usan **0.03** como decimal. La comisión la asume el **cliente** en el flujo de escrow; el trabajador recibe el monto acordado. Cualquier referencia en UI o docs a 0.5%, 1.5% CertiX o 0.3% está desactualizada.
 
 ## Switching from Testnet to Mainnet
 

@@ -14,14 +14,6 @@ require_once __DIR__ . '/auth_bearer.php';
 arcusx_cors_apply('GET, OPTIONS');
 header('Content-Type: application/json; charset=UTF-8');
 
-function fix_utf8_mojibake($str) {
-    if (!is_string($str) || $str === '') return $str;
-    $bytes = @mb_convert_encoding($str, 'ISO-8859-1', 'UTF-8');
-    if ($bytes === false) return $str;
-    if (!mb_check_encoding($bytes, 'UTF-8')) return $str;
-    return $bytes;
-}
-
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     http_response_code(405);
     echo json_encode(['success' => false, 'message' => 'Método no permitido'], JSON_UNESCAPED_UNICODE);

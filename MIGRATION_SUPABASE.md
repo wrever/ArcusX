@@ -1,6 +1,24 @@
 # Plan de Migración: PHP/MySQL → Supabase (PostgreSQL + Edge Functions)
 
-> **Objetivo**: Eliminar el backend PHP en cPanel y convertir ArcusX en una plataforma 100% basada en Supabase (PostgreSQL, Row Level Security, Edge Functions y Realtime). Separar los contextos de **marketplace público** y **portal empresas**, que convergen en una capa compartida de datos.
+> **Objetivo (meta)**: Consolidar el **plano de datos y las APIs** en **Supabase** (PostgreSQL, RLS, Auth, Realtime, Storage y **Edge Functions** como HTTP, webhooks y lógica privilegiada), hasta **reducir o retirar** el backend PHP en cPanel cuando cada dominio esté validado en producción. **Trustless Work + Stellar** siguen siendo la capa de custodia y liquidación; la base de datos no la sustituye.
+>
+> **Qué evitamos**: un cliché de “startup marketplace” que reescribe todo en **Node + Redis + otro hosting** sin modelo formal. El producto apunta a **infraestructura de ejecución de tareas** (trazabilidad del ciclo tarea → postulación → escrow → liberación), con **una identidad** (`auth.users` + filas de perfil) y una **rama B2B** (organizaciones, roles) que **confluye con el marketplace** en las mismas reglas de publicación y contratación. Más adelante, **KYC** (personas) y **KYB** (empresas) se apoyan en ese mismo modelo (ver `ARQUITECTURA_Y_ROADMAP_ARCUSX.md`).
+>
+> **Principio operativo**: migración por **estrangulación** progresiva de PHP (dominios de solo lectura o bajo riesgo primero; escrituras críticas con doble fuente, feature flags o colas hasta cutover), y **revisiones claras de `supabase/migrations/`** cuando haya **trabajo en paralelo** (iniciativas acotadas por contrato) para no bloquear el núcleo B2B ni el flujo de escrow.
+
+---
+
+## 0. Prioridades alineadas al roadmap (Tranche 2)
+
+Orden sugerido **sin esperar al cutover final**:
+
+1. **Esquema y RLS** para `public` + tablas de **organización / membresía** (B2B) y vínculo tarea ↔ `org_id` donde aplique.
+2. **Edge Functions** para webhooks y secretos (Trustless Work, proveedores); exponer solo lo que no pueda ir al cliente con anon key.
+3. **Realtime + Storage** en el **pipeline de ejecución** (mensajes, evidencias, notificaciones) donde el producto lo exija.
+4. **PostgREST** como lectura/escritura segura donde RLS baste; Functions solo donde haga falta privilegio.
+5. **Portal empresas** en paralelo al marketplace React existente (mismo repo, routing por host), compartiendo Supabase project.
+
+El timeline de fases más abajo sigue siendo válido; las semanas pueden solaparse según equipo siempre que se respeten los **límites de ownership** en migraciones SQL.
 
 ---
 
@@ -77,6 +95,8 @@
 ```
 
 ### Separación de contextos
+
+Misma app y **mismo proyecto Supabase**: los usuarios son filas en `auth.users`; “cuenta empresa” es **membresía y roles** en Postgres, no un segundo login ajeno al ecosistema (salvo integraciones futuras tipo SSO, que igualmente mapean a `user_id`).
 
 | Contexto | Dominio | Schema PostgreSQL | Edge Functions prefix |
 |----------|---------|-------------------|-----------------------|
@@ -834,7 +854,7 @@ $$;
 
 ### FASE 9 — Cutover (3 días)
 
-**Objetivo**: cortar el tráfico del backend PHP y apuntar todo a Supabase.
+**Objetivo**: cuando **todos** los dominios críticos estén en Supabase con pruebas aceptables, cortar el tráfico del backend PHP y apuntar el frontend solo a Supabase. Hasta entonces, **coexistencia prolongada** (PHP + Supabase) es normal y preferible a un big-bang prematuro.
 
 #### 9.1 Estrategia de cutover (Blue-Green)
 
@@ -893,14 +913,15 @@ VITE_STELLAR_NETWORK=testnet
 
 | Área | PHP/MySQL actual | Supabase target |
 |------|-----------------|-----------------|
-| Auth | JWT custom HS256 + Supabase OAuth = doble sistema | JWT Supabase unificado |
-| Tiempo real | Polling cada N segundos | WebSockets nativos (Realtime) |
+| Auth | JWT custom HS256 + Supabase OAuth = doble sistema | Sesión/JWT Supabase + RLS; retirar JWT PHP cuando el front ya no dependa de `sync_supabase_user` para cada llamada |
+| APIs | 65 `.php` planos, CORS repetido | **PostgREST** (CRUD con RLS) + **Edge Functions** (webhooks, secretos, reglas B2B); APIs públicas/partners documentables sobre el mismo proyecto |
+| Tiempo real | Polling cada N segundos | Realtime (canales) donde aplique |
 | Seguridad | CORS manual en 65 archivos | RLS en base de datos |
-| Escalabilidad | Hosting compartido cPanel | Edge Functions globales (CDN) |
-| Storage | Disco del servidor | Supabase Storage + CDN |
-| Tipos | PHP sin tipos | TypeScript end-to-end |
+| Escalabilidad | Hosting compartido cPanel | Edge Functions globales; Postgres gestionado |
+| Storage | Disco del servidor | Supabase Storage + CDN delante de assets estáticos |
+| Tipos | PHP sin tipos | TypeScript en Functions y cliente |
 | CI/CD | FTP manual | `supabase db push` + GitHub Actions |
-| Costo | cPanel mensual | Supabase Free tier → Pro según crecimiento |
+| Costo | cPanel mensual | Un proveedor principal (Supabase tier) + Stellar/TW externos |
 
 ### Riesgos a gestionar
 
@@ -911,6 +932,7 @@ VITE_STELLAR_NETWORK=testnet
 | Escrow secrets en DB → sensibles | Usar `supabase vault` para los secrets, no columna plana |
 | Rate limits de Edge Functions en Free tier | Monitorear en staging; upgrade a Pro antes del cutover |
 | RLS demasiado restrictivo → bugs de acceso | Test suite con usuarios de diferentes roles antes del cutover |
+| **Varias personas tocando migraciones SQL a la vez** | PR por dominio; nombres de archivo con timestamp único; no mezclar cambios en las mismas tablas sin revisión explícita; alinear alcance con `ARQUITECTURA_Y_ROADMAP_ARCUSX.md` |
 
 ---
 
@@ -988,3 +1010,7 @@ VITE_STELLAR_NETWORK=testnet
 - [ ] Deploy con `VITE_USE_SUPABASE=true`
 - [ ] Monitorear 48h
 - [ ] Apagar PHP backend
+
+---
+
+**Última revisión del documento**: mayo 2026 · Coherente con `ARQUITECTURA_Y_ROADMAP_ARCUSX.md` (roadmap por tranches, comisión de plataforma y auth OAuth en el producto actual).

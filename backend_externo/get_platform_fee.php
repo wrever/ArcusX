@@ -16,7 +16,7 @@ header('Content-Type: application/json; charset=UTF-8');
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     try {
         // Obtener platform fee de la tabla system_config
-        $platformFee = 0.003; // Valor por defecto (0.3%)
+        $platformFee = 0.03; // Valor por defecto (3%)
         
         // Verificar si la tabla system_config existe
         $checkTable = $conn->query("SHOW TABLES LIKE 'system_config'");
@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         echo json_encode([
             'success' => false,
             'message' => 'Error al obtener platform fee',
-            'platform_fee' => 0.003 // Retornar valor por defecto en caso de error
+            'platform_fee' => 0.03 // Retornar valor por defecto en caso de error
         ]);
     } finally {
         if (isset($conn)) {

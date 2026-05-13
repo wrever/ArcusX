@@ -5,10 +5,44 @@ import { FaRocket, FaUsers, FaLaptopCode, FaMoneyBillWave, FaArrowRight, FaLock,
 import axios from 'axios';
 import { API_URL } from '../config/database';
 import { hasSupabase, supabase } from '../config/supabase';
+import { getFreelancers } from '../services/freelancerService';
+import type { Freelancer } from '../types/freelancer';
+import { getAvatarUrl } from '../utils/avatarUtils';
+import { recoverUtf8Mojibake } from '../utils/utf8Mojibake';
 import '../css/Hero.css';
 import { useI18n } from '../i18n/I18nProvider';
 import Footer from './Footer';
 import SEO from './SEO';
+
+/** URL de /create-task con contexto de contratación (también leída por query en CreateTask). */
+function buildHireTaskUrl(freelancer: Freelancer): string {
+  const firstSkill = freelancer.skills?.[0];
+  const skillLabel =
+    typeof firstSkill === 'string'
+      ? firstSkill
+      : firstSkill &&
+          typeof firstSkill === 'object' &&
+          firstSkill !== null &&
+          'name' in firstSkill
+        ? String((firstSkill as { name: string }).name)
+        : undefined;
+  const params = new URLSearchParams();
+  params.set('for_user', String(freelancer.id));
+  params.set('hire_username', encodeURIComponent(freelancer.username));
+  if (skillLabel) params.set('hire_skill', encodeURIComponent(skillLabel));
+  return `/create-task?${params.toString()}`;
+}
+
+function freelancerDisplayInitials(name: string): string {
+  if (!name) return '?';
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}
 
 interface TaskResult {
   id: number;
@@ -53,6 +87,8 @@ const Hero = () => {
   const carouselTrackRef = useRef<HTMLDivElement>(null);
   const [carouselTasks, setCarouselTasks] = useState<TaskResult[]>([]);
   const [loadingCarousel, setLoadingCarousel] = useState(true);
+  const [landingFreelancers, setLandingFreelancers] = useState<Freelancer[]>([]);
+  const [loadingLandingFreelancers, setLoadingLandingFreelancers] = useState(true);
   const [publicStats, setPublicStats] = useState<{
     open_tasks: number;
     total_users: number;
@@ -64,8 +100,15 @@ const Hero = () => {
   const infiniteCarouselTasks = carouselTasks.length > 0
     ? Array.from({ length: REPEAT_COPIES }, () => carouselTasks).flat()
     : [];
+  const infiniteLandingFreelancers = landingFreelancers.length > 0
+    ? Array.from({ length: REPEAT_COPIES }, () => landingFreelancers).flat()
+    : [];
   const oneSetWidthRef = useRef(0);
   const autoScrollRef = useRef<number | null>(null);
+  const freelancerCarouselRef = useRef<HTMLDivElement>(null);
+  const freelancerTrackRef = useRef<HTMLDivElement>(null);
+  const freelancerOneSetWidthRef = useRef(0);
+  const freelancerAutoScrollRef = useRef<number | null>(null);
 
   useEffect(() => {
     const fetchCarouselTasks = async () => {
@@ -82,6 +125,34 @@ const Hero = () => {
       }
     };
     fetchCarouselTasks();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadLandingFreelancers = async () => {
+      setLoadingLandingFreelancers(true);
+      try {
+        const res = await getFreelancers({
+          page: 1,
+          limit: 40,
+          sortBy: 'rating',
+          sortOrder: 'desc',
+          preferProfile: true,
+        });
+        if (!cancelled) {
+          const list = Array.isArray(res.freelancers) ? res.freelancers : [];
+          setLandingFreelancers(list.slice(0, 16));
+        }
+      } catch {
+        if (!cancelled) setLandingFreelancers([]);
+      } finally {
+        if (!cancelled) setLoadingLandingFreelancers(false);
+      }
+    };
+    loadLandingFreelancers();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -201,11 +272,29 @@ const Hero = () => {
     setSearchResults([]);
   };
 
+  const handleFreelancerHireClick = (freelancer: Freelancer) => {
+    const target = buildHireTaskUrl(freelancer);
+    const token = localStorage.getItem('token');
+    if (token) {
+      navigate(target);
+    } else {
+      navigate(`/login?redirect=${encodeURIComponent(target)}`);
+    }
+  };
+
   const scrollCarousel = (dir: 'left' | 'right') => {
     const el = carouselRef.current;
     if (!el) return;
     const step = el.clientWidth * 0.85;
     el.scrollBy({ left: dir === 'left' ? -step : step, behavior: 'smooth' });
+  };
+
+  /** Botones: inverso al carrusel de tareas (misma sensación que el auto-scroll RTL del track). */
+  const scrollFreelancerCarousel = (dir: 'left' | 'right') => {
+    const el = freelancerCarouselRef.current;
+    if (!el) return;
+    const step = el.clientWidth * 0.85;
+    el.scrollBy({ left: dir === 'left' ? step : -step, behavior: 'smooth' });
   };
 
   // Movimiento automático continuo; se reinicia cuando el carrusel se muestra de nuevo (p. ej. al borrar la búsqueda)
@@ -237,6 +326,42 @@ const Hero = () => {
       if (autoScrollRef.current != null) cancelAnimationFrame(autoScrollRef.current);
     };
   }, [carouselTasks.length, showCarousel]);
+
+  useEffect(() => {
+    if (landingFreelancers.length === 0) return;
+    const viewport = freelancerCarouselRef.current;
+    const track = freelancerTrackRef.current;
+    if (!viewport || !track) return;
+
+    const setWidth = track.scrollWidth / REPEAT_COPIES;
+    if (setWidth <= 0) return;
+    freelancerOneSetWidthRef.current = setWidth;
+
+    // Evita un frame en 0 y salto al envolver: empezar dentro del primer bloque repetido.
+    const maxStart = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+    viewport.scrollLeft = Math.min(Math.max(0, setWidth * 0.5), maxStart);
+
+    const SPEED_PX = 0.85;
+    const loop = () => {
+      const setW = freelancerOneSetWidthRef.current;
+      if (setW <= 0) {
+        freelancerAutoScrollRef.current = requestAnimationFrame(loop);
+        return;
+      }
+      // Sentido opuesto al carrusel de tareas (tareas: scrollLeft +; freelancers: −).
+      let next = viewport.scrollLeft - SPEED_PX;
+      if (next < 0) {
+        next += setW;
+      }
+      viewport.scrollLeft = next;
+      freelancerAutoScrollRef.current = requestAnimationFrame(loop);
+    };
+
+    freelancerAutoScrollRef.current = requestAnimationFrame(loop);
+    return () => {
+      if (freelancerAutoScrollRef.current != null) cancelAnimationFrame(freelancerAutoScrollRef.current);
+    };
+  }, [landingFreelancers.length]);
 
   const toggleRoadmap = (index: number) => {
     setExpandedRoadmap((prev) => {
@@ -279,7 +404,7 @@ const Hero = () => {
     name: 'Trabajos Online en Stellar Blockchain',
     provider: { '@type': 'Organization', name: 'ArcusX' },
     description: 'Plataforma de trabajos online en Stellar con escrow seguro y pagos en USDC.',
-    offers: { '@type': 'Offer', price: '0.5', priceCurrency: 'USD', description: 'Comisión 0.5% por transacción' }
+    offers: { '@type': 'Offer', price: '3', priceCurrency: 'USD', description: 'Comisión 3% al cliente en escrow por transacción' }
   };
   const productSchema = {
     '@context': 'https://schema.org',
@@ -469,6 +594,101 @@ const Hero = () => {
         <section className="landing-trust-strip" aria-label={t('landing.trust.aria')}>
           <div className="landing-trust-strip-inner">
             <span className="landing-trust-text">{t('landing.trust.line')}</span>
+          </div>
+        </section>
+
+        <section className="hero-carousel-section hero-freelancer-carousel-section" aria-label={t('hero.freelancer.carousel.aria')}>
+          <div className="hero-carousel-wrap">
+            {loadingLandingFreelancers ? (
+              <p className="hero-carousel-loading">{t('hero.freelancer.carousel.loading')}</p>
+            ) : landingFreelancers.length === 0 ? (
+              <p className="hero-carousel-empty">{t('hero.freelancer.carousel.empty')}</p>
+            ) : (
+              <div className="hero-carousel-nav-wrap">
+                <button
+                  type="button"
+                  className="hero-carousel-btn hero-carousel-btn-prev"
+                  onClick={() => scrollFreelancerCarousel('left')}
+                  aria-label={t('hero.carousel.prev')}
+                >
+                  <FaChevronLeft />
+                </button>
+                <div className="hero-carousel-viewport hero-freelancer-carousel-viewport" ref={freelancerCarouselRef}>
+                  <div className="hero-carousel-track" ref={freelancerTrackRef}>
+                    {infiniteLandingFreelancers.map((fl, idx) => {
+                      const avatarSrc = fl.avatar_url ? getAvatarUrl(fl.avatar_url) : null;
+                      const rawBio = fl.bio?.trim() ?? '';
+                      const normalizedBio = rawBio ? recoverUtf8Mojibake(rawBio) : '';
+                      const bioText = normalizedBio
+                        ? `${normalizedBio.slice(0, 110)}${normalizedBio.length > 110 ? '…' : ''}`
+                        : t('hero.freelancer.carousel.bioFallback');
+                      const skillsPreview = (fl.skills || [])
+                        .filter((s): s is string => typeof s === 'string')
+                        .slice(0, 2)
+                        .join(' · ');
+                      const metaLine = t('hero.freelancer.carousel.meta')
+                        .replace('{{rating}}', fl.average_rating.toFixed(1))
+                        .replace('{{tasks}}', String(fl.tasks_completed));
+                      return (
+                        <article key={`${fl.id}-${idx}`} className="hero-carousel-card hero-freelancer-card">
+                          <div className="hero-freelancer-card-top">
+                            <div className="hero-freelancer-avatar-wrap">
+                              {avatarSrc ? (
+                                <img
+                                  src={avatarSrc}
+                                  alt={fl.username}
+                                  className="hero-freelancer-avatar-img"
+                                  loading="lazy"
+                                  decoding="async"
+                                />
+                              ) : (
+                                <span className="hero-freelancer-avatar-placeholder" aria-hidden>
+                                  {freelancerDisplayInitials(fl.username)}
+                                </span>
+                              )}
+                            </div>
+                            <div className="hero-freelancer-card-head">
+                              <button
+                                type="button"
+                                className="hero-freelancer-name-btn"
+                                onClick={() => navigate(`/profile/${fl.id}`)}
+                              >
+                                {fl.username}
+                              </button>
+                              <span className="hero-carousel-card-meta hero-freelancer-meta-line">{metaLine}</span>
+                              {skillsPreview ? (
+                                <span className="hero-freelancer-skills-preview">{skillsPreview}</span>
+                              ) : null}
+                            </div>
+                          </div>
+                          <p className="hero-carousel-card-desc hero-freelancer-bio">{bioText}</p>
+                          <div className="hero-carousel-card-footer hero-freelancer-card-footer">
+                            <button
+                              type="button"
+                              className="hero-carousel-card-apply hero-freelancer-card-cta"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleFreelancerHireClick(fl);
+                              }}
+                            >
+                              {t('freelancers.card.hire')} <FaArrowRight />
+                            </button>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="hero-carousel-btn hero-carousel-btn-next"
+                  onClick={() => scrollFreelancerCarousel('right')}
+                  aria-label={t('hero.carousel.next')}
+                >
+                  <FaChevronRight />
+                </button>
+              </div>
+            )}
           </div>
         </section>
 

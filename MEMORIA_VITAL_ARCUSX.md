@@ -367,7 +367,7 @@ arcusx/
 **Propósito:** Hook para obtener comisión de plataforma.
 
 **Retorna:**
-- `platformFee` - Fee actual (número decimal, ej: 0.003 = 0.3%)
+- `platformFee` - Fee actual (número decimal, ej: 0.03 = 3%)
 - `loading` - Estado de carga
 
 **Notas:**

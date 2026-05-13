@@ -36,5 +36,7 @@ export interface FreelancerFilters {
   sortOrder?: 'asc' | 'desc';
   page?: number;
   limit?: number;
+  /** Si true, el backend ordena primero por perfil (foto, bio, skills) y luego por sortBy. */
+  preferProfile?: boolean;
 }
 

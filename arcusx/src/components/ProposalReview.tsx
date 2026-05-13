@@ -262,8 +262,8 @@ const ProposalReview = () => {
       // workerAmount = X * (1 - R)
       // X = workerAmount / (1 - R)
       //
-      // Ejemplo: workerAmount = 1 USDC, R = 0.005 (0.5%)
-      // X = 1 / (1 - 0.005) = 1 / 0.995 = 1.005025... USDC
+      // Ejemplo: workerAmount = 1 USDC, R = 0.03 (3%)
+      // X = 1 / (1 - 0.03) = 1 / 0.97 ≈ 1.030928... USDC
       const escrowAmount = workerAmount / (1 - platformFee);
       
       // Asegurar precisión de USDC (7 decimales)

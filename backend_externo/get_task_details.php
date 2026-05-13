@@ -16,15 +16,6 @@ ini_set('error_log', __DIR__ . '/php-error.log');
 
 require_once __DIR__ . '/config.php';
 
-// Corregir mojibake (UTF-8 leído como Latin-1): tildes y ñ correctos en el frontend
-function fix_utf8_mojibake($str) {
-    if (!is_string($str) || $str === '') return $str;
-    $bytes = @mb_convert_encoding($str, 'ISO-8859-1', 'UTF-8');
-    if ($bytes === false) return $str;
-    if (!mb_check_encoding($bytes, 'UTF-8')) return $str;
-    return $bytes;
-}
-
 try {
     // Verificar métodos permitidos
     if (!in_array($_SERVER['REQUEST_METHOD'], ['GET', 'POST', 'DELETE'])) {

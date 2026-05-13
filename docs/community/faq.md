@@ -6,12 +6,12 @@ Common questions and answers about ArcusX platform, features, and usage. ❓
 
 ### What is ArcusX?
 
-ArcusX is a decentralized freelancing platform built on the Stellar blockchain that connects clients with workers through secure escrow smart contracts. We offer low fees (0.5%), instant payments, and global access to freelance opportunities.
+ArcusX is a decentralized freelancing platform built on the Stellar blockchain that connects clients with workers through secure escrow smart contracts. We offer competitive fees (3% platform fee on escrow to the client), instant payments, and global access to freelance opportunities.
 
 ### How is ArcusX different from traditional freelancing platforms?
 
 ArcusX differs in several key ways:
-- Much lower commission (0.5% vs 10-20% on traditional platforms)
+- Much lower commission structure than traditional platforms (workers receive 100% of agreed pay; client pays ~3% platform fee on escrow)
 - Instant payments (3-5 seconds vs days/weeks)
 - No geographical restrictions
 - Complete transparency (all transactions on blockchain)
@@ -93,7 +93,7 @@ You receive payment after:
 
 ### How much commission does ArcusX charge?
 
-ArcusX charges 0.5% commission, which is automatically deducted when funds are released. If the task pays 100 USDC, you receive 100 USDC and the client pays 100.5025 USDC total (you get the full 100, commission is added to client's payment).
+ArcusX charges a 3% platform commission to the client when escrow is created. If the task pays 100 USDC to the worker, the worker receives 100 USDC and the client pays the agreed worker amount plus that commission (e.g. 103 USDC total before network fees, depending on rounding).
 
 ### Can I cancel a task after accepting?
 
@@ -154,7 +154,7 @@ You can:
 
 Posting tasks is free. You only pay:
 - The agreed payment to the worker
-- 0.5% platform commission (added to worker payment)
+- 3% platform commission (paid by the client; added to worker payment in escrow)
 - Minimal Stellar transaction fees
 
 ### How long does payment take?
@@ -169,12 +169,12 @@ ArcusX uses USDC (USD Coin) on the Stellar blockchain. USDC is a stablecoin pegg
 
 ### How much is the platform commission?
 
-ArcusX charges 0.5% commission per transaction. This is significantly lower than traditional platforms (10-20%).
+ArcusX charges a 3% platform commission on escrow to the client. This is significantly lower than typical freelancer-side fees on traditional platforms (often 10-20%).
 
 ### Are there any hidden fees?
 
 No, there are no hidden fees. The only costs are:
-- Platform commission (0.5%, clearly shown)
+- Platform commission (3%, clearly shown)
 - Stellar network transaction fees (minimal, less than $0.01)
 
 ### How are payments processed?

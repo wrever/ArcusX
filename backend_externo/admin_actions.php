@@ -10,7 +10,7 @@
  * @return array [platformFee, hasEscrowAmount, hasEscrowPlatformFee]
  */
 function admin_get_platform_fee_and_task_escrow_flags($conn) {
-    $platformFee = 0.003;
+    $platformFee = 0.03;
     try {
         $checkTable = $conn->query("SHOW TABLES LIKE 'system_config'");
         if ($checkTable !== false && $checkTable->num_rows > 0) {
@@ -18,12 +18,12 @@ function admin_get_platform_fee_and_task_escrow_flags($conn) {
             if ($feeResult !== false && $feeResult->num_rows > 0) {
                 $feeRow = $feeResult->fetch_assoc();
                 $feeValue = $feeRow['config_value'];
-                $platformFee = is_numeric($feeValue) ? (float)$feeValue : 0.003;
+                $platformFee = is_numeric($feeValue) ? (float)$feeValue : 0.03;
             }
         }
     } catch (Exception $e) {
         error_log('Error al obtener platform_fee: ' . $e->getMessage());
-        $platformFee = 0.003;
+        $platformFee = 0.03;
     }
     $checkEscrowAmount = $conn->query("SHOW COLUMNS FROM tasks LIKE 'escrow_amount'");
     $hasEscrowAmount = $checkEscrowAmount && $checkEscrowAmount->num_rows > 0;
