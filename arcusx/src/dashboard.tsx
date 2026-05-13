@@ -106,6 +106,7 @@ const Dashboard = () => {
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationFilter, setNotificationFilter] = useState('all');
+  const [notificationsActionError, setNotificationsActionError] = useState('');
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const notificationDropdownRef = useRef<HTMLDivElement>(null);
   
@@ -548,6 +549,7 @@ const Dashboard = () => {
     if (!user?.id) return;
     
     setLoadingNotifications(true);
+    setNotificationsActionError('');
     try {
       const data = await getUserNotifications({ page: 1, limit: 50 });
       setNotifications(data.notifications);
@@ -631,18 +633,43 @@ const Dashboard = () => {
     }
   };
   
+  const dismissNotificationErrorMessage = (raw: string): string => {
+    const msg = raw.toLowerCase();
+    if (/link_required|arcusx_user_link|link\s*required/.test(msg)) {
+      return t('dashboard.notifications.delete.failed.link');
+    }
+    if (/not_authenticated|not authenticated|no hay sesión|no session/.test(msg)) {
+      return t('dashboard.notifications.delete.failed.session');
+    }
+    if (
+      /arcusx_dismiss_notification|could not find the function|schema cache|function public\.arcusx_dismiss/.test(
+        msg
+      )
+    ) {
+      return t('dashboard.notifications.delete.failed.rpc');
+    }
+    return t('dashboard.notifications.delete.failed');
+  };
+
   const deleteNotification = async (notificationId: number) => {
-    const notification = notifications.find(n => n.id === notificationId);
+    const notification = notifications.find((n) => n.id === notificationId);
+    setNotificationsActionError('');
     try {
+      if (user?.id) {
+        await ensureArcusxSupabaseUserLink(Number(user.id));
+      }
       await dismissNotification(notificationId);
-    } catch {
+    } catch (err: unknown) {
+      const raw = err instanceof Error ? err.message : String(err);
+      if (import.meta.env.DEV) {
+        console.warn('[ArcusX] dismissNotification', raw);
+      }
+      setNotificationsActionError(dismissNotificationErrorMessage(raw));
       return;
     }
-    setNotifications(prev =>
-      prev.filter(n => n.id !== notificationId)
-    );
+    setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
     if (notification && !notification.is_read) {
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     }
   };
   
@@ -1468,7 +1495,8 @@ const Dashboard = () => {
                 </h2>
                 <div className="notifications-actions">
                   {unreadCount > 0 && (
-                    <button 
+                    <button
+                      type="button"
                       className="mark-all-read"
                       onClick={markAllNotificationsAsRead}
                     >
@@ -1477,36 +1505,81 @@ const Dashboard = () => {
                   )}
                 </div>
               </div>
-              
+
+              {notificationsActionError && (
+                <div
+                  className="notification-action-error"
+                  role="alert"
+                  style={{
+                    marginBottom: '1rem',
+                    padding: '12px 14px',
+                    borderRadius: '8px',
+                    background: 'rgba(239, 68, 68, 0.12)',
+                    border: '1px solid rgba(239, 68, 68, 0.35)',
+                    color: '#fecaca',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                  }}
+                >
+                  <span style={{ flex: 1, lineHeight: 1.45 }}>{notificationsActionError}</span>
+                  <button
+                    type="button"
+                    className="delete-button"
+                    aria-label={t('dashboard.notifications.delete.error.close')}
+                    onClick={() => setNotificationsActionError('')}
+                  >
+                    <FaTimes />
+                  </button>
+                </div>
+              )}
+
               {/* Filter Tabs */}
               <div className="notifications-filters">
-                <button 
+                <button
+                  type="button"
                   className={`filter-tab ${notificationFilter === 'all' ? 'active' : ''}`}
-                  onClick={() => setNotificationFilter('all')}
+                  onClick={() => {
+                    setNotificationFilter('all');
+                    setNotificationsActionError('');
+                  }}
                 >
                   {t('dashboard.notifications.filter.all')} ({notifications.length})
                 </button>
                 <button 
                   className={`filter-tab ${notificationFilter === 'unread' ? 'active' : ''}`}
-                  onClick={() => setNotificationFilter('unread')}
+                  onClick={() => {
+                    setNotificationFilter('unread');
+                    setNotificationsActionError('');
+                  }}
                 >
                   {t('dashboard.notifications.filter.unread')} ({unreadCount})
                 </button>
                 <button 
                   className={`filter-tab ${notificationFilter === 'success' ? 'active' : ''}`}
-                  onClick={() => setNotificationFilter('success')}
+                  onClick={() => {
+                    setNotificationFilter('success');
+                    setNotificationsActionError('');
+                  }}
                 >
                   {t('dashboard.notifications.filter.success')}
                 </button>
                 <button 
                   className={`filter-tab ${notificationFilter === 'warning' ? 'active' : ''}`}
-                  onClick={() => setNotificationFilter('warning')}
+                  onClick={() => {
+                    setNotificationFilter('warning');
+                    setNotificationsActionError('');
+                  }}
                 >
                   {t('dashboard.notifications.filter.warning')}
                 </button>
                 <button 
                   className={`filter-tab ${notificationFilter === 'error' ? 'active' : ''}`}
-                  onClick={() => setNotificationFilter('error')}
+                  onClick={() => {
+                    setNotificationFilter('error');
+                    setNotificationsActionError('');
+                  }}
                 >
                   {t('dashboard.notifications.filter.error')}
                 </button>
@@ -1579,7 +1652,8 @@ const Dashboard = () => {
                       
                       <div className="notification-actions">
                         {!notification.is_read && (
-                          <button 
+                          <button
+                            type="button"
                             onClick={() => markNotificationAsRead(notification.id)}
                             className="mark-read-button"
                           >
@@ -1587,8 +1661,12 @@ const Dashboard = () => {
                           </button>
                         )}
                         
-                        <button 
-                          onClick={() => deleteNotification(notification.id)}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void deleteNotification(notification.id);
+                          }}
                           className="delete-button"
                           aria-label={t('dashboard.notifications.delete')}
                         >

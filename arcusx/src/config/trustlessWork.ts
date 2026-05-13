@@ -19,12 +19,8 @@ export const TRUSTLESS_WORK_BASE_URL = import.meta.env.VITE_TRUSTLESS_WORK_BASE_
 export const PLATFORM_WALLET = import.meta.env.VITE_PLATFORM_WALLET || '';
 export const ADMIN_WALLET = import.meta.env.VITE_ADMIN_WALLET || '';
 
-// Platform fee: 3% = 300 basis points
-// CRÍTICO: el API de escrow multiplica el valor por 100; enviar 3.0 para obtener 3% (300 basis points)
+// Platform fee: 3%. CRÍTICO (Trustless Work): el valor se interpreta según el SDK; hoy se envía 3.0 para 3% — verificar contra la doc actual del paquete `@trustless-work/escrow`.
 export const PLATFORM_FEE_BPS = 3.0;
-
-// Fee reducido para usuarios CertiX Verified (KYC gratuito incluido en su plan)
-export const PLATFORM_FEE_BPS_CERTIX = 1.5;
 
 // Verificar que las variables estén configuradas (solo en desarrollo)
 if (import.meta.env.DEV) {

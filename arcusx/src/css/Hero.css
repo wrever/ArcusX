@@ -626,6 +626,9 @@
   flex-shrink: 0;
   width: 48px;
   height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0 !important;
   border-radius: 50%;
   border: 1px solid var(--border-color);
   background: var(--bg-card);
@@ -634,7 +637,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  z-index: 2;
   transition: all 0.2s ease;
+}
+
+.hero-carousel-btn svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  display: block;
+  flex-shrink: 0;
+  color: inherit;
+  fill: currentColor;
 }
 
 .hero-carousel-btn:hover {
@@ -690,6 +704,30 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
+/* Texto legible al hover (tema oscuro / default): evita que todo se perciba “apagado” */
+:root[data-theme="dark"] .hero-carousel-card:hover .hero-carousel-card-title,
+:root:not([data-theme]) .hero-carousel-card:hover .hero-carousel-card-title,
+:root[data-theme="dark"] .hero-carousel-card:hover .hero-carousel-card-meta,
+:root:not([data-theme]) .hero-carousel-card:hover .hero-carousel-card-meta,
+:root[data-theme="dark"] .hero-carousel-card:hover .hero-carousel-card-desc,
+:root:not([data-theme]) .hero-carousel-card:hover .hero-carousel-card-desc,
+:root[data-theme="dark"] .hero-carousel-card:hover .hero-freelancer-skills-preview,
+:root:not([data-theme]) .hero-carousel-card:hover .hero-freelancer-skills-preview {
+  color: #ffffff;
+}
+
+:root[data-theme="light"] .hero-carousel-card:hover .hero-carousel-card-title,
+:root[data-theme="light"] .hero-carousel-card:hover .hero-carousel-card-meta,
+:root[data-theme="light"] .hero-carousel-card:hover .hero-carousel-card-desc,
+:root[data-theme="light"] .hero-carousel-card:hover .hero-freelancer-skills-preview {
+  color: var(--text-primary);
+}
+
+:root[data-theme="dark"] .hero-carousel-card:hover .hero-carousel-card-price,
+:root:not([data-theme]) .hero-carousel-card:hover .hero-carousel-card-price {
+  color: #b6ffe4;
+}
+
 .hero-carousel-card-title {
   font-size: 1.1rem;
   font-weight: 600;
@@ -735,15 +773,74 @@
   font-size: 0.9rem;
   font-weight: 600;
   background: var(--primary-green, #10dd88);
-  color: var(--bg-primary);
-  border: none;
+  background-color: var(--primary-green, #10dd88);
+  color: #0a0a0a;
+  border: none !important;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-.hero-carousel-card-apply:hover {
-  filter: brightness(1.1);
+/* index.css button:hover pisa el CTA: hover = fondo oscuro + texto blanco (normal = verde + negro) */
+.hero-carousel-card-apply:hover,
+.hero-carousel-card-apply:focus-visible {
+  background: #0a0a0a !important;
+  background-color: #0a0a0a !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(16, 221, 136, 0.4) !important;
+  filter: none;
   transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.hero-carousel-card-apply:hover svg,
+.hero-carousel-card-apply:focus-visible svg {
+  color: #ffffff;
+  fill: currentColor;
+}
+
+.hero-freelancer-name-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0;
+  margin: 0;
+  border: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  cursor: pointer;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.25;
+  transition: color 0.2s ease, text-decoration 0.2s ease;
+}
+
+.hero-freelancer-name-btn:hover,
+.hero-freelancer-name-btn:focus-visible {
+  background: transparent !important;
+  background-color: transparent !important;
+  border-color: transparent !important;
+  color: var(--primary-green, #10dd88);
+  text-decoration: underline;
+}
+
+:root[data-theme="dark"] .hero-carousel-card:hover .hero-freelancer-name-btn,
+:root:not([data-theme]) .hero-carousel-card:hover .hero-freelancer-name-btn {
+  color: #ffffff;
+}
+
+:root[data-theme="dark"] .hero-carousel-card:hover .hero-freelancer-name-btn:hover,
+:root:not([data-theme]) .hero-carousel-card:hover .hero-freelancer-name-btn:hover {
+  color: var(--primary-green, #10dd88);
+}
+
+:root[data-theme="light"] .hero-carousel-card:hover .hero-freelancer-name-btn {
+  color: var(--text-primary);
 }
 
 @media (max-width: 768px) {
@@ -754,11 +851,122 @@
   .hero-carousel-btn {
     width: 40px;
     height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0 !important;
+  }
+
+  .hero-carousel-btn svg {
+    width: 1.1rem;
+    height: 1.1rem;
   }
 
   .hero-carousel-card {
     width: 260px;
     min-height: 160px;
+  }
+}
+
+/* — Carrusel de freelancers (debajo de la franja Stellar · USDC…) — */
+.hero-freelancer-carousel-section {
+  padding: 2rem 1rem 2.35rem;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.hero-freelancer-carousel-section .hero-carousel-wrap {
+  max-width: 1400px;
+}
+
+.hero-freelancer-carousel-viewport {
+  scroll-snap-type: none;
+}
+
+.hero-freelancer-card {
+  width: 300px;
+  min-height: 218px;
+}
+
+.hero-freelancer-card-top {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  margin-bottom: 0.35rem;
+}
+
+.hero-freelancer-avatar-wrap {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid rgba(16, 221, 136, 0.38);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+}
+
+.hero-freelancer-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hero-freelancer-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(145deg, rgba(16, 221, 136, 0.28), rgba(16, 221, 136, 0.06));
+  color: var(--primary-green, #10dd88);
+}
+
+.hero-freelancer-card-head {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.hero-freelancer-skills-preview {
+  font-size: 0.72rem;
+  color: var(--text-muted, rgba(255, 255, 255, 0.45));
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hero-freelancer-bio {
+  margin-bottom: 0.75rem;
+}
+
+.hero-freelancer-card-footer {
+  justify-content: flex-end;
+}
+
+.hero-freelancer-card-cta {
+  width: 100%;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .hero-freelancer-carousel-section {
+    padding: 1.5rem 0.75rem 1.85rem;
+  }
+
+  .hero-freelancer-card {
+    width: 272px;
+    min-height: 200px;
+  }
+
+  .hero-freelancer-avatar-wrap {
+    width: 48px;
+    height: 48px;
   }
 }
 

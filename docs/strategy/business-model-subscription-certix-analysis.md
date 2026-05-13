@@ -74,16 +74,13 @@ El tier **Verified** y el bundling CertiX cobran más sentido cuando el usuario 
 
 En `arcusx/src/config/trustlessWork.ts` y `arcusx/src/config/commission.ts` el producto ya define:
 
-- **Fee base de plataforma:** `PLATFORM_FEE_BPS = 3.0` (3%).
-- **Fee reducido CertiX Verified:** `PLATFORM_FEE_BPS_CERTIX = 1.5` y `CERTIX_COMMISSION_RATE = 0.015` (1.5%).
+- **Fee de plataforma:** `PLATFORM_FEE_BPS = 3.0` y `DEFAULT_COMMISSION_RATE = 0.03` (**3%**). No hay en código una tarifa reducida separada por CertiX/suscripción (CertiX es producto aparte).
 
-Eso **coincide con la fila “Free 3%” y “Verified 1.5%”** de la tabla de Cloud a nivel de porcentajes — **pero** la propuesta añade **Pro 2%** y **Studio 1%**, que hoy **no** están modelados como constantes de negocio ni como reglas de usuario.
+Eso **coincide con la fila “Free 3%”** de la tabla de Cloud a nivel de porcentaje base — **pero** la propuesta añade **Verified 1.5%**, **Pro 2%** y **Studio 1%**, que hoy **no** están modelados como constantes de negocio ni como reglas de usuario en el código de escrow.
 
 ### 3.2 Dónde se aplica el fee en la UI
 
-El fee visible y usado en flujos de escrow/comisión pasa por `usePlatformFee` → `getPlatformFee()` (`platformFeeService.ts`), con fallback por defecto **0.3% (0.003)** cuando no hay token o no responde el backend — **desalineado** con el 3% documentado en `trustlessWork.ts` y con la narrativa de negocio.
-
-**Implicación para el modelo:** antes de vender tiers por “ahorro en fee”, hay que **unificar fuente de verdad**: mismo porcentaje en creación de escrow (Trustless Work), UI, y backend (`get_platform_fee.php` / admin config), y **mapear tier de usuario → fee efectivo** (incl. CertiX verified).
+El fee visible y usado en flujos de escrow/comisión pasa por `usePlatformFee` → `getPlatformFee()` (`platformFeeService.ts`), con fallback por defecto **3% (0.03)** cuando no hay token o no responde el backend — alineado con `trustlessWork.ts` y `get_platform_fee.php`.
 
 ### 3.3 CertiX como producto separado
 
@@ -127,7 +124,7 @@ CertiX vive en el monorepo como app aparte (Next.js). El bundling “certs/mes�
 
 ### Fase A — Fundamentos (sin vender aún Pro/Studio)
 
-1. **Single source of truth del fee:** alinear `platformFeeService` / admin / Trustless Work con **3% base** y **1.5% CertiX verified** según reglas de negocio acordadas.
+1. **Single source of truth del fee:** mantener alineados `platformFeeService` / admin / Trustless Work con **3%** hasta que exista lógica de suscripción/tiers en código.
 2. **Estado de usuario:** campo o servicio “subscription_tier” + “certix_verified” (o equivalente) consumible en frontend al crear escrow.
 3. **Pricing page + checkout** (una pasarela): empezar con **Verified** como único pago recurrente opcional, cruzado con beneficio 1.5% + paquete CertiX acotado.
 4. **API CertiX → ArcusX:** contrato de sync (webhook + usuario enlazado); perfil público con **badge agregado** y vista detalle para lista / enlaces a CertiX.
@@ -162,7 +159,7 @@ Requisitos sugeridos antes de lanzar: pipeline B2B, contrato tipo, volumen míni
 
 ## 7. Conclusión
 
-La propuesta de Cloud es **coherente** con la dirección del producto (Stellar + escrow + CertiX como capa de confianza) y **parcialmente alineada** con constantes ya definidas (3% / 1.5% CertiX). La **visión de producto** (§2): fuente de verdad en CertiX, **sync preferente en vivo**, perfil ArcusX con **badge agregado** y descubrimiento en CertiX o en el perfil público, es la columna vertebral del diferencial frente a marketplaces genéricos. Para ejecutar el modelo hace falta: **(1)** corregir desalineaciones técnicas del fee en app, **(2)** introducir **billing y modelo de datos de suscripción**, **(3)** **API/webhooks CertiX ↔ ArcusX** y políticas de privacidad del listado detallado, **(4)** acordar **integración operativa** CertiX para créditos por tier, y **(5)** seguir el **rollout escalonado** para no sobrecargar producto y soporte.
+La propuesta de Cloud es **coherente** con la dirección del producto (Stellar + escrow + CertiX como capa de confianza) y **parcialmente alineada** con el **3%** ya definido en código para el fee de plataforma. La **visión de producto** (§2): fuente de verdad en CertiX, **sync preferente en vivo**, perfil ArcusX con **badge agregado** y descubrimiento en CertiX o en el perfil público, es la columna vertebral del diferencial frente a marketplaces genéricos. Para ejecutar el modelo hace falta: **(1)** mantener alineado el fee en app y backend, **(2)** introducir **billing y modelo de datos de suscripción** si se retoma el tier Verified, **(3)** **API/webhooks CertiX ↔ ArcusX** y políticas de privacidad del listado detallado, **(4)** acordar **integración operativa** CertiX para créditos por tier, y **(5)** seguir el **rollout escalonado** para no sobrecargar producto y soporte.
 
 ---
 

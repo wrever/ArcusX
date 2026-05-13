@@ -59,6 +59,10 @@ export async function getFreelancers(filters: FreelancerFilters = {}): Promise<F
     params.append('sort_order', filters.sortOrder);
   }
 
+  if (filters.preferProfile) {
+    params.append('prefer_profile', '1');
+  }
+
   const url = `${API_URL}/auth/get_freelancers.php?${params.toString()}`;
   
   const response = await fetch(url, {

@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $check->close();
 
         // Obtener platform fee para cálculos retroactivos si no hay escrow_amount
-        $platformFee = 0.003; // default 0.3%
+        $platformFee = 0.03; // default 3%
         try {
             $feeRes = $conn->query("SHOW TABLES LIKE 'system_config'");
             if ($feeRes && $feeRes->num_rows > 0) {

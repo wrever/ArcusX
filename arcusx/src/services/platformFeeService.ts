@@ -13,7 +13,7 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 /**
  * Obtiene el platform fee del backend
  * @param useCache Si es true, usa el cache si está disponible
- * @returns El platform fee como decimal (ej: 0.005 para 0.5%)
+ * @returns El platform fee como decimal (ej: 0.03 para 3%)
  */
 export async function getPlatformFee(useCache: boolean = true): Promise<number> {
   // Verificar cache
@@ -37,7 +37,7 @@ export async function getPlatformFee(useCache: boolean = true): Promise<number> 
     const token = localStorage.getItem('token');
     if (!token) {
       // Si no hay token, usar valor por defecto
-      return 0.003; // 0.3% por defecto
+      return 0.03; // 3% por defecto
     }
 
     // Intentar obtener desde el endpoint público o desde admin
@@ -95,9 +95,9 @@ export async function getPlatformFee(useCache: boolean = true): Promise<number> 
     }
 
     // Si todo falla, usar valor por defecto
-    return 0.003; // 0.3% por defecto
+    return 0.03; // 3% por defecto
   } catch (error) {
-    return 0.003; // 0.3% por defecto
+    return 0.03; // 3% por defecto
   }
 }
 
@@ -113,7 +113,7 @@ export function clearPlatformFeeCache(): void {
 
 /**
  * Obtiene el platform fee para el servicio de escrow
- * El API espera el fee como decimal (ej: 0.005 para 0.5%)
+ * El API espera el fee como decimal (ej: 0.03 para 3%)
  * @returns El platform fee en el formato que exige el contrato
  */
 export async function getPlatformFeeForTrustlessWork(): Promise<number> {

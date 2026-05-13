@@ -33,15 +33,6 @@ try {
     exit;
 }
 
-// Corregir mojibake: datos que se guardaron como Latin-1 pero son bytes UTF-8 (ej. programaciÃ³n → programación)
-function fix_utf8_mojibake($str) {
-    if (!is_string($str) || $str === '') return $str;
-    $bytes = @mb_convert_encoding($str, 'ISO-8859-1', 'UTF-8');
-    if ($bytes === false) return $str;
-    if (!mb_check_encoding($bytes, 'UTF-8')) return $str;
-    return $bytes;
-}
-
 // Asegurarse de que la solicitud es GET
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 

@@ -8,11 +8,11 @@ import { getPlatformFee } from '../services/platformFeeService';
 
 /**
  * Hook para obtener el platform fee
- * @returns El platform fee como decimal (ej: 0.005 para 0.5%) y el porcentaje como string
+ * @returns El platform fee como decimal (ej: 0.03 para 3%) y el porcentaje como string
  */
 export function usePlatformFee() {
-  const [platformFee, setPlatformFee] = useState<number>(0.003); // 0.3% por defecto
-  const [platformFeePercent, setPlatformFeePercent] = useState<string>('0.3');
+  const [platformFee, setPlatformFee] = useState<number>(0.03); // 3% por defecto
+  const [platformFeePercent, setPlatformFeePercent] = useState<string>('3');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
