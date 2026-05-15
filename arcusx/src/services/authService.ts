@@ -174,7 +174,7 @@ export const authService = {
   async registerWallet(walletAddress: string): Promise<{ success: boolean; wallet_address?: string; already_registered?: boolean; message?: string }> {
     const token = localStorage.getItem('token');
     const response = await axios.post(
-      `${API_URL}/register_wallet.php`,
+      `${API_URL}/auth/register_wallet.php`,
       { wallet_address: walletAddress },
       { headers: { Authorization: `Bearer ${token}` } }
     );
@@ -183,7 +183,7 @@ export const authService = {
 
   async verifyWallet(): Promise<{ success: boolean; has_wallet: boolean; wallet_address?: string | null }> {
     const token = localStorage.getItem('token');
-    const response = await axios.get(`${API_URL}/verify_wallet.php`, {
+    const response = await axios.get(`${API_URL}/auth/verify_wallet.php`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     return response.data;
