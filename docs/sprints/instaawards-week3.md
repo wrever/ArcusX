@@ -52,4 +52,6 @@ WHERE status = 'completed' AND escrow_status = 'completed';
 
 ---
 
+**Next:** Week 4 close — [`instaawards-week4.md`](./instaawards-week4.md)
+
 *2026-05-18*
