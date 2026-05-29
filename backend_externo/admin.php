@@ -17,6 +17,7 @@ require_once 'admin_common.php';
 
 // Incluir funciones handler
 require_once 'admin_actions.php';
+require_once 'admin_referral_actions.php';
 
 // Obtener acción de la petición
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
@@ -138,6 +139,56 @@ try {
         case 'get_notifications':
             $params = array_merge($_GET, $_POST);
             $response = handleGetNotifications($conn, $user, $params);
+            break;
+
+        // ========== REFERIDOS (Supabase) ==========
+        case 'referral_stats':
+            $response = handleReferralStats();
+            break;
+
+        case 'referral_list_partners':
+            $params = array_merge($_GET, $_POST);
+            $response = handleReferralListPartners($params);
+            break;
+
+        case 'referral_create_partner':
+            $data = json_decode(file_get_contents('php://input'), true) ?: [];
+            $response = handleReferralCreatePartner($data);
+            break;
+
+        case 'referral_create_code':
+            $data = json_decode(file_get_contents('php://input'), true) ?: [];
+            $response = handleReferralCreateCode($data);
+            break;
+
+        case 'referral_list_codes':
+            $params = array_merge($_GET, $_POST);
+            $response = handleReferralListCodes($params);
+            break;
+
+        case 'referral_daily_report':
+            $params = array_merge($_GET, $_POST);
+            $response = handleReferralDailyReport($params);
+            break;
+
+        case 'referral_list_signups':
+            $params = array_merge($_GET, $_POST);
+            $response = handleReferralListSignups($params);
+            break;
+
+        case 'referral_fraud_alerts':
+            $params = array_merge($_GET, $_POST);
+            $response = handleReferralFraudAlerts($params);
+            break;
+
+        case 'referral_mark_alert_read':
+            $data = json_decode(file_get_contents('php://input'), true) ?: [];
+            $response = handleReferralMarkAlertRead($data);
+            break;
+
+        case 'referral_toggle_code':
+            $data = json_decode(file_get_contents('php://input'), true) ?: [];
+            $response = handleReferralToggleCode($data);
             break;
         
         // ========== ACCIÓN NO VÁLIDA ==========

@@ -25,23 +25,44 @@ ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/php-error.log');
 
 require_once 'config.php';
+require __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/auth_bearer.php';
 
 try {
-    // Asegurarse de que la solicitud es POST
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        http_response_code(405);
-        echo json_encode(['success' => false, 'message' => 'Método no permitido. Solo se permite POST.']);
-        exit();
+        arcusx_json_exit(405, [
+            'success' => false,
+            'message' => 'Method not allowed',
+            'error' => 'method_not_allowed',
+        ]);
     }
 
-    // Obtener los datos JSON enviados por el frontend
-    $data = json_decode(file_get_contents('php://input'), true);
+    $tokenUserId = arcusx_require_user_id();
 
-    // Validar si se recibieron todos los campos necesarios, incluyendo subtitle y user_id
+    $data = json_decode(file_get_contents('php://input'), true);
+    if (!is_array($data)) {
+        arcusx_json_exit(400, [
+            'success' => false,
+            'message' => 'Invalid JSON body',
+            'error' => 'invalid_json',
+        ]);
+    }
+
     if (!isset($data['title'], $data['subtitle'], $data['description'], $data['price'], $data['currency'], $data['difficulty'], $data['category'], $data['user_id'])) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'message' => 'Faltan campos obligatorios, incluyendo el subtítulo o el ID del usuario.']);
-        exit();
+        arcusx_json_exit(400, [
+            'success' => false,
+            'message' => 'Missing required fields',
+            'error' => 'missing_fields',
+        ]);
+    }
+
+    $bodyUserId = (int) $data['user_id'];
+    if ($bodyUserId !== $tokenUserId) {
+        arcusx_json_exit(403, [
+            'success' => false,
+            'message' => 'Forbidden: user_id does not match authenticated user',
+            'error' => 'user_id_mismatch',
+        ]);
     }
 
     // Sanitizar los datos para prevenir inyecciones SQL
@@ -60,7 +81,7 @@ try {
     $currency = $conn->real_escape_string($data['currency']);
     $difficulty = $conn->real_escape_string($data['difficulty']);
     $category = $conn->real_escape_string($data['category']);
-    $userId = intval($data['user_id']);
+    $userId = $tokenUserId;
 
     // Validar los valores de los campos de selección (opcional pero recomendado)
     $allowed_currencies = ['USDC']; // Solo USDC permitido

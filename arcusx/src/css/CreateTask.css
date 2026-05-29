@@ -177,6 +177,24 @@
   box-shadow: var(--shadow-md);
 }
 
+:root[data-theme="light"] .create-task-container .back-button,
+:root[data-theme="light"] .create-task-container .back-button span,
+:root[data-theme="light"] .create-task-container .back-button svg {
+  color: #0f172a !important;
+}
+
+:root[data-theme="light"] .create-task-container .back-button {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+:root[data-theme="light"] .create-task-container .back-button:hover,
+:root[data-theme="light"] .create-task-container .back-button:hover span,
+:root[data-theme="light"] .create-task-container .back-button:hover svg {
+  color: var(--primary-blue) !important;
+  background: var(--bg-hover) !important;
+}
+
 .create-task-form-card {
   background: var(--bg-card);
   backdrop-filter: blur(20px);

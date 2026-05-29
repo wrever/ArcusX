@@ -12,6 +12,7 @@ ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/php-error.log');
 
 require_once __DIR__ . '/cors.php';
+require_once __DIR__ . '/auth_bearer.php';
 arcusx_cors_handle_preflight('GET, OPTIONS');
 ob_start();
 
@@ -22,15 +23,11 @@ ob_end_clean();
 try {
     require_once __DIR__ . '/config.php';
 } catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Error de conexión']);
-    exit;
+    arcusx_json_error(500, 'Error de conexión', 'db_config');
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-    http_response_code(405);
-    echo json_encode(['success' => false, 'message' => 'Método no permitido']);
-    exit;
+    arcusx_json_error(405, 'Método no permitido', 'method_not_allowed');
 }
 
 try {
@@ -47,15 +44,13 @@ try {
     ");
     $total_volume_usdc = $r && $r->num_rows ? round((float)$r->fetch_assoc()['total'], 0) : 0;
 
-    echo json_encode([
-        'success' => true,
+    arcusx_json_success([
         'open_tasks' => $open_tasks,
         'total_users' => $total_users,
         'total_volume_usdc' => $total_volume_usdc,
     ]);
 } catch (Exception $e) {
     error_log('get_landing_market_stats.php: ' . $e->getMessage());
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Error al obtener estadísticas']);
+    arcusx_json_error(500, 'Error al obtener estadísticas', 'stats_query_failed');
 }
 $conn->close();

@@ -37,6 +37,24 @@
   box-shadow: var(--shadow-md);
 }
 
+:root[data-theme="light"] .proposal-review-container .back-button,
+:root[data-theme="light"] .proposal-review-container .back-button span,
+:root[data-theme="light"] .proposal-review-container .back-button svg {
+  color: #0f172a !important;
+}
+
+:root[data-theme="light"] .proposal-review-container .back-button {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+:root[data-theme="light"] .proposal-review-container .back-button:hover,
+:root[data-theme="light"] .proposal-review-container .back-button:hover span,
+:root[data-theme="light"] .proposal-review-container .back-button:hover svg {
+  color: var(--primary-blue) !important;
+  background: var(--bg-hover) !important;
+}
+
 .proposal-review-content {
   display: flex;
   flex-direction: column;
@@ -684,60 +702,78 @@
   color: #000000 !important;
 }
 
-/* Forzar todos los textos dentro del panel de confirmación */
-:root[data-theme="light"] .proposal-review-container .selection-confirmation,
-:root[data-theme="light"] .proposal-review-container .selection-confirmation * {
-  color: #000000 !important;
-}
-
 :root[data-theme="light"] .proposal-review-container .selection-confirmation h3 {
-  color: #000000 !important;
+  color: #0f172a !important;
 }
 
 :root[data-theme="light"] .proposal-review-container .selection-confirmation p {
-  color: #1e293b !important;
+  color: #475569 !important;
 }
 
 :root[data-theme="light"] .proposal-review-container .selection-confirmation strong {
-  color: #000000 !important;
+  color: #0f172a !important;
 }
 
-:root[data-theme="light"] .proposal-review-container .selection-confirmation span {
-  color: #000000 !important;
-}
-
-/* Asegurar que todos los elementos dentro de selection-confirmation sean visibles */
-:root[data-theme="light"] .selection-confirmation,
-:root[data-theme="light"] .selection-confirmation * {
-  color: #000000 !important;
-}
-
+/* Textos del panel (sin afectar botones de acción) */
 :root[data-theme="light"] .selection-confirmation h3 {
-  color: #000000 !important;
+  color: #0f172a !important;
   font-weight: 700 !important;
   font-size: 1.5rem !important;
 }
 
 :root[data-theme="light"] .selection-confirmation p {
-  color: #1e293b !important;
+  color: #475569 !important;
   font-weight: 500 !important;
   font-size: 1rem !important;
 }
 
 :root[data-theme="light"] .selection-confirmation strong {
-  color: #000000 !important;
+  color: #0f172a !important;
   font-weight: 700 !important;
-  font-size: 1rem !important;
 }
 
-:root[data-theme="light"] .selection-confirmation span {
-  color: #000000 !important;
-  font-weight: 500 !important;
+:root[data-theme="light"] .selection-confirmation .wallet-address {
+  color: #0f172a !important;
 }
 
 :root[data-theme="light"] .selection-confirmation a {
   color: #0284c7 !important;
   font-weight: 600 !important;
+}
+
+:root[data-theme="light"] .confirmation-actions .accept-button {
+  background: linear-gradient(90deg, #16a34a, #15803d) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border: none !important;
+}
+
+:root[data-theme="light"] .confirmation-actions .accept-button:hover:not(:disabled) {
+  background: linear-gradient(90deg, #15803d, #166534) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35) !important;
+}
+
+:root[data-theme="light"] .confirmation-actions .accept-button svg {
+  color: #ffffff !important;
+  fill: currentColor !important;
+}
+
+:root[data-theme="light"] .confirmation-actions .reject-button {
+  background: linear-gradient(90deg, #ef4444, #dc2626) !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border: none !important;
+}
+
+:root[data-theme="light"] .confirmation-actions .reject-button:hover:not(:disabled) {
+  background: linear-gradient(90deg, #dc2626, #b91c1c) !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme="light"] .confirmation-actions .reject-button svg {
+  color: #ffffff !important;
+  fill: currentColor !important;
 }
 
 .confirmation-header {
@@ -781,8 +817,11 @@
   color: #000000 !important;
 }
 
-:root[data-theme="light"] .selected-proposal-summary * {
-  color: #000000 !important;
+:root[data-theme="light"] .selected-proposal-summary strong,
+:root[data-theme="light"] .selected-proposal-summary p,
+:root[data-theme="light"] .selected-proposal-summary span,
+:root[data-theme="light"] .selected-proposal-summary a {
+  color: inherit;
 }
 
 .summary-item {
@@ -1577,6 +1616,119 @@
 
 .escrow-process-note strong {
   color: #fff;
+}
+
+/* Modo claro — popup proceso escrow / liberar fondos */
+:root[data-theme="light"] .escrow-process-popup {
+  background: var(--overlay) !important;
+}
+
+:root[data-theme="light"] .escrow-process-content {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+:root[data-theme="light"] .escrow-process-title {
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme="light"] .escrow-process-close {
+  color: var(--text-secondary) !important;
+}
+
+:root[data-theme="light"] .escrow-process-close:hover {
+  color: var(--text-primary) !important;
+  background: var(--bg-hover) !important;
+}
+
+:root[data-theme="light"] .escrow-task-info {
+  background: rgba(59, 130, 246, 0.08) !important;
+  border: 1px solid rgba(59, 130, 246, 0.25) !important;
+}
+
+:root[data-theme="light"] .escrow-task-info h3 {
+  color: var(--primary-blue) !important;
+}
+
+:root[data-theme="light"] .escrow-task-details,
+:root[data-theme="light"] .escrow-task-details p {
+  color: var(--text-secondary) !important;
+}
+
+:root[data-theme="light"] .escrow-task-details strong {
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme="light"] .escrow-task-xlm-note {
+  color: #b45309 !important;
+}
+
+:root[data-theme="light"] .escrow-step.pending {
+  background: var(--bg-tertiary) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="light"] .escrow-step.in-progress {
+  background: rgba(59, 130, 246, 0.1) !important;
+  border: 1px solid rgba(59, 130, 246, 0.3) !important;
+  color: var(--primary-blue) !important;
+}
+
+:root[data-theme="light"] .escrow-step.completed {
+  background: rgba(22, 163, 74, 0.1) !important;
+  border: 1px solid rgba(22, 163, 74, 0.35) !important;
+  color: #15803d !important;
+}
+
+:root[data-theme="light"] .escrow-step.error {
+  background: rgba(239, 68, 68, 0.08) !important;
+  border: 1px solid rgba(239, 68, 68, 0.35) !important;
+  color: #b91c1c !important;
+}
+
+:root[data-theme="light"] .escrow-step-text h3 {
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme="light"] .escrow-step-text p {
+  color: var(--text-secondary) !important;
+}
+
+:root[data-theme="light"] .escrow-step-button {
+  background: linear-gradient(90deg, #3b82f6, #2563eb) !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme="light"] .escrow-step-button:hover:not(:disabled) {
+  box-shadow: var(--shadow-blue) !important;
+}
+
+:root[data-theme="light"] .escrow-step-status {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme="light"] .escrow-progress-header {
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="light"] .escrow-progress-bar {
+  background: var(--bg-tertiary) !important;
+}
+
+:root[data-theme="light"] .escrow-progress-fill {
+  background: linear-gradient(90deg, #3b82f6, #2563eb) !important;
+}
+
+:root[data-theme="light"] .escrow-process-note {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-secondary) !important;
+}
+
+:root[data-theme="light"] .escrow-process-note strong {
+  color: var(--text-primary) !important;
 }
 
 /* Animaciones */

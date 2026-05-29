@@ -62,3 +62,18 @@ function arcusx_require_user_id(): int {
     }
     return $id;
 }
+
+/**
+ * @param array<string, mixed> $extra
+ */
+function arcusx_json_success(array $extra = [], int $httpCode = 200): void {
+    arcusx_json_exit($httpCode, array_merge(['success' => true], $extra));
+}
+
+function arcusx_json_error(int $httpCode, string $message, ?string $error = null): void {
+    $body = ['success' => false, 'message' => $message];
+    if ($error !== null && $error !== '') {
+        $body['error'] = $error;
+    }
+    arcusx_json_exit($httpCode, $body);
+}

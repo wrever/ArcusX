@@ -10,7 +10,7 @@
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-.back-button {
+.apply-task-container .back-button {
   position: absolute;
   top: 1rem;
   left: 1rem;
@@ -30,22 +30,15 @@
   font-weight: 600;
 }
 
-/* Estilos específicos para modo claro y oscuro - Siempre con fondo azul */
-:root[data-theme="light"] .back-button {
+:root[data-theme="light"] .apply-task-container .back-button,
+:root[data-theme="dark"] .apply-task-container .back-button {
   background: var(--primary-blue) !important;
   border-color: var(--primary-blue) !important;
   color: #ffffff !important;
   box-shadow: var(--shadow-md) !important;
 }
 
-:root[data-theme="dark"] .back-button {
-  background: var(--primary-blue) !important;
-  border-color: var(--primary-blue) !important;
-  color: #ffffff !important;
-  box-shadow: var(--shadow-md) !important;
-}
-
-.back-button:hover {
+.apply-task-container .back-button:hover {
   color: #ffffff !important;
   background: var(--primary-blue-hover) !important;
   border-color: var(--primary-blue-hover) !important;
@@ -438,6 +431,18 @@
 
 .apply-wallet-paste-btn:hover {
   background: rgba(16, 221, 136, 0.22);
+}
+
+:root[data-theme="light"] .apply-wallet-paste-btn {
+  background: rgba(59, 130, 246, 0.12) !important;
+  border: 1px solid rgba(59, 130, 246, 0.45) !important;
+  color: #1d4ed8 !important;
+}
+
+:root[data-theme="light"] .apply-wallet-paste-btn:hover {
+  background: rgba(59, 130, 246, 0.2) !important;
+  border-color: #2563eb !important;
+  color: #1e40af !important;
 }
 
 .apply-hire-ref-banner {

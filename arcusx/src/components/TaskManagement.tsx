@@ -447,7 +447,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                     {loadingEscrowInfo ? (
                       <div style={{ padding: '20px', textAlign: 'center' }}>
                         <FaSpinner className="spinning" style={{ fontSize: '24px', margin: '0 auto', display: 'block' }} />
-                        <p style={{ marginTop: '10px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                        <p style={{ marginTop: '10px', color: 'var(--text-muted)' }}>
                           Cargando información del escrow...
                         </p>
                       </div>
@@ -516,7 +516,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                               }}>
                                 <FaExclamationTriangle style={{ color: '#ef4444', marginRight: '8px' }} />
                                 <strong style={{ color: '#ef4444' }}>Inconsistencias Detectadas:</strong>
-                                <p style={{ marginTop: '8px', color: 'rgba(255, 255, 255, 0.8)' }}>
+                                <p style={{ marginTop: '8px', color: 'var(--text-secondary)' }}>
                                   {JSON.stringify(escrowInfo.inconsistencies, null, 2)}
                                 </p>
                               </div>
@@ -530,7 +530,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                       <div style={{ 
                         padding: '20px', 
                         textAlign: 'center',
-                        color: 'rgba(255, 255, 255, 0.6)'
+                        color: 'var(--text-muted)'
                       }}>
                         <FaExclamationTriangle style={{ marginBottom: '10px', fontSize: '24px' }} />
                         <p>{t('admin.tasks.error.escrowFetch')}</p>

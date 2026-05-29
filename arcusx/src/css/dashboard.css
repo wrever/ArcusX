@@ -664,7 +664,7 @@
 }
 
 .stat-card {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-card);
   backdrop-filter: blur(10px);
   border-radius: 12px;
   padding: 1.5rem 1.25rem;
@@ -687,7 +687,7 @@
   width: 45px;
   height: 45px;
   border-radius: 12px;
-  background: rgba(16, 221, 136, 0.1);
+  background: color-mix(in srgb, var(--primary-blue) 12%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1217,7 +1217,7 @@ input[type="search"]::placeholder {
   width: 100%;
   padding: 0.9rem;
   background: linear-gradient(90deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
-  color: var(--text-primary, #ffffff);
+  color: var(--on-accent, #ffffff);
   border: none;
   border-radius: 12px;
   font-weight: 600;
@@ -3394,7 +3394,7 @@ input[type="search"]::placeholder {
 
 .btn-primary {
   background: linear-gradient(90deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
-  color: var(--text-primary, #ffffff);
+  color: var(--on-accent, #ffffff);
 }
 
 .btn-primary:hover {
@@ -3787,19 +3787,21 @@ input[type="search"]::placeholder {
   font-weight: 600;
   min-width: 100px;
   justify-content: center;
-  background: linear-gradient(135deg, rgba(16, 221, 136, 0.2) 0%, rgba(17, 128, 179, 0.2) 100%);
-  color: var(--text-primary, #ffffff);
-  box-shadow: 0 2px 8px rgba(16, 221, 136, 0.2);
-  border: 1px solid rgba(16, 221, 136, 0.3);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
 }
 .theme-language-buttons .lang-select--inline .lang-select-trigger:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(16, 221, 136, 0.3);
-  background: linear-gradient(135deg, rgba(16, 221, 136, 0.3) 0%, rgba(17, 128, 179, 0.3) 100%);
-  border-color: rgba(16, 221, 136, 0.5);
+  box-shadow: var(--shadow-md);
+  background: var(--bg-hover);
+  border-color: var(--border-color-hover);
 }
-.theme-language-buttons .lang-select--inline .lang-select-trigger svg {
-  color: var(--text-primary, #ffffff);
+.theme-language-buttons .lang-select--inline .lang-select-trigger svg,
+.theme-language-buttons .lang-select--inline .lang-select-trigger .lang-select-label,
+.theme-language-buttons .lang-select--inline .lang-select-trigger .lang-select-chevron {
+  color: var(--text-primary);
 }
 .theme-language-buttons .lang-select--inline .lang-select-dropdown {
   top: 100%;
@@ -4324,6 +4326,133 @@ input[type="search"]::placeholder {
   }
 }
 
+/* Disputas pendientes */
+.pending-disputes-section.dashboard-pending-disputes {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 2px solid rgba(239, 68, 68, 0.3);
+}
+
+.pending-disputes-section.dashboard-pending-disputes h2 {
+  margin: 0;
+  color: #ef4444;
+}
+
+.dashboard-dispute-icon {
+  color: #ef4444;
+  font-size: 24px;
+}
+
+.dashboard-pending-dispute-item {
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.dashboard-pending-dispute-item h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+.dashboard-dispute-reason {
+  margin: 0.5rem 0;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+/* Utilidades dashboard (ambos temas) */
+.dashboard-filter-active {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.dashboard-muted-text {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.dashboard-filter-chip {
+  padding: 0.25rem 0.75rem;
+  border-radius: 50px;
+  font-size: 0.85rem;
+  background: rgba(16, 221, 136, 0.15);
+  border: 1px solid rgba(16, 221, 136, 0.35);
+  color: var(--primary-blue);
+}
+
+.dashboard-filter-clear {
+  padding: 0.25rem 0.75rem;
+  border-radius: 50px;
+  font-size: 0.85rem;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #ef4444;
+  cursor: pointer;
+}
+
+.dashboard-results-count {
+  margin-top: 1rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.dashboard-empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-secondary);
+}
+
+.dashboard-error-banner {
+  padding: 1rem;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+  color: #ef4444;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.dashboard-pagination {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  align-items: center;
+}
+
+.dashboard-pagination-label {
+  padding: 0.5rem 1rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.dashboard-pagination-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.dashboard-pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dashboard-private-muted {
+  color: var(--text-secondary);
+}
+
 /* ===== ESTILOS ESPECÍFICOS PARA MODO CLARO - NOTIFICACIONES ===== */
 :root[data-theme="light"] .notifications-container {
   background: #ffffff !important;
@@ -4385,22 +4514,17 @@ input[type="search"]::placeholder {
   background: #e2e8f0 !important;
 }
 
-/* Iconos negros en modo claro para mejor visibilidad */
-:root[data-theme="light"] .dashboard svg,
-:root[data-theme="light"] .dashboard-sidebar svg,
-:root[data-theme="light"] .dashboard-main svg {
-  color: #000000;
+/* Iconos en modo claro: heredan del contenedor (evita romper botones con gradiente) */
+:root[data-theme="light"] .sidebar-nav li svg {
+  color: currentColor;
 }
 
-/* Mantener colores específicos para iconos activos y especiales en modo claro */
 :root[data-theme="light"] .sidebar-nav li.active svg {
   color: var(--primary-blue);
 }
 
-/* Esta regla fue eliminada - los iconos de stats del dashboard ahora son negros en modo claro y blancos en modo oscuro */
-
 :root[data-theme="light"] .notification-button svg {
-  color: #000000;
+  color: currentColor;
 }
 
 :root[data-theme="light"] .logout-button svg {

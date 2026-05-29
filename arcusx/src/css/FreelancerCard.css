@@ -449,6 +449,50 @@
   background: rgba(16,185,129,0.18);
 }
 
+/* Modo claro */
+:root[data-theme="light"] .freelancer-sub-row,
+:root[data-theme="light"] .metric-label {
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="light"] .metric-value {
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme="light"] .freelancer-wallet,
+:root[data-theme="light"] .freelancer-badge {
+  background: var(--bg-tertiary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme="light"] .freelancer-metric {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+:root[data-theme="light"] .skill-chip {
+  background: var(--bg-tertiary) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme="light"] .skill-chip.more {
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="light"] .freelancer-hire-btn {
+  background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+  border: none !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme="light"] .freelancer-hire-btn:hover {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+  color: #ffffff !important;
+  box-shadow: var(--shadow-blue) !important;
+}
+
 @media (max-width: 900px){
   .freelancer-card-horizontal{
     flex-direction:column;

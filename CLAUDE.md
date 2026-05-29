@@ -10,6 +10,7 @@ ArcusX is a decentralized freelancing platform on the Stellar blockchain. The re
 - **`backend_externo/`** — PHP REST API with MySQL (authentication, task management, escrow coordination)
 - **`CertiX/`** — Next.js 14 app for blockchain-based verifiable certifications (separate product)
 - **`Miraes/`** — Separate project (minimal, standalone)
+- **`docs/escrow-native/`** — Escrow nativo Soroban (Edge Supabase + WASM en `contracts/arcusx-escrow/`). **Todo el sistema escrow nuevo vive solo en esta carpeta.**
 
 There are **no automated tests** in any sub-project. `npm run lint` is the only automated code-quality check.
 
@@ -32,6 +33,12 @@ npm run deploy:stellar  # Deploy Stellar escrow contract (tsx scripts/)
 cd backend_externo
 composer install     # Install PHP dependencies (Firebase JWT)
 # Serve via a local PHP server or configure Apache/Nginx pointing to this directory
+```
+
+### Escrow nativo (Soroban)
+```bash
+cd docs/escrow-native/contracts/arcusx-escrow
+cargo test           # Tests del contrato WASM
 ```
 
 ### CertiX

@@ -22,13 +22,7 @@ arcusx_cors_apply('GET, OPTIONS');
 header('Content-Type: application/json; charset=UTF-8');
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $loggedInUserId = arcusx_jwt_user_id();
-
-    if ($loggedInUserId === null) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'Acceso no autorizado: Token JWT no proporcionado o inválido.']);
-        exit;
-    }
+    $loggedInUserId = arcusx_require_user_id();
 
     try {
         // Verificar si el usuario ya tiene una wallet registrada

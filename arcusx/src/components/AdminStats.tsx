@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaChartLine, FaCoins, FaUsers, FaExclamationTriangle, FaCheckCircle, FaWallet, FaGavel, FaCog, FaShieldAlt, FaLink, FaSpinner } from 'react-icons/fa';
+import { FaChartLine, FaCoins, FaUsers, FaUserPlus, FaExclamationTriangle, FaCheckCircle, FaWallet, FaGavel, FaCog, FaShieldAlt, FaLink, FaSpinner } from 'react-icons/fa';
 import { PLATFORM_WALLET, ADMIN_WALLET, TRUSTLESS_WORK_BASE_URL } from '../config/trustlessWork';
 import { useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks';
 import { getAdminTasks } from '../services/adminService';
@@ -21,6 +21,8 @@ interface AdminStatsProps {
     feesThisWeek?: number;
     volumeToday?: number;
     feesToday?: number;
+    totalUsers?: number;
+    totalReferralUsers?: number;
   } | null;
   onRefresh: () => void;
   loading: boolean;
@@ -153,6 +155,22 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
   };
 
   const statsCards = [
+    {
+      title: 'Usuarios en la plataforma',
+      value: stats?.totalUsers ?? 0,
+      icon: <FaUsers />,
+      color: '#3b82f6',
+      description: 'Total exacto en base de datos (MySQL)',
+      trend: null,
+    },
+    {
+      title: 'Registros por referido',
+      value: stats?.totalReferralUsers ?? 0,
+      icon: <FaUserPlus />,
+      color: '#10dd88',
+      description: 'Invitados válidos (status valid, todos los tiempos)',
+      trend: 'Ver detalle por afiliado en pestaña Referidos',
+    },
     {
       title: 'Total Escrows',
       value: stats?.totalEscrows || 0,
@@ -310,9 +328,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
         <div className="escrows-status-section" style={{
           marginTop: '30px',
           padding: '20px',
-          backgroundColor: 'rgba(255, 255, 255, 0.03)',
           borderRadius: '12px',
-          border: '1px solid rgba(255, 255, 255, 0.1)'
         }}>
           <h3 style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <FaCheckCircle style={{ color: '#10b981' }} />
@@ -332,7 +348,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
               <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#10b981' }}>
                 {escrowsStats.activeCount}
               </div>
-              <div style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', marginTop: '5px' }}>
+              <div className="escrows-status-label" style={{ fontSize: '14px', marginTop: '5px' }}>
                 Escrows Activos
               </div>
             </div>
@@ -345,7 +361,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
               <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#10b981' }}>
                 {formatCurrency(escrowsStats.totalBalance)}
               </div>
-              <div style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', marginTop: '5px' }}>
+              <div className="escrows-status-label" style={{ fontSize: '14px', marginTop: '5px' }}>
                 Balance Total Bloqueado
               </div>
             </div>
@@ -358,7 +374,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
               <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#3b82f6' }}>
                 {escrowsStats.completedCount}
               </div>
-              <div style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', marginTop: '5px' }}>
+              <div className="escrows-status-label" style={{ fontSize: '14px', marginTop: '5px' }}>
                 Escrows Completados
               </div>
             </div>
@@ -372,7 +388,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ef4444' }}>
                   {escrowsStats.disputedCount}
                 </div>
-                <div style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', marginTop: '5px' }}>
+                <div className="escrows-status-label" style={{ fontSize: '14px', marginTop: '5px' }}>
                   Escrows en Disputa
                 </div>
               </div>
@@ -387,7 +403,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#f59e0b' }}>
                   {escrowsStats.inconsistencies}
                 </div>
-                <div style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', marginTop: '5px' }}>
+                <div className="escrows-status-label" style={{ fontSize: '14px', marginTop: '5px' }}>
                   Inconsistencias Detectadas
                 </div>
               </div>

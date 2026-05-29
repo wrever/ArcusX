@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import axios from 'axios'; // Importar axios
+import axios from '../config/axios';
 import { API_URL } from '../config/database'; // Asegúrate de que la ruta a tu config.js es correcta
 import { hasSupabase } from '../config/supabase';
 import {
@@ -2618,7 +2618,7 @@ const SuperviseTask = () => {
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    backgroundColor: 'var(--overlay)',
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
@@ -2632,14 +2632,14 @@ const SuperviseTask = () => {
                     }
                 }}>
                     <div style={{
-                        backgroundColor: 'rgba(10, 10, 10, 0.98)',
+                        backgroundColor: 'var(--bg-card)',
                         borderRadius: '20px',
                         padding: '32px',
                         maxWidth: '600px',
                         width: '90%',
                         maxHeight: '90vh',
                         overflowY: 'auto',
-                        border: '2px solid rgba(16, 221, 136, 0.3)',
+                        border: '2px solid var(--border-color-active)',
                         boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
                     }} onClick={(e) => e.stopPropagation()}>
                         <div style={{
@@ -2650,7 +2650,7 @@ const SuperviseTask = () => {
                         }}>
                             <h2 style={{
                                 margin: 0,
-                                color: '#fff',
+                                color: 'var(--text-primary)',
                                 fontSize: '24px',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -2671,7 +2671,7 @@ const SuperviseTask = () => {
                                 style={{
                                     background: 'none',
                                     border: 'none',
-                                    color: '#fff',
+                                    color: 'var(--text-primary)',
                                     fontSize: '28px',
                                     cursor: creatingDispute ? 'not-allowed' : 'pointer',
                                     opacity: creatingDispute ? 0.5 : 1,
@@ -2696,7 +2696,7 @@ const SuperviseTask = () => {
                             marginBottom: '24px'
                         }}>
                             <h3 style={{
-                                color: '#fff',
+                                color: 'var(--text-primary)',
                                 fontSize: '18px',
                                 fontWeight: '600',
                                 marginTop: 0,
@@ -2709,7 +2709,7 @@ const SuperviseTask = () => {
                                 ¿Tienes un problema con esta tarea?
                             </h3>
                             <p style={{
-                                color: 'rgba(255, 255, 255, 0.9)',
+                                color: 'var(--text-secondary)',
                                 marginBottom: 0,
                                 lineHeight: '1.7',
                                 fontSize: '15px'
@@ -2734,7 +2734,7 @@ const SuperviseTask = () => {
                         <div style={{ marginBottom: '24px' }}>
                             <label style={{
                                 display: 'block',
-                                color: '#fff',
+                                color: 'var(--text-primary)',
                                 marginBottom: '8px',
                                 fontWeight: '600',
                                 fontSize: '14px'
@@ -2753,10 +2753,10 @@ const SuperviseTask = () => {
                                     width: '100%',
                                     minHeight: '150px',
                                     padding: '12px',
-                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                    border: '2px solid rgba(16, 221, 136, 0.3)',
+                                    backgroundColor: 'var(--bg-tertiary)',
+                                    border: '2px solid var(--border-color-active)',
                                     borderRadius: '8px',
-                                    color: '#fff',
+                                    color: 'var(--text-primary)',
                                     fontSize: '14px',
                                     fontFamily: 'inherit',
                                     resize: 'vertical',
@@ -2765,16 +2765,16 @@ const SuperviseTask = () => {
                                 }}
                                 onFocus={(e) => {
                                     e.currentTarget.style.borderColor = '#10dd88';
-                                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
+                                    e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
                                 }}
                                 onBlur={(e) => {
                                     e.currentTarget.style.borderColor = 'rgba(16, 221, 136, 0.3)';
-                                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                                    e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
                                 }}
                             />
                             <p style={{
                                 marginTop: '8px',
-                                color: 'rgba(255, 255, 255, 0.6)',
+                                color: 'var(--text-muted)',
                                 fontSize: '12px'
                             }}>
                                 Mínimo 10 caracteres. {disputeReason.length}/10
@@ -2797,10 +2797,10 @@ const SuperviseTask = () => {
                                 disabled={creatingDispute}
                                 style={{
                                     padding: '12px 24px',
-                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                                    backgroundColor: 'var(--bg-tertiary)',
+                                    border: '1px solid var(--border-color)',
                                     borderRadius: '8px',
-                                    color: '#fff',
+                                    color: 'var(--text-primary)',
                                     fontSize: '15px',
                                     fontWeight: '600',
                                     cursor: creatingDispute ? 'not-allowed' : 'pointer',
@@ -2809,11 +2809,11 @@ const SuperviseTask = () => {
                                 }}
                                 onMouseOver={(e) => {
                                     if (!creatingDispute) {
-                                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                                        e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
                                     }
                                 }}
                                 onMouseOut={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                                    e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
                                 }}
                             >
                                 {t('common.cancel')}
@@ -2826,7 +2826,7 @@ const SuperviseTask = () => {
                                     backgroundColor: creatingDispute || disputeReason.trim().length < 10 ? 'rgba(255, 152, 0, 0.5)' : '#ff9800',
                                     border: 'none',
                                     borderRadius: '8px',
-                                    color: '#fff',
+                                    color: 'var(--text-primary)',
                                     fontSize: '15px',
                                     fontWeight: '600',
                                     cursor: creatingDispute || disputeReason.trim().length < 10 ? 'not-allowed' : 'pointer',
@@ -2909,14 +2909,14 @@ const SuperviseTask = () => {
                         </h3>
                         <div style={{
                             marginBottom: '30px',
-                            color: 'rgba(255, 255, 255, 0.9)',
+                            color: 'var(--text-secondary)',
                             lineHeight: '1.6'
                         }}>
                             <p style={{ 
                                 fontSize: '18px', 
                                 marginBottom: '15px', 
                                 fontWeight: '500',
-                                color: 'rgba(255, 255, 255, 0.8)'
+                                color: 'var(--text-secondary)'
                             }}>
                                 {t('supervise.popup.paidWorkerAllGood')}
                             </p>
@@ -2928,16 +2928,16 @@ const SuperviseTask = () => {
                                 textAlign: 'left',
                                 border: '1px solid rgba(16, 221, 136, 0.2)'
                             }}>
-                                <p style={{ margin: '8px 0', fontSize: '16px', color: '#fff' }}>
+                                <p style={{ margin: '8px 0', fontSize: '16px', color: 'var(--text-primary)' }}>
                                     <strong style={{ color: '#10dd88' }}> {t('supervise.popup.totalPaid')}</strong> {paymentSuccessData.amount} USDC
                                 </p>
-                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'var(--text-muted)' }}>
                                     <strong style={{ color: '#10dd88', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><FaDollarSign /> {t('supervise.popup.workerReceives')}</strong> {paymentSuccessData.netAmount} USDC
                                 </p>
-                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'var(--text-muted)' }}>
                                     <strong style={{ color: '#10dd88' }}> {t('supervise.popup.platformCommission')}</strong> {(parseFloat(paymentSuccessData.amount) - parseFloat(paymentSuccessData.netAmount || '0')).toFixed(7)} USDC
                                 </p>
-                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'var(--text-muted)' }}>
                                     <strong style={{ color: '#10dd88' }}> {t('supervise.popup.txHash')}</strong>
                                 </p>
                                 <code style={{
@@ -2953,7 +2953,7 @@ const SuperviseTask = () => {
                                 }}>
                                     {paymentSuccessData.txHash}
                                 </code>
-                                <p style={{ margin: '15px 0 0 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic' }}>
+                                <p style={{ margin: '15px 0 0 0', fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
                                     ⏰ {t('supervise.popup.taskDeleted24h')}
                                 </p>
                             </div>
@@ -2966,7 +2966,7 @@ const SuperviseTask = () => {
                                 }}
                                 style={{
                                     background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
-                                    color: '#fff',
+                                    color: 'var(--text-primary)',
                                     border: 'none',
                                     padding: '14px 32px',
                                     borderRadius: '10px',
@@ -2996,9 +2996,9 @@ const SuperviseTask = () => {
                                     navigate('/dashboard');
                                 }}
                                 style={{
-                                    background: 'rgba(255, 255, 255, 0.1)',
-                                    color: '#fff',
-                                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                                    background: 'var(--bg-tertiary)',
+                                    color: 'var(--text-primary)',
+                                    border: '1px solid var(--border-color)',
                                     padding: '14px 32px',
                                     borderRadius: '10px',
                                     fontSize: '16px',
@@ -3008,11 +3008,11 @@ const SuperviseTask = () => {
                                     minWidth: '200px'
                                 }}
                                 onMouseOver={(e) => {
-                                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                                    e.currentTarget.style.background = 'var(--bg-hover)';
                                     e.currentTarget.style.transform = 'translateY(-2px)';
                                 }}
                                 onMouseOut={(e) => {
-                                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                                    e.currentTarget.style.background = 'var(--bg-tertiary)';
                                     e.currentTarget.style.transform = 'translateY(0)';
                                 }}
                             >
@@ -3069,14 +3069,14 @@ const SuperviseTask = () => {
                         </h3>
                         <div style={{
                             marginBottom: '30px',
-                            color: 'rgba(255, 255, 255, 0.9)',
+                            color: 'var(--text-secondary)',
                             lineHeight: '1.6'
                         }}>
                             <p style={{ 
                                 fontSize: '18px', 
                                 marginBottom: '15px', 
                                 fontWeight: '500',
-                                color: 'rgba(255, 255, 255, 0.8)'
+                                color: 'var(--text-secondary)'
                             }}>
                                 {t('supervise.popup.receivedCorrectly')}
                             </p>
@@ -3088,15 +3088,15 @@ const SuperviseTask = () => {
                                 textAlign: 'left',
                                 border: '1px solid rgba(16, 221, 136, 0.2)'
                             }}>
-                                <p style={{ margin: '8px 0', fontSize: '16px', color: '#fff' }}>
+                                <p style={{ margin: '8px 0', fontSize: '16px', color: 'var(--text-primary)' }}>
                                     <strong style={{ color: '#10dd88' }}> {t('supervise.popup.amountReceived')}</strong> {paymentSuccessData.netAmount || paymentSuccessData.amount} USDC
                                 </p>
                                 {paymentSuccessData.netAmount && (
-                                    <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                    <p style={{ margin: '8px 0', fontSize: '14px', color: 'var(--text-muted)' }}>
                                         <strong style={{ color: '#10dd88' }}> {t('supervise.popup.totalAmountAfterCommission')}</strong> {paymentSuccessData.amount} USDC ({t('supervise.afterCommission')})
                                     </p>
                                 )}
-                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'var(--text-muted)' }}>
                                     <strong style={{ color: '#10dd88' }}> {t('supervise.popup.txHash')}</strong>
                                 </p>
                                 <code style={{
@@ -3112,7 +3112,7 @@ const SuperviseTask = () => {
                                 }}>
                                     {paymentSuccessData.txHash}
                                 </code>
-                                <p style={{ margin: '15px 0 0 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic' }}>
+                                <p style={{ margin: '15px 0 0 0', fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
                                     ⏰ {t('supervise.popup.taskDeleted24h')}
                                 </p>
                             </div>
@@ -3125,7 +3125,7 @@ const SuperviseTask = () => {
                                 }}
                                 style={{
                                     background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
-                                    color: '#fff',
+                                    color: 'var(--text-primary)',
                                     border: 'none',
                                     padding: '14px 32px',
                                     borderRadius: '10px',
@@ -3155,9 +3155,9 @@ const SuperviseTask = () => {
                                     navigate('/dashboard');
                                 }}
                                 style={{
-                                    background: 'rgba(255, 255, 255, 0.1)',
-                                    color: '#fff',
-                                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                                    background: 'var(--bg-tertiary)',
+                                    color: 'var(--text-primary)',
+                                    border: '1px solid var(--border-color)',
                                     padding: '14px 32px',
                                     borderRadius: '10px',
                                     fontSize: '16px',
@@ -3167,11 +3167,11 @@ const SuperviseTask = () => {
                                     minWidth: '200px'
                                 }}
                                 onMouseOver={(e) => {
-                                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                                    e.currentTarget.style.background = 'var(--bg-hover)';
                                     e.currentTarget.style.transform = 'translateY(-2px)';
                                 }}
                                 onMouseOut={(e) => {
-                                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                                    e.currentTarget.style.background = 'var(--bg-tertiary)';
                                     e.currentTarget.style.transform = 'translateY(0)';
                                 }}
                             >
@@ -3228,14 +3228,14 @@ const SuperviseTask = () => {
                         </h3>
                         <div style={{
                             marginBottom: '30px',
-                            color: 'rgba(255, 255, 255, 0.9)',
+                            color: 'var(--text-secondary)',
                             lineHeight: '1.6'
                         }}>
                             <p style={{ 
                                 fontSize: '18px', 
                                 marginBottom: '15px', 
                                 fontWeight: '500',
-                                color: 'rgba(255, 255, 255, 0.8)'
+                                color: 'var(--text-secondary)'
                             }}>
                                 Para recibir tu reembolso, debes firmar la transacción con tu wallet Stellar
                             </p>
@@ -3247,13 +3247,13 @@ const SuperviseTask = () => {
                                 textAlign: 'left',
                                 border: '1px solid rgba(16, 221, 136, 0.2)'
                             }}>
-                                <p style={{ margin: '8px 0', fontSize: '16px', color: '#fff' }}>
+                                <p style={{ margin: '8px 0', fontSize: '16px', color: 'var(--text-primary)' }}>
                                     <strong style={{ color: '#10dd88' }}> {t('supervise.popup.refundAmount')}</strong> {refundTransaction.refundAmount.toFixed(7)} USDC
                                 </p>
-                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'var(--text-muted)' }}>
                                     <strong style={{ color: '#10dd88', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><FaMapMarkerAlt aria-hidden="true" /> {t('supervise.popup.yourAddress')}</strong> {address?.slice(0, 6)}...{address?.slice(-4)}
                                 </p>
-                                <p style={{ margin: '8px 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic' }}>
+                                <p style={{ margin: '8px 0', fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
                                      {t('supervise.popup.signRefundNote')}
                                 </p>
                             </div>
@@ -3280,9 +3280,9 @@ const SuperviseTask = () => {
                                 }}
                                 disabled={cancellingTask}
                                 style={{
-                                    background: 'rgba(255, 255, 255, 0.1)',
-                                    color: '#fff',
-                                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                                    background: 'var(--bg-tertiary)',
+                                    color: 'var(--text-primary)',
+                                    border: '1px solid var(--border-color)',
                                     padding: '14px 32px',
                                     borderRadius: '10px',
                                     fontSize: '16px',
@@ -3300,7 +3300,7 @@ const SuperviseTask = () => {
                                 disabled={cancellingTask || !isConnected || !kit}
                                 style={{
                                     background: cancellingTask || !isConnected || !kit ? 'rgba(16, 221, 136, 0.5)' : 'linear-gradient(90deg, #10dd88, #0ab86a)',
-                                    color: '#fff',
+                                    color: 'var(--text-primary)',
                                     border: 'none',
                                     padding: '14px 32px',
                                     borderRadius: '10px',
@@ -3392,14 +3392,14 @@ const SuperviseTask = () => {
                         </h3>
                         <div style={{
                             marginBottom: '30px',
-                            color: 'rgba(255, 255, 255, 0.9)',
+                            color: 'var(--text-secondary)',
                             lineHeight: '1.6'
                         }}>
                             <p style={{ 
                                 fontSize: '18px', 
                                 marginBottom: '15px', 
                                 fontWeight: '500',
-                                color: 'rgba(255, 255, 255, 0.9)'
+                                color: 'var(--text-secondary)'
                             }}>
                                 {refundNotificationMessage}
                             </p>
@@ -3411,14 +3411,14 @@ const SuperviseTask = () => {
                                 textAlign: 'left',
                                 border: '1px solid rgba(16, 221, 136, 0.2)'
                             }}>
-                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.8)' }}>
+                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'var(--text-secondary)' }}>
                                     <strong style={{ color: '#10dd88' }}> {t('supervise.popup.nextSteps')}</strong>
                                 </p>
                                 <ul style={{ 
                                     margin: '10px 0', 
                                     paddingLeft: '20px', 
                                     fontSize: '14px', 
-                                    color: 'rgba(255, 255, 255, 0.7)',
+                                    color: 'var(--text-muted)',
                                     lineHeight: '1.8'
                                 }}>
                                     <li>{t('supervise.refund.bullet1')}</li>
@@ -3435,7 +3435,7 @@ const SuperviseTask = () => {
                                 }}
                                 style={{
                                     background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
-                                    color: '#fff',
+                                    color: 'var(--text-primary)',
                                     border: 'none',
                                     padding: '14px 32px',
                                     borderRadius: '10px',
@@ -3510,14 +3510,14 @@ const SuperviseTask = () => {
                         </h3>
                         <div style={{
                             marginBottom: '30px',
-                            color: 'rgba(255, 255, 255, 0.9)',
+                            color: 'var(--text-secondary)',
                             lineHeight: '1.6'
                         }}>
                             <p style={{ 
                                 fontSize: '18px', 
                                 marginBottom: '15px', 
                                 fontWeight: '500',
-                                color: 'rgba(255, 255, 255, 0.8)'
+                                color: 'var(--text-secondary)'
                             }}>
                                 {t('supervise.popup.disputeRegistered')}
                             </p>
@@ -3530,7 +3530,7 @@ const SuperviseTask = () => {
                                     textAlign: 'left',
                                     border: '1px solid rgba(16, 221, 136, 0.2)'
                                 }}>
-                                    <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                    <p style={{ margin: '8px 0', fontSize: '14px', color: 'var(--text-muted)' }}>
                                         <strong style={{ color: '#10dd88' }}> {t('supervise.popup.txHash')}</strong>
                                     </p>
                                     <code style={{
@@ -3557,7 +3557,7 @@ const SuperviseTask = () => {
                                 }}
                                 style={{
                                     background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
-                                    color: '#fff',
+                                    color: 'var(--text-primary)',
                                     border: 'none',
                                     padding: '14px 32px',
                                     borderRadius: '10px',
@@ -3594,7 +3594,7 @@ const SuperviseTask = () => {
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    backgroundColor: 'var(--overlay)',
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',

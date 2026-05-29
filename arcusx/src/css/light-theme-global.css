@@ -1,0 +1,255 @@
+/**
+ * Correcciones globales modo claro — contraste y colores sin rastros del tema oscuro.
+ */
+
+/* --- Botones volver (texto oscuro sobre fondo claro) --- */
+:root[data-theme="light"] .back-button,
+:root[data-theme="light"] .back-button span,
+:root[data-theme="light"] .back-button svg {
+  color: #0f172a !important;
+}
+
+:root[data-theme="light"] .back-button {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+:root[data-theme="light"] .back-button:hover,
+:root[data-theme="light"] .back-button:hover span,
+:root[data-theme="light"] .back-button:hover svg {
+  color: var(--primary-blue) !important;
+  background: var(--bg-hover) !important;
+  border-color: var(--border-color-hover) !important;
+}
+
+/* Apply task: botón primario azul con texto blanco */
+:root[data-theme="light"] .apply-task-container .back-button,
+:root[data-theme="light"] .apply-task-container .back-button span,
+:root[data-theme="light"] .apply-task-container .back-button svg {
+  color: #ffffff !important;
+  background: linear-gradient(90deg, #3b82f6, #2563eb) !important;
+  border-color: transparent !important;
+}
+
+:root[data-theme="light"] .apply-task-container .back-button:hover,
+:root[data-theme="light"] .apply-task-container .back-button:hover span,
+:root[data-theme="light"] .apply-task-container .back-button:hover svg {
+  color: #ffffff !important;
+  background: linear-gradient(90deg, #2563eb, #1d4ed8) !important;
+}
+
+/* Supervise task: pill azul */
+:root[data-theme="light"] .supervise-back-dashboard-btn,
+:root[data-theme="light"] .supervise-back-dashboard-btn span,
+:root[data-theme="light"] .supervise-back-dashboard-btn svg {
+  color: #ffffff !important;
+  background: linear-gradient(90deg, #3b82f6, #2563eb) !important;
+}
+
+/* --- Selector de idioma (header dashboard y similares) --- */
+:root[data-theme="light"] .theme-language-buttons .lang-select--inline .lang-select-trigger {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+:root[data-theme="light"] .theme-language-buttons .lang-select--inline .lang-select-trigger:hover {
+  background: var(--bg-hover) !important;
+  border-color: var(--border-color-hover) !important;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md) !important;
+}
+
+:root[data-theme="light"] .theme-language-buttons .lang-select--inline .lang-select-trigger svg,
+:root[data-theme="light"] .theme-language-buttons .lang-select--inline .lang-select-trigger .lang-select-label,
+:root[data-theme="light"] .theme-language-buttons .lang-select--inline .lang-select-trigger .lang-select-chevron {
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme="light"] .lang-select-trigger {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .lang-select-dropdown {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+  box-shadow: var(--shadow-lg);
+}
+
+:root[data-theme="light"] .lang-select-option {
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .lang-select-option:hover {
+  background: var(--bg-hover);
+}
+
+/* --- Wallet (texto blanco !important del modo oscuro) --- */
+:root[data-theme="light"] .wallet-button,
+:root[data-theme="light"] .wallet-button.connected,
+:root[data-theme="light"] .wallet-button.disconnected {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+:root[data-theme="light"] .wallet-button.connected {
+  background: rgba(59, 130, 246, 0.08) !important;
+  border-color: rgba(59, 130, 246, 0.35) !important;
+}
+
+:root[data-theme="light"] .wallet-button:hover,
+:root[data-theme="light"] .wallet-button.connected:hover {
+  background: var(--bg-hover) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+:root[data-theme="light"] .wallet-button svg,
+:root[data-theme="light"] .wallet-button .wallet-address,
+:root[data-theme="light"] .wallet-button span,
+:root[data-theme="light"] .wallet-button .wallet-type-badge,
+:root[data-theme="light"] .wallet-button .spinner {
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme="light"] .wallet-button .wallet-type-badge {
+  background: var(--bg-tertiary) !important;
+}
+
+/* --- Filtros dashboard (evitar background shorthand que repite la flecha) --- */
+:root[data-theme="light"] .filter-select,
+:root[data-theme="light"] .search-input,
+:root[data-theme="light"] input[type="text"].search-input,
+:root[data-theme="light"] input[type="search"] {
+  background-color: var(--input-background);
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 16px;
+  color: var(--text-primary);
+  border: 1px solid var(--input-border);
+}
+
+:root[data-theme="light"] .filter-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+}
+
+:root[data-theme="light"] .filter-select:hover,
+:root[data-theme="light"] .filter-select:focus {
+  background-color: var(--bg-hover);
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 16px;
+}
+
+:root[data-theme="light"] .filter-select:focus {
+  background-color: var(--bg-primary);
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+:root[data-theme="light"] .search-input:focus,
+:root[data-theme="light"] input[type="text"].search-input:focus,
+:root[data-theme="light"] input[type="search"]:focus {
+  background-color: var(--bg-primary);
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* --- Propuestas: botón Seleccionar legible --- */
+:root[data-theme="light"] .proposal-review-container .select-button,
+:root[data-theme="light"] .proposal-review-container .action-button.select-button {
+  background: linear-gradient(90deg, #3b82f6, #2563eb) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+:root[data-theme="light"] .proposal-review-container .select-button svg,
+:root[data-theme="light"] .proposal-review-container .select-button span {
+  color: #ffffff !important;
+}
+
+:root[data-theme="light"] .proposal-review-container .select-button:hover {
+  box-shadow: var(--shadow-blue) !important;
+}
+
+/* Avatar verde → azul en claro */
+:root[data-theme="light"] .applicant-avatar {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+/* Badge pendiente: azul suave en claro */
+:root[data-theme="light"] .status-badge.pending {
+  background: rgba(59, 130, 246, 0.15) !important;
+  color: #1d4ed8 !important;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+}
+
+/* Botones genéricos: no heredar fondo oscuro de index.css si son primarios */
+:root[data-theme="light"] button.primary-button,
+:root[data-theme="light"] button.btn-primary,
+:root[data-theme="light"] .btn-primary {
+  color: #ffffff !important;
+}
+
+/* Texto sobre fondos claros — forzar legibilidad */
+:root[data-theme="light"] .dashboard-main p,
+:root[data-theme="light"] .tasks-container p,
+:root[data-theme="light"] .proposal-review-container .proposal-message p {
+  color: var(--text-secondary);
+}
+
+:root[data-theme="light"] .dashboard-main h1,
+:root[data-theme="light"] .dashboard-main h2,
+:root[data-theme="light"] .dashboard-main h3,
+:root[data-theme="light"] .proposal-review-container h1,
+:root[data-theme="light"] .proposal-review-container h2,
+:root[data-theme="light"] .proposal-review-container h3 {
+  color: var(--text-primary);
+}
+
+/* Popup / ConfirmDialog — acabado modo claro */
+:root[data-theme="light"] .popup-title {
+  color: var(--primary-blue);
+}
+
+:root[data-theme="light"] .popup-message {
+  color: var(--text-secondary);
+}
+
+:root[data-theme="light"] .confirm-dialog-icon.info {
+  color: var(--primary-blue);
+}
+
+:root[data-theme="light"] .confirm-dialog-button-info {
+  background: linear-gradient(90deg, #3b82f6, #2563eb) !important;
+  color: #ffffff !important;
+  box-shadow: var(--shadow-blue) !important;
+}
+
+:root[data-theme="light"] .dashboard-pagination-label {
+  color: var(--text-secondary);
+}
+
+:root[data-theme="light"] .dashboard-pagination-btn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .dashboard-pagination-btn:disabled {
+  opacity: 0.5;
+}
+
+:root[data-theme="light"] .dashboard-private-muted {
+  color: var(--text-secondary);
+}
+
+:root[data-theme="light"] .supervise-task-container .supervise-back-dashboard-btn {
+  background: linear-gradient(90deg, #3b82f6, #2563eb) !important;
+  color: #ffffff !important;
+}

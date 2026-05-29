@@ -503,3 +503,37 @@
 :root[data-theme="light"] .swap-no-liquidity-suggestion {
   color: var(--text-secondary);
 }
+
+:root[data-theme="light"] .swap-icon-button {
+  background: #ffffff !important;
+  border: 2px solid var(--primary-blue) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+:root[data-theme="light"] .swap-icon-symbol {
+  color: var(--primary-blue) !important;
+}
+
+:root[data-theme="light"] .swap-icon-button:hover:not(:disabled) {
+  background: var(--primary-blue) !important;
+  border-color: var(--primary-blue) !important;
+}
+
+:root[data-theme="light"] .swap-icon-button:hover:not(:disabled) .swap-icon-symbol {
+  color: #ffffff !important;
+}
+
+:root[data-theme="light"] .swap-action-container .wallet-button {
+  background: linear-gradient(90deg, #3b82f6, #2563eb) !important;
+  color: #ffffff !important;
+  box-shadow: var(--shadow-blue) !important;
+}
+
+:root[data-theme="light"] .swap-action-container .wallet-button svg,
+:root[data-theme="light"] .swap-action-container .wallet-button span {
+  color: #ffffff !important;
+}
+
+:root[data-theme="light"] .swap-button.enabled {
+  color: #ffffff !important;
+}

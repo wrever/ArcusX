@@ -1,0 +1,465 @@
+/**
+ * Week 3 — Dashboard light theme (no dark-mode color remnants).
+ * Load after dashboard.css.
+ */
+
+:root[data-theme="light"] .dashboard {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .dashboard-sidebar {
+  background: var(--bg-primary);
+  border-right: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+:root[data-theme="light"] .sidebar-header,
+:root[data-theme="light"] .sidebar-user,
+:root[data-theme="light"] .sidebar-footer {
+  border-color: var(--border-color);
+}
+
+:root[data-theme="light"] .sidebar-logo img {
+  filter: none;
+}
+
+:root[data-theme="light"] .sidebar-nav li {
+  color: var(--text-secondary);
+}
+
+:root[data-theme="light"] .sidebar-nav li:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .sidebar-nav li.active {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--primary-blue);
+  border-left-color: var(--primary-blue);
+}
+
+:root[data-theme="light"] .level-progress {
+  background: var(--bg-tertiary);
+}
+
+:root[data-theme="light"] .dashboard-main {
+  background: var(--bg-secondary);
+}
+
+:root[data-theme="light"] .dashboard-header h1,
+:root[data-theme="light"] .tasks-header h2 {
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .notification-button {
+  color: var(--text-secondary);
+}
+
+:root[data-theme="light"] .notification-button:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .notification-button.active {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--primary-blue);
+}
+
+:root[data-theme="light"] .notification-badge {
+  border-color: var(--bg-primary);
+  color: #fff;
+}
+
+:root[data-theme="light"] .notification-dropdown {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+  box-shadow: var(--shadow-lg);
+}
+
+:root[data-theme="light"] .notification-dropdown-header,
+:root[data-theme="light"] .notification-dropdown-item {
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+:root[data-theme="light"] .notification-dropdown-item:hover {
+  background: var(--bg-hover);
+}
+
+:root[data-theme="light"] .stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+:root[data-theme="light"] .stat-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-color-hover);
+  background: var(--bg-card);
+}
+
+:root[data-theme="light"] .stat-icon {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--primary-blue);
+}
+
+:root[data-theme="light"] .stat-info h3 {
+  color: var(--text-muted);
+}
+
+:root[data-theme="light"] .stat-info p {
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .tasks-container,
+:root[data-theme="light"] .filter-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+:root[data-theme="light"] .filters-toggle {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .filters-toggle:hover {
+  background: var(--bg-hover);
+}
+
+:root[data-theme="light"] .filter-container input[type="text"],
+:root[data-theme="light"] .filter-container input[type="number"] {
+  background-color: var(--input-background);
+  border: 1px solid var(--input-border);
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .filter-container input:focus {
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  background-color: var(--bg-primary);
+}
+
+:root[data-theme="light"] .search-input::placeholder,
+:root[data-theme="light"] input::placeholder {
+  color: var(--text-muted);
+}
+
+:root[data-theme="light"] .task-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+:root[data-theme="light"] .task-card:hover {
+  background: var(--bg-card);
+  border-color: var(--border-color-hover);
+  box-shadow: var(--shadow-md);
+}
+
+:root[data-theme="light"] .task-header h3,
+:root[data-theme="light"] .task-detail strong,
+:root[data-theme="light"] .task-detail span {
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .task-description,
+:root[data-theme="light"] .task-detail label {
+  color: var(--text-secondary);
+}
+
+:root[data-theme="light"] .task-details {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+}
+
+:root[data-theme="light"] .task-difficulty.intermedio {
+  color: #1e293b;
+}
+
+:root[data-theme="light"] .logout-button {
+  border-color: var(--border-color);
+  color: var(--primary-orange);
+}
+
+:root[data-theme="light"] .logout-button:hover {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+/* Disputas pendientes (antes inline oscuro en dashboard.tsx) */
+:root[data-theme="light"] .dashboard-pending-disputes,
+:root[data-theme="light"] .pending-disputes-section.dashboard-pending-disputes {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+:root[data-theme="light"] .dashboard-pending-disputes h2,
+:root[data-theme="light"] .pending-disputes-section.dashboard-pending-disputes h2 {
+  margin: 0;
+  color: #b91c1c;
+}
+
+:root[data-theme="light"] .dashboard-dispute-icon {
+  color: #ef4444;
+  font-size: 24px;
+}
+
+:root[data-theme="light"] .dashboard-pending-disputes > p {
+  color: var(--text-secondary);
+}
+
+:root[data-theme="light"] .dashboard-pending-dispute-item {
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+
+:root[data-theme="light"] .dashboard-pending-dispute-item h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+:root[data-theme="light"] .dashboard-dispute-reason {
+  margin: 0.5rem 0;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+:root[data-theme="light"] .dashboard-pending-dispute-item h3 {
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .dashboard-pending-dispute-item p {
+  color: var(--text-secondary);
+}
+
+
+:root[data-theme="light"] .dashboard-filter-chip {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.35);
+  color: var(--primary-blue);
+}
+
+:root[data-theme="light"] .dashboard-filter-clear {
+  background: rgba(239, 68, 68, 0.08);
+  color: #b91c1c;
+}
+
+:root[data-theme="light"] .wallet-balance,
+:root[data-theme="light"] .transactions-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+:root[data-theme="light"] .wallet-balance h2,
+:root[data-theme="light"] .transactions-container h2 {
+  color: var(--text-secondary);
+}
+
+:root[data-theme="light"] .balance-amount {
+  color: var(--primary-blue);
+  -webkit-text-fill-color: var(--primary-blue);
+  background: none;
+}
+
+:root[data-theme="light"] .wallet-description {
+  color: var(--text-muted);
+}
+
+:root[data-theme="light"] .transaction-item {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+}
+
+:root[data-theme="light"] .transaction-item:hover {
+  background: var(--bg-hover);
+}
+
+:root[data-theme="light"] .task-button {
+  color: var(--on-accent, #ffffff) !important;
+  background: linear-gradient(90deg, #3b82f6, #2563eb) !important;
+}
+
+:root[data-theme="light"] .task-button:hover {
+  box-shadow: 0 6px 15px rgba(59, 130, 246, 0.35);
+}
+
+:root[data-theme="light"] .btn-primary {
+  color: var(--on-accent, #ffffff) !important;
+  background: linear-gradient(90deg, #3b82f6, #2563eb) !important;
+}
+
+:root[data-theme="light"] .btn-secondary {
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+:root[data-theme="light"] .btn-secondary:hover {
+  background: var(--bg-hover) !important;
+  border-color: var(--border-color-hover) !important;
+}
+
+:root[data-theme="light"] .task-card-progress .btn-secondary {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+:root[data-theme="light"] .mark-all-read {
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+:root[data-theme="light"] .filter-tab.active {
+  color: var(--primary-blue) !important;
+}
+
+:root[data-theme="light"] .create-task-button {
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.35);
+}
+
+:root[data-theme="light"] .create-task-button:hover {
+  background: linear-gradient(90deg, #2563eb, #1d4ed8);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.45);
+}
+
+:root[data-theme="light"] .tasks-in-progress-container,
+:root[data-theme="light"] .task-in-progress-card,
+:root[data-theme="light"] .offers-container,
+:root[data-theme="light"] .offer-card {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .dashboard-error-banner {
+  background: rgba(239, 68, 68, 0.08);
+  color: #b91c1c;
+}
+
+/* Configuración: privacidad, avatar, botones perfil */
+:root[data-theme="light"] .privacy-setting-display {
+  background: rgba(255, 243, 205, 0.6) !important;
+  border: 1px solid rgba(245, 158, 11, 0.45) !important;
+}
+
+:root[data-theme="light"] .privacy-info strong {
+  color: #92400e !important;
+}
+
+:root[data-theme="light"] .privacy-info p {
+  color: #78350f !important;
+}
+
+:root[data-theme="light"] .privacy-info svg {
+  color: #d97706 !important;
+}
+
+:root[data-theme="light"] .profile-avatar-placeholder-display {
+  background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+  color: #ffffff !important;
+  border-color: #2563eb !important;
+}
+
+:root[data-theme="light"] .edit-full-profile-button,
+:root[data-theme="light"] .edit-profile-button {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+  box-shadow: var(--shadow-blue) !important;
+}
+
+:root[data-theme="light"] .edit-full-profile-button svg,
+:root[data-theme="light"] .edit-full-profile-button span,
+:root[data-theme="light"] .edit-profile-button svg,
+:root[data-theme="light"] .edit-profile-button span {
+  color: #ffffff !important;
+  fill: currentColor !important;
+}
+
+:root[data-theme="light"] .settings-edit-section {
+  background: rgba(59, 130, 246, 0.06) !important;
+  border: 2px dashed rgba(59, 130, 246, 0.35) !important;
+}
+
+:root[data-theme="light"] .edit-hint {
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="light"] .skill-tag-preview {
+  background: rgba(59, 130, 246, 0.12) !important;
+  border: 1px solid rgba(59, 130, 246, 0.35) !important;
+  color: #1d4ed8 !important;
+}
+
+:root[data-theme="light"] .skill-tag-preview.more {
+  background: var(--bg-tertiary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="light"] .settings-info-card,
+:root[data-theme="light"] .settings-preview-card,
+:root[data-theme="light"] .profile-display-card {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+:root[data-theme="light"] .settings-info-card h3,
+:root[data-theme="light"] .settings-preview-card h3,
+:root[data-theme="light"] .settings-container h2 {
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme="light"] .info-label {
+  color: var(--text-muted) !important;
+}
+
+:root[data-theme="light"] .info-value,
+:root[data-theme="light"] .portfolio-count,
+:root[data-theme="light"] .stat-value-display {
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme="light"] .stat-label-display {
+  color: var(--text-muted) !important;
+}
+
+/* Campana de notificaciones */
+:root[data-theme="light"] .notification-button {
+  color: var(--text-secondary) !important;
+}
+
+:root[data-theme="light"] .notification-button:hover,
+:root[data-theme="light"] .notification-button.active {
+  color: var(--primary-blue) !important;
+  background: rgba(59, 130, 246, 0.1) !important;
+}
+
+:root[data-theme="light"] .notification-button svg {
+  color: currentColor !important;
+}
+
+:root[data-theme="light"] .no-notifications-icon {
+  color: var(--primary-blue) !important;
+  opacity: 0.85;
+}
+
+:root[data-theme="light"] .no-notifications h3 {
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme="light"] .no-notifications p {
+  color: var(--text-secondary) !important;
+}

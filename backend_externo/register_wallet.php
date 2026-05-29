@@ -22,13 +22,7 @@ error_log('REQUEST_URI: ' . ($_SERVER['REQUEST_URI'] ?? ''));
 error_log('ORIGIN: ' . ($_SERVER['HTTP_ORIGIN'] ?? ''));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $loggedInUserId = arcusx_jwt_user_id();
-
-    if ($loggedInUserId === null) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'Acceso no autorizado: Token JWT no proporcionado o inválido.']);
-        exit;
-    }
+    $loggedInUserId = arcusx_require_user_id();
 
     $data = json_decode(file_get_contents('php://input'), true);
 

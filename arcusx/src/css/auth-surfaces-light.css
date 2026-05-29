@@ -1,0 +1,251 @@
+/**
+ * Week 3 — light theme overrides for auth, admin login, register, admin panel, support chat.
+ * Loaded after page CSS; uses variables from themes.css.
+ */
+
+/* Login */
+:root[data-theme="light"] .login-container {
+  background: var(--bg-secondary);
+  background-image: radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(37, 99, 235, 0.08) 0%, transparent 50%);
+}
+
+:root[data-theme="light"] .login-container::before {
+  background: linear-gradient(to bottom right, rgba(248, 250, 252, 0.9), rgba(241, 245, 249, 0.5));
+}
+
+:root[data-theme="light"] .login-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-lg);
+}
+
+:root[data-theme="light"] .login-card::before {
+  background: linear-gradient(90deg, var(--primary-blue), var(--secondary-blue));
+  box-shadow: none;
+}
+
+:root[data-theme="light"] .login-header h1,
+:root[data-theme="light"] .login-header p,
+:root[data-theme="light"] .login-footer p,
+:root[data-theme="light"] .login-footer a {
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .login-footer a {
+  color: var(--primary-blue);
+}
+
+:root[data-theme="light"] .login-container .back-button,
+:root[data-theme="light"] .login-container .back-button span,
+:root[data-theme="light"] .login-container .back-button svg,
+:root[data-theme="light"] .register-container .back-button,
+:root[data-theme="light"] .register-container .back-button span,
+:root[data-theme="light"] .register-container .back-button svg {
+  color: #0f172a !important;
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+:root[data-theme="light"] .login-container .back-button:hover,
+:root[data-theme="light"] .register-container .back-button:hover {
+  color: var(--primary-blue) !important;
+  background: var(--bg-hover) !important;
+}
+
+:root[data-theme="light"] .oauth-button {
+  background: var(--bg-tertiary) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme="light"] .oauth-button:hover {
+  background: var(--bg-hover) !important;
+  border-color: var(--border-color-hover) !important;
+}
+
+:root[data-theme="light"] .oauth-button span,
+:root[data-theme="light"] .oauth-button svg {
+  color: var(--text-primary) !important;
+  fill: var(--text-primary) !important;
+}
+
+/* Register */
+:root[data-theme="light"] .register-container {
+  background: var(--bg-secondary);
+}
+
+:root[data-theme="light"] .register-container::before {
+  background: linear-gradient(to bottom right, rgba(248, 250, 252, 0.95), transparent);
+}
+
+:root[data-theme="light"] .register-content {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-lg);
+}
+
+:root[data-theme="light"] .register-left {
+  border-right: 1px solid var(--border-color);
+}
+
+:root[data-theme="light"] .register-info,
+:root[data-theme="light"] .register-info h1,
+:root[data-theme="light"] .register-info p {
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .register-info h1 .highlight-text {
+  color: #fff !important;
+  background: linear-gradient(90deg, var(--primary-blue), var(--secondary-blue));
+  -webkit-text-fill-color: #fff !important;
+  box-shadow: var(--shadow-blue);
+}
+
+:root[data-theme="light"] .register-right h2,
+:root[data-theme="light"] .register-form label {
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .register-form .oauth-button {
+  background: var(--bg-tertiary) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Admin login */
+:root[data-theme="light"] .admin-login-container {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%);
+}
+
+:root[data-theme="light"] .admin-back-button {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+:root[data-theme="light"] .admin-back-button:hover {
+  background: var(--bg-hover);
+  border-color: var(--primary-blue);
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .admin-login-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-lg);
+}
+
+:root[data-theme="light"] .admin-login-card .login-header h1,
+:root[data-theme="light"] .admin-login-card .login-header p {
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .admin-login-card input {
+  background: var(--input-background);
+  border-color: var(--input-border);
+  color: var(--text-primary);
+}
+
+/* Admin panel */
+:root[data-theme="light"] .admin-panel-container {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .admin-header h1 {
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--primary-blue) 100%);
+  -webkit-text-fill-color: transparent;
+}
+
+:root[data-theme="light"] .admin-header p {
+  color: var(--text-secondary);
+}
+
+:root[data-theme="light"] .admin-tab,
+:root[data-theme="light"] .admin-table-container,
+:root[data-theme="light"] .admin-content {
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .admin-tab.active {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: var(--primary-blue);
+  color: var(--primary-blue);
+}
+
+:root[data-theme="light"] .admin-table th {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .admin-table td {
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+}
+
+:root[data-theme="light"] .admin-logout-button {
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .admin-stats .stats-header h2,
+:root[data-theme="light"] .admin-stats .stat-content h3,
+:root[data-theme="light"] .admin-stats .stat-value,
+:root[data-theme="light"] .admin-stats .stat-description {
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .admin-stats .stat-description,
+:root[data-theme="light"] .admin-stats .stat-trend {
+  color: var(--text-secondary);
+}
+
+:root[data-theme="light"] .admin-stats .stat-card {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+:root[data-theme="light"] .admin-stats .config-item,
+:root[data-theme="light"] .admin-stats .config-overview h3 {
+  color: var(--text-primary);
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+/* Support chat */
+:root[data-theme="light"] .support-chat-modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+
+:root[data-theme="light"] .support-chat-header {
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+/* Dashboard stat cards (Week 3 list) */
+:root[data-theme="light"] .stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+:root[data-theme="light"] .stat-card:hover {
+  box-shadow: var(--shadow-md);
+}
+
+:root[data-theme="light"] .stat-info h3 {
+  color: var(--text-muted);
+}
+
+:root[data-theme="light"] .stat-info p {
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .user-avatar-placeholder {
+  background: var(--bg-tertiary);
+  color: var(--primary-blue);
+  border: 1px solid var(--border-color);
+}

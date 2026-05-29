@@ -80,7 +80,7 @@ const DisputeTimelineView: React.FC<DisputeTimelineViewProps> = ({ disputeId }) 
     return (
       <div style={{ padding: '40px', textAlign: 'center' }}>
         <div className="loading-spinner" style={{ margin: '0 auto' }}></div>
-        <p style={{ marginTop: '20px', color: 'rgba(255, 255, 255, 0.6)' }}>
+        <p style={{ marginTop: '20px', color: 'var(--text-muted)' }}>
           Cargando timeline...
         </p>
       </div>
@@ -99,7 +99,7 @@ const DisputeTimelineView: React.FC<DisputeTimelineViewProps> = ({ disputeId }) 
 
   if (timeline.length === 0) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center', color: 'rgba(255, 255, 255, 0.6)' }}>
+      <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
         <FaClock style={{ fontSize: '48px', marginBottom: '15px', opacity: 0.5 }} />
         <p>No hay eventos en el timeline.</p>
       </div>
@@ -170,7 +170,7 @@ const DisputeTimelineView: React.FC<DisputeTimelineViewProps> = ({ disputeId }) 
                   }}>
                     <h4 style={{
                       margin: 0,
-                      color: '#fff',
+                      color: 'var(--text-primary)',
                       fontSize: '16px',
                       fontWeight: 'bold'
                     }}>
@@ -178,7 +178,7 @@ const DisputeTimelineView: React.FC<DisputeTimelineViewProps> = ({ disputeId }) 
                     </h4>
                     <span style={{
                       fontSize: '12px',
-                      color: 'rgba(255, 255, 255, 0.6)',
+                      color: 'var(--text-muted)',
                       whiteSpace: 'nowrap',
                       marginLeft: '15px'
                     }}>
@@ -188,7 +188,7 @@ const DisputeTimelineView: React.FC<DisputeTimelineViewProps> = ({ disputeId }) 
                   
                   <p style={{
                     margin: '8px 0 0 0',
-                    color: 'rgba(255, 255, 255, 0.8)',
+                    color: 'var(--text-secondary)',
                     lineHeight: '1.6',
                     fontSize: '14px'
                   }}>
@@ -202,7 +202,7 @@ const DisputeTimelineView: React.FC<DisputeTimelineViewProps> = ({ disputeId }) 
                       background: 'rgba(40, 192, 240, 0.1)',
                       borderRadius: '6px',
                       fontSize: '12px',
-                      color: 'rgba(255, 255, 255, 0.7)'
+                      color: 'var(--text-muted)'
                     }}>
                       <FaUser /> {event.user.username}
                     </div>
@@ -213,7 +213,7 @@ const DisputeTimelineView: React.FC<DisputeTimelineViewProps> = ({ disputeId }) 
                       {event.metadata.contract_id && (
                         <div style={{
                           fontSize: '11px',
-                          color: 'rgba(255, 255, 255, 0.6)',
+                          color: 'var(--text-muted)',
                           fontFamily: 'monospace',
                           wordBreak: 'break-all'
                         }}>
@@ -237,7 +237,7 @@ const DisputeTimelineView: React.FC<DisputeTimelineViewProps> = ({ disputeId }) 
                           background: 'rgba(239, 68, 68, 0.1)',
                           borderRadius: '6px',
                           fontSize: '12px',
-                          color: 'rgba(255, 255, 255, 0.8)',
+                          color: 'var(--text-secondary)',
                           fontStyle: 'italic'
                         }}>
                           "{event.metadata.reason}"

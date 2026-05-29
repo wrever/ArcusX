@@ -5,10 +5,11 @@ import ThemeToggle from './components/ThemeToggle';
 import LanguageFab from './components/LanguageFab';
 import { FiMenu } from 'react-icons/fi';
 import './css/dashboard.css';
+import './css/dashboard-light.css';
 import './css/dashboard.enterprise.css';
 import arcusLogoDark from './images/arcus-logo.png';
 import arcusLogoLight from './images/arcusxlogoclaro.png';
-import axios from 'axios';
+import axios from './config/axios';
 import { API_URL } from './config/database';
 import { useAuth } from './hooks/useAuth';
 import WalletButton from './components/WalletButton';
@@ -1058,39 +1059,27 @@ const Dashboard = () => {
           {/* Tasks Tab */}
           {/* Sección de Disputas Pendientes de Firma */}
           {pendingDisputes.length > 0 && (
-            <div className="pending-disputes-section" style={{
-              marginBottom: '2rem',
-              padding: '1.5rem',
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              borderRadius: '12px',
-              border: '2px solid rgba(239, 68, 68, 0.3)'
-            }}>
+            <div className="pending-disputes-section dashboard-pending-disputes">
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
-                <FaExclamationTriangle style={{ color: '#ef4444', fontSize: '24px' }} />
-                <h2 style={{ margin: 0, color: '#ef4444' }}>{t('dashboard.disputes.pending')} ({pendingDisputes.length})</h2>
+                <FaExclamationTriangle className="dashboard-dispute-icon" />
+                <h2>{t('dashboard.disputes.pending')} ({pendingDisputes.length})</h2>
               </div>
-              <p style={{ color: 'rgba(255, 255, 255, 0.8)', marginBottom: '1rem' }}>
+              <p className="dashboard-muted-text" style={{ marginBottom: '1rem' }}>
                 Tienes disputas resueltas que requieren tu firma para liberar los fondos. Por favor, firma las transacciones desde tu wallet Freighter.
               </p>
               {pendingDisputes.map((dispute) => (
-                <div key={dispute.dispute_id} style={{
-                  padding: '1rem',
-                  marginBottom: '1rem',
-                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(239, 68, 68, 0.2)'
-                }}>
+                <div key={dispute.dispute_id} className="dashboard-pending-dispute-item">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                     <div>
-                      <h3 style={{ margin: 0, color: '#fff', fontSize: '16px' }}>{t('dashboard.disputes.task')} {dispute.task_title}</h3>
-                      <p style={{ margin: '0.5rem 0', color: 'rgba(255, 255, 255, 0.7)', fontSize: '14px' }}>
+                      <h3>{t('dashboard.disputes.task')} {dispute.task_title}</h3>
+                      <p>
                         {dispute.user_role === 'client' 
                           ? `${t('dashboard.disputes.refund')} ${dispute.refund_amount.toFixed(2)} USDC`
                           : `${t('dashboard.disputes.payment')} ${dispute.payment_amount.toFixed(2)} USDC`
                         }
                       </p>
                       {dispute.resolution_reason && (
-                        <p style={{ margin: '0.5rem 0', color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px', fontStyle: 'italic' }}>
+                        <p className="dashboard-dispute-reason">
                           {t('dashboard.disputes.reason')} {dispute.resolution_reason}
                         </p>
                       )}
@@ -1204,75 +1193,36 @@ const Dashboard = () => {
                 
                 {/* Badges de filtros activos */}
                 {(searchQuery || minPrice || maxPrice || categoryFilter !== 'all' || difficultyFilter !== 'all') && (
-                  <div style={{
-                    marginTop: '1rem',
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '0.5rem',
-                    alignItems: 'center'
-                  }}>
-                    <span style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.9rem' }}>{t('dashboard.tasks.filter.active')}</span>
+                  <div className="dashboard-filter-active">
+                    <span className="dashboard-muted-text">{t('dashboard.tasks.filter.active')}</span>
                     {searchQuery && (
-                      <span style={{
-                        padding: '0.25rem 0.75rem',
-                        backgroundColor: 'rgba(16, 221, 136, 0.2)',
-                        border: '1px solid rgba(16, 221, 136, 0.4)',
-                        borderRadius: '50px',
-                        fontSize: '0.85rem',
-                        color: 'var(--primary-green, #10dd88)'
-                      }}>
+                      <span className="dashboard-filter-chip">
                         Búsqueda: {searchQuery}
                       </span>
                     )}
                     {minPrice && (
-                      <span style={{
-                        padding: '0.25rem 0.75rem',
-                        backgroundColor: 'rgba(16, 221, 136, 0.2)',
-                        border: '1px solid rgba(16, 221, 136, 0.4)',
-                        borderRadius: '50px',
-                        fontSize: '0.85rem',
-                        color: 'var(--primary-green, #10dd88)'
-                      }}>
+                      <span className="dashboard-filter-chip">
                         Min: {minPrice} USDC
                       </span>
                     )}
                     {maxPrice && (
-                      <span style={{
-                        padding: '0.25rem 0.75rem',
-                        backgroundColor: 'rgba(16, 221, 136, 0.2)',
-                        border: '1px solid rgba(16, 221, 136, 0.4)',
-                        borderRadius: '50px',
-                        fontSize: '0.85rem',
-                        color: 'var(--primary-green, #10dd88)'
-                      }}>
+                      <span className="dashboard-filter-chip">
                         Max: {maxPrice} USDC
                       </span>
                     )}
                     {categoryFilter !== 'all' && (
-                      <span style={{
-                        padding: '0.25rem 0.75rem',
-                        backgroundColor: 'rgba(16, 221, 136, 0.2)',
-                        border: '1px solid rgba(16, 221, 136, 0.4)',
-                        borderRadius: '50px',
-                        fontSize: '0.85rem',
-                        color: 'var(--primary-green, #10dd88)'
-                      }}>
+                      <span className="dashboard-filter-chip">
                         {categoryFilter}
                       </span>
                     )}
                     {difficultyFilter !== 'all' && (
-                      <span style={{
-                        padding: '0.25rem 0.75rem',
-                        backgroundColor: 'rgba(16, 221, 136, 0.2)',
-                        border: '1px solid rgba(16, 221, 136, 0.4)',
-                        borderRadius: '50px',
-                        fontSize: '0.85rem',
-                        color: 'var(--primary-green, #10dd88)'
-                      }}>
+                      <span className="dashboard-filter-chip">
                         {difficultyFilter}
                       </span>
                     )}
                     <button
+                      type="button"
+                      className="dashboard-filter-clear"
                       onClick={() => {
                         setSearchQuery('');
                         setMinPrice('');
@@ -1281,15 +1231,6 @@ const Dashboard = () => {
                         setDifficultyFilter('all');
                         setSortBy('date_desc');
                       }}
-                      style={{
-                        padding: '0.25rem 0.75rem',
-                        backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                        border: '1px solid rgba(239, 68, 68, 0.4)',
-                        borderRadius: '50px',
-                        fontSize: '0.85rem',
-                        color: '#ef4444',
-                        cursor: 'pointer'
-                      }}
                       >
                         {t('dashboard.tasks.filter.clear.all')}
                       </button>
@@ -1297,11 +1238,7 @@ const Dashboard = () => {
                 )}
                 
                 {/* Contador de resultados */}
-                <div style={{
-                  marginTop: '1rem',
-                  color: 'rgba(255, 255, 255, 0.7)',
-                  fontSize: '0.9rem'
-                }}>
+                <div className="dashboard-results-count">
                   {filteredTasks.length} {filteredTasks.length === 1 ? t('dashboard.tasks.results.single') : t('dashboard.tasks.results.multiple')}
                 </div>
               </div>
@@ -1364,7 +1301,7 @@ const Dashboard = () => {
                 <h2>{t('dashboard.wallet.total.earnings')}</h2>
                 <div className="balance-amount">${totalEarnings.toFixed(2)}</div>
                 {totalPaid > 0 && (
-                  <div style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: 'rgba(255, 255, 255, 0.7)' }}>
+                  <div className="dashboard-muted-text" style={{ marginTop: '0.5rem' }}>
                     {t('dashboard.wallet.total.paid')} ${totalPaid.toFixed(2)}
                   </div>
                 )}
@@ -1376,17 +1313,17 @@ const Dashboard = () => {
               <div className="transactions-container">
                 <h2>{t('dashboard.wallet.transactions')}</h2>
                 {loadingTransactions && (
-                  <div style={{ textAlign: 'center', padding: '2rem', color: 'rgba(255, 255, 255, 0.7)' }}>
+                  <div className="dashboard-empty-state">
                     {t('dashboard.wallet.transactions.loading')}
                   </div>
                 )}
                 {transactionsError && (
-                  <div style={{ padding: '1rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', color: '#ef4444', marginBottom: '1rem' }}>
+                  <div className="dashboard-error-banner">
                     {transactionsError}
                   </div>
                 )}
                 {!loadingTransactions && !transactionsError && transactions.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '2rem', color: 'rgba(255, 255, 255, 0.7)' }}>
+                  <div className="dashboard-empty-state">
                     {t('dashboard.wallet.transactions.empty')}
                   </div>
                 )}
@@ -1442,35 +1379,23 @@ const Dashboard = () => {
                   ))}
                 </div>
                     {transactionsTotalPages > 1 && (
-                      <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1.5rem' }}>
+                      <div className="dashboard-pagination">
                         <button
+                          type="button"
+                          className="dashboard-pagination-btn"
                           onClick={() => setTransactionsPage(p => Math.max(1, p - 1))}
                           disabled={transactionsPage === 1}
-                          style={{
-                            padding: '0.5rem 1rem',
-                            backgroundColor: transactionsPage === 1 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(16, 221, 136, 0.2)',
-                            border: '1px solid rgba(16, 221, 136, 0.4)',
-                            borderRadius: '6px',
-                            color: '#fff',
-                            cursor: transactionsPage === 1 ? 'not-allowed' : 'pointer'
-                          }}
                         >
                           {t('dashboard.wallet.transactions.previous')}
                         </button>
-                        <span style={{ padding: '0.5rem 1rem', color: 'rgba(255, 255, 255, 0.7)' }}>
+                        <span className="dashboard-pagination-label">
                           {t('dashboard.wallet.transactions.page')} {transactionsPage} {t('dashboard.wallet.transactions.of')} {transactionsTotalPages}
                         </span>
                         <button
+                          type="button"
+                          className="dashboard-pagination-btn"
                           onClick={() => setTransactionsPage(p => Math.min(transactionsTotalPages, p + 1))}
                           disabled={transactionsPage >= transactionsTotalPages}
-                          style={{
-                            padding: '0.5rem 1rem',
-                            backgroundColor: transactionsPage >= transactionsTotalPages ? 'rgba(255, 255, 255, 0.05)' : 'rgba(16, 221, 136, 0.2)',
-                            border: '1px solid rgba(16, 221, 136, 0.4)',
-                            borderRadius: '6px',
-                            color: '#fff',
-                            cursor: transactionsPage >= transactionsTotalPages ? 'not-allowed' : 'pointer'
-                          }}
                         >
                           {t('dashboard.wallet.transactions.next')}
                         </button>
@@ -1691,7 +1616,7 @@ const Dashboard = () => {
                 {t('dashboard.privateOffers.intro')}
               </p>
               {loadingPrivateOffers && (
-                <p style={{ color: 'rgba(255, 255, 255, 0.75)' }}>{t('dashboard.privateOffers.loading')}</p>
+                <p className="dashboard-private-muted">{t('dashboard.privateOffers.loading')}</p>
               )}
               {privateOffersError && (
                 <p className="error-message" role="alert">
@@ -1699,7 +1624,7 @@ const Dashboard = () => {
                 </p>
               )}
               {!loadingPrivateOffers && !privateOffersError && privateOffers.length === 0 && (
-                <p style={{ color: 'rgba(255, 255, 255, 0.75)' }}>{t('dashboard.privateOffers.empty')}</p>
+                <p className="dashboard-private-muted">{t('dashboard.privateOffers.empty')}</p>
               )}
               {!loadingPrivateOffers && privateOffers.length > 0 && (
                 <div className="tasks-grid">
@@ -1950,8 +1875,7 @@ const Dashboard = () => {
                       </Link>
                       <Link 
                         to={`/profile/${user?.id || storedUserData?.id || ''}`} 
-                        className="edit-full-profile-button"
-                        style={{ background: 'var(--primary-blue)', color: '#fff' }}
+                        className="edit-full-profile-button edit-full-profile-button--public"
                       >
                         <FaGlobe />
                         <span>{t('dashboard.settings.view.public.profile')}</span>

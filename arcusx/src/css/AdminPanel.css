@@ -158,10 +158,17 @@
   opacity: 0;
   transition: opacity 0.3s ease;
   z-index: 0;
+  pointer-events: none;
 }
 
 .admin-content:hover::before {
   opacity: 1;
+}
+
+/* Contenido por encima del overlay decorativo (::before) */
+.admin-content > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* Loading States */

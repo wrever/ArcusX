@@ -1,0 +1,7 @@
+# Soroban build artifacts
+contracts/**/target/
+contracts/**/test_snapshots/
+
+# Secrets locales
+.env
+.env.local

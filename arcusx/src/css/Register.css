@@ -544,7 +544,7 @@
   border: 1px solid rgba(239, 68, 68, 0.4);
 }
 /*CODE OWNER: BRUNO MIRANDA*/
-.back-button {
+.register-container .back-button {
   position: fixed;
   top: 2rem;
   left: 2rem;
@@ -564,10 +564,10 @@
   z-index: 10;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
-.back-button span {
+.register-container .back-button span {
   color: white;
 }
-.back-button:hover {
+.register-container .back-button:hover {
   background: rgba(40, 192, 240, 0.2);
   border-color: rgba(40, 192, 240, 0.4);
   transform: translateX(-5px);
@@ -575,7 +575,7 @@
   box-shadow: 0 6px 20px rgba(40, 192, 240, 0.3);
 }
 
-.back-button svg {
+.register-container .back-button svg {
   font-size: 1rem;
   color: white;
 }
@@ -594,12 +594,11 @@
     font-size: 2.5rem;
   }
 
-  .back-button {
+  .register-container .back-button {
     top: 1rem;
     left: 1rem;
     padding: 0.5rem 1rem;
     font-size: 0.9rem;
-    color: white;
   }
 }
 

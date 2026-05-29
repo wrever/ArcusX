@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaChartLine, FaExclamationTriangle, FaBell, FaGavel, FaUsers, FaSignOutAlt, FaCoins, FaShieldAlt, FaTasks, FaWallet } from 'react-icons/fa';
+import { FaChartLine, FaExclamationTriangle, FaBell, FaGavel, FaUsers, FaSignOutAlt, FaCoins, FaShieldAlt, FaTasks, FaWallet, FaUserPlus } from 'react-icons/fa';
 import AdminStats from './AdminStats';
 import NotificationManagement from './NotificationManagement';
 import DisputeManagement from './DisputeManagement';
@@ -9,7 +9,8 @@ import EscrowManagement from './EscrowManagement';
 import UserManagement from './UserManagement';
 import FeeManagement from './FeeManagement';
 import TokenManagement from './TokenManagement';
-import { getAdminStats, getAdminConfig, adminLogout } from '../services/adminService';
+import ReferralManagement from './ReferralManagement';
+import { getAdminStats, getAdminConfig, getReferralStats, adminLogout } from '../services/adminService';
 import { useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks';
 import '../css/AdminPanel.css';
 
@@ -28,6 +29,8 @@ interface AdminStats {
   feesThisWeek?: number;
   volumeToday?: number;
   feesToday?: number;
+  totalUsers?: number;
+  totalReferralUsers?: number;
 }
 
 interface AdminPanelProps {
@@ -58,8 +61,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
     setLoading(true);
     setError(null);
     try {
-      // Obtener estadísticas del backend
-      const backendStats = await getAdminStats();
+      const [backendStats, referralStats] = await Promise.all([
+        getAdminStats(),
+        getReferralStats().catch(() => null),
+      ]);
       
       // Obtener configuración del sistema
       let configs: any[] = [];
@@ -153,7 +158,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
         volumeThisWeek: volumeThisWeek,
         feesThisWeek: feesThisWeek,
         volumeToday: volumeToday,
-        feesToday: feesToday
+        feesToday: feesToday,
+        totalUsers: backendStats.total_users ?? 0,
+        totalReferralUsers: referralStats?.total_valid_referrals ?? 0,
       });
     } catch (err: any) {
       setError(err.message || 'Error al cargar estadísticas. Verifica tu conexión.');
@@ -171,7 +178,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
     { id: 'fees', label: 'Gestión de Fees', icon: <FaCoins /> },
     { id: 'tokens', label: 'Tokens', icon: <FaShieldAlt /> },
     { id: 'notifications', label: 'Notificaciones', icon: <FaBell /> },
-    { id: 'disputes', label: 'Arbitraje', icon: <FaGavel /> }
+    { id: 'disputes', label: 'Arbitraje', icon: <FaGavel /> },
+    { id: 'referrals', label: 'Referidos', icon: <FaUserPlus /> },
   ];
 
   if (!isAdmin) {
@@ -302,6 +310,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
           <DisputeManagement 
             onUpdate={fetchAdminStats}
           />
+        )}
+
+        {activeTab === 'referrals' && (
+          <ReferralManagement />
         )}
       </div>
     </div>

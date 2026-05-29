@@ -319,7 +319,7 @@
 
 a.nav-button.register {
   background: var(--gradient-primary);
-  color: var(--dark-blue);
+  color: var(--on-accent, #ffffff);
   border: none;
   box-shadow: var(--shadow-blue);
 }
