@@ -10,7 +10,7 @@ import './css/dashboard.enterprise.css';
 import arcusLogoDark from './images/arcus-logo.png';
 import arcusLogoLight from './images/arcusxlogoclaro.png';
 import axios from './config/axios';
-import { API_URL } from './config/database';
+import { arcusxApiUrl } from './config/arcusxApi';
 import { useAuth } from './hooks/useAuth';
 import WalletButton from './components/WalletButton';
 import { useScheduledTaskDeletion } from './hooks/useScheduledTaskDeletion';
@@ -295,7 +295,7 @@ const Dashboard = () => {
             params.append('sort_by', sortBy);
           }
 
-          const url = `${API_URL}/auth/get_tasks.php${params.toString() ? '?' + params.toString() : ''}`;
+          const url = `${arcusxApiUrl('get_tasks')}${params.toString() ? '?' + params.toString() : ''}`;
           const response = await axios.get(url);
           
           if (Array.isArray(response.data)) {
@@ -354,7 +354,7 @@ const Dashboard = () => {
             return;
           }
 
-          const response = await axios.get(`${API_URL}/auth/get_completed_tasks_count.php`, {
+          const response = await axios.get(`${arcusxApiUrl('get_completed_tasks_count')}`, {
             headers: {
               'Authorization': `Bearer ${token}`
             }
@@ -379,7 +379,7 @@ const Dashboard = () => {
         setLoadingUserTasks(true);
         setUserTasksError('');
         try {
-          const response = await axios.get(`${API_URL}/auth/get_user_tasks.php?user_id=${user.id}`);
+          const response = await axios.get(`${arcusxApiUrl('get_user_tasks')}?user_id=${user.id}`);
           if (Array.isArray(response.data)) {
             setUserTasks(response.data); // Guardar las tareas del usuario en el estado
           } else {
@@ -407,7 +407,7 @@ const Dashboard = () => {
         setAcceptedTasksError('');
         try {
           // Llamada al nuevo script de backend
-          const response = await axios.get(`${API_URL}/auth/get_accepted_tasks.php?user_id=${user.id}`);
+          const response = await axios.get(`${arcusxApiUrl('get_accepted_tasks')}?user_id=${user.id}`);
           if (Array.isArray(response.data)) {
             setAcceptedTasks(response.data); // Guardar las tareas aceptadas en el estado
           } else {

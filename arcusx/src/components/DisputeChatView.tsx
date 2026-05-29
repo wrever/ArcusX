@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { FaUser, FaUserTie, FaSearch, FaFile, FaDownload } from 'react-icons/fa';
 import { getDisputeChat, ChatMessage, ChatParticipants, ChatStats } from '../services/disputeService';
-import { API_URL } from '../config/database';
+import { publicAssetUrl } from '../config/arcusxApi';
 import '../css/AdminPanel.css';
 
 interface DisputeChatViewProps {
@@ -313,7 +313,7 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
                       {message.files.map((file, idx) => (
                         <a
                           key={idx}
-                          href={`${API_URL}${file.url}`}
+                          href={publicAssetUrl(file.url)}
                           target="_blank"
                           rel="noopener noreferrer"
                           style={{

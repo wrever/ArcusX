@@ -4,7 +4,7 @@
  */
 
 import axios from '../config/axios';
-import { API_URL } from '../config/database';
+import { arcusxApiUrl } from '../config/arcusxApi';
 
 export interface CancellationCheckResult {
   allowed: boolean;
@@ -45,7 +45,7 @@ export async function checkCancellationAllowed(
 ): Promise<CancellationCheckResult> {
   try {
     const response = await axios.get(
-      `${API_URL}/auth/check_cancellation_allowed.php?task_id=${taskId}`
+      `${arcusxApiUrl('check_cancellation_allowed')}?task_id=${taskId}`
     );
 
     if (response.data.success) {
@@ -69,7 +69,7 @@ export async function cancelTask(
 ): Promise<CancelTaskResult> {
   try {
     const response = await axios.post(
-      `${API_URL}/auth/cancel_task.php`,
+      `${arcusxApiUrl('cancel_task')}`,
       {
         task_id: taskId,
         reason: reason || null
@@ -105,7 +105,7 @@ export async function confirmCancellation(
 ): Promise<CancelTaskResult> {
   try {
     const response = await axios.post(
-      `${API_URL}/auth/cancel_task.php`,
+      `${arcusxApiUrl('cancel_task')}`,
       {
         task_id: taskId,
         tx_hash: txHash,

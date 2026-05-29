@@ -3,7 +3,7 @@
  * Este servicio centraliza la obtención del fee para que se use en toda la aplicación
  */
 
-import { API_URL } from '../config/database';
+import { arcusxApiUrl, arcusxApiHeaders } from '../config/arcusxApi';
 
 // Cache del fee para evitar múltiples llamadas
 let cachedFee: number | null = null;
@@ -67,12 +67,9 @@ export async function getPlatformFee(useCache: boolean = true): Promise<number> 
 
     // Intentar obtener desde endpoint público (si existe)
     try {
-      const response = await fetch(`${API_URL}/auth/get_platform_fee.php`, {
+      const response = await fetch(`${arcusxApiUrl('get_platform_fee')}`, {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers: arcusxApiHeaders(),
       });
 
       if (response.ok) {

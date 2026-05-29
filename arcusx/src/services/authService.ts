@@ -1,5 +1,5 @@
-import axios from 'axios';
-import { API_URL } from '../config/database';
+import axios from '../config/axios';
+import { arcusxApiUrl, arcusxApiHeaders } from '../config/arcusxApi';
 import { supabase, hasSupabase } from '../config/supabase';
 import { ensureArcusxSupabaseUserLink } from './arcusxMessagingSupabase';
 import {
@@ -171,9 +171,13 @@ export const authService = {
       };
 
       const syncResponse = await axios.post(
-        `${API_URL}/auth/sync_supabase_user.php`,
+        arcusxApiUrl('sync_supabase_user'),
         syncPayload,
-        { timeout: 20000, withCredentials: true },
+        {
+          timeout: 20000,
+          withCredentials: true,
+          headers: Object.fromEntries(arcusxApiHeaders().entries()),
+        },
       );
 
       let referralMeta = syncResponse.data.referral as Record<string, unknown> | null | undefined;
@@ -247,19 +251,17 @@ export const authService = {
   },
 
   async registerWallet(walletAddress: string): Promise<{ success: boolean; wallet_address?: string; already_registered?: boolean; message?: string }> {
-    const token = localStorage.getItem('token');
     const response = await axios.post(
-      `${API_URL}/auth/register_wallet.php`,
+      arcusxApiUrl('register_wallet'),
       { wallet_address: walletAddress },
-      { headers: { Authorization: `Bearer ${token}` } }
+      { headers: Object.fromEntries(arcusxApiHeaders().entries()) },
     );
     return response.data;
   },
 
   async verifyWallet(): Promise<{ success: boolean; has_wallet: boolean; wallet_address?: string | null }> {
-    const token = localStorage.getItem('token');
-    const response = await axios.get(`${API_URL}/auth/verify_wallet.php`, {
-      headers: { Authorization: `Bearer ${token}` }
+    const response = await axios.get(arcusxApiUrl('verify_wallet'), {
+      headers: Object.fromEntries(arcusxApiHeaders().entries()),
     });
     return response.data;
   }

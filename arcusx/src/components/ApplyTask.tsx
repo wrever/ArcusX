@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { FaArrowLeft, FaCommentAlt, FaLink, FaWallet, FaInfoCircle } from 'react-icons/fa';
 import axios from '../config/axios';
-import { API_URL } from '../config/database';
+import { arcusxApiUrl } from '../config/arcusxApi';
 import '../css/ApplyTask.css'; // Necesitas crear este archivo CSS
 import { useI18n } from '../i18n/I18nProvider';
 import { authService } from '../services/authService';
@@ -80,7 +80,7 @@ const ApplyTask = () => {
       setError(null);
       try {
         // TODO: Crear este endpoint en el backend
-        const response = await axios.get(`${API_URL}/auth/get_task_details.php?task_id=${taskId}`);
+        const response = await axios.get(`${arcusxApiUrl('get_task_details')}?task_id=${taskId}`);
         if (response.data) {
           setTask(response.data);
         } else {
@@ -191,7 +191,7 @@ const ApplyTask = () => {
       };
 
 
-      const response = await axios.post(`${API_URL}/auth/apply_task.php`, payload);
+      const response = await axios.post(`${arcusxApiUrl('apply_task')}`, payload);
 
       if (response.data?.success !== false && response.data?.message) {
         setSubmitMessage(response.data.message);

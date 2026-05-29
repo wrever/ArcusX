@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from '../config/axios';
-import { API_URL } from '../config/database'; // Asegúrate de que la ruta a tu config.js es correcta
+import { arcusxApiUrl } from '../config/arcusxApi';
 import { hasSupabase } from '../config/supabase';
 import {
   fetchTaskMessagesSupabase,
@@ -346,7 +346,7 @@ const SuperviseTask = () => {
             setLoading(true);
             setError(null);
             try {
-                const taskResponse = await axios.get(`${API_URL}/auth/get_task_details.php?task_id=${taskId}`);
+                const taskResponse = await axios.get(`${arcusxApiUrl('get_task_details')}?task_id=${taskId}`);
                 
                 if (taskResponse.data) {
                     if (taskResponse.data.user_id === undefined || taskResponse.data.user_id === null || typeof taskResponse.data.user_id !== 'string') {
@@ -422,7 +422,7 @@ const SuperviseTask = () => {
                     return;
                 }
                 
-                const workerResponse = await axios.get(`${API_URL}/auth/get_user_details.php?user_id=${workerIdToFetch}`);
+                const workerResponse = await axios.get(`${arcusxApiUrl('get_user_details')}?user_id=${workerIdToFetch}`);
                 
                 if (workerResponse.data) {
                     if (workerResponse.data.id === undefined || workerResponse.data.id === null) {
@@ -1045,7 +1045,7 @@ const SuperviseTask = () => {
                 attempts++;
             }
 
-            const response = await axios.post(`${API_URL}/auth/complete_task.php`, {
+            const response = await axios.post(`${arcusxApiUrl('complete_task')}`, {
                 task_id: parseInt(taskId!, 10),
                 action: 'accept',
                 escrow_completed: escrowCompleted,
@@ -1187,7 +1187,7 @@ const SuperviseTask = () => {
                     const token = localStorage.getItem('token');
                     if (token && refundResult.txHash) {
                         await axios.post(
-                            `${API_URL}/auth/create_dispute.php`,
+                            `${arcusxApiUrl('create_dispute')}`,
                             {
                                 task_id: parseInt(taskId!, 10),
                                 reason: 'Cancelación de tarea - Reembolso solicitado',
@@ -1450,7 +1450,7 @@ const SuperviseTask = () => {
             if (isWorker) {
                 // TRABAJADOR: Solo notificar al cliente (actualizar BD)
                 // NO cambiar el estado del milestone - eso solo lo hace el cliente
-                const response = await axios.post(`${API_URL}/auth/complete_task.php`, 
+                const response = await axios.post(`${arcusxApiUrl('complete_task')}`, 
                     {
                         task_id: parseInt(taskId, 10),
                         action: 'accept'
@@ -1479,7 +1479,7 @@ const SuperviseTask = () => {
                 // CLIENTE: Puede aprobar el milestone y liberar fondos
                 // Esto se maneja en otro lugar (handleApproveMilestone, handleReleaseFunds)
                 // Por ahora, solo actualizar BD si es necesario
-            const response = await axios.post(`${API_URL}/auth/complete_task.php`, 
+            const response = await axios.post(`${arcusxApiUrl('complete_task')}`, 
                 {
                     task_id: parseInt(taskId, 10),
                     action: 'accept'
@@ -1663,7 +1663,7 @@ const SuperviseTask = () => {
             
             // Paso 2: Crear registro en la base de datos
             const response = await axios.post(
-                `${API_URL}/auth/create_dispute.php`,
+                `${arcusxApiUrl('create_dispute')}`,
                 {
                     task_id: parseInt(taskId, 10),
                     reason: disputeReason.trim(),

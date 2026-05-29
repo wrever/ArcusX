@@ -1,5 +1,5 @@
 import axios from '../config/axios';
-import { API_URL } from '../config/database';
+import { arcusxApiUrl } from '../config/arcusxApi';
 
 export interface PrivateOfferTask {
   id: number;
@@ -18,13 +18,8 @@ export interface PrivateOfferTask {
 }
 
 export async function fetchPrivateOffers(): Promise<PrivateOfferTask[]> {
-  const token = localStorage.getItem('token');
-  if (!token) {
-    throw new Error('No autenticado');
-  }
   const { data } = await axios.get<{ success?: boolean; offers?: PrivateOfferTask[]; message?: string }>(
-    `${API_URL}/auth/get_private_offers.php`,
-    { headers: { Authorization: `Bearer ${token}` } }
+    `${arcusxApiUrl('get_private_offers')}`,
   );
   if (data && data.success === false) {
     throw new Error(data.message || 'Error al cargar ofertas');

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaUser, FaCalendarAlt, FaWallet, FaExternalLinkAlt, FaCheck, FaTimes, FaSpinner, FaEye, FaHome, FaFileAlt, FaCheckCircle, FaUserCircle } from 'react-icons/fa';
 import axios from '../config/axios';
-import { API_URL } from '../config/database';
+import { arcusxApiUrl } from '../config/arcusxApi';
 import { useWallet } from '../hooks/useWallet';
 // Escrow Trustless Work (cliente aprueba y firma liberación; ver trustlessWorkEscrowService)
 
@@ -113,7 +113,7 @@ const ProposalReview = () => {
 
     try {
       // Cargar detalles de la tarea
-      const taskResponse = await axios.get(`${API_URL}/auth/get_task_details.php?task_id=${taskId}`);
+      const taskResponse = await axios.get(`${arcusxApiUrl('get_task_details')}?task_id=${taskId}`);
       if (taskResponse.data) {
         const taskData = taskResponse.data;
         setTask(taskData);
@@ -122,7 +122,7 @@ const ProposalReview = () => {
         if (taskData.escrow_id && taskData.accepted_applicant_id) {
           devLog('Tarea ya tiene escrow completado. Cargando propuesta aceptada...');
           // Cargar la propuesta aceptada para mostrar en el popup de éxito
-      const proposalsResponse = await axios.get(`${API_URL}/auth/get_task_proposals.php?task_id=${taskId}`);
+      const proposalsResponse = await axios.get(`${arcusxApiUrl('get_task_proposals')}?task_id=${taskId}`);
       if (Array.isArray(proposalsResponse.data)) {
             // Buscar la propuesta aceptada por applicant_id o por status
             const acceptedProposal = proposalsResponse.data.find(
@@ -152,7 +152,7 @@ const ProposalReview = () => {
           }
         } else {
           // Cargar propuestas de la tarea normalmente
-          const proposalsResponse = await axios.get(`${API_URL}/auth/get_task_proposals.php?task_id=${taskId}`);
+          const proposalsResponse = await axios.get(`${arcusxApiUrl('get_task_proposals')}?task_id=${taskId}`);
           if (Array.isArray(proposalsResponse.data)) {
             setProposals(proposalsResponse.data);
           } else {
@@ -370,7 +370,7 @@ const ProposalReview = () => {
             payload.trustline_address = trustlineAddress;
           }
 
-          await axios.post(`${API_URL}/auth/create_escrow.php`, payload, {
+          await axios.post(`${arcusxApiUrl('create_escrow')}`, payload, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
@@ -609,7 +609,7 @@ const ProposalReview = () => {
       // Seleccionar propuesta en el backend
       try {
         const selectResponse = await axios.post(
-          `${API_URL}/auth/select_proposal.php`,
+          `${arcusxApiUrl('select_proposal')}`,
           {
             task_id: taskId,
             proposal_id: selectedProposal.id,
