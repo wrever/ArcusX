@@ -139,7 +139,7 @@ Pick **only** what blocks demo or pilot; defer the rest.
 |----------|------|-------|
 | P0 | Record or schedule live E2E | Bruno |
 | P0 | Pilot retro or scheduled session | Bruno |
-| P1 | Bugs from Week 2 testing list | Eng |
+| P1 | Bugs from Week 2 testing list | ☑ repo (`week-04-technical-close.md`) |
 | P1 | Responsive smoke 320px on dashboard + proposals | Eng |
 | P2 | i18n / console cleanup per `week-04-plan` | Eng |
 | P3 | Full PHP `arcusx_json_error` migration | Backlog |

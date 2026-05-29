@@ -3,7 +3,7 @@ import { FaCheckCircle, FaSpinner, FaTimes, FaHandshake, FaCoins, FaDollarSign, 
 import { usePlatformFee } from '../hooks/usePlatformFee';
 import { useI18n } from '../i18n/I18nProvider';
 import { createRating, CreateRatingPayload } from '../services/ratingService';
-import { devLog, devWarn } from '../utils/logger';
+import { devLog, devWarn, devError } from '../utils/logger';
 import '../css/ProposalReview.css';
 import '../css/ReviewForm.css';
 
@@ -211,7 +211,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
       
       setRatingError(null);
     } catch (err: any) {
-      console.error('Error al enviar rating:', err);
+      devError('Error al enviar rating:', err);
       setRatingError(`${t('complete.rating.error')}: ${err.message || ''}`);
     } finally {
       setSubmittingRating(false);
@@ -240,7 +240,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
             devLog('Milestone aprobado. Enviando rating al servidor...');
             // Enviar rating en background (no bloquear la UI)
             submitRatingToServer().catch(err => {
-              console.error('Error crítico al enviar rating:', err);
+              devError('Error crítico al enviar rating:', err);
             });
           }
           

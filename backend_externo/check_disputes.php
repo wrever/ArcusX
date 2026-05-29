@@ -62,7 +62,7 @@ try {
         'disputes' => $disputes,
         'message' => $totalCount > 0 
             ? "Hay {$totalCount} disputa(s) en el sistema ({$pendingCount} pendientes, {$resolvedCount} resueltas). Puedes probar con estas desde el panel de admin."
-            : 'No hay disputas en el sistema. Ejecuta create_test_dispute.php para crear una de prueba.'
+            : 'No hay disputas en el sistema.'
     ], JSON_PRETTY_PRINT);
     
 } catch (Exception $e) {

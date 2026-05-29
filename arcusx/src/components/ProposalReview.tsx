@@ -23,7 +23,7 @@ import { calculateCommissionFromWorkerAmount, calculateTotalWithCommission } fro
 import { usePlatformFee } from '../hooks/usePlatformFee';
 import EscrowProcessPopup from './EscrowProcessPopup';
 import { useI18n } from '../i18n/I18nProvider';
-import { devLog, devWarn } from '../utils/logger';
+import { devLog, devWarn, devError } from '../utils/logger';
 import '../css/ProposalReview.css';
 
 interface TaskData {
@@ -103,7 +103,7 @@ const ProposalReview = () => {
   // Función para cargar datos de la tarea y propuestas
   const fetchTaskAndProposals = async () => {
     if (!taskId) {
-      setError('ID de tarea no proporcionado.');
+      setError(t('proposals.error.noTaskId'));
       setLoading(false);
       return;
     }
@@ -190,14 +190,14 @@ const ProposalReview = () => {
     if (!selectedProposal) return;
     
     if (!user || !user.id) {
-      setPopupMessage('Debes estar logueado para realizar esta acción.');
+      setPopupMessage(t('proposals.error.loginRequired'));
       setShowErrorPopup(true);
       return;
     }
 
     // Verificar wallet Stellar
       if (!isConnected) {
-        setPopupMessage('Debes conectar tu wallet Stellar para continuar.');
+        setPopupMessage(t('proposals.error.walletRequired'));
         setShowErrorPopup(true);
         return;
       }
@@ -225,15 +225,15 @@ const ProposalReview = () => {
       }
 
       if (!isConnected || !address) {
-        return { success: false, error: 'Debes conectar tu wallet Stellar primero' };
+        return { success: false, error: t('proposals.error.walletConnectFirst') };
       }
 
       if (!kit) {
-        return { success: false, error: 'Kit de wallets no inicializado. Por favor reconecta tu wallet.' };
+        return { success: false, error: t('proposals.error.walletKitNotReady') };
       }
 
       if (!task) {
-        return { success: false, error: 'No se encontró información de la tarea' };
+        return { success: false, error: t('proposals.error.taskNotFound') };
       }
 
       // Validar direcciones Stellar
@@ -241,11 +241,11 @@ const ProposalReview = () => {
       const workerAddress = selectedProposal.worker_wallet_address;
 
       if (!clientAddress || !clientAddress.startsWith('G') || clientAddress.length !== 56) {
-        return { success: false, error: 'Dirección del cliente no es válida' };
+        return { success: false, error: t('proposals.error.invalidClientAddress') };
         }
 
       if (!workerAddress || !workerAddress.startsWith('G') || workerAddress.length !== 56) {
-        return { success: false, error: 'Dirección del trabajador no es válida' };
+        return { success: false, error: t('proposals.error.invalidWorkerAddress') };
       }
       
       // Crear escrow con Trustless Work
@@ -298,7 +298,7 @@ const ProposalReview = () => {
       );
 
       if (!result.success) {
-        console.error('Error al crear escrow:', result.error);
+        devError('Error al crear escrow:', result.error);
         return {
           success: false,
           error: result.error || t('proposals.error.createEscrow')
@@ -306,10 +306,10 @@ const ProposalReview = () => {
       }
 
       if (!result.contractId) {
-        console.error('No se recibió contractId:', result);
+        devError('No se recibió contractId:', result);
         return {
           success: false,
-          error: 'No se pudo obtener el contractId del escrow creado'
+          error: t('proposals.error.noContractId')
         };
       }
 
@@ -378,7 +378,7 @@ const ProposalReview = () => {
           });
         }
       } catch (error: any) {
-        console.error('Error al guardar escrow en backend:', error);
+        devError('Error al guardar escrow en backend:', error);
         // Continuar de todas formas - el escrow ya se creó en Trustless Work
       }
       
@@ -393,10 +393,10 @@ const ProposalReview = () => {
       
     } catch (error: any) {
       if (error.message?.includes('User declined')) {
-        return { success: false, error: 'Transacción cancelada por el usuario' };
+        return { success: false, error: t('proposals.error.txCancelled') };
       }
       
-      return { success: false, error: error.message || 'Error creando el escrow' };
+      return { success: false, error: error.message || t('proposals.error.createEscrowGeneric') };
     }
   };
 
@@ -413,15 +413,15 @@ const ProposalReview = () => {
       }
 
       if (!isConnected || !address) {
-        return { success: false, error: 'Debes conectar tu wallet Stellar primero' };
+        return { success: false, error: t('proposals.error.walletConnectFirst') };
       }
       
       if (!task) {
-        return { success: false, error: 'No se encontró información de la tarea' };
+        return { success: false, error: t('proposals.error.taskNotFound') };
       }
 
       if (!kit) {
-        return { success: false, error: 'Kit de wallets no inicializado. Por favor reconecta tu wallet.' };
+        return { success: false, error: t('proposals.error.walletKitNotReady') };
       }
 
       // IMPORTANTE: El escrow se creó con workerAmount / (1 - platformFee)
@@ -535,7 +535,7 @@ const ProposalReview = () => {
                 // El resultado puede tener diferentes estructuras, devolvemos el resultado completo
                 return Array.isArray(result) ? result : (result as any)?.escrows || result || [];
               } catch (error: any) {
-                console.error('Error en wrapper de getEscrowByContractIds:', error.message);
+                devError('Error en wrapper de getEscrowByContractIds:', error.message);
                 return [];
               }
             }
@@ -588,10 +588,10 @@ const ProposalReview = () => {
       
     } catch (error: any) {
       if (error.message?.includes('User declined')) {
-        return { success: false, error: 'Transacción cancelada por el usuario' };
+        return { success: false, error: t('proposals.error.txCancelled') };
       }
       
-      return { success: false, error: error.message || 'Error enviando dinero al escrow' };
+      return { success: false, error: error.message || t('proposals.error.fundEscrowGeneric') };
     }
   };
   // ============================================
@@ -632,16 +632,16 @@ const ProposalReview = () => {
         if (selectResponse.status < 200 || selectResponse.status >= 300) {
           const errorMessage = selectResponse.data?.message || 
                              t('proposals.error.selectWorker') + ' Status: ' + selectResponse.status;
-          console.error('Error al seleccionar propuesta:', errorMessage);
+          devError('Error al seleccionar propuesta:', errorMessage);
           // Continuar de todas formas - la transacción de Stellar ya se completó
         } else if (!selectResponse.data || selectResponse.data.success !== true) {
           const errorMessage = selectResponse.data?.message || 
                              t('proposals.error.selectWorker') + ' La respuesta no indica éxito.';
-          console.error('Error al seleccionar propuesta:', errorMessage);
+          devError('Error al seleccionar propuesta:', errorMessage);
           // Continuar de todas formas
         }
       } catch (error: any) {
-        console.error('Error al seleccionar propuesta en backend:', error);
+        devError('Error al seleccionar propuesta en backend:', error);
         // Continuar de todas formas - la transacción de Stellar ya se completó
       }
 
@@ -661,15 +661,16 @@ const ProposalReview = () => {
     const feePercent = (platformFee * 100).toFixed(2);
     
     // Mostrar mensaje de éxito mejorado
-    setPopupMessage(`CONTRATO ACTIVADO EXITOSAMENTE!
-        
-Trabajador recibirá: ${workerAmount.toFixed(2)} ${task?.currency || 'USDC'}
-Comisión de plataforma (${feePercent}%): ${commission.toFixed(7)} ${task?.currency || 'USDC'}
-Total pagado: ${totalAmount.toFixed(7)} ${task?.currency || 'USDC'}
-Red: Stellar Testnet
-Trabajador: ${selectedProposal?.applicant_username}
-
-El proyecto está activo y el trabajador puede comenzar.`);
+    const currency = task?.currency || 'USDC';
+    setPopupMessage(
+      t('proposals.success.contractActivated')
+        .replace('{{workerAmount}}', workerAmount.toFixed(2))
+        .replace('{{feePercent}}', feePercent)
+        .replace('{{commission}}', commission.toFixed(7))
+        .replace('{{totalAmount}}', totalAmount.toFixed(7))
+        .replace(/\{\{currency\}\}/g, currency)
+        .replace('{{workerName}}', selectedProposal?.applicant_username ?? '')
+    );
     
     // Cerrar el popup de proceso primero
     setShowEscrowProcessPopup(false);
@@ -718,13 +719,13 @@ El proyecto está activo y el trabajador puede comenzar.`);
       }
       
       if (!connectedAddress) {
-        return { success: false, error: 'No se pudo conectar con la wallet Stellar' };
+        return { success: false, error: t('proposals.error.walletConnectFailed') };
       }
 
       return { success: true };
       
     } catch (error: any) {
-      return { success: false, error: error.message || 'Error conectando wallet' };
+      return { success: false, error: error.message || t('proposals.error.walletConnectGeneric') };
     }
   };
 

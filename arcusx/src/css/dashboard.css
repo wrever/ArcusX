@@ -1548,6 +1548,10 @@ input[type="search"]::placeholder {
 }
 
 @media (max-width: 480px) {
+  .placeholder-chart {
+    min-width: 280px;
+  }
+
   .stats-container {
     width: 100%;
     max-width: 100%;
