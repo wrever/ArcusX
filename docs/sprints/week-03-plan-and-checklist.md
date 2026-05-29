@@ -18,13 +18,15 @@ API polish on **critical** routes, **Bearer** on task/escrow UI, **light theme**
 | API: apply, create, select, complete, cancel, dispute, escrow, wallet, landing stats | Yes |
 | `arcusx_json_success` / `arcusx_json_error` helpers | Yes |
 | Frontend `config/axios` on critical flows + cancelTask | Yes |
-| Light theme CSS + contrast fixes | Yes |
+| Light theme CSS + contrast fixes (incl. follow-up 2026-05-28) | Yes |
 | `docs/api/ENDPOINTS.md`, `docs/demo/E2E_TESTNET.md` | Yes |
 | `docs/sprints/instaawards-week3.md` | Yes |
 | README: local dev + Hero stats | Yes |
 | `npm run build` | Yes |
 
-**Optional (not blocking close):** recorded demo video; live design-partner pilot.
+**Deferred to Week 4 / InstaAwards:** recorded demo; live design-partner pilot — see [`instaawards-week4.md`](./instaawards-week4.md).
+
+**Follow-up shipped 2026-05-28:** `light-theme-remaining.css`, `light-theme-contrast.css`, per-page light overrides (proposals/escrow, apply, hero, blockchain status). Documented in changelog §3.1.
 
 ---
 

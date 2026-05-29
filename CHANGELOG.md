@@ -13,6 +13,24 @@ Las entradas siguen espíritu **[Keep a Changelog](https://keepachangelog.com/es
 
 ---
 
+## 2026-05-28 — Semana 3 (seguimiento): contraste modo claro en flujos críticos
+
+**Detalle:** [`docs/sprints/week-03-changelog-and-architecture.md`](./docs/sprints/week-03-changelog-and-architecture.md) §3.1 · InstaAwards cierre: [`docs/sprints/instaawards-week4.md`](./docs/sprints/instaawards-week4.md)
+
+### Tema claro — segunda pasada
+
+- Nuevos: **`light-theme-remaining.css`**, **`light-theme-contrast.css`** (import en `main.tsx` tras global/auth/dashboard).
+- **`themes.css`:** token `--on-accent` para texto en botones con gradiente.
+- Overrides por pantalla: **`ProposalReview.css`** (confirmación, escrow fund/release), **`ApplyTask.css`**, **`FreelancerCard.css`**, **`SuperviseTask.css`** (estado blockchain), **`Hero.css`**, **`Preloader.css`**, **`WalletConnectPopup.css`**, **`SwapCard.css`**, **`UserProfile.css`**, ampliación **`dashboard-light.css`** / **`dashboard.css`**.
+- Correcciones: quitar reglas globales `color: #000` que rompían CTAs; `.download-button` ya no fuerza texto blanco en fondo claro; menos inline `#fff` en TSX de escrow/disputas/supervisión.
+
+### Documentación
+
+- Changelog sprint Week 3 actualizado con matriz de smoke en modo claro.
+- **InstaAwards Week 4:** plan de cierre y checklist en `docs/sprints/instaawards-week4.md`.
+
+---
+
 ## 2026-05-18 — Semana 3: API crítica, Bearer, tema claro, docs reviewer
 
 **Entregable detallado:** [`docs/sprints/week-03-changelog-and-architecture.md`](./docs/sprints/week-03-changelog-and-architecture.md) · Checklist: [`docs/sprints/week-03-plan-and-checklist.md`](./docs/sprints/week-03-plan-and-checklist.md)
@@ -27,10 +45,11 @@ Las entradas siguen espíritu **[Keep a Changelog](https://keepachangelog.com/es
 
 - **`config/axios`:** `ApplyTask`, `CreateTask`, `ProposalReview`, `SuperviseTask`, `dashboard`, `privateOffersService`, `cancelTaskService`.
 
-### Tema claro
+### Tema claro (núcleo 2026-05-18)
 
 - Nuevos: **`auth-surfaces-light.css`**, **`dashboard-light.css`**, **`light-theme-global.css`**, **`ProtectedRoute.css`**.
 - Contraste: wallet, filtros, idioma, volver, popups; `Register`/`Login` ya no filtran `.back-button` blanco global.
+- *Seguimiento 2026-05-28:* ver entrada anterior (remaining + contrast + flujos escrow/proposals).
 
 ### Documentación
 

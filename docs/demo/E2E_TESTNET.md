@@ -55,7 +55,7 @@ Use this script for **reviewer demos**, **InstaAwards**, or **SDF** walkthroughs
 - [ ] No 401 on apply/create with logged-in user
 - [ ] Escrow `contractId` saved on task row
 - [ ] Freelancer receives USDC (minus fee logic as designed)
-- [ ] Light theme readable on dashboard + proposals
+- [ ] Light theme readable on landing, dashboard, settings, apply, proposals (escrow popup), supervise (blockchain card), wallet popup
 
 ## Troubleshooting
 
@@ -74,4 +74,4 @@ Use this script for **reviewer demos**, **InstaAwards**, or **SDF** walkthroughs
 
 ---
 
-*Week 3 — 2026-05-18*
+*Week 3 — 2026-05-18 · Light-theme criteria updated Week 4 — 2026-05-28*
