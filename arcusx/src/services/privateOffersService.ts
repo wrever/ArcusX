@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from '../config/axios';
 import { API_URL } from '../config/database';
 
 export interface PrivateOfferTask {

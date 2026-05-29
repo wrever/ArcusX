@@ -1,187 +1,212 @@
 <?php
 require_once __DIR__ . '/cors.php';
 arcusx_cors_handle_preflight('POST, OPTIONS');
-require_once 'config.php'; // Incluye la configuración de la base de datos
+
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+
+require_once 'config.php';
+require __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/auth_bearer.php';
 
 arcusx_cors_apply('POST, OPTIONS');
 header('Content-Type: application/json; charset=UTF-8');
 
-// Asegurarse de que la solicitud es POST
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Obtener los datos JSON enviados por el frontend
-    $data = json_decode(file_get_contents('php://input'), true);
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    arcusx_json_exit(405, [
+        'success' => false,
+        'message' => 'Method not allowed',
+        'error' => 'method_not_allowed',
+    ]);
+}
 
-    // Validar si se recibieron los campos necesarios
-    $missing_fields = [];
-    if (!isset($data['taskId'])) $missing_fields[] = 'taskId';
-    if (!isset($data['applicantId'])) $missing_fields[] = 'applicantId';
-    if (!isset($data['message'])) $missing_fields[] = 'message';
-    if (!isset($data['walletAddress'])) $missing_fields[] = 'walletAddress';
-    
-    if (!empty($missing_fields)) {
-        http_response_code(400); // Bad Request
-        error_log("Campos faltantes: " . implode(', ', $missing_fields));
-        error_log("Datos recibidos: " . json_encode($data));
-        echo json_encode([
-            'message' => 'Faltan campos obligatorios: ' . implode(', ', $missing_fields),
-            'received_data' => $data
+$applicantId = arcusx_require_user_id();
+
+$data = json_decode(file_get_contents('php://input'), true);
+if (!is_array($data)) {
+    arcusx_json_exit(400, [
+        'success' => false,
+        'message' => 'Invalid JSON body',
+        'error' => 'invalid_json',
+    ]);
+}
+
+$missing_fields = [];
+if (!isset($data['taskId'])) {
+    $missing_fields[] = 'taskId';
+}
+if (!isset($data['message'])) {
+    $missing_fields[] = 'message';
+}
+if (!isset($data['walletAddress'])) {
+    $missing_fields[] = 'walletAddress';
+}
+
+if ($missing_fields !== []) {
+    error_log('apply_task missing: ' . implode(', ', $missing_fields));
+    arcusx_json_exit(400, [
+        'success' => false,
+        'message' => 'Missing required fields: ' . implode(', ', $missing_fields),
+        'error' => 'missing_fields',
+    ]);
+}
+
+$taskId = (int) $data['taskId'];
+$bodyApplicantId = isset($data['applicantId']) ? (int) $data['applicantId'] : 0;
+
+if ($bodyApplicantId > 0 && $bodyApplicantId !== $applicantId) {
+    arcusx_json_exit(403, [
+        'success' => false,
+        'message' => 'Forbidden: applicantId does not match authenticated user',
+        'error' => 'applicant_id_mismatch',
+    ]);
+}
+
+$message = trim((string) $data['message']);
+if ($message === '') {
+    arcusx_json_exit(400, [
+        'success' => false,
+        'message' => 'Message is required',
+        'error' => 'message_required',
+    ]);
+}
+
+$walletAddress_raw = trim((string) $data['walletAddress']);
+
+if ($walletAddress_raw === '') {
+    arcusx_json_exit(400, [
+        'success' => false,
+        'message' => 'Wallet address cannot be empty',
+        'error' => 'wallet_required',
+    ]);
+}
+
+$address_length = strlen($walletAddress_raw);
+if ($address_length !== 56) {
+    arcusx_json_exit(400, [
+        'success' => false,
+        'message' => 'Stellar address must be exactly 56 characters',
+        'error' => 'wallet_invalid_length',
+    ]);
+}
+
+if (substr($walletAddress_raw, 0, 1) !== 'G') {
+    arcusx_json_exit(400, [
+        'success' => false,
+        'message' => 'Stellar address must start with G',
+        'error' => 'wallet_invalid_format',
+    ]);
+}
+
+if (!preg_match('/^G[A-Z0-9]{55}$/i', $walletAddress_raw)) {
+    $uppercase_address = strtoupper($walletAddress_raw);
+    if (preg_match('/^G[A-Z0-9]{55}$/', $uppercase_address)) {
+        $walletAddress_raw = $uppercase_address;
+    } else {
+        arcusx_json_exit(400, [
+            'success' => false,
+            'message' => 'Stellar address contains invalid characters',
+            'error' => 'wallet_invalid_chars',
         ]);
-        exit;
     }
+}
 
-    // Sanitizar los datos
-    $taskId = intval($data['taskId']);
-    $applicantId = intval($data['applicantId']);
-    $message = $conn->real_escape_string($data['message']);
-    
-    // Validar formato de dirección Stellar ANTES de sanitizar
-    $walletAddress_raw = trim($data['walletAddress']);
-    
-    // Log para debugging
-    error_log("=== VALIDACIÓN DE DIRECCIÓN STELLAR ===");
-    error_log("Dirección recibida: " . $walletAddress_raw);
-    error_log("Longitud: " . strlen($walletAddress_raw));
-    error_log("Primer carácter: " . substr($walletAddress_raw, 0, 1));
-    
-    // Validación básica: debe empezar con G y tener 56 caracteres
-    if (empty($walletAddress_raw)) {
-        http_response_code(400);
-        echo json_encode(['message' => 'La dirección de wallet no puede estar vacía.']);
-        exit;
-    }
-    
-    // Validar longitud (56 caracteres)
-    $address_length = strlen($walletAddress_raw);
-    if ($address_length !== 56) {
-        http_response_code(400);
-        error_log("ERROR: Longitud incorrecta - Recibido: $address_length, Esperado: 56");
-        echo json_encode([
-            'message' => "La dirección de wallet Stellar debe tener exactamente 56 caracteres. Longitud recibida: $address_length",
-            'received_address' => $walletAddress_raw,
-            'address_length' => $address_length,
-            'expected_length' => 56
-        ]);
-        exit;
-    }
-    
-    // Validar que empiece con G
-    $first_char = substr($walletAddress_raw, 0, 1);
-    if ($first_char !== 'G') {
-        http_response_code(400);
-        error_log("ERROR: No empieza con G - Primer carácter: $first_char");
-        echo json_encode([
-            'message' => "La dirección de wallet Stellar debe empezar con la letra G. Primer carácter recibido: $first_char",
-            'received_address' => $walletAddress_raw,
-            'first_char' => $first_char
-        ]);
-        exit;
-    }
-    
-    // Validar que contenga solo caracteres alfanuméricos (A-Z, 0-9) - MÁS PERMISIVO
-    // Permitir cualquier carácter alfanumérico después de G
-    if (!preg_match('/^G[A-Z0-9]{55}$/i', $walletAddress_raw)) {
-        // Intentar con mayúsculas forzadas
-        $uppercase_address = strtoupper($walletAddress_raw);
-        if (preg_match('/^G[A-Z0-9]{55}$/', $uppercase_address)) {
-            // La dirección es válida pero tiene minúsculas, usar la versión en mayúsculas
-            $walletAddress_raw = $uppercase_address;
-            error_log("Dirección convertida a mayúsculas: $walletAddress_raw");
-        } else {
-            http_response_code(400);
-            error_log("ERROR: Caracteres inválidos en dirección Stellar");
-            // Verificar qué caracteres son inválidos
-            $invalid_chars = preg_replace('/[A-Z0-9]/i', '', substr($walletAddress_raw, 1));
-            echo json_encode([
-                'message' => 'La dirección de wallet Stellar contiene caracteres inválidos. Solo se permiten letras y números.',
-                'received_address' => $walletAddress_raw,
-                'invalid_chars' => $invalid_chars ?: 'ninguno detectado',
-                'address_length' => $address_length,
-                'first_char' => $first_char
-            ]);
-            exit;
-        }
-    }
-    
-    error_log("✓ Dirección Stellar válida: $walletAddress_raw");
-    
-    // Ahora sanitizar después de validar
-    $walletAddress = $conn->real_escape_string($walletAddress_raw);
-    
-    // Sanitizar y obtener el campo portfolioUrl si existe, si no, será NULL en la DB
-    $portfolioUrl = isset($data['portfolioUrl']) && !empty($data['portfolioUrl']) ? $conn->real_escape_string($data['portfolioUrl']) : NULL;
+$walletAddress = $walletAddress_raw;
+$portfolioUrl = '';
+if (isset($data['portfolioUrl']) && trim((string) $data['portfolioUrl']) !== '') {
+    $portfolioUrl = trim((string) $data['portfolioUrl']);
+}
 
-    // Validar si la tarea existe
-    $check_task = $conn->query("SELECT id, user_id FROM tasks WHERE id = $taskId");
-    if ($check_task->num_rows === 0) {
-        http_response_code(404); // Not Found
-        echo json_encode(['message' => 'La tarea a la que intentas aplicar no existe.']);
-        exit;
-    }
-    
-    $task_data = $check_task->fetch_assoc();
+$stmt_task = $conn->prepare('SELECT id, user_id FROM tasks WHERE id = ? LIMIT 1');
+if ($stmt_task === false) {
+    arcusx_json_exit(500, ['success' => false, 'message' => 'Server error', 'error' => 'db_prepare']);
+}
+$stmt_task->bind_param('i', $taskId);
+$stmt_task->execute();
+$task_result = $stmt_task->get_result();
+if ($task_result->num_rows === 0) {
+    $stmt_task->close();
+    arcusx_json_exit(404, [
+        'success' => false,
+        'message' => 'Task not found',
+        'error' => 'task_not_found',
+    ]);
+}
+$task_data = $task_result->fetch_assoc();
+$stmt_task->close();
 
-    $privCol = $conn->query("SHOW COLUMNS FROM tasks LIKE 'is_private_invite'");
-    if ($privCol && $privCol->num_rows > 0) {
-        $tp = $conn->query("SELECT COALESCE(is_private_invite,0) AS pi, invited_user_id FROM tasks WHERE id = $taskId LIMIT 1");
-        if ($tp && $tp->num_rows > 0) {
-            $pr = $tp->fetch_assoc();
-            if ((int) ($pr['pi'] ?? 0) === 1 && isset($pr['invited_user_id']) && (int) $pr['invited_user_id'] > 0) {
-                if ((int) $pr['invited_user_id'] !== (int) $applicantId) {
-                    http_response_code(403);
-                    echo json_encode(['message' => 'Esta tarea es una oferta privada; solo el freelancer invitado puede postular.'], JSON_UNESCAPED_UNICODE);
-                    exit;
+$privCol = $conn->query("SHOW COLUMNS FROM tasks LIKE 'is_private_invite'");
+if ($privCol && $privCol->num_rows > 0) {
+    $stmt_priv = $conn->prepare(
+        'SELECT COALESCE(is_private_invite, 0) AS pi, invited_user_id FROM tasks WHERE id = ? LIMIT 1'
+    );
+    if ($stmt_priv) {
+        $stmt_priv->bind_param('i', $taskId);
+        $stmt_priv->execute();
+        $priv_result = $stmt_priv->get_result();
+        if ($priv_result && $priv_result->num_rows > 0) {
+            $pr = $priv_result->fetch_assoc();
+            if ((int) ($pr['pi'] ?? 0) === 1 && (int) ($pr['invited_user_id'] ?? 0) > 0) {
+                if ((int) $pr['invited_user_id'] !== $applicantId) {
+                    $stmt_priv->close();
+                    arcusx_json_exit(403, [
+                        'success' => false,
+                        'message' => 'This private offer is only for the invited freelancer',
+                        'error' => 'private_invite_only',
+                    ]);
                 }
             }
         }
+        $stmt_priv->close();
     }
-    
-    // Validar que el aplicante no sea el creador de la tarea
-    if ($task_data['user_id'] == $applicantId) {
-        http_response_code(400);
-        echo json_encode(['message' => 'No puedes aplicar a tu propia tarea.']);
-        exit;
-    }
-
-    // Validar si el aplicante existe
-    $check_applicant = $conn->query("SELECT id FROM users WHERE id = $applicantId");
-    if ($check_applicant->num_rows === 0) {
-        http_response_code(404); // Not Found
-        echo json_encode(['message' => 'El usuario aplicante no existe.']);
-        exit;
-    }
-
-    // Validar que no haya aplicado previamente a esta tarea
-    $check_application = $conn->query("SELECT id FROM applications WHERE task_id = $taskId AND applicant_id = $applicantId");
-    if ($check_application->num_rows > 0) {
-        http_response_code(409); // Conflict
-        echo json_encode(['message' => 'Ya has aplicado a esta tarea anteriormente.']);
-        exit;
-    }
-
-    // Preparar la consulta SQL usando prepared statements
-    $stmt = $conn->prepare("INSERT INTO applications (task_id, applicant_id, message, portfolio_url, worker_wallet_address) VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param("iisss", $taskId, $applicantId, $message, $portfolioUrl, $walletAddress);
-
-    // Ejecutar la consulta
-    if ($stmt->execute()) {
-        // Éxito: devolver un mensaje de confirmación
-        http_response_code(201); // Created
-        echo json_encode(['message' => 'Aplicación enviada exitosamente.', 'application_id' => $conn->insert_id]);
-    } else {
-        // Error en la inserción
-        http_response_code(500); // Internal Server Error
-        error_log("Error al insertar aplicación: " . $stmt->error);
-        echo json_encode(['message' => 'Error al enviar la aplicación.']);
-    }
-    
-    $stmt->close();
-
-    // Cerrar la conexión a la base de datos
-    $conn->close();
-
-} else {
-    // Si la solicitud no es POST, devolver método no permitido
-    http_response_code(405); // Method Not Allowed
-    echo json_encode(['message' => 'Método no permitido']);
 }
-?>
+
+if ((int) $task_data['user_id'] === $applicantId) {
+    arcusx_json_exit(400, [
+        'success' => false,
+        'message' => 'You cannot apply to your own task',
+        'error' => 'own_task',
+    ]);
+}
+
+$stmt_dup = $conn->prepare('SELECT id FROM applications WHERE task_id = ? AND applicant_id = ? LIMIT 1');
+if ($stmt_dup === false) {
+    arcusx_json_exit(500, ['success' => false, 'message' => 'Server error', 'error' => 'db_prepare']);
+}
+$stmt_dup->bind_param('ii', $taskId, $applicantId);
+$stmt_dup->execute();
+$dup_result = $stmt_dup->get_result();
+if ($dup_result->num_rows > 0) {
+    $stmt_dup->close();
+    arcusx_json_exit(409, [
+        'success' => false,
+        'message' => 'You have already applied to this task',
+        'error' => 'already_applied',
+    ]);
+}
+$stmt_dup->close();
+
+$stmt = $conn->prepare(
+    'INSERT INTO applications (task_id, applicant_id, message, portfolio_url, worker_wallet_address) VALUES (?, ?, ?, ?, ?)'
+);
+if ($stmt === false) {
+    arcusx_json_exit(500, ['success' => false, 'message' => 'Server error', 'error' => 'db_prepare']);
+}
+
+$stmt->bind_param('iisss', $taskId, $applicantId, $message, $portfolioUrl, $walletAddress);
+
+if ($stmt->execute()) {
+    arcusx_json_exit(201, [
+        'success' => true,
+        'message' => 'Application submitted successfully',
+        'application_id' => (int) $conn->insert_id,
+    ]);
+}
+
+error_log('apply_task insert: ' . $stmt->error);
+$stmt->close();
+arcusx_json_exit(500, [
+    'success' => false,
+    'message' => 'Error submitting application',
+    'error' => 'insert_failed',
+]);

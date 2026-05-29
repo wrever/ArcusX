@@ -605,10 +605,10 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                 padding: '8px 0',
                 borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
               }}>
-                <span style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.8)' }}>
+                <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
                   {t('complete.popup.workerPaymentLabel')}
                 </span>
-                <strong style={{ fontSize: '14px', color: '#fff' }}>
+                <strong style={{ fontSize: '14px', color: 'var(--text-primary)' }}>
                   {formattedWorkerAmount} USDC
                 </strong>
               </div>
@@ -619,10 +619,10 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                 padding: '8px 0',
                 borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
               }}>
-                <span style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.8)' }}>
+                <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
                   {t('complete.popup.platformCommissionLabel').replace('{{percent}}', String(platformFeePercent))}
                 </span>
-                <strong style={{ fontSize: '14px', color: '#fff' }}>
+                <strong style={{ fontSize: '14px', color: 'var(--text-primary)' }}>
                   {formattedCommission} USDC
                 </strong>
               </div>
@@ -723,14 +723,14 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
             
             <div style={{
               marginBottom: '30px',
-              color: 'rgba(255, 255, 255, 0.9)',
+              color: 'var(--text-secondary)',
               lineHeight: '1.6'
             }}>
               <p style={{ 
                 fontSize: '16px', 
                 marginBottom: '20px', 
                 fontWeight: '500',
-                color: 'rgba(255, 255, 255, 0.8)'
+                color: 'var(--text-secondary)'
               }}>
                 {t('complete.success.milestoneMessage')}
               </p>
@@ -752,7 +752,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                   borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
                 }}>
                   <span style={{ fontSize: '18px' }}></span>
-                  <strong style={{ fontSize: '15px', color: '#fff' }}>
+                  <strong style={{ fontSize: '15px', color: 'var(--text-primary)' }}>
                     {t('complete.success.milestoneTitle')}
                   </strong>
                 </div>
@@ -763,7 +763,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                   marginBottom: '12px'
                 }}>
                   <span style={{ fontSize: '18px' }}></span>
-                  <strong style={{ fontSize: '15px', color: '#fff' }}>
+                  <strong style={{ fontSize: '15px', color: 'var(--text-primary)' }}>
                     {t('complete.success.fundsReleased').replace('{{amount}}', formattedWorkerAmount)}
                   </strong>
                 </div>
@@ -775,7 +775,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                   }}>
                     <p style={{ 
                       fontSize: '13px', 
-                      color: 'rgba(255, 255, 255, 0.6)',
+                      color: 'var(--text-muted)',
                       margin: 0
                     }}>
                       <strong style={{ color: '#10dd88' }}>{t('complete.popup.txHash')}</strong>{' '}
@@ -799,7 +799,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                 onClick={handleSuccessPopupClose}
                 style={{
                   background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
-                  color: '#fff',
+                  color: 'var(--text-primary)',
                   border: 'none',
                   padding: '14px 32px',
                   borderRadius: '10px',

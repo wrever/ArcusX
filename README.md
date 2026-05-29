@@ -184,10 +184,34 @@ The platform fee (0.5%) is automatically deducted and sent to the configured tre
    # Frontend
    cd arcusx
    npm run dev
+   # → http://localhost:5173
 
-   # Backend
-   # Configure your PHP server to serve backend_externo/
+   # Backend (PHP built-in example)
+   cd backend_externo
+   php -S localhost:8080
+   # Point VITE_API_URL=http://localhost:8080 in arcusx/.env for local API
    ```
+
+7. **Backend secrets (required)**
+   - Copy `backend_externo/.env.example` values into server env or Apache `SetEnv` (see `.htaccess` template).
+   - Never commit real `ARCUSX_JWT_SECRET` or DB passwords.
+
+### Hero public stats
+
+The landing page shows **open tasks**, **registered users**, and **completed volume (USDC)**:
+
+- With **Supabase** configured (`VITE_SUPABASE_URL`), stats come from RPCs (preferred).
+- Otherwise **`GET /auth/get_landing_market_stats.php`** (public JSON, no JWT).
+
+### Week 3 reviewer docs
+
+- API list: [`docs/api/ENDPOINTS.md`](./docs/api/ENDPOINTS.md)
+- Testnet demo script: [`docs/demo/E2E_TESTNET.md`](./docs/demo/E2E_TESTNET.md)
+- Sprint changelog: [`docs/sprints/week-03-changelog-and-architecture.md`](./docs/sprints/week-03-changelog-and-architecture.md)
+- InstaAwards pilot: [`docs/sprints/instaawards-week3.md`](./docs/sprints/instaawards-week3.md)
+- **ArcusX Guard + agentic payments:** [`docs/agentic-payments/arcusx-guard/`](./docs/agentic-payments/arcusx-guard/) — escrow agéntico + IA protectora
+- **ArcusX Deals (acuerdos modulares):** [`docs/agreement-deals/`](./docs/agreement-deals/) — plantillas + link de pago (alquiler, P2P, coaching…)
+- Escrow nativo Soroban: [`docs/escrow-native/`](./docs/escrow-native/)
 
 ## ⚙️ Configuration
 

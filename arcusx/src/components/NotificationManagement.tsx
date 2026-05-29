@@ -410,7 +410,7 @@ const NotificationManagement: React.FC<NotificationManagementProps> = ({ onUpdat
       {/* Contenido: Lista */}
       {activeTab === 'list' && (
         <>
-          <div className="filter-info" style={{ marginBottom: '20px', padding: '16px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '12px', border: '1px solid rgba(40, 192, 240, 0.3)' }}>
+          <div className="filter-info" style={{ marginBottom: '20px', padding: '16px', background: 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid rgba(40, 192, 240, 0.3)' }}>
             <span>Total: {total} notificaciones</span>
           </div>
           
@@ -572,7 +572,7 @@ const NotificationManagement: React.FC<NotificationManagementProps> = ({ onUpdat
               
               <div className="dispute-details-section">
                 <h4>Título</h4>
-                <p style={{ fontSize: '18px', fontWeight: '600', color: '#fff', margin: '8px 0' }}>
+                <p style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', margin: '8px 0' }}>
                   {selectedNotification.title}
                 </p>
               </div>
@@ -580,13 +580,13 @@ const NotificationManagement: React.FC<NotificationManagementProps> = ({ onUpdat
               <div className="dispute-details-section">
                 <h4>Mensaje</h4>
                 <div style={{ 
-                  background: 'rgba(255, 255, 255, 0.05)', 
+                  background: 'var(--bg-tertiary)', 
                   padding: '20px', 
                   borderRadius: '12px',
                   border: '1px solid rgba(40, 192, 240, 0.3)',
                   whiteSpace: 'pre-wrap',
                   lineHeight: '1.6',
-                  color: 'rgba(255, 255, 255, 0.9)'
+                  color: 'var(--text-secondary)'
                 }}>
                   {selectedNotification.message}
                 </div>

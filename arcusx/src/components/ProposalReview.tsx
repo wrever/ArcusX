@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaUser, FaCalendarAlt, FaWallet, FaExternalLinkAlt, FaCheck, FaTimes, FaSpinner, FaEye, FaHome, FaFileAlt, FaCheckCircle, FaUserCircle } from 'react-icons/fa';
-import axios from 'axios';
+import axios from '../config/axios';
 import { API_URL } from '../config/database';
 import { useWallet } from '../hooks/useWallet';
 // Escrow Trustless Work (cliente aprueba y firma liberación; ver trustlessWorkEscrowService)
@@ -1082,7 +1082,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
             {/* Contenido */}
             <div className="popup-content" style={{
               marginBottom: '32px',
-              color: 'rgba(255, 255, 255, 0.9)',
+              color: 'var(--text-secondary)',
               lineHeight: '1.7',
               fontSize: '16px'
             }}>
@@ -1099,7 +1099,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
                   <p style={{ 
                     fontSize: '16px', 
                     marginBottom: '24px', 
-                    color: 'rgba(255, 255, 255, 0.8)'
+                    color: 'var(--text-secondary)'
                   }}>
                     El trabajador ha sido seleccionado y el escrow está configurado correctamente
                   </p>
@@ -1120,7 +1120,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
                       borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
                     }}>
                       <FaCheckCircle style={{ fontSize: '18px', color: '#4ade80' }} />
-                      <strong style={{ fontSize: '15px', color: '#fff' }}>
+                      <strong style={{ fontSize: '15px', color: 'var(--text-primary)' }}>
                         Contrato escrow creado
                       </strong>
                     </div>
@@ -1133,7 +1133,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
                       borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
                     }}>
                       <FaCheckCircle style={{ fontSize: '18px', color: '#4ade80' }} />
-                      <strong style={{ fontSize: '15px', color: '#fff' }}>
+                      <strong style={{ fontSize: '15px', color: 'var(--text-primary)' }}>
                         Fondos enviados al escrow
                       </strong>
                     </div>
@@ -1146,7 +1146,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
                       borderBottom: selectedProposal || task?.escrow_id ? '1px solid rgba(40, 192, 240, 0.2)' : 'none'
                     }}>
                       <FaCheckCircle style={{ fontSize: '18px', color: '#4ade80' }} />
-                      <strong style={{ fontSize: '15px', color: '#fff' }}>
+                      <strong style={{ fontSize: '15px', color: 'var(--text-primary)' }}>
                         Trabajador seleccionado{selectedProposal ? `: ${selectedProposal.applicant_username}` : ''}
                       </strong>
                     </div>
@@ -1160,7 +1160,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
                       }}>
                         <p style={{ 
                           fontSize: '13px', 
-                          color: 'rgba(255, 255, 255, 0.8)',
+                          color: 'var(--text-secondary)',
                           margin: '4px 0'
                         }}>
                           <strong style={{ color: '#10dd88' }}>Wallet:</strong>{' '}
@@ -1177,7 +1177,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
                         {selectedProposal.message && (
                           <p style={{ 
                             fontSize: '12px', 
-                            color: 'rgba(255, 255, 255, 0.7)',
+                            color: 'var(--text-muted)',
                             margin: '8px 0 0 0',
                             fontStyle: 'italic'
                           }}>
@@ -1194,7 +1194,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
                       }}>
                         <p style={{ 
                           fontSize: '13px', 
-                          color: 'rgba(255, 255, 255, 0.6)',
+                          color: 'var(--text-muted)',
                           margin: 0
                         }}>
                           <strong style={{ color: '#10dd88' }}>{t('proposals.label.contractId')}</strong>{' '}
@@ -1229,7 +1229,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
                     borderRadius: '12px',
                     textAlign: 'left'
                   }}>
-                    <p style={{ margin: '8px 0', color: 'rgba(255, 255, 255, 0.9)' }}>
+                    <p style={{ margin: '8px 0', color: 'var(--text-secondary)' }}>
                       <strong style={{ color: '#10dd88' }}>{t('proposals.label.contractAddress')}</strong>
                     </p>
                     <code className="contract-address" style={{
@@ -1245,16 +1245,16 @@ El proyecto está activo y el trabajador puede comenzar.`);
                     }}>
                       {popupMessage.split('Dirección del contrato: ')[1]?.split('\n')[0]}
                     </code>
-                    <p style={{ margin: '8px 0', color: 'rgba(255, 255, 255, 0.9)' }}>
+                    <p style={{ margin: '8px 0', color: 'var(--text-secondary)' }}>
                       <strong style={{ color: '#10dd88' }}>{t('proposals.label.network')}</strong> {popupMessage.split('Red: ')[1]?.split('\n')[0]}
                     </p>
-                    <p style={{ margin: '8px 0', color: 'rgba(255, 255, 255, 0.9)' }}>
+                    <p style={{ margin: '8px 0', color: 'var(--text-secondary)' }}>
                       <strong style={{ color: '#10dd88' }}>{t('proposals.label.status')}</strong> {popupMessage.split('Estado: ')[1]}
                     </p>
                   </div>
                 </div>
               ) : (
-                <p style={{ fontSize: '17px', color: 'rgba(255, 255, 255, 0.9)' }}>{popupMessage}</p>
+                <p style={{ fontSize: '17px', color: 'var(--text-secondary)' }}>{popupMessage}</p>
               )}
             </div>
 
@@ -1265,7 +1265,7 @@ El proyecto está activo y el trabajador puede comenzar.`);
                 className="popup-button success-button"
                 style={{
                   background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
-                  color: '#fff',
+                  color: 'var(--text-primary)',
                   border: 'none',
                   padding: '16px 40px',
                   borderRadius: '12px',
@@ -1295,9 +1295,9 @@ El proyecto está activo y el trabajador puede comenzar.`);
                 onClick={handleGoToDashboard} 
                 className="popup-button secondary-button"
                 style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  color: '#fff',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  background: 'var(--bg-tertiary)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border-color)',
                   padding: '16px 40px',
                   borderRadius: '12px',
                   fontSize: '17px',
@@ -1311,11 +1311,11 @@ El proyecto está activo y el trabajador puede comenzar.`);
                   gap: '8px'
                 }}
                 onMouseOver={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                  e.currentTarget.style.background = 'var(--bg-hover)';
                   e.currentTarget.style.transform = 'translateY(-2px)';
                 }}
                 onMouseOut={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                  e.currentTarget.style.background = 'var(--bg-tertiary)';
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >

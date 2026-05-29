@@ -32,17 +32,7 @@ header('Content-Type: application/json; charset=UTF-8');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
-        $userId = arcusx_jwt_user_id();
-
-        if ($userId === null) {
-            http_response_code(401);
-            echo json_encode([
-                'success' => false,
-                'message' => 'Acceso no autorizado: Token JWT no proporcionado o inválido.'
-            ]);
-            $conn->close();
-            exit;
-        }
+        $userId = arcusx_require_user_id();
         
         $data = json_decode(file_get_contents('php://input'), true);
         

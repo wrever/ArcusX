@@ -1,4 +1,5 @@
 import { API_URL } from '../config/database';
+import { supabase, hasSupabase } from '../config/supabase';
 
 export interface AdminUser {
   id: number;
@@ -494,5 +495,221 @@ export async function withdrawAdminCommission(amount?: number): Promise<{
     tx_hash: String(data.tx_hash ?? ''),
     amount_withdrawn: Number(data.amount_withdrawn) || 0,
   };
+}
+
+// ——— Referidos (Supabase Edge) ———
+
+type ReferralAdminPayload = Record<string, unknown>;
+
+export interface ReferralStats {
+  unread_fraud_alerts: number;
+  valid_signups_today: number;
+  rejected_signups_today: number;
+  active_partners?: number;
+  total_valid_referrals?: number;
+}
+
+export interface ReferralPartnerTimeline {
+  from: string;
+  to: string;
+  partner_id: string;
+  total_valid: number;
+  daily_rows: { signup_date: string; valid_count: number }[];
+}
+
+export interface ReferralPartner {
+  id: string;
+  display_name: string;
+  is_active: boolean;
+}
+
+export interface ReferralFraudAlert {
+  id: string;
+  title: string;
+  message: string;
+  partner_display_name: string;
+  ref_code: string;
+  flag_types: string[];
+  created_at: string;
+  is_read: boolean;
+}
+
+export interface ReferralCreateCodeResult {
+  success?: boolean;
+  link?: string;
+  link_register?: string;
+  code?: Record<string, unknown>;
+}
+
+export interface ReferralDailyReport {
+  from?: string;
+  to?: string;
+  rows: Record<string, unknown>[];
+  total_valid?: number;
+}
+
+function asArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
+async function referralAdminCall(
+  action: string,
+  payload: ReferralAdminPayload = {},
+): Promise<ReferralAdminPayload> {
+  const token = localStorage.getItem('admin_token') || localStorage.getItem('token');
+
+  if (hasSupabase && token) {
+    const { data, error } = await supabase.functions.invoke('referral-admin', {
+      body: { action, ...payload },
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (error) {
+      const msg = (error.message ?? '').toLowerCase();
+      if (
+        msg.includes('not found') ||
+        msg.includes('failed to send') ||
+        msg.includes('non-2xx')
+      ) {
+        throw new Error(
+          'Falta desplegar la Edge Function referral-admin en Supabase (Dashboard → Edge Functions → Deploy). Los Secrets solos no bastan.',
+        );
+      }
+      throw error;
+    }
+
+    if (data && typeof data === 'object') {
+      const res = data as ReferralAdminPayload;
+      if (res.success === false) {
+        throw new Error(String(res.message ?? 'Error en referidos'));
+      }
+      return res;
+    }
+
+    throw new Error(
+      'referral-admin respondió vacío. Verifica deploy y ARCUSX_JWT_SECRET en Edge Secrets.',
+    );
+  }
+
+  throw new Error(
+    'Referidos requiere Supabase configurado y sesión admin. Despliega referral-admin en Edge Functions.',
+  );
+}
+
+export async function getReferralStats(): Promise<ReferralStats> {
+  const data = await referralAdminCall('referral_stats');
+  return {
+    unread_fraud_alerts: Number(data.unread_fraud_alerts ?? 0),
+    valid_signups_today: Number(data.valid_signups_today ?? 0),
+    rejected_signups_today: Number(data.rejected_signups_today ?? 0),
+    active_partners: Number(data.active_partners ?? 0),
+    total_valid_referrals: Number(data.total_valid_referrals ?? 0),
+  };
+}
+
+export async function getReferralPartnerTimeline(
+  partnerId: string,
+  from: string,
+  to: string,
+): Promise<ReferralPartnerTimeline> {
+  const data = await referralAdminCall('referral_partner_timeline', {
+    partner_id: partnerId,
+    from,
+    to,
+  });
+  return {
+    from: String(data.from ?? from),
+    to: String(data.to ?? to),
+    partner_id: String(data.partner_id ?? partnerId),
+    total_valid: Number(data.total_valid ?? 0),
+    daily_rows: asArray<{ signup_date: string; valid_count: number }>(data.daily_rows),
+  };
+}
+
+export async function getReferralPartners(): Promise<ReferralPartner[]> {
+  const data = await referralAdminCall('referral_list_partners');
+  return asArray<ReferralPartner>(data.partners);
+}
+
+export async function createReferralPartner(payload: {
+  display_name: string;
+  contact_email?: string;
+  notes?: string;
+}) {
+  return referralAdminCall('referral_create_partner', payload);
+}
+
+export async function createReferralCode(payload: {
+  partner_id: string;
+  code: string;
+  label?: string;
+}): Promise<ReferralCreateCodeResult> {
+  const data = await referralAdminCall('referral_create_code', payload);
+  return {
+    success: data.success === true,
+    link: typeof data.link === 'string' ? data.link : undefined,
+    link_register: typeof data.link_register === 'string' ? data.link_register : undefined,
+    code: typeof data.code === 'object' && data.code !== null
+      ? (data.code as Record<string, unknown>)
+      : undefined,
+  };
+}
+
+export async function getReferralCodes(partnerId?: string) {
+  const data = await referralAdminCall('referral_list_codes', {
+    ...(partnerId ? { partner_id: partnerId } : {}),
+  });
+  return data.codes ?? [];
+}
+
+export async function getReferralDailyReport(
+  from: string,
+  to: string,
+  partnerId?: string,
+): Promise<ReferralDailyReport> {
+  const data = await referralAdminCall('referral_daily_report', {
+    from,
+    to,
+    ...(partnerId ? { partner_id: partnerId } : {}),
+  });
+  return {
+    from: typeof data.from === 'string' ? data.from : from,
+    to: typeof data.to === 'string' ? data.to : to,
+    rows: asArray<Record<string, unknown>>(data.rows),
+    total_valid: Number(data.total_valid ?? 0),
+  };
+}
+
+export async function getReferralSignups(params?: {
+  page?: number;
+  status?: string;
+  signup_date?: string;
+}): Promise<Record<string, unknown>[]> {
+  const data = await referralAdminCall('referral_list_signups', {
+    page: params?.page ?? 1,
+    ...(params?.status ? { status: params.status } : {}),
+    ...(params?.signup_date ? { signup_date: params.signup_date } : {}),
+  });
+  return asArray<Record<string, unknown>>(data.signups);
+}
+
+export async function getReferralFraudAlerts(
+  unreadOnly = true,
+): Promise<ReferralFraudAlert[]> {
+  const data = await referralAdminCall('referral_fraud_alerts', {
+    unread_only: unreadOnly ? '1' : '0',
+  });
+  return asArray<ReferralFraudAlert>(data.alerts);
+}
+
+export async function markReferralFraudAlertRead(alertId: string) {
+  return referralAdminCall('referral_mark_alert_read', { alert_id: alertId });
+}
+
+export async function toggleReferralCode(codeId: string, isActive: boolean) {
+  return referralAdminCall('referral_toggle_code', {
+    code_id: codeId,
+    is_active: isActive,
+  });
 }
 

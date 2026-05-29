@@ -791,7 +791,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
                     {loadingEscrowInfo ? (
                       <div style={{ padding: '20px', textAlign: 'center' }}>
                         <FaSpinner className="spinning" style={{ fontSize: '24px', margin: '0 auto', display: 'block' }} />
-                        <p style={{ marginTop: '10px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                        <p style={{ marginTop: '10px', color: 'var(--text-muted)' }}>
                           {t('admin.escrows.loadingInfo')}
                         </p>
                       </div>
@@ -859,7 +859,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
                             }}>
                               <FaExclamationTriangle style={{ color: '#ef4444', marginRight: '8px' }} />
                               <strong style={{ color: '#ef4444' }}>{t('admin.escrows.inconsistenciesDetected')}</strong>
-                              <p style={{ marginTop: '8px', color: 'rgba(255, 255, 255, 0.8)' }}>
+                              <p style={{ marginTop: '8px', color: 'var(--text-secondary)' }}>
                                 {JSON.stringify(escrowInfo.inconsistencies, null, 2)}
                               </p>
                             </div>
@@ -872,7 +872,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
                               {escrowInfo.milestones.map((milestone: any, idx: number) => (
                                 <div key={idx} style={{
                                   padding: '8px',
-                                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                  backgroundColor: 'var(--bg-tertiary)',
                                   borderRadius: '6px',
                                   marginBottom: '6px'
                                 }}>
@@ -892,7 +892,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
                       <div style={{ 
                         padding: '20px', 
                         textAlign: 'center',
-                        color: 'rgba(255, 255, 255, 0.6)'
+                        color: 'var(--text-muted)'
                       }}>
                         <FaExclamationTriangle style={{ marginBottom: '10px', fontSize: '24px' }} />
                         <p>{t('admin.escrows.error.noInfo')}</p>

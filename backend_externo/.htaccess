@@ -5,8 +5,18 @@
 # Requiere mod_env. Si getenv() sigue vacío, el host puede usar PHP-FPM sin pasar vars: usa entorno desde cPanel o contacta soporte.
 
 <IfModule mod_env.c>
-    SetEnv ARCUSX_DB_PASSWORD "REEMPLAZA_CON_PASSWORD_REAL"
-    SetEnv ARCUSX_JWT_SECRET "REEMPLAZA_CON_JWT_SECRET_REAL"
+  # MySQL + JWT app (ya los tienes en producción)
+  SetEnv ARCUSX_DB_PASSWORD "Brn08a33!"
+  SetEnv ARCUSX_JWT_SECRET "GA7UTLCKIPSQSCRLILQKZGE24X5CBAH32C7NJEZ2NKQLTB4OZDINXL3D"
+
+  # OAuth sync (sync_supabase_user.php) — NO van en arcusx/.env del build
+  SetEnv ARCUSX_SUPABASE_URL "https://atgsesbstjleabesclzs.supabase.co"
+  SetEnv ARCUSX_SUPABASE_ANON_KEY "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0Z3Nlc2JzdGpsZWFiZXNjbHpzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0NTY3NzgsImV4cCI6MjA3ODAzMjc3OH0.RjwwgXaHHQ-Pz69qeZfXKRc0AuuNdAm3wjecY0xB-YY"
+
+  # Referidos vía PHP (opcional si atribuyes solo desde Edge/cliente)
+  # SetEnv ARCUSX_SUPABASE_SERVICE_ROLE_KEY "REEMPLAZA_SERVICE_ROLE"
+  # SetEnv REFERRAL_INTERNAL_SECRET "REEMPLAZA"
+  # SetEnv REFERRAL_HASH_SALT "REEMPLAZA"
 </IfModule>
 
 DirectoryIndex index.html

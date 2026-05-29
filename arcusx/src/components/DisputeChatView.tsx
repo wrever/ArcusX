@@ -89,7 +89,7 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
     return (
       <div style={{ padding: '40px', textAlign: 'center' }}>
         <div className="loading-spinner" style={{ margin: '0 auto' }}></div>
-        <p style={{ marginTop: '20px', color: 'rgba(255, 255, 255, 0.6)' }}>
+        <p style={{ marginTop: '20px', color: 'var(--text-muted)' }}>
           Cargando chat...
         </p>
       </div>
@@ -108,7 +108,7 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
 
   if (messages.length === 0) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center', color: 'rgba(255, 255, 255, 0.6)' }}>
+      <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
         <p>No hay mensajes en este chat.</p>
       </div>
     );
@@ -133,14 +133,14 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#fff',
+                color: 'var(--text-primary)',
                 fontSize: '18px'
               }}>
                 <FaUser />
               </div>
               <div>
-                <div style={{ fontWeight: 'bold', color: '#fff' }}>Cliente</div>
-                <div style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                <div style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>Cliente</div>
+                <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
                   {participants.client.username}
                 </div>
               </div>
@@ -156,14 +156,14 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#fff',
+                color: 'var(--text-primary)',
                 fontSize: '18px'
               }}>
                 <FaUserTie />
               </div>
               <div>
-                <div style={{ fontWeight: 'bold', color: '#fff' }}>Trabajador</div>
-                <div style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                <div style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>Trabajador</div>
+                <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
                   {participants.worker.username}
                 </div>
               </div>
@@ -185,7 +185,7 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
               left: '12px',
               top: '50%',
               transform: 'translateY(-50%)',
-              color: 'rgba(255, 255, 255, 0.5)'
+              color: 'var(--text-muted)'
             }} />
             <input
               type="text"
@@ -195,10 +195,10 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
               style={{
                 width: '100%',
                 padding: '10px 10px 10px 40px',
-                background: 'rgba(255, 255, 255, 0.1)',
+                background: 'var(--bg-tertiary)',
                 border: '1px solid rgba(40, 192, 240, 0.3)',
                 borderRadius: '8px',
-                color: '#fff',
+                color: 'var(--text-primary)',
                 fontSize: '14px'
               }}
             />
@@ -209,10 +209,10 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
             onChange={(e) => setFilterByUser(e.target.value as 'all' | 'client' | 'worker')}
             style={{
               padding: '10px 15px',
-              background: 'rgba(255, 255, 255, 0.1)',
+              background: 'var(--bg-tertiary)',
               border: '1px solid rgba(40, 192, 240, 0.3)',
               borderRadius: '8px',
-              color: '#fff',
+              color: 'var(--text-primary)',
               fontSize: '14px',
               cursor: 'pointer'
             }}
@@ -227,10 +227,10 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
             onChange={(e) => setDateFilter(e.target.value as 'all' | 'today' | 'week' | 'month')}
             style={{
               padding: '10px 15px',
-              background: 'rgba(255, 255, 255, 0.1)',
+              background: 'var(--bg-tertiary)',
               border: '1px solid rgba(40, 192, 240, 0.3)',
               borderRadius: '8px',
-              color: '#fff',
+              color: 'var(--text-primary)',
               fontSize: '14px',
               cursor: 'pointer'
             }}
@@ -251,7 +251,7 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
         maxHeight: '500px'
       }}>
         {filteredMessages.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(255, 255, 255, 0.6)' }}>
+          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
             <p>No se encontraron mensajes con los filtros aplicados.</p>
           </div>
         ) : (
@@ -288,22 +288,22 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: '#fff',
+                      color: 'var(--text-primary)',
                       fontSize: '14px'
                     }}>
                       {isClient ? <FaUser /> : <FaUserTie />}
                     </div>
                     <div>
-                      <div style={{ fontWeight: 'bold', color: '#fff', fontSize: '14px' }}>
+                      <div style={{ fontWeight: 'bold', color: 'var(--text-primary)', fontSize: '14px' }}>
                         {message.sender_username}
                       </div>
-                      <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                         {new Date(message.created_at).toLocaleString('es-ES')}
                       </div>
                     </div>
                   </div>
                   
-                  <div style={{ color: 'rgba(255, 255, 255, 0.9)', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
+                  <div style={{ color: 'var(--text-secondary)', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
                     {message.message}
                   </div>
 
@@ -367,7 +367,7 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
             <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10dd88' }}>
               {stats.total_messages}
             </div>
-            <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
               Total mensajes
             </div>
           </div>
@@ -375,7 +375,7 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
             <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10dd88' }}>
               {stats.client_messages}
             </div>
-            <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
               Cliente
             </div>
           </div>
@@ -383,7 +383,7 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
             <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10dd88' }}>
               {stats.worker_messages}
             </div>
-            <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
               Trabajador
             </div>
           </div>
@@ -391,7 +391,7 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
             <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10dd88' }}>
               {stats.files_shared}
             </div>
-            <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
               Archivos
             </div>
           </div>

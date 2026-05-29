@@ -367,6 +367,20 @@
   white-space: nowrap;
 }
 
+:root[data-theme="light"] .landing-hero-search-loading {
+  color: #2563eb;
+}
+
+:root[data-theme="light"] .landing-hero-search-results {
+  background: #ffffff;
+  border-color: var(--border-color);
+  box-shadow: var(--shadow-lg);
+}
+
+:root[data-theme="light"] .hero-carousel-loading {
+  color: var(--text-secondary);
+}
+
 .landing-hero-search-hint {
   font-size: 0.9rem;
   color: var(--text-muted);
@@ -2083,9 +2097,58 @@
   box-shadow: var(--shadow-md), 0 0 0 1px rgba(16, 221, 136, 0.1);
 }
 
+:root[data-theme="light"] .landing-roadmap--arcusx {
+  background-image: radial-gradient(ellipse 100% 60% at 50% 30%, rgba(59, 130, 246, 0.06), transparent 55%);
+}
+
+:root[data-theme="light"] .landing-roadmap-title {
+  color: #0f172a;
+}
+
+:root[data-theme="light"] .landing-roadmap-subtitle {
+  color: #475569;
+}
+
+:root[data-theme="light"] .landing-roadmap-track {
+  background: rgba(100, 116, 139, 0.25);
+}
+
+:root[data-theme="light"] .landing-roadmap-track-progress {
+  background: linear-gradient(180deg, #3b82f6, rgba(37, 99, 235, 0.45));
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.25);
+}
+
+:root[data-theme="light"] .landing-roadmap-phase-date {
+  color: #64748b;
+}
+
+:root[data-theme="light"] .landing-roadmap-item[data-phase="done"] .landing-roadmap-phase-date,
+:root[data-theme="light"] .landing-roadmap-item[data-phase="now"] .landing-roadmap-phase-date {
+  color: #2563eb;
+}
+
 :root[data-theme="light"] .landing-roadmap-card {
   background: var(--bg-card);
   border-color: var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+:root[data-theme="light"] .landing-roadmap-card h3 {
+  color: #0f172a;
+  border-bottom-color: var(--border-color);
+}
+
+:root[data-theme="light"] .landing-roadmap-card li {
+  color: #475569;
+}
+
+:root[data-theme="light"] .landing-roadmap-card li::before {
+  background: #3b82f6;
+}
+
+:root[data-theme="light"] .landing-roadmap-item[data-phase="now"] .landing-roadmap-node {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
 }
 
 .landing-roadmap-card h3 {

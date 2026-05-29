@@ -317,7 +317,7 @@
   z-index: 1;
 }
 
-.back-button {
+.login-container .back-button {
   position: fixed;
   top: 2rem;
   left: 2rem;
@@ -340,7 +340,7 @@
     0 0 0 1px rgba(40, 192, 240, 0.1);
 }
 
-.back-button:hover {
+.login-container .back-button:hover {
   background: rgba(40, 192, 240, 0.2);
   border-color: var(--primary-blue);
   transform: translateX(-5px);
@@ -350,11 +350,11 @@
     0 0 0 1px rgba(40, 192, 240, 0.3);
 }
 
-.back-button span {
+.login-container .back-button span {
   color: var(--text-light);
 }
 
-.back-button svg {
+.login-container .back-button svg {
   color: var(--text-light);
   font-size: 1rem;
 }
@@ -496,7 +496,7 @@
     align-items: flex-start;
   }
   
-  .back-button {
+  .login-container .back-button {
     top: 1rem;
     left: 1rem;
     padding: 0.5rem 1rem;

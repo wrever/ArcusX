@@ -68,7 +68,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
     return (
       <div style={{ padding: '40px', textAlign: 'center' }}>
         <div className="loading-spinner" style={{ margin: '0 auto' }}></div>
-        <p style={{ marginTop: '20px', color: 'rgba(255, 255, 255, 0.6)' }}>
+        <p style={{ marginTop: '20px', color: 'var(--text-muted)' }}>
           Cargando archivos...
         </p>
       </div>
@@ -104,7 +104,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
               : 'rgba(255, 255, 255, 0.1)',
             border: `1px solid ${activeTab === 'task_files' ? 'transparent' : 'rgba(40, 192, 240, 0.3)'}`,
             borderRadius: '8px',
-            color: '#fff',
+            color: 'var(--text-primary)',
             fontWeight: 'bold',
             cursor: 'pointer',
             transition: 'all 0.3s ease',
@@ -144,7 +144,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
               : 'rgba(255, 255, 255, 0.1)',
             border: `1px solid ${activeTab === 'chat_files' ? 'transparent' : 'rgba(40, 192, 240, 0.3)'}`,
             borderRadius: '8px',
-            color: '#fff',
+            color: 'var(--text-primary)',
             fontWeight: 'bold',
             cursor: 'pointer',
             transition: 'all 0.3s ease',
@@ -184,7 +184,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
               : 'rgba(255, 255, 255, 0.1)',
             border: `1px solid ${activeTab === 'delivery_files' ? 'transparent' : 'rgba(40, 192, 240, 0.3)'}`,
             borderRadius: '8px',
-            color: '#fff',
+            color: 'var(--text-primary)',
             fontWeight: 'bold',
             cursor: 'pointer',
             transition: 'all 0.3s ease',
@@ -224,7 +224,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
         maxHeight: '500px'
       }}>
         {currentFiles.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(255, 255, 255, 0.6)' }}>
+          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
             <FaFile style={{ fontSize: '48px', marginBottom: '15px', opacity: 0.5 }} />
             <p>No hay archivos en esta categoría.</p>
           </div>
@@ -263,7 +263,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
                       fontWeight: 'bold',
-                      color: '#fff',
+                      color: 'var(--text-primary)',
                       fontSize: '14px',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -271,13 +271,13 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
                     }}>
                       {file.filename}
                     </div>
-                    <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginTop: '4px' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
                       {file.size_formatted || `${(file.size / 1024).toFixed(2)} KB`}
                     </div>
                   </div>
                 </div>
 
-                <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', marginBottom: '10px' }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px' }}>
                   {file.uploaded_by === 'client' ? <><FaUser style={{ marginRight: '4px' }} /> Cliente</> : <><FaUserTie style={{ marginRight: '4px' }} /> Trabajador</>}
                   {file.uploaded_at && (
                     <span style={{ marginLeft: '8px' }}>
@@ -330,7 +330,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
                       background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
                       border: 'none',
                       borderRadius: '6px',
-                      color: '#fff',
+                      color: 'var(--text-primary)',
                       cursor: 'pointer',
                       textDecoration: 'none',
                       display: 'flex',
@@ -375,7 +375,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
             <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10dd88' }}>
               {summary.total_files}
             </div>
-            <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
               Total archivos
             </div>
           </div>
@@ -383,7 +383,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
             <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10dd88' }}>
               {summary.task_files_count}
             </div>
-            <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
               De la tarea
             </div>
           </div>
@@ -391,7 +391,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
             <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10dd88' }}>
               {summary.chat_files_count}
             </div>
-            <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
               Del chat
             </div>
           </div>
@@ -399,7 +399,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
             <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10dd88' }}>
               {summary.delivery_files_count}
             </div>
-            <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
               Entregas
             </div>
           </div>
@@ -436,14 +436,14 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-              <h3 style={{ color: '#fff', margin: 0 }}>{previewFile.filename}</h3>
+              <h3 style={{ color: 'var(--text-primary)', margin: 0 }}>{previewFile.filename}</h3>
               <button
                 onClick={() => setPreviewFile(null)}
                 style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  background: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border-color)',
                   borderRadius: '6px',
-                  color: '#fff',
+                  color: 'var(--text-primary)',
                   padding: '8px 16px',
                   cursor: 'pointer',
                   fontSize: '14px'

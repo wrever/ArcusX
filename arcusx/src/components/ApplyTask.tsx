@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { FaArrowLeft, FaCommentAlt, FaLink, FaWallet, FaInfoCircle } from 'react-icons/fa';
-import axios from 'axios';
+import axios from '../config/axios';
 import { API_URL } from '../config/database';
 import '../css/ApplyTask.css'; // Necesitas crear este archivo CSS
 import { useI18n } from '../i18n/I18nProvider';
@@ -143,6 +143,14 @@ const ApplyTask = () => {
       return;
     }
 
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setSubmitError(t('apply.error.login'));
+      setShowErrorPopup(true);
+      setSubmitting(false);
+      return;
+    }
+
     if (!task?.id) {
         setSubmitError(t('apply.error.no.task'));
         setShowErrorPopup(true);
@@ -185,7 +193,7 @@ const ApplyTask = () => {
 
       const response = await axios.post(`${API_URL}/auth/apply_task.php`, payload);
 
-      if (response.data && response.data.message) {
+      if (response.data?.success !== false && response.data?.message) {
         setSubmitMessage(response.data.message);
         setApplicationData({
           message: '',

@@ -6,6 +6,11 @@ import '../css/Login.enterprise.css';
 import { useAuth } from '../hooks/useAuth';
 import { useEnterpriseMode } from '../hooks/useEnterpriseMode';
 import { authService } from '../services/authService';
+import {
+  captureRefFromSearch,
+  getStoredRefCode,
+  normalizeRefCode,
+} from '../utils/referralCapture';
 import { useI18n } from '../i18n/I18nProvider';
 import SEO from './SEO';
 
@@ -18,6 +23,14 @@ const Login = () => {
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/dashboard';
   const { isAuthenticated } = useAuth();
+  const refFromUrl = searchParams.get('ref') ?? searchParams.get('r');
+  const refCode = refFromUrl
+    ? normalizeRefCode(refFromUrl)
+    : getStoredRefCode();
+
+  useEffect(() => {
+    captureRefFromSearch(window.location.search);
+  }, [searchParams, refFromUrl]);
 
   // Verificar si el usuario ya está autenticado al cargar el componente
   useEffect(() => {
@@ -31,6 +44,7 @@ const Login = () => {
     setError('');
     setOauthLoading('google');
     try {
+      captureRefFromSearch(window.location.search);
       await authService.signInWithGoogle();
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : '';
@@ -43,6 +57,7 @@ const Login = () => {
     setError('');
     setOauthLoading('github');
     try {
+      captureRefFromSearch(window.location.search);
       await authService.signInWithGitHub();
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : '';
@@ -95,6 +110,22 @@ const Login = () => {
           </div>
 
           {error && <div className="login-error">{error}</div>}
+
+          {refCode && (
+            <p
+              className="login-referral-banner"
+              style={{
+                marginBottom: '1rem',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                background: 'rgba(16, 221, 136, 0.12)',
+                border: '1px solid rgba(16, 221, 136, 0.35)',
+                fontSize: '14px',
+              }}
+            >
+              Invitación de referido activa · código <strong>{refCode}</strong>
+            </p>
+          )}
 
           <div className="oauth-buttons">
             <button

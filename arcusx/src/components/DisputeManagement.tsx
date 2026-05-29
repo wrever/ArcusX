@@ -1271,7 +1271,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
             border: '1px solid rgba(255, 152, 0, 0.3)',
             borderRadius: '8px',
             fontSize: '0.9em',
-            color: 'rgba(255, 255, 255, 0.9)',
+            color: 'var(--text-secondary)',
             display: 'flex',
             alignItems: 'flex-start',
             gap: '10px'
@@ -1543,7 +1543,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                         : 'rgba(255, 255, 255, 0.1)',
                       border: `1px solid ${activeTab === 'summary' ? 'transparent' : 'rgba(16, 221, 136, 0.3)'}`,
                       borderRadius: '8px',
-                      color: '#fff',
+                      color: 'var(--text-primary)',
                       fontWeight: 'bold',
                       cursor: 'pointer',
                       transition: 'all 0.3s ease',
@@ -1554,12 +1554,12 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                     }}
                     onMouseOver={(e) => {
                       if (activeTab !== 'summary') {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                        e.currentTarget.style.background = 'var(--bg-hover)';
                       }
                     }}
                     onMouseOut={(e) => {
                       if (activeTab !== 'summary') {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                        e.currentTarget.style.background = 'var(--bg-tertiary)';
                       }
                     }}
                   >
@@ -1576,7 +1576,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                         : 'rgba(255, 255, 255, 0.1)',
                       border: `1px solid ${activeTab === 'chat' ? 'transparent' : 'rgba(16, 221, 136, 0.3)'}`,
                       borderRadius: '8px',
-                      color: '#fff',
+                      color: 'var(--text-primary)',
                       fontWeight: 'bold',
                       cursor: 'pointer',
                       transition: 'all 0.3s ease',
@@ -1587,12 +1587,12 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                     }}
                     onMouseOver={(e) => {
                       if (activeTab !== 'chat') {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                        e.currentTarget.style.background = 'var(--bg-hover)';
                       }
                     }}
                     onMouseOut={(e) => {
                       if (activeTab !== 'chat') {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                        e.currentTarget.style.background = 'var(--bg-tertiary)';
                       }
                     }}
                   >
@@ -1609,7 +1609,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                         : 'rgba(255, 255, 255, 0.1)',
                       border: `1px solid ${activeTab === 'files' ? 'transparent' : 'rgba(16, 221, 136, 0.3)'}`,
                       borderRadius: '8px',
-                      color: '#fff',
+                      color: 'var(--text-primary)',
                       fontWeight: 'bold',
                       cursor: 'pointer',
                       transition: 'all 0.3s ease',
@@ -1620,12 +1620,12 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                     }}
                     onMouseOver={(e) => {
                       if (activeTab !== 'files') {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                        e.currentTarget.style.background = 'var(--bg-hover)';
                       }
                     }}
                     onMouseOut={(e) => {
                       if (activeTab !== 'files') {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                        e.currentTarget.style.background = 'var(--bg-tertiary)';
                       }
                     }}
                   >
@@ -1642,7 +1642,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                         : 'rgba(255, 255, 255, 0.1)',
                       border: `1px solid ${activeTab === 'timeline' ? 'transparent' : 'rgba(16, 221, 136, 0.3)'}`,
                       borderRadius: '8px',
-                      color: '#fff',
+                      color: 'var(--text-primary)',
                       fontWeight: 'bold',
                       cursor: 'pointer',
                       transition: 'all 0.3s ease',
@@ -1653,12 +1653,12 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                     }}
                     onMouseOver={(e) => {
                       if (activeTab !== 'timeline') {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                        e.currentTarget.style.background = 'var(--bg-hover)';
                       }
                     }}
                     onMouseOut={(e) => {
                       if (activeTab !== 'timeline') {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                        e.currentTarget.style.background = 'var(--bg-tertiary)';
                       }
                     }}
                   >

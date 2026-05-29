@@ -8,6 +8,16 @@ import {
 import { Networks } from '@stellar/stellar-sdk';
 import { authService } from '../services/authService';
 
+const walletNetwork = (): WalletNetwork => {
+  const net = import.meta.env.VITE_STELLAR_NETWORK?.trim().toLowerCase();
+  return net === 'mainnet' ? WalletNetwork.PUBLIC : WalletNetwork.TESTNET;
+};
+
+const networkPassphrase = (): string => {
+  const net = import.meta.env.VITE_STELLAR_NETWORK?.trim().toLowerCase();
+  return net === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
+};
+
 interface WalletState {
   isConnected: boolean;
   address: string | null;
@@ -38,7 +48,7 @@ export const useWallet = () => {
         const savedWalletId = saved ? (JSON.parse(saved).walletId ?? 'freighter') : 'freighter';
 
         const stellarKit = new StellarWalletsKit({
-          network: WalletNetwork.TESTNET,
+          network: walletNetwork(),
           selectedWalletId: savedWalletId,
           modules: [
             new FreighterModule(),
@@ -147,7 +157,7 @@ export const useWallet = () => {
       // kit.signTransaction necesita la frase de contraseña como cadena
       const { signedTxXdr } = await kit.signTransaction(transactionXdr, {
         address: walletState.address!,
-        networkPassphrase: Networks.TESTNET
+        networkPassphrase: networkPassphrase()
       });
       return signedTxXdr;
     } catch (error) {

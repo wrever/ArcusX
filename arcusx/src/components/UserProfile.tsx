@@ -265,7 +265,7 @@ const UserProfile = () => {
         <div className="profile-stats-grid">
           <div className="stat-card">
             <div className="stat-icon tasks-completed">
-              <FaTasks style={{ color: '#ffffff', fill: '#ffffff' }} />
+              <FaTasks />
             </div>
             <div className="stat-content">
               <div className="stat-value">{stats.tasks_completed}</div>
@@ -275,7 +275,7 @@ const UserProfile = () => {
           
           <div className="stat-card">
             <div className="stat-icon tasks-created">
-              <FaBriefcase style={{ color: '#ffffff', fill: '#ffffff' }} />
+              <FaBriefcase />
             </div>
             <div className="stat-content">
               <div className="stat-value">{stats.tasks_created}</div>
@@ -285,7 +285,7 @@ const UserProfile = () => {
           
           <div className="stat-card">
             <div className="stat-icon earnings">
-              <FaDollarSign style={{ color: '#ffffff', fill: '#ffffff' }} />
+              <FaDollarSign />
             </div>
             <div className="stat-content">
               <div className="stat-value">${stats.total_earned.toFixed(2)}</div>
@@ -295,7 +295,7 @@ const UserProfile = () => {
           
           <div className="stat-card">
             <div className="stat-icon rating">
-              <FaStar style={{ color: '#ffffff', fill: '#ffffff' }} />
+              <FaStar />
             </div>
             <div className="stat-content">
               <div className="stat-value">

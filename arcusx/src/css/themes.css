@@ -56,6 +56,8 @@
   --overlay-light: rgba(0, 0, 0, 0.6);
   --input-background: rgba(20, 20, 20, 0.95);
   --input-border: rgba(16, 221, 136, 0.3);
+
+  --on-accent: #ffffff;
 }
 
 /* Modo Claro (Paleta Pastel con Buen Contraste) */
@@ -117,6 +119,9 @@
   /* Link colors */
   --link-color: #2563eb;
   --link-hover-color: #1d4ed8;
+
+  /* Texto sobre fondos de acento (botones primarios, gradientes) */
+  --on-accent: #ffffff;
 }
 
 /* Transición suave entre temas */

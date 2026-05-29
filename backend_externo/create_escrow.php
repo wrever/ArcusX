@@ -65,19 +65,9 @@ try {
         exit;
     }
     
-    // Verificar autenticación
     error_log("Verificando autenticación...");
-    $jwtUid = arcusx_jwt_user_id();
-    error_log("Client ID obtenido: " . ($jwtUid !== null ? (string) $jwtUid : 'NULL'));
-
-    if ($jwtUid === null) {
-        error_log("ERROR: Token de autenticación inválido");
-        http_response_code(401);
-        echo json_encode(['message' => 'Token de autenticación inválido']);
-        exit;
-    }
-
-    $clientId = (string) $jwtUid;
+    $clientId = (string) arcusx_require_user_id();
+    error_log("Client ID obtenido: " . $clientId);
 
     if ($isSignatureConfirmation) {
         // CONFIRMAR FIRMA DEL CONTRATO

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { FaArrowLeft, FaClock, FaExclamationTriangle, FaCheckCircle, FaFileAlt, FaCreditCard, FaHeading, FaAlignLeft, FaDollarSign, FaTag, FaLayerGroup, FaInfoCircle } from 'react-icons/fa';
 import '../css/CreateTask.css';
-import axios from 'axios';
+import axios from '../config/axios';
 import Popup from './Popup';
 import { API_URL } from '../config/database';
 import { getPlatformFee } from '../services/platformFeeService';
@@ -561,7 +561,7 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
                   <FaDollarSign style={{ marginRight: '6px', fontSize: '14px' }} />
                   {t('create.label.payment')}
                 </label>
-                <p className="helper-text" style={{ fontSize: '0.85em', color: 'rgba(255, 255, 255, 0.7)', marginTop: '0.25rem', marginBottom: '0.5rem' }}>
+                <p className="helper-text" style={{ fontSize: '0.85em', color: 'var(--text-muted)', marginTop: '0.25rem', marginBottom: '0.5rem' }}>
                   <FaInfoCircle style={{ marginRight: '4px', fontSize: '12px' }} />
                   {t('create.helper.payment').replace('{{p}}', String(platformFeePercent))}
                 </p>

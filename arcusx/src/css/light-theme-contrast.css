@@ -1,0 +1,200 @@
+/**
+ * Contraste modo claro — botones, iconos y textos legibles (sin blanco sobre blanco).
+ */
+
+/* ========== Botones PRIMARIOS (texto blanco sobre gradiente azul/verde) ========== */
+:root[data-theme="light"] .task-button,
+:root[data-theme="light"] .btn-primary,
+:root[data-theme="light"] .create-task-button,
+:root[data-theme="light"] .submit-button,
+:root[data-theme="light"] .application-form button[type="submit"],
+:root[data-theme="light"] .chat-send-btn,
+:root[data-theme="light"] .select-button,
+:root[data-theme="light"] .accept-button,
+:root[data-theme="light"] .reject-button,
+:root[data-theme="light"] .sign-contract-button,
+:root[data-theme="light"] .escrow-step-button:not(.error),
+:root[data-theme="light"] .popup-button.primary,
+:root[data-theme="light"] .btn-success,
+:root[data-theme="light"] .btn-danger,
+:root[data-theme="light"] .claim-btn,
+:root[data-theme="light"] .pending-action-buttons .btn-primary,
+:root[data-theme="light"] .admin-panel-container .btn-primary,
+:root[data-theme="light"] .token-management .btn-primary,
+:root[data-theme="light"] .fee-management .btn-primary,
+:root[data-theme="light"] .referral-mgmt .btn-primary,
+:root[data-theme="light"] .refresh-button,
+:root[data-theme="light"] .add-token-button,
+:root[data-theme="light"] .save-fee-button,
+:root[data-theme="light"] .confirm-dialog-button-info,
+:root[data-theme="light"] .confirm-dialog-button-danger,
+:root[data-theme="light"] a.nav-button.register,
+:root[data-theme="light"] .supervise-back-dashboard-btn,
+:root[data-theme="light"] .apply-task-container .back-button {
+  color: var(--on-accent, #ffffff) !important;
+  -webkit-text-fill-color: var(--on-accent, #ffffff) !important;
+}
+
+:root[data-theme="light"] .task-button svg,
+:root[data-theme="light"] .btn-primary svg,
+:root[data-theme="light"] .create-task-button svg,
+:root[data-theme="light"] .submit-button svg,
+:root[data-theme="light"] .chat-send-btn svg,
+:root[data-theme="light"] .select-button svg,
+:root[data-theme="light"] .pending-action-buttons .btn-primary svg,
+:root[data-theme="light"] .apply-task-container .back-button svg {
+  color: var(--on-accent, #ffffff) !important;
+  fill: currentColor !important;
+}
+
+:root[data-theme="light"] .task-button,
+:root[data-theme="light"] .create-task-button,
+:root[data-theme="light"] .pending-action-buttons .btn-primary {
+  background: linear-gradient(90deg, #3b82f6, #2563eb) !important;
+}
+
+:root[data-theme="light"] .pending-action-buttons .btn-primary:hover {
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35) !important;
+}
+
+/* ========== Botones SECUNDARIOS / outline (texto oscuro, borde visible) ========== */
+:root[data-theme="light"] .btn-secondary,
+:root[data-theme="light"] .task-button.secondary,
+:root[data-theme="light"] .pending-action-buttons .btn-secondary,
+:root[data-theme="light"] .admin-panel-container .btn-secondary,
+:root[data-theme="light"] .token-management .btn-secondary,
+:root[data-theme="light"] .fee-management .btn-secondary,
+:root[data-theme="light"] .referral-mgmt .btn-secondary,
+:root[data-theme="light"] .cancel-button,
+:root[data-theme="light"] .confirm-dialog-button.cancel,
+:root[data-theme="light"] .arcusx-modal-secondary-btn,
+:root[data-theme="light"] .mark-all-read,
+:root[data-theme="light"] .filters-toggle {
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+  -webkit-text-fill-color: var(--text-primary) !important;
+}
+
+:root[data-theme="light"] .btn-secondary:hover,
+:root[data-theme="light"] .task-button.secondary:hover,
+:root[data-theme="light"] .pending-action-buttons .btn-secondary:hover,
+:root[data-theme="light"] .admin-panel-container .btn-secondary:hover,
+:root[data-theme="light"] .token-management .btn-secondary:hover,
+:root[data-theme="light"] .fee-management .btn-secondary:hover,
+:root[data-theme="light"] .cancel-button:hover,
+:root[data-theme="light"] .confirm-dialog-button.cancel:hover,
+:root[data-theme="light"] .arcusx-modal-secondary-btn:hover:not(:disabled),
+:root[data-theme="light"] .mark-all-read:hover,
+:root[data-theme="light"] .filters-toggle:hover {
+  background: var(--bg-hover) !important;
+  border-color: var(--border-color-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme="light"] .btn-secondary svg,
+:root[data-theme="light"] .pending-action-buttons .btn-secondary svg,
+:root[data-theme="light"] .cancel-button svg {
+  color: currentColor !important;
+  fill: currentColor !important;
+}
+
+/* ========== Tabs y chips ========== */
+:root[data-theme="light"] .filter-tab {
+  background: var(--bg-card) !important;
+  color: var(--text-secondary) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+:root[data-theme="light"] .filter-tab:hover {
+  background: var(--bg-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme="light"] .filter-tab.active {
+  background: rgba(59, 130, 246, 0.12) !important;
+  color: var(--primary-blue) !important;
+  border-color: rgba(59, 130, 246, 0.4) !important;
+}
+
+/* ========== Botón volver genérico (no primario azul) ========== */
+:root[data-theme="light"] .back-button:not(.apply-task-container .back-button):not(.create-task-container .back-button):not(.proposal-review-container .back-button):not(.supervise-back-dashboard-btn) {
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+:root[data-theme="light"] .back-button:not(.apply-task-container .back-button):not(.create-task-container .back-button):not(.proposal-review-container .back-button):not(.supervise-back-dashboard-btn) svg,
+:root[data-theme="light"] .back-button:not(.apply-task-container .back-button):not(.create-task-container .back-button):not(.proposal-review-container .back-button):not(.supervise-back-dashboard-btn) span {
+  color: var(--text-primary) !important;
+}
+
+/* Proposal review back = primario azul */
+:root[data-theme="light"] .proposal-review-container .back-button,
+:root[data-theme="light"] .proposal-review-container .back-button span,
+:root[data-theme="light"] .proposal-review-container .back-button svg,
+:root[data-theme="light"] .create-task-container .back-button,
+:root[data-theme="light"] .create-task-container .back-button span,
+:root[data-theme="light"] .create-task-container .back-button svg {
+  color: var(--on-accent, #ffffff) !important;
+}
+
+/* ========== OAuth / outline en auth ========== */
+:root[data-theme="light"] .oauth-button {
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+:root[data-theme="light"] .oauth-button span,
+:root[data-theme="light"] .oauth-button svg {
+  color: var(--text-primary) !important;
+}
+
+/* ========== Wallet navbar ========== */
+:root[data-theme="light"] .wallet-button,
+:root[data-theme="light"] .wallet-button.connected,
+:root[data-theme="light"] .wallet-button.disconnected,
+:root[data-theme="light"] .wallet-button span,
+:root[data-theme="light"] .wallet-button .wallet-address {
+  color: var(--text-primary) !important;
+}
+
+/* ========== Dispute / outline rojo ========== */
+:root[data-theme="light"] .dispute-btn {
+  background: rgba(220, 38, 38, 0.08);
+  color: #b91c1c;
+  border-color: rgba(220, 38, 38, 0.35);
+}
+
+:root[data-theme="light"] .dispute-btn:hover {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+/* ========== Popups escrow / acciones con fondo claro ========== */
+:root[data-theme="light"] .popup-button.secondary,
+:root[data-theme="light"] .action-button.cancel-button {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+/* ========== Referral admin ========== */
+:root[data-theme="light"] .referral-mgmt .referral-form-row input,
+:root[data-theme="light"] .referral-mgmt .referral-select {
+  background: var(--input-background) !important;
+  border: 1px solid var(--input-border) !important;
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme="light"] .referral-mgmt .referral-form-row button {
+  background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme="light"] .referral-mgmt .referral-alert-item button {
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+}

@@ -3,7 +3,7 @@
  * Servicio para cancelación de tareas y reembolsos
  */
 
-import axios from 'axios';
+import axios from '../config/axios';
 import { API_URL } from '../config/database';
 
 export interface CancellationCheckResult {
@@ -44,18 +44,8 @@ export async function checkCancellationAllowed(
   taskId: number
 ): Promise<CancellationCheckResult> {
   try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('No hay token de autenticación');
-    }
-
     const response = await axios.get(
-      `${API_URL}/auth/check_cancellation_allowed.php?task_id=${taskId}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      }
+      `${API_URL}/auth/check_cancellation_allowed.php?task_id=${taskId}`
     );
 
     if (response.data.success) {
@@ -78,22 +68,11 @@ export async function cancelTask(
   reason?: string
 ): Promise<CancelTaskResult> {
   try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('No hay token de autenticación');
-    }
-
     const response = await axios.post(
       `${API_URL}/auth/cancel_task.php`,
       {
         task_id: taskId,
         reason: reason || null
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
       }
     );
 
@@ -125,23 +104,12 @@ export async function confirmCancellation(
   reason?: string
 ): Promise<CancelTaskResult> {
   try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('No hay token de autenticación');
-    }
-
     const response = await axios.post(
       `${API_URL}/auth/cancel_task.php`,
       {
         task_id: taskId,
         tx_hash: txHash,
         reason: reason || null
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
       }
     );
 

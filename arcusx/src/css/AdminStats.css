@@ -194,6 +194,19 @@
   text-decoration: underline;
 }
 
+.escrows-status-section {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.escrows-status-section h3 {
+  color: #fff;
+}
+
+.escrows-status-label {
+  color: rgba(255, 255, 255, 0.7);
+}
+
 .stat-trend {
   font-size: 12px;
   color: rgba(16, 185, 129, 0.8);
