@@ -2,8 +2,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
 import { FaRocket, FaUsers, FaLaptopCode, FaMoneyBillWave, FaArrowRight, FaLock, FaBolt, FaCheck, FaMapMarkedAlt, FaChevronDown, FaSearch, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
-import axios from 'axios';
-import { API_URL } from '../config/database';
+import axios from '../config/axios';
+import { arcusxApiUrl } from '../config/arcusxApi';
 import { hasSupabase, supabase } from '../config/supabase';
 import { getFreelancers } from '../services/freelancerService';
 import type { Freelancer } from '../types/freelancer';
@@ -114,7 +114,7 @@ const Hero = () => {
     const fetchCarouselTasks = async () => {
       setLoadingCarousel(true);
       try {
-        const url = `${API_URL}/auth/get_tasks.php?sort_by=date_desc`;
+        const url = `${arcusxApiUrl('get_tasks')}?sort_by=date_desc`;
         const response = await axios.get(url);
         const data = Array.isArray(response.data) ? response.data : (response.data?.tasks ?? []);
         setCarouselTasks(Array.isArray(data) ? data.slice(0, 12) : []);
@@ -197,7 +197,7 @@ const Hero = () => {
             open_tasks?: number;
             total_users?: number;
             total_volume_usdc?: number;
-          }>(`${API_URL}/auth/get_landing_market_stats.php`);
+          }>(`${arcusxApiUrl('get_landing_market_stats')}`);
           if (cancelled) return;
           const d = res.data;
           if (d && d.success !== false) {
@@ -233,7 +233,7 @@ const Hero = () => {
           const params = new URLSearchParams();
           params.append('search', searchQuery.trim());
           params.append('sort_by', 'date_desc');
-          const url = `${API_URL}/auth/get_tasks.php?${params.toString()}`;
+          const url = `${arcusxApiUrl('get_tasks')}?${params.toString()}`;
           const response = await axios.get(url);
           const data = Array.isArray(response.data) ? response.data : (response.data?.tasks ?? []);
           setSearchResults(Array.isArray(data) ? data.slice(0, 8) : []);

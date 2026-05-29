@@ -1,4 +1,4 @@
-import { API_URL } from '../config/database';
+import { arcusxApiUrl, arcusxApiHeaders } from '../config/arcusxApi';
 
 export interface UserDispute {
   dispute_id: number;
@@ -152,12 +152,9 @@ export async function getUserDisputes(): Promise<UserDisputesResponse> {
     throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
   }
 
-  const response = await fetch(`${API_URL}/auth/get_user_disputes.php`, {
+  const response = await fetch(`${arcusxApiUrl('get_user_disputes')}`, {
     method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: arcusxApiHeaders(),
   });
 
   if (!response.ok) {
@@ -184,12 +181,9 @@ export async function getDisputeRefundXDR(disputeId: number): Promise<{ success:
   }
 
   // Llamar al endpoint del admin para obtener la XDR firmada
-  const response = await fetch(`${API_URL}/auth/admin_release_dispute_funds.php`, {
+  const response = await fetch(`${arcusxApiUrl('admin_release_dispute_funds')}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: arcusxApiHeaders(),
     body: JSON.stringify({ dispute_id: disputeId }),
   });
 
@@ -217,12 +211,9 @@ export async function getDisputeChat(disputeId: number): Promise<DisputeChatResp
     throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
   }
 
-  const response = await fetch(`${API_URL}/auth/get_dispute_chat.php?dispute_id=${disputeId}`, {
+  const response = await fetch(`${arcusxApiUrl('get_dispute_chat')}?dispute_id=${disputeId}`, {
     method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: arcusxApiHeaders(),
   });
 
   if (!response.ok) {
@@ -249,12 +240,9 @@ export async function getDisputeFiles(disputeId: number): Promise<DisputeFilesRe
     throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
   }
 
-  const response = await fetch(`${API_URL}/auth/get_dispute_files.php?dispute_id=${disputeId}`, {
+  const response = await fetch(`${arcusxApiUrl('get_dispute_files')}?dispute_id=${disputeId}`, {
     method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: arcusxApiHeaders(),
   });
 
   if (!response.ok) {
@@ -281,12 +269,9 @@ export async function getDisputeTimeline(disputeId: number): Promise<DisputeTime
     throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
   }
 
-  const response = await fetch(`${API_URL}/auth/get_dispute_timeline.php?dispute_id=${disputeId}`, {
+  const response = await fetch(`${arcusxApiUrl('get_dispute_timeline')}?dispute_id=${disputeId}`, {
     method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: arcusxApiHeaders(),
   });
 
   if (!response.ok) {

@@ -4,7 +4,7 @@ import { FaArrowLeft, FaClock, FaExclamationTriangle, FaCheckCircle, FaFileAlt, 
 import '../css/CreateTask.css';
 import axios from '../config/axios';
 import Popup from './Popup';
-import { API_URL } from '../config/database';
+import { arcusxApiUrl } from '../config/arcusxApi';
 import { getPlatformFee } from '../services/platformFeeService';
 import { useI18n } from '../i18n/I18nProvider';
 
@@ -108,7 +108,7 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
     if (!user?.id) return;
     
     try {
-      const response = await axios.get(`${API_URL}/auth/task_stats.php?user_id=${user.id}`);
+      const response = await axios.get(`${arcusxApiUrl('task_stats')}?user_id=${user.id}`);
       setUserLimits(response.data);
     } catch (error: any) {
       // Para usuarios nuevos, establecer valores por defecto que permitan crear tareas
@@ -321,7 +321,7 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
 
     try {
       // Enviar los datos de la tarea a la API PHP
-      const response = await axios.post(`${API_URL}/auth/create_task.php`, {
+      const response = await axios.post(`${arcusxApiUrl('create_task')}`, {
         ...formData,
         user_id: user.id,
         ...(hireContext
@@ -335,7 +335,7 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
         
         // Recargar límites del usuario (con manejo de errores)
         try {
-          const limitsResponse = await axios.get(`${API_URL}/auth/task_stats.php?user_id=${user.id}`);
+          const limitsResponse = await axios.get(`${arcusxApiUrl('task_stats')}?user_id=${user.id}`);
           if (limitsResponse.data) {
             setUserLimits(limitsResponse.data);
           }

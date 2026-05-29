@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaFile, FaFilePdf, FaFileImage, FaFileArchive, FaDownload, FaEye, FaUser, FaUserTie } from 'react-icons/fa';
 import { getDisputeFiles, DisputeFile, DisputeFiles } from '../services/disputeService';
-import { API_URL } from '../config/database';
+import { publicAssetUrl } from '../config/arcusxApi';
 import '../css/AdminPanel.css';
 
 interface DisputeFilesViewProps {
@@ -59,7 +59,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
     if (file.url.startsWith('http')) {
       return file.url;
     }
-    return `${API_URL}${file.url}`;
+    return publicAssetUrl(file.url);
   };
 
   const currentFiles = files[activeTab] || [];

@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { FaUpload, FaDownload, FaFile, FaTrash, FaSpinner, FaFolderOpen } from 'react-icons/fa';
 import '../css/FileExchange.css';
 import { useI18n } from '../i18n/I18nProvider';
+import { arcusxApiUrl, arcusxApiHeaders } from '../config/arcusxApi';
 
 interface FileItem {
   id: string;
@@ -58,8 +59,11 @@ const FileExchange: React.FC<FileExchangeProps> = ({
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await fetch(`https://arcusx.pro/api/auth/get_task_details.php?task_id=${taskId}`, {
+        const uploadHeaders = arcusxApiHeaders();
+        uploadHeaders.delete('Content-Type');
+        const response = await fetch(`${arcusxApiUrl('get_task_details', { task_id: taskId })}`, {
           method: 'POST',
+          headers: uploadHeaders,
           body: formData
         });
 
@@ -109,11 +113,9 @@ const FileExchange: React.FC<FileExchangeProps> = ({
     }
 
     try {
-      const response = await fetch(`https://arcusx.pro/api/auth/get_task_details.php?task_id=${taskId}`, {
+      const response = await fetch(`${arcusxApiUrl('get_task_details', { task_id: taskId })}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: arcusxApiHeaders(),
         body: JSON.stringify({ file_id: fileId })
       });
 

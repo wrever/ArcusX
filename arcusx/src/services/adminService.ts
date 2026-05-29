@@ -1,4 +1,4 @@
-import { API_URL } from '../config/database';
+import { arcusxAdminUrl, arcusxApiHeaders } from '../config/arcusxApi';
 import { supabase, hasSupabase } from '../config/supabase';
 
 export interface AdminUser {
@@ -41,12 +41,9 @@ export interface AdminStats {
  */
 export async function adminLogin(email: string, password: string): Promise<AdminLoginResponse> {
   try {
-    const response = await fetch(`${API_URL}/auth/admin_login.php`, {
+    const response = await fetch(arcusxAdminUrl('admin_login'), {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
-      },
+      headers: arcusxApiHeaders({ 'X-Requested-With': 'XMLHttpRequest' }),
       body: JSON.stringify({ email, password }),
     });
 
@@ -151,17 +148,17 @@ async function adminApiCall(action: string, method: string = 'GET', body?: any, 
 
   // Construir URL correctamente
   // admin.php está en /api/auth/ igual que admin_login.php
-  let url = `${API_URL}/auth/admin.php?action=${action}`;
-  if (queryParams && queryParams.toString()) {
-    url += `&${queryParams.toString()}`;
+  const query: Record<string, string> = {};
+  if (queryParams) {
+    queryParams.forEach((v, k) => {
+      query[k] = v;
+    });
   }
-  
+  const url = arcusxAdminUrl(action, query);
+
   const options: RequestInit = {
     method,
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: arcusxApiHeaders(),
   };
   
   if (body && method !== 'GET') {
