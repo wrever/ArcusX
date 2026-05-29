@@ -1,7 +1,7 @@
 # Week 4 — Plan & checklist (InstaAwards close)
 
 **Target close:** 2026-05-28  
-**Deliverables:** [`instaawards-week4.md`](./instaawards-week4.md) · Engineering alignment with [`PLAN_MES1_REVISORES.md`](../../PLAN_MES1_REVISORES.md) § Week 4
+**Deliverables:** [`instaawards-week4.md`](./instaawards-week4.md) · [`week-04-technical-close.md`](./week-04-technical-close.md) · Engineering alignment with [`PLAN_MES1_REVISORES.md`](../../PLAN_MES1_REVISORES.md) § Week 4
 
 **Builds on:** Week 3 closed in repo ([`week-03-changelog-and-architecture.md`](./week-03-changelog-and-architecture.md)); light-theme follow-up 2026-05-28.
 
@@ -17,17 +17,17 @@ Finish the **reviewer / SDF month**: demo evidence, pilot outcome, metrics snaps
 
 | # | Area | Item | Done |
 |---|------|------|------|
-| 1 | **Demo** | E2E recorded or live per `docs/demo/E2E_TESTNET.md` | ☐ |
-| 2 | **Pilot** | Design partner: full cycle **or** retro + next date in `instaawards-week4.md` | ☐ |
-| 3 | **Metrics** | SQL snapshot pasted in `instaawards-week4.md` | ☐ |
-| 4 | **Docs** | `instaawards-week4.md` filled; README links Week 4 | ☐ |
-| 5 | **Deploy** | `npm run build` + PHP upload; server `.htaccess` `SetEnv` preserved | ☐ |
-| 6 | **Light theme** | Smoke routes in week-03 changelog § Verification (light) | ☐ |
-| 7 | **Bugs** | Week 2 critical-flow issues resolved or documented WONTFIX | ☐ |
-| 8 | **i18n** | ProtectedRoute, SuperviseTask, ProposalReview, CompleteTaskPopup, UserProfile → `t()` where still hardcoded (best effort) | ☐ |
-| 9 | **Console** | No `console.log` in production paths (ProposalReview, escrow service, dashboard) | ☐ |
-| 10 | **Responsive** | 320px / 768px: dashboard + proposals — no horizontal overflow | ☐ |
-| 11 | **Mainnet** | Checklist dated in `instaawards-week4.md` — no false claims | ☐ |
+| 1 | **Demo** | E2E recorded or live per `docs/demo/E2E_TESTNET.md` | ☐ ops |
+| 2 | **Pilot** | Design partner: full cycle **or** retro + next date in `instaawards-week4.md` | ☐ ops |
+| 3 | **Metrics** | SQL snapshot pasted in `instaawards-week4.md` | ☐ ops |
+| 4 | **Docs** | `instaawards-week4.md` filled; README links Week 4 | ☐ ops |
+| 5 | **Deploy** | `npm run build` + PHP upload; server `.htaccess` `SetEnv` preserved | ☐ ops |
+| 6 | **Light theme** | 8 archivos + gaps en `week-04-light-theme-gaps.md` | ☑ repo |
+| 7 | **Bugs** | Week 2: utilities ausentes, EvidenceUpload no-op, check_disputes | ☑ repo |
+| 8 | **i18n** | 5 componentes — ver `week-04-technical-close.md` | ☑ repo |
+| 9 | **Console** | devLog/devWarn/devError en 3 archivos + logger | ☑ repo |
+| 10 | **Responsive** | `responsive-critical.css` + chart 480px | ☑ repo |
+| 11 | **Mainnet** | Checklist dated in `instaawards-week4.md` — no false claims | ☐ ops |
 
 ---
 

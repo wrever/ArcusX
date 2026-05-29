@@ -246,7 +246,7 @@ const ApplyTask = () => {
   }
 
   if (error) {
-    return <div className="apply-task-container error-message">Error: {error}</div>;
+    return <div className="apply-task-container error-message">{t('common.error')}: {error}</div>;
   }
 
   if (!task) {

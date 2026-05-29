@@ -13,6 +13,23 @@ Las entradas siguen espíritu **[Keep a Changelog](https://keepachangelog.com/es
 
 ---
 
+## 2026-05-28 — Semana 4 (cierre técnico): i18n, consola, responsive, QA docs
+
+**Detalle:** [`docs/sprints/week-04-technical-close.md`](./docs/sprints/week-04-technical-close.md)
+
+### Frontend
+
+- **i18n:** `ProposalReview` (errores/éxito escrow), `UserProfile` (SEO/alt); `ProtectedRoute` / `SuperviseTask` / `CompleteTaskPopup` ya en `t()`.
+- **Logger:** `devError` en `utils/logger.ts`; `trustlessWorkEscrowService`, `ProposalReview`, `CompleteTaskPopup` sin `console.*` en producción.
+- **Responsive:** `responsive-critical.css` (touch ≥44px, overflow); chart dashboard `min-width` 280px en 480px.
+
+### Backend / limpieza
+
+- `check_disputes.php` sin referencia a scripts de test (utilities ya ausentes del repo).
+- Excepciones documentadas: `week-04-cleanup-exceptions.md`, gaps light: `week-04-light-theme-gaps.md`.
+
+---
+
 ## 2026-05-28 — Semana 3 (seguimiento): contraste modo claro en flujos críticos
 
 **Detalle:** [`docs/sprints/week-03-changelog-and-architecture.md`](./docs/sprints/week-03-changelog-and-architecture.md) §3.1 · InstaAwards cierre: [`docs/sprints/instaawards-week4.md`](./docs/sprints/instaawards-week4.md)

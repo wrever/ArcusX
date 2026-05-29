@@ -126,7 +126,7 @@ const UserProfile = () => {
     name: profile.username,
     url: `https://arcusx.pro/profile/${userId}`,
     image: profile.avatar_url ? getAvatarUrl(profile.avatar_url) : getDefaultAvatarUrl(),
-    description: profile.bio || `Perfil de ${profile.username} en ArcusX`,
+    description: profile.bio || t('profile.schema.description').replace('{{username}}', profile.username),
     ...(profile.portfolio_url && {
       sameAs: [profile.portfolio_url]
     })
@@ -137,7 +137,17 @@ const UserProfile = () => {
       {profile && (
         <SEO
           title={t('profile.title').replace('{{username}}', profile.username)}
-          description={profile.bio || `Perfil público de ${profile.username} en ArcusX. ${stats ? `Rating: ${stats.average_rating}/5, ${stats.tasks_completed} tareas completadas.` : ''}`}
+          description={
+            profile.bio ||
+            t('profile.meta.description')
+              .replace('{{username}}', profile.username)
+              .replace(
+                '{{stats}}',
+                stats
+                  ? `Rating: ${stats.average_rating}/5, ${stats.tasks_completed} ${t('profile.stats.completed').toLowerCase()}.`
+                  : ''
+              )
+          }
               image={profile.avatar_url ? getAvatarUrl(profile.avatar_url) : getDefaultAvatarUrl()}
           url={`/profile/${userId}`}
           type="profile"
@@ -201,7 +211,7 @@ const UserProfile = () => {
           {profile.avatar_url ? (
             <img 
               src={getAvatarUrl(profile.avatar_url)} 
-              alt={`Avatar de ${profile.username} - Perfil público en ArcusX`}
+              alt={t('profile.avatar.alt').replace('{{username}}', profile.username)}
               className="profile-avatar"
               loading="lazy"
               decoding="async"
