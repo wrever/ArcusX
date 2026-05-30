@@ -73,3 +73,13 @@ export function recoverUtf8Mojibake(str: string): string {
   const paired = decodeAllMojibakePairs(str);
   return legacyWholeStringRecover(paired);
 }
+
+/** Mojibake + saltos de línea literales (\\n) del backend legacy. */
+export function normalizeDisplayText(str: string | null | undefined): string {
+  if (!str) return '';
+  let s = recoverUtf8Mojibake(str);
+  if (s.includes('\\n')) {
+    s = s.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n').replace(/\\r/g, '\n');
+  }
+  return s;
+}

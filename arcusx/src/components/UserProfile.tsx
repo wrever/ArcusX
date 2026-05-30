@@ -6,6 +6,7 @@ import type { UserProfile as UserProfileType, UserStatistics } from '../types/pr
 import RatingDisplay from './RatingDisplay';
 import SEO from './SEO';
 import { getAvatarUrl, getDefaultAvatarUrl } from '../utils/avatarUtils';
+import { normalizeDisplayText } from '../utils/utf8Mojibake';
 import '../css/UserProfile.css';
 import '../css/Preloader.css';
 import logoDark from '../images/arcus-logo.png';
@@ -336,7 +337,7 @@ const UserProfile = () => {
         <h2 className="section-title">{t('profile.section.bio')}</h2>
         {profile.bio ? (
           <div className="bio-content">
-            <p className="profile-bio-full">{profile.bio}</p>
+            <p className="profile-bio-full">{normalizeDisplayText(profile.bio)}</p>
           </div>
         ) : (
           <div className="empty-state">

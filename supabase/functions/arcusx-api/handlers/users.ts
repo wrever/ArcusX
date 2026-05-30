@@ -3,6 +3,7 @@ import type { ApiContext } from './types.ts';
 import { qpInt } from './types.ts';
 import { requireUser } from './require.ts';
 import { computeUserPublicStats, isPublicProfile, parseSkills } from './stats-helpers.ts';
+import { normalizeDisplayText } from '../../_shared/text-encoding.ts';
 
 export async function getUserDetails(ctx: ApiContext): Promise<Response> {
   const { req, supabase, url } = ctx;
@@ -51,7 +52,7 @@ export async function getUserProfile(ctx: ApiContext): Promise<Response> {
     id: user.id,
     username: user.username,
     avatar_url: user.avatar_url,
-    bio: user.bio,
+    bio: normalizeDisplayText(user.bio as string | null),
     portfolio_url: user.portfolio_url,
     public_profile: isPublic,
     member_since: user.created_at,

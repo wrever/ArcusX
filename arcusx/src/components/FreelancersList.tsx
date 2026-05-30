@@ -50,7 +50,12 @@ const FreelancersList = () => {
 
       const response = await getFreelancers(filters);
       setFreelancers(response.freelancers);
-      setTotalPages(response.pagination.total_pages);
+      const total = response.pagination.total ?? 0;
+      const pageLimit = response.pagination.limit ?? limit;
+      const pages =
+        response.pagination.total_pages ??
+        (total > 0 ? Math.ceil(total / pageLimit) : 0);
+      setTotalPages(Math.max(pages, 1));
     } catch (err: any) {
       setError(err.message || 'Error al cargar freelancers');
       setFreelancers([]);

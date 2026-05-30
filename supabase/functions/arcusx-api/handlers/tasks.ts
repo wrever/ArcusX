@@ -3,6 +3,7 @@ import type { ApiContext } from './types.ts';
 import { qp, qpInt } from './types.ts';
 import { requireUser } from './require.ts';
 import { uploadTaskFile } from './storage-helpers.ts';
+import { normalizeDisplayText } from '../../_shared/text-encoding.ts';
 
 const ALLOWED_CURRENCIES = ['USDC'];
 const ALLOWED_DIFFICULTIES = ['Fácil', 'Intermedio', 'Difícil', 'FÃ¡cil', 'Fácil '];
@@ -58,14 +59,14 @@ export async function getTasks(ctx: ApiContext): Promise<Response> {
     const u = row.arcusx_users as Record<string, unknown> | null;
     return {
       id: row.id,
-      title: row.title,
-      subtitle: row.subtitle,
-      description: row.description,
+      title: normalizeDisplayText(row.title as string),
+      subtitle: normalizeDisplayText(row.subtitle as string),
+      description: normalizeDisplayText(row.description as string),
       price: row.price,
-      currency: row.currency,
-      difficulty: row.difficulty,
-      category: row.category,
-      creator_username: u?.username ?? '',
+      currency: normalizeDisplayText(row.currency as string),
+      difficulty: normalizeDisplayText(row.difficulty as string),
+      category: normalizeDisplayText(row.category as string),
+      creator_username: normalizeDisplayText(u?.username ?? ''),
       creator_id: u?.id ?? row.user_id,
       creator_rating: u?.average_rating ?? null,
       creator_total_ratings: u?.total_ratings ?? null,
@@ -367,14 +368,41 @@ export async function getUserTasks(ctx: ApiContext): Promise<Response> {
   const userId = qpInt(url, 'user_id') ?? auth.userId;
   if (userId !== auth.userId) return jsonError(req, 'Forbidden', 403);
 
-  const { data, error } = await auth.supabase
+  const { data: tasks, error } = await auth.supabase
     .from('arcusx_tasks')
-    .select('*')
+    .select('id, title, subtitle, price, currency, difficulty, category, created_at, user_id, accepted_applicant_id')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
   if (error) return jsonError(req, error.message, 500);
-  return jsonResponse(req, data ?? []);
+  const rows = tasks ?? [];
+  const taskIds = rows.map((t) => t.id as number);
+  if (taskIds.length === 0) return jsonResponse(req, []);
+
+  const { data: apps } = await auth.supabase
+    .from('arcusx_applications')
+    .select('task_id, status, applicant_id')
+    .in('task_id', taskIds);
+
+  const out = rows.map((t) => {
+    const related = (apps ?? []).filter((a) => a.task_id === t.id);
+    const accepted = related.find((a) => a.status === 'accepted');
+    return {
+      id: t.id,
+      title: normalizeDisplayText(t.title as string),
+      subtitle: normalizeDisplayText(t.subtitle as string),
+      price: t.price,
+      currency: normalizeDisplayText(t.currency as string),
+      difficulty: normalizeDisplayText(t.difficulty as string),
+      category: normalizeDisplayText(t.category as string),
+      created_at: t.created_at,
+      proposal_count: related.length,
+      has_accepted_proposal: Boolean(accepted),
+      accepted_applicant_id: accepted?.applicant_id ?? t.accepted_applicant_id ?? null,
+    };
+  });
+
+  return jsonResponse(req, out);
 }
 
 export async function getAcceptedTasks(ctx: ApiContext): Promise<Response> {
@@ -385,12 +413,44 @@ export async function getAcceptedTasks(ctx: ApiContext): Promise<Response> {
 
   const { data, error } = await auth.supabase
     .from('arcusx_tasks')
-    .select('*')
+    .select(`
+      id, title, subtitle, description, price, currency, difficulty, category, created_at,
+      accepted_applicant_id,
+      arcusx_users!arcusx_tasks_user_id_fkey (
+        id, username, average_rating, total_ratings
+      )
+    `)
     .eq('accepted_applicant_id', userId)
     .order('created_at', { ascending: false });
 
   if (error) return jsonError(req, error.message, 500);
-  return jsonResponse(req, data ?? []);
+
+  const out = (data ?? []).map((row) => {
+    const creator = row.arcusx_users as {
+      id?: number;
+      username?: string;
+      average_rating?: number;
+      total_ratings?: number;
+    } | null;
+    return {
+      id: row.id,
+      title: normalizeDisplayText(row.title as string),
+      subtitle: normalizeDisplayText(row.subtitle as string),
+      description: normalizeDisplayText(row.description as string),
+      price: row.price,
+      currency: normalizeDisplayText(row.currency as string),
+      difficulty: normalizeDisplayText(row.difficulty as string),
+      category: normalizeDisplayText(row.category as string),
+      created_at: row.created_at,
+      accepted_applicant_id: row.accepted_applicant_id,
+      creator_id: creator?.id ?? null,
+      creator_username: normalizeDisplayText(creator?.username ?? ''),
+      creator_rating: creator?.average_rating != null ? Number(creator.average_rating) : null,
+      creator_total_ratings: creator?.total_ratings != null ? Number(creator.total_ratings) : null,
+    };
+  });
+
+  return jsonResponse(req, out);
 }
 
 export async function getCompletedTasksCount(ctx: ApiContext): Promise<Response> {

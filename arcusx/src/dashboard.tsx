@@ -31,6 +31,7 @@ import TutorialsTab from './components/TutorialsTab';
 import SwapPage from './pages/SwapPage';
 import SupportPage from './pages/SupportPage';
 import { getAvatarUrl } from './utils/avatarUtils';
+import { normalizeDisplayText } from './utils/utf8Mojibake';
 import { useTheme } from './contexts/ThemeContext';
 import { useEnterpriseMode } from './hooks/useEnterpriseMode';
 import { hasSupabase } from './config/supabase';
@@ -63,6 +64,20 @@ interface TaskData {
   proposal_count?: number; // Añadir campo para el conteo de propuestas (opcional inicialmente)
   has_accepted_proposal?: boolean; // **Añadido de nuevo**
   accepted_applicant_id?: number | null; // **Añadido de nuevo**
+}
+
+function normalizeTaskForDisplay(task: TaskData): TaskData {
+  return {
+    ...task,
+    title: normalizeDisplayText(task.title),
+    subtitle: normalizeDisplayText(task.subtitle),
+    description: task.description ? normalizeDisplayText(task.description) : task.description,
+    category: task.category ? normalizeDisplayText(task.category) : task.category,
+    difficulty: task.difficulty ? normalizeDisplayText(task.difficulty) : task.difficulty,
+    creator_username: task.creator_username
+      ? normalizeDisplayText(task.creator_username)
+      : task.creator_username,
+  };
 }
 
 const Dashboard = () => {
@@ -381,7 +396,22 @@ const Dashboard = () => {
         try {
           const response = await axios.get(arcusxApiUrl('get_user_tasks', { user_id: user.id }));
           if (Array.isArray(response.data)) {
-            setUserTasks(response.data); // Guardar las tareas del usuario en el estado
+            const base = response.data.map((row: TaskData) => normalizeTaskForDisplay(row));
+            const enriched = await Promise.all(
+              base.map(async (task) => {
+                if (task.proposal_count !== undefined) return task;
+                try {
+                  const pr = await axios.get(
+                    arcusxApiUrl('get_task_proposals', { task_id: task.id }),
+                  );
+                  const count = Array.isArray(pr.data) ? pr.data.length : 0;
+                  return { ...task, proposal_count: count };
+                } catch {
+                  return { ...task, proposal_count: 0 };
+                }
+              }),
+            );
+            setUserTasks(enriched);
           } else {
             setUserTasksError(t('dashboard.manage.tasks.error.format'));
             setUserTasks([]); // Limpiar tareas si el formato es incorrecto
@@ -409,7 +439,26 @@ const Dashboard = () => {
           // Llamada al nuevo script de backend
           const response = await axios.get(arcusxApiUrl('get_accepted_tasks', { user_id: user.id }));
           if (Array.isArray(response.data)) {
-            setAcceptedTasks(response.data); // Guardar las tareas aceptadas en el estado
+            const base = response.data.map((row: TaskData) => normalizeTaskForDisplay(row));
+            const enriched = await Promise.all(
+              base.map(async (task) => {
+                if (task.creator_username) return task;
+                try {
+                  const detail = await axios.get(
+                    arcusxApiUrl('get_task_details', { task_id: task.id }),
+                  );
+                  const d = detail.data;
+                  return {
+                    ...task,
+                    creator_id: d?.user_id ?? task.creator_id,
+                    creator_username: d?.creator_username ?? d?.username ?? task.creator_username,
+                  };
+                } catch {
+                  return task;
+                }
+              }),
+            );
+            setAcceptedTasks(enriched);
           } else {
             setAcceptedTasksError(t('dashboard.in.progress.error.format'));
             setAcceptedTasks([]); // Limpiar tareas si el formato es incorrecto
@@ -1955,12 +2004,12 @@ const Dashboard = () => {
                             </span>
                         </div>
                         )}
-                        {task.creator_username && (
+                        {(task.creator_username || task.creator_id) && (
                           <div className="task-detail">
                             <span className="task-detail-label">{t('dashboard.tasks.creator')}</span>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                               <Link 
-                                to={`/profile/${task.creator_id || task.id}`}
+                                to={`/profile/${task.creator_id ?? task.id}`}
                                 className="task-creator-link"
                                 style={{
                                   color: 'var(--primary-blue)',
@@ -1976,7 +2025,7 @@ const Dashboard = () => {
                                   e.currentTarget.style.textDecoration = 'none';
                                 }}
                               >
-                                {task.creator_username}
+                                {task.creator_username || t('dashboard.tasks.creator.unknown')}
                               </Link>
                               {task.creator_rating !== undefined && task.creator_rating > 0 && (
                                 <RatingDisplay
@@ -2023,30 +2072,24 @@ const Dashboard = () => {
                     <div key={task.id} className="user-task-item">
                       <h3>{task.title}</h3>
                       <p>{task.subtitle}</p>
-                      {/* Mostrar el número de propuestas */}
-                      <div className="proposal-count">
-                        {t('dashboard.manage.tasks.proposals')} {task.proposal_count !== undefined ? task.proposal_count : t('common.loading')}
-                      </div>
-                      {/* Botones de acción (Editar, Ver Propuestas, etc.) - **Corregido** */}
                       <div className="task-actions">
-                         {/* Lógica condicional para mostrar el botón "Supervisar" o "Ver Propuestas" */}
                          {task.has_accepted_proposal ? (
-                             // Mostrar botón Supervisar si hay una propuesta aceptada
                              <button
-                                 className="btn-primary" // O la clase que prefieras para este botón
+                                 className="btn-primary"
                                  onClick={() => handleSuperviseTaskClick(task.id, task.accepted_applicant_id)}
                              >
                                  {t('dashboard.manage.tasks.supervise')}
                              </button>
                          ) : (
-                             // Mostrar botón Ver Propuestas si no hay propuestas aceptadas
                              <button
                                  className="btn-secondary"
                                  onClick={() => navigate(`/proposals/${task.id}`)}
                              >
                                  {enterprise
                                    ? t('dashboard.manage.tasks.view.proposals')
-                                   : `${t('dashboard.manage.tasks.view.proposals')} (${task.proposal_count !== undefined ? task.proposal_count : 0})`}
+                                   : task.proposal_count !== undefined
+                                     ? `${t('dashboard.manage.tasks.view.proposals')} (${task.proposal_count})`
+                                     : t('common.loading.proposals')}
                              </button>
                          )}
                          {/* Botón de Editar Tarea (opcional, para más tarde) */}
