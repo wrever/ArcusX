@@ -8,7 +8,7 @@ import { hasSupabase, supabase } from '../config/supabase';
 import { getFreelancers } from '../services/freelancerService';
 import type { Freelancer } from '../types/freelancer';
 import { getAvatarUrl } from '../utils/avatarUtils';
-import { recoverUtf8Mojibake } from '../utils/utf8Mojibake';
+import { normalizeDisplayText } from '../utils/utf8Mojibake';
 import '../css/Hero.css';
 import { useI18n } from '../i18n/I18nProvider';
 import Footer from './Footer';
@@ -617,7 +617,7 @@ const Hero = () => {
                     {infiniteLandingFreelancers.map((fl, idx) => {
                       const avatarSrc = fl.avatar_url ? getAvatarUrl(fl.avatar_url) : null;
                       const rawBio = fl.bio?.trim() ?? '';
-                      const normalizedBio = rawBio ? recoverUtf8Mojibake(rawBio) : '';
+                      const normalizedBio = rawBio ? normalizeDisplayText(rawBio) : '';
                       const bioText = normalizedBio
                         ? `${normalizedBio.slice(0, 110)}${normalizedBio.length > 110 ? '…' : ''}`
                         : t('hero.freelancer.carousel.bioFallback');

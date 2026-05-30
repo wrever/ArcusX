@@ -10,7 +10,7 @@ import RatingDisplay from './RatingDisplay';
 import { useI18n } from '../i18n/I18nProvider';
 import type { Freelancer } from '../types/freelancer';
 import { getAvatarUrl } from '../utils/avatarUtils';
-import { recoverUtf8Mojibake } from '../utils/utf8Mojibake';
+import { normalizeDisplayText } from '../utils/utf8Mojibake';
 import { getFreelancerSignals } from '../utils/web3Identity';
 import '../css/FreelancerCard.css';
 
@@ -36,7 +36,7 @@ const FreelancerCard = memo(({ freelancer }: FreelancerCardProps) => {
   const truncatedBio = useMemo(() => {
     const maxLength = 120;
     if (!freelancer.bio) return t('freelancers.card.no.bio');
-    const bio = recoverUtf8Mojibake(freelancer.bio);
+    const bio = normalizeDisplayText(freelancer.bio);
     if (bio.length <= maxLength) return bio;
     return bio.substring(0, maxLength).trim() + '...';
   }, [freelancer.bio, t]);

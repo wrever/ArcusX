@@ -2,6 +2,7 @@ import { jsonError, jsonResponse } from '../../_shared/arcusx-cors.ts';
 import type { ApiContext } from './types.ts';
 import { qp, qpInt } from './types.ts';
 import { parseSkills } from './stats-helpers.ts';
+import { normalizeDisplayText } from '../../_shared/text-encoding.ts';
 
 type FreelancerRow = {
   id: number;
@@ -116,7 +117,7 @@ export async function getFreelancers(ctx: ApiContext): Promise<Response> {
       id,
       username: String(u.username ?? ''),
       avatar_url: (u.avatar_url as string | null) ?? null,
-      bio: (u.bio as string | null) ?? null,
+      bio: normalizeDisplayText((u.bio as string | null) ?? '') || null,
       skills: u.skills,
       average_rating: Math.round(averageRating * 100) / 100,
       total_ratings: totalRatings,
