@@ -114,7 +114,7 @@ const Hero = () => {
     const fetchCarouselTasks = async () => {
       setLoadingCarousel(true);
       try {
-        const url = `${arcusxApiUrl('get_tasks')}?sort_by=date_desc`;
+        const url = arcusxApiUrl('get_tasks', { sort_by: 'date_desc' });
         const response = await axios.get(url);
         const data = Array.isArray(response.data) ? response.data : (response.data?.tasks ?? []);
         setCarouselTasks(Array.isArray(data) ? data.slice(0, 12) : []);
@@ -233,8 +233,7 @@ const Hero = () => {
           const params = new URLSearchParams();
           params.append('search', searchQuery.trim());
           params.append('sort_by', 'date_desc');
-          const url = `${arcusxApiUrl('get_tasks')}?${params.toString()}`;
-          const response = await axios.get(url);
+          const response = await axios.get(arcusxApiUrl('get_tasks', params));
           const data = Array.isArray(response.data) ? response.data : (response.data?.tasks ?? []);
           setSearchResults(Array.isArray(data) ? data.slice(0, 8) : []);
           setShowResults(true);

@@ -86,12 +86,33 @@ const METHOD_OVERRIDES: Record<string, (ctx: Parameters<ApiHandler>[0]) => Promi
   upload_avatar: misc.uploadAvatar,
 };
 
-export function resolveAction(url: URL, req: Request): string {
-  const q = url.searchParams.get('action')?.trim();
-  if (q) return q.replace(/\.php$/i, '');
+/** Separa action de query embebida (legacy: action=get_tasks?sort_by=desc). */
+export function resolveAction(url: URL, _req: Request): string {
+  const raw = url.searchParams.get('action')?.trim();
+  if (raw) {
+    const cleaned = raw.replace(/\.php$/i, '');
+    const qIdx = cleaned.indexOf('?');
+    const ampIdx = cleaned.indexOf('&');
+    let name = cleaned;
+    let inline: string | null = null;
+    if (qIdx >= 0) {
+      name = cleaned.slice(0, qIdx);
+      inline = cleaned.slice(qIdx + 1);
+    } else if (ampIdx >= 0) {
+      name = cleaned.slice(0, ampIdx);
+      inline = cleaned.slice(ampIdx + 1);
+    }
+    if (inline) {
+      const extra = new URLSearchParams(inline);
+      extra.forEach((v, k) => {
+        if (!url.searchParams.has(k)) url.searchParams.set(k, v);
+      });
+    }
+    return name.trim();
+  }
   const path = url.pathname.split('/').filter(Boolean);
   const last = path[path.length - 1];
-  if (last && last !== 'arcusx-api') return last.replace(/\.php$/i, '');
+  if (last && last !== 'arcusx-api') return last.replace(/\.php$/i, '').split('?')[0];
   return '';
 }
 

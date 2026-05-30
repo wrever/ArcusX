@@ -295,8 +295,7 @@ const Dashboard = () => {
             params.append('sort_by', sortBy);
           }
 
-          const url = `${arcusxApiUrl('get_tasks')}${params.toString() ? '?' + params.toString() : ''}`;
-          const response = await axios.get(url);
+          const response = await axios.get(arcusxApiUrl('get_tasks', params));
           
           if (Array.isArray(response.data)) {
             setFetchedTasks(response.data); // Guardar las tareas en el estado
@@ -360,8 +359,9 @@ const Dashboard = () => {
             }
           });
           
-          if (response.data && response.data.success) {
-            setCompletedTasksCount(response.data.completed_tasks_count);
+          if (response.data?.success) {
+            const n = response.data.completed_tasks_count ?? response.data.count ?? 0;
+            setCompletedTasksCount(Number(n) || 0);
           }
         } catch (error: any) {
         }
@@ -379,7 +379,7 @@ const Dashboard = () => {
         setLoadingUserTasks(true);
         setUserTasksError('');
         try {
-          const response = await axios.get(`${arcusxApiUrl('get_user_tasks')}?user_id=${user.id}`);
+          const response = await axios.get(arcusxApiUrl('get_user_tasks', { user_id: user.id }));
           if (Array.isArray(response.data)) {
             setUserTasks(response.data); // Guardar las tareas del usuario en el estado
           } else {
@@ -407,7 +407,7 @@ const Dashboard = () => {
         setAcceptedTasksError('');
         try {
           // Llamada al nuevo script de backend
-          const response = await axios.get(`${arcusxApiUrl('get_accepted_tasks')}?user_id=${user.id}`);
+          const response = await axios.get(arcusxApiUrl('get_accepted_tasks', { user_id: user.id }));
           if (Array.isArray(response.data)) {
             setAcceptedTasks(response.data); // Guardar las tareas aceptadas en el estado
           } else {

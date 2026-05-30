@@ -39,14 +39,84 @@ export async function createDispute(ctx: ApiContext): Promise<Response> {
 export async function getUserDisputes(ctx: ApiContext): Promise<Response> {
   const { req } = ctx;
   const auth = await requireUser(ctx);
-  const { data, error } = await auth.supabase
+
+  const { data: rows, error } = await auth.supabase
     .from('arcusx_disputes')
-    .select('*, arcusx_tasks(title, user_id, accepted_applicant_id)')
-    .or(`created_by.eq.${auth.userId}`)
-    .order('created_at', { ascending: false });
+    .select(`
+      id, status, resolution, resolved_at,
+      arcusx_tasks!inner (
+        id, title, price, escrow_id, escrow_status, user_id, accepted_applicant_id
+      )
+    `)
+    .eq('status', 'resolved')
+    .order('resolved_at', { ascending: false });
 
   if (error) return jsonError(req, error.message, 500);
-  return jsonResponse(req, { success: true, disputes: data ?? [] });
+
+  const disputes: Array<Record<string, unknown>> = [];
+
+  for (const row of rows ?? []) {
+    const task = row.arcusx_tasks as {
+      id: number;
+      title: string;
+      price: number;
+      escrow_id: string | null;
+      escrow_status: string | null;
+      user_id: number;
+      accepted_applicant_id: number | null;
+    } | null;
+    if (!task || task.escrow_status !== 'pending_dispute_resolution') continue;
+    if (task.user_id !== auth.userId && task.accepted_applicant_id !== auth.userId) continue;
+
+    let resolution: Record<string, unknown> | null = null;
+    if (row.resolution) {
+      try {
+        resolution = typeof row.resolution === 'string'
+          ? JSON.parse(row.resolution)
+          : row.resolution as Record<string, unknown>;
+      } catch {
+        resolution = null;
+      }
+    }
+
+    const decision = resolution?.decision as string | undefined;
+    let userRole: 'client' | 'worker' | null = null;
+    let needsSignature = false;
+    let refundAmount = 0;
+    let paymentAmount = 0;
+
+    if (task.user_id === auth.userId) {
+      userRole = 'client';
+      if (decision === 'client' || decision === 'split') {
+        needsSignature = true;
+        refundAmount = Number(resolution?.refund_to_client ?? 0);
+      }
+    } else if (task.accepted_applicant_id === auth.userId) {
+      userRole = 'worker';
+      if (decision === 'worker' || decision === 'split') {
+        needsSignature = true;
+        paymentAmount = Number(resolution?.pay_to_worker ?? 0);
+      }
+    }
+
+    if (!needsSignature || !userRole) continue;
+
+    disputes.push({
+      dispute_id: row.id,
+      task_id: task.id,
+      task_title: task.title,
+      price: Number(task.price ?? 0),
+      escrow_id: task.escrow_id,
+      user_role: userRole,
+      decision,
+      refund_amount: refundAmount,
+      payment_amount: paymentAmount,
+      resolved_at: row.resolved_at,
+      resolution_reason: resolution?.reason ?? null,
+    });
+  }
+
+  return jsonResponse(req, { success: true, disputes, count: disputes.length });
 }
 
 export async function getDisputeChat(ctx: ApiContext): Promise<Response> {

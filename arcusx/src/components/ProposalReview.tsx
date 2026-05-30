@@ -113,7 +113,7 @@ const ProposalReview = () => {
 
     try {
       // Cargar detalles de la tarea
-      const taskResponse = await axios.get(`${arcusxApiUrl('get_task_details')}?task_id=${taskId}`);
+      const taskResponse = await axios.get(arcusxApiUrl('get_task_details', { task_id: taskId }));
       if (taskResponse.data) {
         const taskData = taskResponse.data;
         setTask(taskData);
@@ -122,7 +122,7 @@ const ProposalReview = () => {
         if (taskData.escrow_id && taskData.accepted_applicant_id) {
           devLog('Tarea ya tiene escrow completado. Cargando propuesta aceptada...');
           // Cargar la propuesta aceptada para mostrar en el popup de éxito
-      const proposalsResponse = await axios.get(`${arcusxApiUrl('get_task_proposals')}?task_id=${taskId}`);
+      const proposalsResponse = await axios.get(arcusxApiUrl('get_task_proposals', { task_id: taskId }));
       if (Array.isArray(proposalsResponse.data)) {
             // Buscar la propuesta aceptada por applicant_id o por status
             const acceptedProposal = proposalsResponse.data.find(
@@ -152,7 +152,7 @@ const ProposalReview = () => {
           }
         } else {
           // Cargar propuestas de la tarea normalmente
-          const proposalsResponse = await axios.get(`${arcusxApiUrl('get_task_proposals')}?task_id=${taskId}`);
+          const proposalsResponse = await axios.get(arcusxApiUrl('get_task_proposals', { task_id: taskId }));
           if (Array.isArray(proposalsResponse.data)) {
             setProposals(proposalsResponse.data);
           } else {

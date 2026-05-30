@@ -2,6 +2,7 @@ import { jsonError, jsonResponse, jsonSuccess } from '../../_shared/arcusx-cors.
 import type { ApiContext } from './types.ts';
 import { qpInt } from './types.ts';
 import { requireUser } from './require.ts';
+import { computeUserPublicStats, isPublicProfile, parseSkills } from './stats-helpers.ts';
 
 export async function getUserDetails(ctx: ApiContext): Promise<Response> {
   const { req, supabase, url } = ctx;
@@ -20,18 +21,49 @@ export async function getUserDetails(ctx: ApiContext): Promise<Response> {
 }
 
 export async function getUserProfile(ctx: ApiContext): Promise<Response> {
-  const { req, url } = ctx;
-  const auth = await requireUser(ctx);
-  const userId = qpInt(url, 'user_id') ?? auth.userId;
+  const { req, url, supabase, userId: currentUserId } = ctx;
+  const profileUserId = qpInt(url, 'user_id');
+  if (!profileUserId) return jsonError(req, 'user_id es requerido y debe ser válido', 400);
 
-  const { data, error } = await auth.supabase
+  const { data: user, error } = await supabase
     .from('arcusx_users')
-    .select('*')
-    .eq('id', userId)
-    .single();
+    .select('id, username, email, avatar_url, bio, portfolio_url, public_profile, created_at, average_rating, total_ratings, skills')
+    .eq('id', profileUserId)
+    .maybeSingle();
 
   if (error) return jsonError(req, error.message, 500);
-  return jsonResponse(req, { success: true, profile: data });
+  if (!user) return jsonError(req, 'Usuario no encontrado', 404);
+
+  const isOwner = currentUserId === profileUserId;
+  const isPublic = isPublicProfile(user.public_profile);
+  if (!isPublic && !isOwner) {
+    return jsonError(req, 'Este perfil es privado', 403);
+  }
+
+  const { data: portfolio } = await supabase
+    .from('arcusx_user_portfolio')
+    .select('id, title, description, image_url, project_url, category, created_at, updated_at')
+    .eq('user_id', profileUserId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  const profile: Record<string, unknown> = {
+    id: user.id,
+    username: user.username,
+    avatar_url: user.avatar_url,
+    bio: user.bio,
+    portfolio_url: user.portfolio_url,
+    public_profile: isPublic,
+    member_since: user.created_at,
+    average_rating: user.average_rating != null ? Number(user.average_rating) : 0,
+    total_ratings: user.total_ratings != null ? Number(user.total_ratings) : 0,
+    portfolio: portfolio ?? [],
+    skills: parseSkills(user.skills),
+    verified: false,
+  };
+  if (isOwner) profile.email = user.email;
+
+  return jsonResponse(req, { success: true, profile });
 }
 
 export async function updateUser(ctx: ApiContext): Promise<Response> {
@@ -103,47 +135,17 @@ export async function updateUserProfile(ctx: ApiContext): Promise<Response> {
 export async function getUserPublicStats(ctx: ApiContext): Promise<Response> {
   const { req, supabase, url } = ctx;
   const userId = qpInt(url, 'user_id');
-  if (!userId) return jsonError(req, 'user_id requerido', 400);
+  if (!userId) return jsonError(req, 'user_id es requerido y debe ser válido', 400);
 
-  const { data: user } = await supabase
+  const { data: exists } = await supabase
     .from('arcusx_users')
-    .select('id, username, avatar_url, average_rating, total_ratings, completed_tasks_count, created_at')
+    .select('id')
     .eq('id', userId)
-    .single();
+    .maybeSingle();
+  if (!exists) return jsonError(req, 'Usuario no encontrado', 404);
 
-  const { count: completed } = await supabase
-    .from('arcusx_tasks')
-    .select('*', { count: 'exact', head: true })
-    .eq('accepted_applicant_id', userId)
-    .eq('status', 'completed');
-
-  return jsonResponse(req, {
-    success: true,
-    stats: {
-      ...user,
-      tasks_completed: completed ?? 0,
-    },
-  });
+  const stats = await computeUserPublicStats(supabase, userId);
+  return jsonResponse(req, { success: true, stats });
 }
 
-export async function getFreelancers(ctx: ApiContext): Promise<Response> {
-  const { req, supabase, url } = ctx;
-  const page = Math.max(1, qpInt(url, 'page') ?? 1);
-  const limit = Math.min(100, Math.max(1, qpInt(url, 'limit') ?? 20));
-  const from = (page - 1) * limit;
-  const to = from + limit - 1;
-
-  const { data, error, count } = await supabase
-    .from('arcusx_users')
-    .select('id, username, avatar_url, bio, skills, average_rating, total_ratings, completed_tasks_count, created_at', { count: 'exact' })
-    .eq('public_profile', true)
-    .order('average_rating', { ascending: false })
-    .range(from, to);
-
-  if (error) return jsonError(req, error.message, 500);
-  return jsonResponse(req, {
-    success: true,
-    freelancers: data ?? [],
-    pagination: { page, limit, total: count ?? 0 },
-  });
-}
+export { getFreelancers } from './freelancers-list.ts';

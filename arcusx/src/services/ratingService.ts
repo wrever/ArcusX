@@ -112,7 +112,7 @@ export async function getRatings(
     params.append('page', page.toString());
     params.append('limit', limit.toString());
 
-    const response = await fetch(`${arcusxApiUrl('get_ratings')}?${params.toString()}`, {
+    const response = await fetch(arcusxApiUrl('get_ratings', params), {
       method: 'GET',
       headers: arcusxApiHeaders(),
     });
@@ -144,7 +144,7 @@ export async function getUserRatingSummary(userId?: number): Promise<RatingSumma
       params.append('user_id', userId.toString());
     }
 
-    const response = await fetch(`${arcusxApiUrl('get_user_rating_summary')}?${params.toString()}`, {
+    const response = await fetch(arcusxApiUrl('get_user_rating_summary', params), {
       method: 'GET',
       headers: arcusxApiHeaders(),
     });
