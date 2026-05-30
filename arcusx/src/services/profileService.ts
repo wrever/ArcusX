@@ -19,7 +19,7 @@ import type {
  * Obtener perfil público de usuario
  */
 export async function getUserProfile(userId: number): Promise<UserProfile> {
-  const response = await fetch(`${arcusxApiUrl('get_user_profile')}?user_id=${userId}`, {
+  const response = await fetch(arcusxApiUrl('get_user_profile', { user_id: userId }), {
     method: 'GET',
     headers: arcusxApiHeaders(),
   });
@@ -123,7 +123,7 @@ export async function uploadAvatar(file: File): Promise<string> {
  * Obtener portfolio del usuario
  */
 export async function getPortfolio(userId: number): Promise<PortfolioItem[]> {
-  const response = await fetch(`${arcusxApiUrl('manage_portfolio')}?user_id=${userId}`, {
+  const response = await fetch(arcusxApiUrl('manage_portfolio', { user_id: userId }), {
     method: 'GET',
     headers: arcusxApiHeaders(),
   });
@@ -189,7 +189,7 @@ export async function updatePortfolioItem(item: UpdatePortfolioItemData): Promis
  * Eliminar item del portfolio
  */
 export async function deletePortfolioItem(itemId: number): Promise<void> {
-  const response = await fetch(`${arcusxApiUrl('manage_portfolio')}?id=${itemId}`, {
+  const response = await fetch(arcusxApiUrl('manage_portfolio', { id: itemId }), {
     method: 'DELETE',
     headers: arcusxApiHeaders(),
   });
@@ -209,7 +209,7 @@ export async function deletePortfolioItem(itemId: number): Promise<void> {
  * Obtener estadísticas públicas del usuario
  */
 export async function getUserPublicStats(userId: number): Promise<UserStatistics> {
-  const response = await fetch(`${arcusxApiUrl('get_user_public_stats')}?user_id=${userId}`, {
+  const response = await fetch(arcusxApiUrl('get_user_public_stats', { user_id: userId }), {
     method: 'GET',
     headers: arcusxApiHeaders(),
   });

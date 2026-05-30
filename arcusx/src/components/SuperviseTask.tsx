@@ -346,7 +346,7 @@ const SuperviseTask = () => {
             setLoading(true);
             setError(null);
             try {
-                const taskResponse = await axios.get(`${arcusxApiUrl('get_task_details')}?task_id=${taskId}`);
+                const taskResponse = await axios.get(arcusxApiUrl('get_task_details', { task_id: taskId }));
                 
                 if (taskResponse.data) {
                     if (taskResponse.data.user_id === undefined || taskResponse.data.user_id === null || typeof taskResponse.data.user_id !== 'string') {
@@ -422,7 +422,7 @@ const SuperviseTask = () => {
                     return;
                 }
                 
-                const workerResponse = await axios.get(`${arcusxApiUrl('get_user_details')}?user_id=${workerIdToFetch}`);
+                const workerResponse = await axios.get(arcusxApiUrl('get_user_details', { user_id: workerIdToFetch }));
                 
                 if (workerResponse.data) {
                     if (workerResponse.data.id === undefined || workerResponse.data.id === null) {

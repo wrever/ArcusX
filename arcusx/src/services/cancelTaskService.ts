@@ -45,7 +45,7 @@ export async function checkCancellationAllowed(
 ): Promise<CancellationCheckResult> {
   try {
     const response = await axios.get(
-      `${arcusxApiUrl('check_cancellation_allowed')}?task_id=${taskId}`
+      arcusxApiUrl('check_cancellation_allowed', { task_id: taskId })
     );
 
     if (response.data.success) {

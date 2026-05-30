@@ -80,7 +80,7 @@ const ApplyTask = () => {
       setError(null);
       try {
         // TODO: Crear este endpoint en el backend
-        const response = await axios.get(`${arcusxApiUrl('get_task_details')}?task_id=${taskId}`);
+        const response = await axios.get(arcusxApiUrl('get_task_details', { task_id: taskId }));
         if (response.data) {
           setTask(response.data);
         } else {

@@ -4,6 +4,12 @@ import { qp, qpInt } from './types.ts';
 import { requireUser } from './require.ts';
 import { uploadAvatarFile, isValidHttpUrl } from './storage-helpers.ts';
 import { authenticateRequest } from '../../_shared/arcusx-auth.ts';
+import {
+  calcNetAmount,
+  formatAmount,
+  getPlatformFee,
+  isTransactionTask,
+} from './stats-helpers.ts';
 
 export async function cancelTask(ctx: ApiContext): Promise<Response> {
   const { req, body } = ctx;
@@ -306,32 +312,166 @@ export async function managePortfolio(ctx: ApiContext): Promise<Response> {
 }
 
 export async function getUserTransactions(ctx: ApiContext): Promise<Response> {
-  const { req } = ctx;
+  const { req, url } = ctx;
   const auth = await requireUser(ctx);
-  const { data } = await auth.supabase
+  const targetUserId = qpInt(url, 'user_id') ?? auth.userId;
+  if (targetUserId !== auth.userId) {
+    const { data: adminRow } = await auth.supabase
+      .from('arcusx_users')
+      .select('is_admin, role')
+      .eq('id', auth.userId)
+      .single();
+    const isAdmin = adminRow?.is_admin === true || adminRow?.role === 'admin';
+    if (!isAdmin) return jsonError(req, 'No tienes permiso para ver estas transacciones', 403);
+  }
+
+  const page = Math.max(1, qpInt(url, 'page') ?? 1);
+  const limit = Math.min(100, Math.max(1, qpInt(url, 'limit') ?? 20));
+  const platformFee = await getPlatformFee(auth.supabase);
+
+  const { data: rows, error } = await auth.supabase
     .from('arcusx_tasks')
-    .select('id, title, price, status, escrow_status, completed_at, created_at')
-    .or(`user_id.eq.${auth.userId},accepted_applicant_id.eq.${auth.userId}`)
-    .order('created_at', { ascending: false })
-    .limit(50);
-  return jsonSuccess(req, { transactions: data ?? [] });
+    .select('id, title, price, escrow_amount, escrow_id, escrow_status, status, user_id, accepted_applicant_id, escrow_completed_at, completed_at, created_at')
+    .or(`user_id.eq.${targetUserId},accepted_applicant_id.eq.${targetUserId}`)
+    .order('created_at', { ascending: false });
+
+  if (error) return jsonError(req, error.message, 500);
+
+  const combined = (rows ?? [])
+    .filter(isTransactionTask)
+    .flatMap((t) => {
+      const completedDate = t.escrow_completed_at ?? t.completed_at ?? t.created_at;
+      const items: Array<Record<string, unknown>> = [];
+      if (t.user_id === targetUserId) {
+        const amount = calcNetAmount('paid', Number(t.price ?? 0), t.escrow_amount, platformFee);
+        items.push({
+          id: t.id,
+          task_id: t.id,
+          type: 'paid',
+          amount: formatAmount(amount),
+          currency: 'USDC',
+          task_title: t.title,
+          date: completedDate,
+          status: 'completed',
+          escrow_id: t.escrow_id,
+          _sort: completedDate,
+        });
+      }
+      if (t.accepted_applicant_id === targetUserId) {
+        const amount = calcNetAmount('received', Number(t.price ?? 0), t.escrow_amount, platformFee);
+        items.push({
+          id: t.id,
+          task_id: t.id,
+          type: 'received',
+          amount: formatAmount(amount),
+          currency: 'USDC',
+          task_title: t.title,
+          date: completedDate,
+          status: 'completed',
+          escrow_id: t.escrow_id,
+          _sort: completedDate,
+        });
+      }
+      return items;
+    })
+    .sort((a, b) => String(b._sort).localeCompare(String(a._sort)));
+
+  const total = combined.length;
+  const offset = (page - 1) * limit;
+  const transactions = combined.slice(offset, offset + limit).map(({ _sort, ...rest }) => rest);
+
+  return jsonSuccess(req, {
+    transactions,
+    pagination: {
+      total,
+      page,
+      limit,
+      total_pages: Math.ceil(total / limit) || 1,
+    },
+  });
 }
 
 export async function getUserEarningsSummary(ctx: ApiContext): Promise<Response> {
-  const { req } = ctx;
+  const { req, url } = ctx;
   const auth = await requireUser(ctx);
-  const { data } = await auth.supabase
+  const targetUserId = qpInt(url, 'user_id') ?? auth.userId;
+  if (targetUserId !== auth.userId) {
+    const { data: adminRow } = await auth.supabase
+      .from('arcusx_users')
+      .select('is_admin, role')
+      .eq('id', auth.userId)
+      .single();
+    const isAdmin = adminRow?.is_admin === true || adminRow?.role === 'admin';
+    if (!isAdmin) return jsonError(req, 'No tienes permiso para ver estos datos', 403);
+  }
+
+  const platformFee = await getPlatformFee(auth.supabase);
+  const { data: rows, error } = await auth.supabase
     .from('arcusx_tasks')
-    .select('price')
-    .eq('accepted_applicant_id', auth.userId)
-    .eq('status', 'completed');
-  const total = (data ?? []).reduce((s, r) => s + Number(r.price ?? 0), 0);
-  const earned = total.toFixed(2);
+    .select('id, title, price, escrow_amount, escrow_id, escrow_status, status, user_id, accepted_applicant_id, escrow_completed_at, completed_at, created_at')
+    .or(`user_id.eq.${targetUserId},accepted_applicant_id.eq.${targetUserId}`);
+
+  if (error) return jsonError(req, error.message, 500);
+
+  const tasks = (rows ?? []).filter(isTransactionTask);
+  let totalEarned = 0;
+  let totalPaid = 0;
+
+  for (const t of tasks) {
+    const price = Number(t.price ?? 0);
+    if (t.accepted_applicant_id === targetUserId) {
+      totalEarned += price;
+    }
+    if (t.user_id === targetUserId) {
+      totalPaid += calcNetAmount('paid', price, t.escrow_amount, platformFee);
+    }
+  }
+
+  const combined = tasks.flatMap((t) => {
+    const completedDate = t.escrow_completed_at ?? t.completed_at ?? t.created_at;
+    const items: Array<Record<string, unknown>> = [];
+    if (t.user_id === targetUserId) {
+      const amount = calcNetAmount('paid', Number(t.price ?? 0), t.escrow_amount, platformFee);
+      items.push({
+        id: t.id,
+        task_id: t.id,
+        type: 'paid',
+        amount: formatAmount(amount),
+        currency: 'USDC',
+        task_title: t.title,
+        date: completedDate,
+        status: 'completed',
+        escrow_id: t.escrow_id,
+        _sort: completedDate,
+      });
+    }
+    if (t.accepted_applicant_id === targetUserId) {
+      const amount = calcNetAmount('received', Number(t.price ?? 0), t.escrow_amount, platformFee);
+      items.push({
+        id: t.id,
+        task_id: t.id,
+        type: 'received',
+        amount: formatAmount(amount),
+        currency: 'USDC',
+        task_title: t.title,
+        date: completedDate,
+        status: 'completed',
+        escrow_id: t.escrow_id,
+        _sort: completedDate,
+      });
+    }
+    return items;
+  }).sort((a, b) => String(b._sort).localeCompare(String(a._sort)));
+
+  const last = combined[0];
+  const lastTransaction = last
+    ? (({ _sort, ...rest }) => rest)(last)
+    : null;
+
   return jsonSuccess(req, {
-    total_earnings: total,
-    total_earned: earned,
-    total_paid: '0',
-    total_transactions: data?.length ?? 0,
-    currency: 'USDC',
+    total_earned: formatAmount(totalEarned),
+    total_paid: formatAmount(totalPaid),
+    total_transactions: combined.length,
+    last_transaction: lastTransaction,
   });
 }

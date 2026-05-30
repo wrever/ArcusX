@@ -8,18 +8,23 @@ export const useSupabaseApi = hasSupabase;
 
 const edgeBase = hasSupabase ? `${supabaseUrl}/functions/v1` : '';
 
+function normalizeAction(action: string): string {
+  return action.replace(/\.php$/i, '').replace(/^auth\//, '').split('?')[0].split('#')[0].trim();
+}
+
 export function arcusxApiUrl(
   action: string,
-  query?: Record<string, string | number | undefined | null>,
+  query?: Record<string, string | number | undefined | null> | URLSearchParams,
 ): string {
   if (!hasSupabase) {
     throw new Error('Supabase no configurado (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)');
   }
-  const name = action.replace(/\.php$/i, '').replace(/^auth\//, '');
   const u = new URL(`${edgeBase}/arcusx-api`);
-  u.searchParams.set('action', name);
+  u.searchParams.set('action', normalizeAction(action));
   if (query) {
-    for (const [k, v] of Object.entries(query)) {
+    const entries =
+      query instanceof URLSearchParams ? [...query.entries()] : Object.entries(query);
+    for (const [k, v] of entries) {
       if (v != null && v !== '') u.searchParams.set(k, String(v));
     }
   }

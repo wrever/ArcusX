@@ -211,7 +211,7 @@ export async function getDisputeChat(disputeId: number): Promise<DisputeChatResp
     throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
   }
 
-  const response = await fetch(`${arcusxApiUrl('get_dispute_chat')}?dispute_id=${disputeId}`, {
+  const response = await fetch(arcusxApiUrl('get_dispute_chat', { dispute_id: disputeId }), {
     method: 'GET',
     headers: arcusxApiHeaders(),
   });
@@ -240,7 +240,7 @@ export async function getDisputeFiles(disputeId: number): Promise<DisputeFilesRe
     throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
   }
 
-  const response = await fetch(`${arcusxApiUrl('get_dispute_files')}?dispute_id=${disputeId}`, {
+  const response = await fetch(arcusxApiUrl('get_dispute_files', { dispute_id: disputeId }), {
     method: 'GET',
     headers: arcusxApiHeaders(),
   });
@@ -269,7 +269,7 @@ export async function getDisputeTimeline(disputeId: number): Promise<DisputeTime
     throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
   }
 
-  const response = await fetch(`${arcusxApiUrl('get_dispute_timeline')}?dispute_id=${disputeId}`, {
+  const response = await fetch(arcusxApiUrl('get_dispute_timeline', { dispute_id: disputeId }), {
     method: 'GET',
     headers: arcusxApiHeaders(),
   });

@@ -56,7 +56,7 @@ export async function getUserTransactions(
     params.append('page', page.toString());
     params.append('limit', limit.toString());
 
-    const response = await fetch(`${arcusxApiUrl('get_user_transactions')}?${params.toString()}`, {
+    const response = await fetch(arcusxApiUrl('get_user_transactions', params), {
       method: 'GET',
       headers: arcusxApiHeaders(),
     });
@@ -88,7 +88,7 @@ export async function getUserEarningsSummary(userId?: number): Promise<EarningsS
       params.append('user_id', userId.toString());
     }
 
-    const response = await fetch(`${arcusxApiUrl('get_user_earnings_summary')}?${params.toString()}`, {
+    const response = await fetch(arcusxApiUrl('get_user_earnings_summary', params), {
       method: 'GET',
       headers: arcusxApiHeaders(),
     });

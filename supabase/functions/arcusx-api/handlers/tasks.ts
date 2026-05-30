@@ -396,14 +396,34 @@ export async function getAcceptedTasks(ctx: ApiContext): Promise<Response> {
 export async function getCompletedTasksCount(ctx: ApiContext): Promise<Response> {
   const { req } = ctx;
   const auth = await requireUser(ctx);
-  const { count, error } = await auth.supabase
-    .from('arcusx_tasks')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', auth.userId)
-    .eq('status', 'completed');
 
-  if (error) return jsonError(req, error.message, 500);
-  return jsonResponse(req, { success: true, count: count ?? 0 });
+  const { data: userRow, error: userErr } = await auth.supabase
+    .from('arcusx_users')
+    .select('completed_tasks_count')
+    .eq('id', auth.userId)
+    .maybeSingle();
+
+  if (userErr) return jsonError(req, userErr.message, 500);
+
+  let completed = Number(userRow?.completed_tasks_count ?? 0);
+  if (!Number.isFinite(completed) || completed < 0) completed = 0;
+
+  if (completed === 0) {
+    const { count, error } = await auth.supabase
+      .from('arcusx_tasks')
+      .select('*', { count: 'exact', head: true })
+      .eq('accepted_applicant_id', auth.userId)
+      .eq('status', 'completed')
+      .eq('escrow_status', 'completed');
+    if (error) return jsonError(req, error.message, 500);
+    completed = count ?? 0;
+  }
+
+  return jsonResponse(req, {
+    success: true,
+    completed_tasks_count: completed,
+    count: completed,
+  });
 }
 
 export async function getLandingMarketStats(ctx: ApiContext): Promise<Response> {

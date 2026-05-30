@@ -43,9 +43,7 @@ export async function getFreelancers(filters: FreelancerFilters = {}): Promise<F
     params.append('prefer_profile', '1');
   }
 
-  const url = `${arcusxApiUrl('get_freelancers')}?${params.toString()}`;
-
-  const response = await fetch(url, {
+  const response = await fetch(arcusxApiUrl('get_freelancers', params), {
     method: 'GET',
     headers: arcusxApiHeaders(),
   });

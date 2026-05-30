@@ -108,7 +108,7 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
     if (!user?.id) return;
     
     try {
-      const response = await axios.get(`${arcusxApiUrl('task_stats')}?user_id=${user.id}`);
+      const response = await axios.get(arcusxApiUrl('task_stats', { user_id: user.id }));
       setUserLimits(response.data);
     } catch (error: any) {
       // Para usuarios nuevos, establecer valores por defecto que permitan crear tareas
@@ -335,7 +335,7 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
         
         // Recargar límites del usuario (con manejo de errores)
         try {
-          const limitsResponse = await axios.get(`${arcusxApiUrl('task_stats')}?user_id=${user.id}`);
+          const limitsResponse = await axios.get(arcusxApiUrl('task_stats', { user_id: user.id }));
           if (limitsResponse.data) {
             setUserLimits(limitsResponse.data);
           }
