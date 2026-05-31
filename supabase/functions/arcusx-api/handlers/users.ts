@@ -12,7 +12,7 @@ export async function getUserDetails(ctx: ApiContext): Promise<Response> {
 
   const { data, error } = await supabase
     .from('arcusx_users')
-    .select('id, username, email, avatar_url, bio, portfolio_url, wallet_address, average_rating, total_ratings, skills, verified, public_profile, completed_tasks_count, created_at')
+    .select('id, username, email, avatar_url, bio, portfolio_url, wallet_address, private_payout_wallet, average_rating, total_ratings, skills, verified, public_profile, completed_tasks_count, created_at')
     .eq('id', userId)
     .maybeSingle();
 

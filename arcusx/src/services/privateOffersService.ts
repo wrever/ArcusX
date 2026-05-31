@@ -15,6 +15,10 @@ export interface PrivateOfferTask {
   creator_username: string;
   creator_id?: number;
   my_application_count: number;
+  escrow_id?: string | null;
+  escrow_status?: string | null;
+  accepted_applicant_id?: number | null;
+  is_funded?: boolean;
 }
 
 export async function fetchPrivateOffers(): Promise<PrivateOfferTask[]> {

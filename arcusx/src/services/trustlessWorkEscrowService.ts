@@ -77,6 +77,10 @@ interface CreateEscrowPayload {
   serviceProvider: string;
   receiver: string;
   milestoneDescription: string;
+  /** Quien firma la liberación; por defecto = approver */
+  releaseSigner?: string;
+  /** Fee decimal (0.03) fijado al crear el deal; si no, se lee de system_config */
+  platformFeeOverride?: number;
 }
 
 interface EscrowResult {
@@ -669,7 +673,7 @@ export const createTrustlessEscrow = async (
     validateConfiguration();
     devLog('Wallets de plataforma configuradas');
     
-    const platformFee = await getPlatformFeeForTrustlessWork();
+    const platformFee = payload.platformFeeOverride ?? await getPlatformFeeForTrustlessWork();
     devLog('Platform fee:', platformFee, `(${(platformFee * 100).toFixed(2)}%)`);
     
     const normalizedAmount = normalizeAmount(payload.amount);
@@ -681,6 +685,7 @@ export const createTrustlessEscrow = async (
     // Payload según documentación MCP (deploy_single_release_escrow.json)
     // REQUERIDOS: signer, engagementId, title, roles, description, amount, platformFee, milestones, trustline
     // receiverMemo está en la documentación pero el servidor lo RECHAZA → NO incluirlo
+    const releaseSigner = payload.releaseSigner ?? payload.approver;
     const escrowPayload: InitializeSingleReleaseEscrowPayload = {
       signer: payload.signer,
       engagementId: payload.engagementId,
@@ -689,7 +694,7 @@ export const createTrustlessEscrow = async (
         approver: payload.approver,
         serviceProvider: payload.serviceProvider,
         platformAddress: PLATFORM_WALLET,
-        releaseSigner: payload.approver,
+        releaseSigner,
         disputeResolver: ADMIN_WALLET,
         receiver: payload.receiver
       },

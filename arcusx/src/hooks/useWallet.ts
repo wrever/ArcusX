@@ -6,7 +6,6 @@ import {
   xBullModule
 } from '@creit.tech/stellar-wallets-kit';
 import { Networks } from '@stellar/stellar-sdk';
-import { authService } from '../services/authService';
 
 const walletNetwork = (): WalletNetwork => {
   const net = import.meta.env.VITE_STELLAR_NETWORK?.trim().toLowerCase();
@@ -99,12 +98,6 @@ export const useWallet = () => {
         connected: true,
         walletType: 'stellar'
       }));
-
-      // Sync wallet address to backend if user is logged in
-      const token = localStorage.getItem('token');
-      if (token) {
-        authService.registerWallet(address).catch(() => {});
-      }
 
       if (!wasAlreadyConnected) {
         window.location.reload();

@@ -968,6 +968,26 @@
   justify-content: center;
 }
 
+.hero-freelancer-card-cta-secondary {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color-active, rgba(16, 221, 136, 0.45));
+  box-shadow: none;
+}
+
+.hero-freelancer-card-cta-secondary:hover,
+.hero-freelancer-card-cta-secondary:focus-visible {
+  background: rgba(16, 221, 136, 0.08);
+  color: var(--primary-green, #10dd88);
+  border-color: var(--primary-green, #10dd88);
+  transform: translateY(-1px);
+}
+
+:root[data-theme="light"] .hero-freelancer-card-cta-secondary {
+  border-color: rgba(16, 221, 136, 0.35);
+  color: var(--text-primary);
+}
+
 @media (max-width: 768px) {
   .hero-freelancer-carousel-section {
     padding: 1.5rem 0.75rem 1.85rem;

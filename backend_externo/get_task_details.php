@@ -142,7 +142,7 @@ function handleGetTaskDetails($task_id) {
         }
         
         // La tarea puede ser marcada como completada si el cliente no la ha marcado previamente
-        $can_mark_completed = intval($task['client_accepted_completion'] ?? 0) === 0;
+        $can_mark_completed = intval($task['worker_accepted_completion'] ?? 0) === 0;
 
         // CONSULTA 2: Obtener wallet del trabajador desde applications (más simple y directo)
         $worker_wallet_address = null;

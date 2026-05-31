@@ -32,6 +32,9 @@ const EditProfile = lazy(() => import('./components/EditProfile'));
 const SwapPage = lazy(() => import('./pages/SwapPage'));
 const TutorialsPage = lazy(() => import('./pages/TutorialsPage'));
 const EmpresasPage = lazy(() => import('./pages/EmpresasPage'));
+const DealWizardPage = lazy(() => import('./pages/DealWizardPage'));
+const DealPublicPage = lazy(() => import('./pages/DealPublicPage'));
+const DealWorkspacePage = lazy(() => import('./pages/DealWorkspacePage'));
 import ReferralLanding from './pages/ReferralLanding';
 const SupportChatButton = lazy(() => import('./components/SupportChatButton'));
 
@@ -83,7 +86,7 @@ function AppContent({ isLoading }: { isLoading: boolean }) {
     path.startsWith('/ref/') ||
     path.startsWith('/r/');
   // Si no estamos en una ruta de app (dashboard, profile, etc.), mostrar FAB por si cPanel devuelve un path distinto
-  const isAppRoute = path.startsWith('/dashboard') || path.startsWith('/admin') || path.startsWith('/profile') || path.startsWith('/create-task') || path.startsWith('/apply-task') || path.startsWith('/proposals') || path.startsWith('/supervise-task') || path.startsWith('/auth');
+  const isAppRoute = path.startsWith('/dashboard') || path.startsWith('/admin') || path.startsWith('/profile') || path.startsWith('/create-task') || path.startsWith('/apply-task') || path.startsWith('/proposals') || path.startsWith('/supervise-task') || path.startsWith('/auth') || path.startsWith('/deals') || path.startsWith('/deal/');
   const showFloatingButtons = isPublicLanding || (!isAppRoute && path.length <= 20);
   const showSupportButton = isRoot && !isEnterpriseLandingHost();
 
@@ -129,6 +132,9 @@ function AppContent({ isLoading }: { isLoading: boolean }) {
               <Route path="/ref/:code" element={<><Navbar /><ReferralLanding /></>} />
               <Route path="/r/:code" element={<><Navbar /><ReferralLanding /></>} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/deals/new" element={<ProtectedRoute><DealWizardPage /></ProtectedRoute>} />
+              <Route path="/deals/workspace/:id" element={<ProtectedRoute><DealWorkspacePage /></ProtectedRoute>} />
+              <Route path="/deal/:token" element={<DealPublicPage />} />
               <Route path="/create-task" element={<ProtectedRoute><CreateTask /></ProtectedRoute>} />
               <Route path="/apply-task/:taskId" element={<ProtectedRoute><ApplyTask /></ProtectedRoute>} />
               <Route path="/proposals/:taskId" element={<ProtectedRoute><ProposalReview /></ProtectedRoute>} />

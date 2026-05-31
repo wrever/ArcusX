@@ -128,19 +128,21 @@ export async function getPendingActions(ctx: ApiContext): Promise<Response> {
     const worker = row.arcusx_users as { username?: string; email?: string } | null;
     const pendingActions: Record<string, unknown>[] = [];
 
-    if (row.status === 'in_progress' || row.status === 'assigned') {
-      if (!row.worker_accepted_completion) {
-        pendingActions.push({
-          type: 'worker_complete',
-          message: 'El trabajador debe marcar la tarea como completada',
-          worker_id: row.accepted_applicant_id,
-        });
-      }
+    if (
+      (row.status === 'in_progress' || row.status === 'assigned') &&
+      row.escrow_id &&
+      !row.client_accepted_completion
+    ) {
+      pendingActions.push({
+        type: 'client_approve_release',
+        message: 'Revisa la entrega y libera los fondos cuando estés conforme',
+        worker_id: row.accepted_applicant_id,
+      });
     }
     if (row.worker_accepted_completion && !row.client_accepted_completion) {
       pendingActions.push({
-        type: 'client_approve_release',
-        message: 'Debes aprobar el milestone y liberar los fondos',
+        type: 'worker_delivery_notified',
+        message: 'El trabajador notificó que terminó (informativo). Tú decides si liberar.',
         worker_id: row.accepted_applicant_id,
       });
     }

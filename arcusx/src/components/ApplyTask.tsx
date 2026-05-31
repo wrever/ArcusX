@@ -3,9 +3,9 @@ import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { FaArrowLeft, FaCommentAlt, FaLink, FaWallet, FaInfoCircle } from 'react-icons/fa';
 import axios from '../config/axios';
 import { arcusxApiUrl } from '../config/arcusxApi';
+import { normalizeDisplayText } from '../utils/utf8Mojibake';
 import '../css/ApplyTask.css'; // Necesitas crear este archivo CSS
 import { useI18n } from '../i18n/I18nProvider';
-import { authService } from '../services/authService';
 import { useWallet } from '../hooks/useWallet';
 
 interface TaskData {
@@ -82,7 +82,16 @@ const ApplyTask = () => {
         // TODO: Crear este endpoint en el backend
         const response = await axios.get(arcusxApiUrl('get_task_details', { task_id: taskId }));
         if (response.data) {
-          setTask(response.data);
+          const d = response.data;
+          setTask({
+            ...d,
+            title: normalizeDisplayText(d.title),
+            subtitle: normalizeDisplayText(d.subtitle),
+            description: normalizeDisplayText(d.description),
+            category: normalizeDisplayText(d.category),
+            difficulty: normalizeDisplayText(d.difficulty),
+            creator_username: normalizeDisplayText(d.creator_username),
+          });
         } else {
           setError(t('apply.error.no.details'));
         }
@@ -102,32 +111,12 @@ const ApplyTask = () => {
   }, [taskId]); // Ejecutar efecto cuando cambie el taskId de la URL
 
   useEffect(() => {
-    let cancelled = false;
-    const fillRegisteredWallet = async () => {
-      if (!user?.id) return;
-      try {
-        const res = await authService.verifyWallet();
-        if (
-          cancelled ||
-          !res.success ||
-          !res.has_wallet ||
-          !res.wallet_address
-        ) {
-          return;
-        }
-        setApplicationData((prev) => ({
-          ...prev,
-          walletAddress: prev.walletAddress.trim() ? prev.walletAddress : res.wallet_address || ''
-        }));
-      } catch {
-        /* sin wallet registrada */
-      }
-    };
-    fillRegisteredWallet();
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id]);
+    if (!connectedWallet?.trim()) return;
+    setApplicationData((prev) => ({
+      ...prev,
+      walletAddress: prev.walletAddress.trim() ? prev.walletAddress : connectedWallet.trim(),
+    }));
+  }, [connectedWallet]);
 
   // Manejar el envío del formulario de aplicación
   const handleApplicationSubmit = async (e: React.FormEvent) => {

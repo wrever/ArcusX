@@ -14,6 +14,10 @@ export interface Freelancer {
   skills?: string[];
   public_profile: boolean;
   joined_date: string;
+  /** Wallet G… registrada para cobrar ofertas privadas */
+  has_payout_wallet?: boolean;
+  /** Presente en API reciente; el front calcula has_payout_wallet si falta */
+  private_payout_wallet?: string | null;
 }
 
 export interface FreelancersResponse {

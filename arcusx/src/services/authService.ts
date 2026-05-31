@@ -1,6 +1,7 @@
 import axios from '../config/axios';
 import { arcusxApiUrl, arcusxApiHeaders } from '../config/arcusxApi';
 import { supabase, hasSupabase } from '../config/supabase';
+import { isValidStellarGAddress } from '../utils/stellarAddress';
 import { ensureArcusxSupabaseUserLink } from './arcusxMessagingSupabase';
 import {
   buildAuthCallbackUrl,
@@ -250,19 +251,64 @@ export const authService = {
     }
   },
 
-  async registerWallet(walletAddress: string): Promise<{ success: boolean; wallet_address?: string; already_registered?: boolean; message?: string }> {
+  async registerWallet(walletAddress: string): Promise<{
+    success: boolean;
+    wallet_address?: string;
+    private_payout_wallet?: string;
+    already_registered?: boolean;
+    changed?: boolean;
+    message?: string;
+  }> {
+    const trimmed = walletAddress.trim();
     const response = await axios.post(
       arcusxApiUrl('register_wallet'),
-      { wallet_address: walletAddress },
+      { wallet_address: trimmed, private_payout_wallet: trimmed },
       { headers: Object.fromEntries(arcusxApiHeaders().entries()) },
     );
-    return response.data;
+    const data = response.data as {
+      success?: boolean;
+      wallet_address?: string;
+      private_payout_wallet?: string;
+      message?: string;
+    };
+    return {
+      success: data.success !== false,
+      wallet_address: data.private_payout_wallet ?? data.wallet_address ?? trimmed,
+      private_payout_wallet: data.private_payout_wallet ?? data.wallet_address ?? trimmed,
+      already_registered: (data as { already_registered?: boolean }).already_registered,
+      changed: (data as { changed?: boolean }).changed,
+      message: data.message,
+    };
   },
 
-  async verifyWallet(): Promise<{ success: boolean; has_wallet: boolean; wallet_address?: string | null }> {
+  async verifyWallet(): Promise<{
+    success: boolean;
+    has_wallet: boolean;
+    wallet_address?: string | null;
+    private_payout_wallet?: string | null;
+  }> {
     const response = await axios.get(arcusxApiUrl('verify_wallet'), {
       headers: Object.fromEntries(arcusxApiHeaders().entries()),
     });
-    return response.data;
+    const data = response.data as {
+      success?: boolean;
+      has_wallet?: boolean;
+      wallet_address?: string | null;
+      private_payout_wallet?: string | null;
+    };
+    const payoutExplicit = data.private_payout_wallet?.trim() || null;
+    const legacyAddress = data.wallet_address?.trim() || null;
+    const payout =
+      payoutExplicit && isValidStellarGAddress(payoutExplicit)
+        ? payoutExplicit
+        : data.has_wallet && legacyAddress && isValidStellarGAddress(legacyAddress)
+          ? legacyAddress
+          : null;
+    return {
+      success: data.success !== false,
+      has_wallet: Boolean(payout),
+      wallet_address: payout,
+      private_payout_wallet: payoutExplicit && isValidStellarGAddress(payoutExplicit) ? payoutExplicit : payout,
+    };
   }
 }; 

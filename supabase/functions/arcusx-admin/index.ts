@@ -1,4 +1,4 @@
-import { handleOptions, jsonError } from '../_shared/arcusx-cors.ts';
+import { handleOptions, jsonError, jsonSuccess } from '../_shared/arcusx-cors.ts';
 import { supabaseService } from '../_shared/referral-db.ts';
 import { signArcusxJwt, bearerToken, verifyArcusxJwt } from '../_shared/arcusx-jwt.ts';
 import { compare } from 'https://deno.land/x/bcrypt@v0.4.1/mod.ts';
@@ -42,8 +42,7 @@ async function adminLogin(req: Request, body: Record<string, unknown>) {
     role: 'admin',
   }, 3600 * 24 * 7);
 
-  return new Response(JSON.stringify({
-    success: true,
+  return jsonSuccess(req, {
     message: 'Login exitoso',
     token,
     user: {
@@ -53,9 +52,6 @@ async function adminLogin(req: Request, body: Record<string, unknown>) {
       is_admin: true,
       role: user.role ?? 'admin',
     },
-  }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json; charset=utf-8' },
   });
 }
 

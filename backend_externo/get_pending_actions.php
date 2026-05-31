@@ -55,24 +55,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     while ($row = $result->fetch_assoc()) {
         $pendingActions = [];
         
-        // Verificar acciones pendientes del trabajador
-        if ($row['status'] === 'in_progress' || $row['status'] === 'assigned') {
-            // Trabajador debe marcar completado
-            if ($row['worker_accepted_completion'] == 0) {
-                $pendingActions[] = [
-                    'type' => 'worker_complete',
-                    'message' => 'El trabajador debe marcar la tarea como completada',
-                    'worker_id' => $row['accepted_applicant_id']
-                ];
-            }
-        }
-        
-        // Verificar acciones pendientes del cliente
-        // Para Trustless Work: cliente debe aprobar milestone y liberar fondos
-        if ($row['worker_accepted_completion'] == 1 && $row['client_accepted_completion'] == 0) {
+        if (
+            ($row['status'] === 'in_progress' || $row['status'] === 'assigned') &&
+            !empty($row['escrow_id']) &&
+            $row['client_accepted_completion'] == 0
+        ) {
             $pendingActions[] = [
                 'type' => 'client_approve_release',
-                'message' => 'Debes aprobar el milestone y liberar los fondos',
+                'message' => 'Revisa la entrega y libera los fondos cuando estés conforme',
+                'worker_id' => $row['accepted_applicant_id']
+            ];
+        }
+
+        if ($row['worker_accepted_completion'] == 1 && $row['client_accepted_completion'] == 0) {
+            $pendingActions[] = [
+                'type' => 'worker_delivery_notified',
+                'message' => 'El trabajador notificó que terminó (informativo). Tú decides si liberar.',
                 'worker_id' => $row['accepted_applicant_id']
             ];
         }

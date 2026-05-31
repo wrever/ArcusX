@@ -118,6 +118,18 @@ export function adminLogout(): void {
   localStorage.removeItem('admin_user');
 }
 
+function normalizeAdminPagination(
+  pagination: Record<string, unknown> | undefined,
+  fallback?: { page?: number; limit?: number; total?: number },
+) {
+  const total = Number(pagination?.total ?? fallback?.total ?? 0);
+  const limit = Number(pagination?.limit ?? fallback?.limit ?? 20);
+  const page = Number(pagination?.page ?? fallback?.page ?? 1);
+  const total_pages =
+    Number(pagination?.total_pages) || (total > 0 ? Math.ceil(total / limit) : 0);
+  return { page, limit, total, total_pages };
+}
+
 /**
  * Llamada genérica al API de admin
  */
@@ -233,7 +245,14 @@ export async function getAdminUsers(params: {
   if (params.is_admin !== undefined) queryParams.append('is_admin', params.is_admin.toString());
 
   const data = await adminApiCall('get_users', 'GET', undefined, queryParams);
-  return { users: data.users, pagination: data.pagination };
+  return {
+    users: data.users,
+    pagination: normalizeAdminPagination(data.pagination, {
+      page: params.page,
+      limit: params.limit,
+      total: data.total,
+    }),
+  };
 }
 
 /**
@@ -378,7 +397,14 @@ export async function getAdminDisputes(params: {
   if (params.status) queryParams.append('status', params.status);
 
   const data = await adminApiCall('get_disputes', 'GET', undefined, queryParams);
-  return { disputes: data.disputes, pagination: data.pagination };
+  return {
+    disputes: data.disputes,
+    pagination: normalizeAdminPagination(data.pagination, {
+      page: params.page,
+      limit: params.limit,
+      total: data.pagination?.total,
+    }),
+  };
 }
 
 /**
@@ -451,7 +477,21 @@ export async function getAdminNotifications(params: {
   if (params.user_id) queryParams.append('user_id', params.user_id.toString());
 
   const data = await adminApiCall('get_notifications', 'GET', undefined, queryParams);
-  return { notifications: data.notifications, pagination: data.pagination };
+  const pag = data.pagination ?? {};
+  const total = Number(pag.total ?? data.total ?? 0);
+  const limit = Number(pag.limit ?? params.limit ?? 20);
+  const totalPages =
+    Number(pag.total_pages) ||
+    (total > 0 ? Math.ceil(total / limit) : 0);
+  const notifications = (data.notifications ?? []).map((n: Record<string, unknown>) => ({
+    ...n,
+    user_id: n.user_id_mysql ?? n.user_id ?? null,
+    is_global: n.user_id_mysql == null && n.user_id == null,
+  }));
+  return {
+    notifications,
+    pagination: { ...pag, total, limit, total_pages: totalPages },
+  };
 }
 
 /**

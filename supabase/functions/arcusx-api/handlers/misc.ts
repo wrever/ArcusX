@@ -112,13 +112,14 @@ export async function getPrivateOffers(ctx: ApiContext): Promise<Response> {
     .from('arcusx_tasks')
     .select(`
       id, title, subtitle, description, price, currency, difficulty, category,
-      created_at, status, user_id,
+      created_at, status, user_id, escrow_id, escrow_status, accepted_applicant_id,
       arcusx_users!arcusx_tasks_user_id_fkey (username)
     `)
     .eq('is_private_invite', true)
     .eq('invited_user_id', auth.userId)
-    .eq('status', 'open')
-    .is('accepted_applicant_id', null)
+    .or(
+      `and(status.eq.open,accepted_applicant_id.is.null),and(status.eq.in_progress,accepted_applicant_id.eq.${auth.userId})`,
+    )
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -149,6 +150,10 @@ export async function getPrivateOffers(ctx: ApiContext): Promise<Response> {
       creator_username: creator?.username ?? '',
       creator_id: row.user_id,
       my_application_count: count ?? 0,
+      escrow_id: row.escrow_id ?? null,
+      escrow_status: row.escrow_status ?? null,
+      accepted_applicant_id: row.accepted_applicant_id ?? null,
+      is_funded: row.escrow_status === 'active' && Boolean(row.escrow_id),
     };
   }));
 

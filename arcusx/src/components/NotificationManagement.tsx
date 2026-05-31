@@ -58,8 +58,13 @@ const NotificationManagement: React.FC<NotificationManagementProps> = ({ onUpdat
     try {
       const data = await getAdminNotifications({ page, limit: 20 });
       setNotifications(data.notifications);
-      setTotalPages(data.pagination.total_pages);
-      setTotal(data.pagination.total);
+      const total = Number(data.pagination?.total ?? 0);
+      const limit = Number(data.pagination?.limit ?? 20);
+      setTotalPages(
+        Number(data.pagination?.total_pages) ||
+          (total > 0 ? Math.ceil(total / limit) : 1),
+      );
+      setTotal(total);
     } catch (err: any) {
       setError(err.message || 'Error al cargar notificaciones');
     } finally {
@@ -454,10 +459,10 @@ const NotificationManagement: React.FC<NotificationManagementProps> = ({ onUpdat
                     
                     <div className="notification-card-footer">
                       <div className="notification-card-meta">
-                        {notif.user_id ? (
+                        {(notif.user_id_mysql ?? notif.user_id) ? (
                           <div className="notification-user">
                             <FaUsers />
-                            <span>{notif.user_username || 'Usuario #' + notif.user_id}</span>
+                            <span>{notif.user_username || `Usuario #${notif.user_id_mysql ?? notif.user_id}`}</span>
                           </div>
                         ) : (
                           <div className="notification-user global">
@@ -552,9 +557,9 @@ const NotificationManagement: React.FC<NotificationManagementProps> = ({ onUpdat
                   <div className="detail-item">
                     <label>Destinatario:</label>
                     <span>
-                      {selectedNotification.user_id ? (
+                      {(selectedNotification.user_id_mysql ?? selectedNotification.user_id) ? (
                         <div>
-                          <div>{selectedNotification.user_username || 'Usuario #' + selectedNotification.user_id}</div>
+                          <div>{selectedNotification.user_username || 'Usuario #' + (selectedNotification.user_id_mysql ?? selectedNotification.user_id)}</div>
                           {selectedNotification.user_email && (
                             <small className="text-muted">{selectedNotification.user_email}</small>
                           )}
