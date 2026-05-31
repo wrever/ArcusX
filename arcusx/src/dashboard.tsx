@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { FaUser, FaTasks, FaWallet, FaChartLine, FaBell, FaCog, FaSignOutAlt, FaPlus, FaTimes, FaExclamationTriangle, FaUsers, FaCheckCircle, FaGlobe, FaLock, FaStar, FaGraduationCap, FaExchangeAlt, FaQuestionCircle, FaEnvelope } from 'react-icons/fa';
+import { FaUser, FaTasks, FaWallet, FaChartLine, FaBell, FaCog, FaSignOutAlt, FaPlus, FaTimes, FaExclamationTriangle, FaUsers, FaCheckCircle, FaGlobe, FaLock, FaStar, FaGraduationCap, FaExchangeAlt, FaQuestionCircle, FaEnvelope, FaHandshake } from 'react-icons/fa';
 import ThemeToggle from './components/ThemeToggle';
 import LanguageFab from './components/LanguageFab';
 import { FiMenu } from 'react-icons/fi';
@@ -37,6 +37,10 @@ import { useEnterpriseMode } from './hooks/useEnterpriseMode';
 import { hasSupabase } from './config/supabase';
 import { ensureArcusxSupabaseUserLink } from './services/arcusxMessagingSupabase';
 import { fetchPrivateOffers, type PrivateOfferTask } from './services/privateOffersService';
+import { authService } from './services/authService';
+import PrivateOfferWalletModal from './components/PrivateOfferWalletModal';
+import DashboardDealsPanel from './components/DashboardDealsPanel';
+import { isValidStellarGAddress } from './utils/stellarAddress';
 
 interface UserData {
   id: number;
@@ -114,6 +118,10 @@ const Dashboard = () => {
   const [privateOffers, setPrivateOffers] = useState<PrivateOfferTask[]>([]);
   const [loadingPrivateOffers, setLoadingPrivateOffers] = useState(false);
   const [privateOffersError, setPrivateOffersError] = useState<string>('');
+  const [showPrivateWalletGate, setShowPrivateWalletGate] = useState(false);
+  const [payoutWalletLoading, setPayoutWalletLoading] = useState(false);
+  const [payoutWalletRegistered, setPayoutWalletRegistered] = useState<boolean | null>(null);
+  const [payoutWalletAddress, setPayoutWalletAddress] = useState<string | null>(null);
 
   const [searchParams] = useSearchParams();
 
@@ -151,28 +159,78 @@ const Dashboard = () => {
     void ensureArcusxSupabaseUserLink(Number(user.id));
   }, [user?.id]);
 
+  const refreshPayoutWallet = async (): Promise<{ registered: boolean; address: string | null }> => {
+    setPayoutWalletLoading(true);
+    try {
+      const w = await authService.verifyWallet();
+      const payout = w.private_payout_wallet ?? w.wallet_address;
+      const registered = Boolean(
+        w.success && w.has_wallet && isValidStellarGAddress(payout),
+      );
+      const address = registered ? String(payout).trim() : null;
+      setPayoutWalletRegistered(registered);
+      setPayoutWalletAddress(address);
+      return { registered, address };
+    } catch {
+      setPayoutWalletRegistered(false);
+      setPayoutWalletAddress(null);
+      return { registered: false, address: null };
+    } finally {
+      setPayoutWalletLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab !== 'private-offers' || !user?.id) return;
     let cancelled = false;
-    setLoadingPrivateOffers(true);
-    setPrivateOffersError('');
-    fetchPrivateOffers()
-      .then((rows) => {
-        if (!cancelled) setPrivateOffers(rows);
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setPrivateOffersError(err instanceof Error ? err.message : String(err));
-          setPrivateOffers([]);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoadingPrivateOffers(false);
-      });
+    void refreshPayoutWallet().then(({ registered }) => {
+      if (cancelled) return;
+      if (!registered) {
+        setShowPrivateWalletGate(true);
+        setPrivateOffers([]);
+        return;
+      }
+      setLoadingPrivateOffers(true);
+      setPrivateOffersError('');
+      fetchPrivateOffers()
+        .then((rows) => {
+          if (!cancelled) setPrivateOffers(rows);
+        })
+        .catch((err: unknown) => {
+          if (!cancelled) {
+            setPrivateOffersError(err instanceof Error ? err.message : String(err));
+            setPrivateOffers([]);
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setLoadingPrivateOffers(false);
+        });
+    });
     return () => {
       cancelled = true;
     };
-  }, [activeTab, user?.id]);
+  }, [activeTab, user?.id, searchParams]);
+
+  useEffect(() => {
+    if (activeTab !== 'private-offers') return;
+    const onFocus = () => {
+      void refreshPayoutWallet().then(({ registered }) => {
+        if (!registered) {
+          setShowPrivateWalletGate(true);
+          setPrivateOffers([]);
+          return;
+        }
+        setShowPrivateWalletGate(false);
+        setLoadingPrivateOffers(true);
+        fetchPrivateOffers()
+          .then(setPrivateOffers)
+          .catch(() => setPrivateOffers([]))
+          .finally(() => setLoadingPrivateOffers(false));
+      });
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [activeTab]);
   
   // Estado para transacciones reales
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -207,6 +265,7 @@ const Dashboard = () => {
     'manage-tasks',
     'freelancers',
     'private-offers',
+    'deals',
     'swap',
     'tutorials',
     'notifications',
@@ -215,10 +274,28 @@ const Dashboard = () => {
   ];
   const showEnterpriseTab = (tab: string) => !enterprise || allowedEnterpriseTabs.includes(tab);
 
+  const openPrivateOffersTab = async () => {
+    setActiveTab('private-offers');
+    const { registered } = await refreshPayoutWallet();
+    if (!registered) setShowPrivateWalletGate(true);
+  };
+
   useEffect(() => {
-    if (searchParams.get('tab') === 'private-offers' && showEnterpriseTab('private-offers')) {
-      setActiveTab('private-offers');
-    }
+    if (searchParams.get('tab') !== 'private-offers' || !showEnterpriseTab('private-offers')) return;
+    let cancelled = false;
+    setActiveTab('private-offers');
+    void refreshPayoutWallet().then(({ registered }) => {
+      if (cancelled) return;
+      if (!registered) setShowPrivateWalletGate(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, enterprise]);
+
+  useEffect(() => {
+    if (searchParams.get('tab') !== 'deals' || !showEnterpriseTab('deals')) return;
+    setActiveTab('deals');
   }, [searchParams, enterprise]);
 
   // Si cambian condiciones de modo, mantener al usuario en un tab permitido
@@ -313,7 +390,9 @@ const Dashboard = () => {
           const response = await axios.get(arcusxApiUrl('get_tasks', params));
           
           if (Array.isArray(response.data)) {
-            setFetchedTasks(response.data); // Guardar las tareas en el estado
+            setFetchedTasks(
+              response.data.map((row: TaskData) => normalizeTaskForDisplay(row)),
+            );
           } else {
             setTasksError(t('dashboard.tasks.error.format'));
             setFetchedTasks([]); // Limpiar tareas si el formato es incorrecto
@@ -604,10 +683,15 @@ const Dashboard = () => {
       const data = await getUserNotifications({ page: 1, limit: 50 });
       setNotifications(data.notifications);
       setUnreadCount(data.unread_count);
-    } catch (error: any) {
-      // Si falla, mantener notificaciones vacías
+    } catch (error: unknown) {
       setNotifications([]);
       setUnreadCount(0);
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes('link_required') || msg.includes('not authenticated')) {
+        setNotificationsActionError(t('dashboard.notifications.error.session'));
+      } else {
+        setNotificationsActionError(t('dashboard.notifications.error.load'));
+      }
     } finally {
       setLoadingNotifications(false);
     }
@@ -645,16 +729,8 @@ const Dashboard = () => {
       );
       // Actualizar contador
       setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (error: any) {
-      // Aún así actualizar el estado local para mejor UX
-      setNotifications(prev => 
-        prev.map(notification => 
-          notification.id === notificationId 
-            ? { ...notification, is_read: true }
-            : notification
-        )
-      );
-      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch {
+      setNotificationsActionError(t('dashboard.notifications.error.read'));
     }
   };
   
@@ -919,8 +995,16 @@ const Dashboard = () => {
               </li>
             )}
             {showEnterpriseTab('private-offers') && (
-              <li className={activeTab === 'private-offers' ? 'active' : ''} onClick={() => setActiveTab('private-offers')}>
+              <li
+                className={activeTab === 'private-offers' ? 'active' : ''}
+                onClick={() => void openPrivateOffersTab()}
+              >
                 <FaEnvelope /> <span>{t('dashboard.tabs.privateOffers')}</span>
+              </li>
+            )}
+            {showEnterpriseTab('deals') && (
+              <li className={activeTab === 'deals' ? 'active' : ''} onClick={() => setActiveTab('deals')}>
+                <FaHandshake /> <span>{t('dashboard.tabs.deals')}</span>
               </li>
             )}
             {showEnterpriseTab('wallet') && (
@@ -973,6 +1057,7 @@ const Dashboard = () => {
             {activeTab === 'manage-tasks' && t('dashboard.title.manage.tasks')}
             {activeTab === 'freelancers' && t('dashboard.title.freelancers')}
             {activeTab === 'private-offers' && t('dashboard.title.privateOffers')}
+            {activeTab === 'deals' && t('dashboard.title.deals')}
             {activeTab === 'tutorials' && t('dashboard.title.tutorials')}
             {activeTab === 'swap' && t('dashboard.title.swap')}
             {activeTab === 'support' && t('dashboard.title.support')}
@@ -1659,11 +1744,54 @@ const Dashboard = () => {
             <FreelancersList />
           )}
 
+          {activeTab === 'deals' && <DashboardDealsPanel />}
+
           {activeTab === 'private-offers' && (
             <div className="tasks-container">
-              <p className="task-description" style={{ marginBottom: '1.25rem', maxWidth: '42rem' }}>
+              <div
+                className={`private-offers-wallet-banner ${
+                  payoutWalletRegistered ? 'is-registered' : 'is-missing'
+                }`}
+                role="status"
+              >
+                {payoutWalletLoading ? (
+                  <span>{t('dashboard.privateOffers.walletStatus.loading')}</span>
+                ) : payoutWalletRegistered && payoutWalletAddress ? (
+                  <>
+                    <FaCheckCircle aria-hidden />
+                    <span>
+                      {t('dashboard.privateOffers.walletStatus.registered')}{' '}
+                      <code className="private-offers-wallet-code">
+                        {payoutWalletAddress.slice(0, 7)}…{payoutWalletAddress.slice(-5)}
+                      </code>
+                    </span>
+                    <Link to="/dashboard/settings/profile#private-payout-wallet" className="private-offers-wallet-link">
+                      {t('dashboard.privateOffers.walletStatus.change')}
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <FaExclamationTriangle aria-hidden />
+                    <span>{t('dashboard.privateOffers.walletStatus.missing')}</span>
+                    <button
+                      type="button"
+                      className="private-offers-wallet-link-btn"
+                      onClick={() => setShowPrivateWalletGate(true)}
+                    >
+                      {t('privateOffers.walletGate.cta')}
+                    </button>
+                  </>
+                )}
+              </div>
+              <p className="task-description private-offers-intro-note">
                 {t('dashboard.privateOffers.intro')}
               </p>
+              <p className="task-description private-offers-freighter-note">
+                {t('dashboard.privateOffers.freighterNote')}
+              </p>
+              {!payoutWalletRegistered && !payoutWalletLoading && (
+                <p className="dashboard-private-muted">{t('dashboard.privateOffers.walletRequired')}</p>
+              )}
               {loadingPrivateOffers && (
                 <p className="dashboard-private-muted">{t('dashboard.privateOffers.loading')}</p>
               )}
@@ -1672,7 +1800,10 @@ const Dashboard = () => {
                   {privateOffersError}
                 </p>
               )}
-              {!loadingPrivateOffers && !privateOffersError && privateOffers.length === 0 && (
+              {payoutWalletRegistered &&
+                !loadingPrivateOffers &&
+                !privateOffersError &&
+                privateOffers.length === 0 && (
                 <p className="dashboard-private-muted">{t('dashboard.privateOffers.empty')}</p>
               )}
               {!loadingPrivateOffers && privateOffers.length > 0 && (
@@ -1706,7 +1837,7 @@ const Dashboard = () => {
                           </div>
                         </div>
                       </div>
-                      {task.my_application_count > 0 && (
+                      {task.is_funded && (
                         <p
                           style={{
                             margin: '0 0 0.75rem',
@@ -1714,16 +1845,28 @@ const Dashboard = () => {
                             color: 'var(--primary-green, #10dd88)',
                           }}
                         >
-                          {t('dashboard.privateOffers.applied')}
+                          {t('dashboard.privateOffers.funded')}
                         </p>
                       )}
-                      <button
-                        type="button"
-                        className="task-button"
-                        onClick={() => navigate(`/apply-task/${task.id}?ref=hire`)}
-                      >
-                        {t('dashboard.privateOffers.review')}
-                      </button>
+                      {task.is_funded && task.accepted_applicant_id === user?.id ? (
+                        <button
+                          type="button"
+                          className="task-button btn-primary"
+                          onClick={() =>
+                            navigate(`/supervise-task/${task.id}/${task.accepted_applicant_id}`)
+                          }
+                        >
+                          {t('dashboard.privateOffers.work')}
+                        </button>
+                      ) : !task.is_funded ? (
+                        <button
+                          type="button"
+                          className="task-button"
+                          onClick={() => navigate(`/apply-task/${task.id}?ref=hire`)}
+                        >
+                          {t('dashboard.privateOffers.review')}
+                        </button>
+                      ) : null}
                     </div>
                   ))}
                 </div>
@@ -2127,6 +2270,13 @@ const Dashboard = () => {
           setShowPendingNotificationsPopup(false);
         }}
       /> */}
+      <PrivateOfferWalletModal
+        open={showPrivateWalletGate}
+        onClose={() => {
+          setShowPrivateWalletGate(false);
+          if (activeTab === 'private-offers') void refreshPayoutWallet();
+        }}
+      />
     </div>
   );
 };

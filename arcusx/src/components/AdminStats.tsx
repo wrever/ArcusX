@@ -194,7 +194,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
       value: formatCurrency(stats?.totalFees || 0),
       icon: <FaWallet />,
       color: '#f59e0b',
-      description: `Comisiones acumuladas (${stats?.platformFee || 0.3}% del volumen)`,
+      description: `Comisiones acumuladas (${stats?.platformFee || 3}% del volumen)`,
       trend: stats?.feesThisWeek || stats?.feesThisMonth 
         ? `Esta semana: ${formatCurrency(stats.feesThisWeek || 0)} | Este mes: ${formatCurrency(stats.feesThisMonth || 0)}` 
         : null
@@ -467,7 +467,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
               <h4>Comisiones Totales</h4>
               <p className="revenue-value">{formatCurrency(stats?.totalFees || 0)}</p>
               <p className="revenue-description">
-                {stats?.platformFee ? `${stats.platformFee}%` : '0.3%'} del volumen total
+                {stats?.platformFee ? `${stats.platformFee}%` : '3%'} del volumen total
               </p>
               {(stats?.feesThisWeek || stats?.feesThisMonth) && (
                 <div className="revenue-trend">

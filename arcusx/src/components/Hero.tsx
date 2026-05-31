@@ -662,16 +662,29 @@ const Hero = () => {
                           </div>
                           <p className="hero-carousel-card-desc hero-freelancer-bio">{bioText}</p>
                           <div className="hero-carousel-card-footer hero-freelancer-card-footer">
-                            <button
-                              type="button"
-                              className="hero-carousel-card-apply hero-freelancer-card-cta"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleFreelancerHireClick(fl);
-                              }}
-                            >
-                              {t('freelancers.card.hire')} <FaArrowRight />
-                            </button>
+                            {fl.has_payout_wallet ? (
+                              <button
+                                type="button"
+                                className="hero-carousel-card-apply hero-freelancer-card-cta"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleFreelancerHireClick(fl);
+                                }}
+                              >
+                                {t('freelancers.card.hire')} <FaArrowRight />
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="hero-carousel-card-apply hero-freelancer-card-cta hero-freelancer-card-cta-secondary"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/profile/${fl.id}`);
+                                }}
+                              >
+                                {t('hero.freelancer.carousel.viewProfile')}
+                              </button>
+                            )}
                           </div>
                         </article>
                       );

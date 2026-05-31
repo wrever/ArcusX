@@ -59,5 +59,18 @@ export async function getFreelancers(filters: FreelancerFilters = {}): Promise<F
     throw new Error('Error al obtener freelancers');
   }
 
-  return data;
+  const STELLAR_G = /^G[A-Z0-9]{55}$/;
+  return {
+    ...data,
+    freelancers: (data.freelancers ?? []).map((f) => {
+      const row = f as FreelancersResponse['freelancers'][number] & {
+        private_payout_wallet?: string | null;
+      };
+      const payout = String(row.private_payout_wallet ?? '').trim();
+      const hasPayout =
+        row.has_payout_wallet === true ||
+        (row.has_payout_wallet !== false && STELLAR_G.test(payout));
+      return { ...f, has_payout_wallet: hasPayout };
+    }),
+  };
 }

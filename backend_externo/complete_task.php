@@ -129,8 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $conn->rollback();
                 exit;
             }
-            // NUEVA LÓGICA: Cuando el cliente acepta, la tarea se marca como completada automáticamente
-            $message_to_send = 'Tarea marcada como completada. Los fondos serán liberados.';
+            $message_to_send = 'Confirmación registrada. Libera los fondos desde el panel cuando la entrega te convenza.';
         } elseif ($loggedInUserId === $taskAcceptedApplicantId) {
             $update_field = 'worker_accepted_completion';
             if ($workerAccepted == 1) {
@@ -168,17 +167,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $workerAccepted = $updated_task_data['worker_accepted_completion'];
 
         $final_status = $currentStatus;
-        
-        // NUEVA LÓGICA: Si el cliente aceptó, marcar la tarea como completada inmediatamente
-        $shouldMarkAsCompleted = false;
-        if ($loggedInUserId === $taskCreatorId && $clientAccepted == 1 && $currentStatus !== 'completed') {
-            $shouldMarkAsCompleted = true;
-            error_log("✅ Cliente aceptó la tarea. Marcando como completada automáticamente...");
-        }
 
-        // Verificar si viene información de que el escrow está completado (fondos liberados)
         $escrowCompleted = isset($data['escrow_completed']) ? (bool)$data['escrow_completed'] : false;
         $txHash = isset($data['tx_hash']) ? trim($data['tx_hash']) : null;
+
+        // Cierre de tarea solo tras liberación on-chain, no por confirmación del cliente sola
+        $shouldMarkAsCompleted = false;
+        if ($escrowCompleted && $clientAccepted == 1 && $currentStatus !== 'completed') {
+            $shouldMarkAsCompleted = true;
+            error_log("✅ Fondos liberados. Marcando tarea como completada...");
+        }
         
         // Si los fondos fueron liberados exitosamente, actualizar escrow_status a 'completed'
         // independientemente de si ambos han aceptado

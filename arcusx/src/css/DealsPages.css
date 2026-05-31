@@ -1,0 +1,203 @@
+.deals-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+.deals-page--wide {
+  max-width: 960px;
+}
+
+.deals-page h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.6rem;
+}
+
+.deals-page .deals-lead {
+  color: var(--text-secondary, #9ca3af);
+  margin: 0 0 1.5rem;
+  line-height: 1.5;
+}
+
+.deals-steps {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.deals-step-pill {
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary, #9ca3af);
+}
+
+.deals-step-pill.is-active {
+  background: rgba(16, 221, 136, 0.2);
+  color: var(--primary-green, #10dd88);
+  font-weight: 600;
+}
+
+.deals-form-card {
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  background: var(--bg-card, rgba(255, 255, 255, 0.03));
+}
+
+.deals-form-card label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.deals-form-card input,
+.deals-form-card textarea,
+.deals-form-card select {
+  width: 100%;
+  margin-bottom: 1rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  background: var(--input-bg, rgba(0, 0, 0, 0.2));
+  color: inherit;
+}
+
+.deals-template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.deals-template-btn {
+  padding: 1rem;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font-size: 0.9rem;
+}
+
+.deals-template-btn.is-selected {
+  border-color: var(--primary-green, #10dd88);
+  background: rgba(16, 221, 136, 0.08);
+}
+
+.deals-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.deals-btn {
+  padding: 0.65rem 1.25rem;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.deals-btn.primary {
+  background: var(--primary-green, #10dd88);
+  color: #0a0f14;
+}
+
+.deals-btn.secondary {
+  background: transparent;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.2));
+  color: inherit;
+}
+
+.deals-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.deals-summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.95rem;
+}
+
+.deals-link-box {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.deals-link-box input {
+  flex: 1;
+  margin: 0;
+}
+
+.deals-status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.deals-status-badge.sent { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+.deals-status-badge.accepted { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+.deals-status-badge.funded { background: rgba(16, 221, 136, 0.2); color: #10dd88; }
+.deals-status-badge.completed { background: rgba(16, 221, 136, 0.35); color: #10dd88; }
+
+.deals-error {
+  color: #f87171;
+  margin: 0.75rem 0;
+}
+
+.deals-list {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0;
+}
+
+.deals-list-item {
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  margin-bottom: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.deals-public-desc {
+  white-space: pre-wrap;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+.deals-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  cursor: pointer;
+}
+
+.deals-workspace-done {
+  color: var(--primary-green, #10dd88);
+  margin-top: 1rem;
+  font-weight: 600;
+}
+
+.deals-disclaimer {
+  font-size: 0.8rem;
+  color: var(--text-secondary, #9ca3af);
+  margin-top: 1rem;
+}

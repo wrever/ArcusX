@@ -4,6 +4,8 @@ import { qp, qpInt } from './types.ts';
 import { parseSkills } from './stats-helpers.ts';
 import { normalizeDisplayText } from '../../_shared/text-encoding.ts';
 
+const STELLAR_G = /^G[A-Z0-9]{55}$/;
+
 type FreelancerRow = {
   id: number;
   username: string;
@@ -52,7 +54,7 @@ export async function getFreelancers(ctx: ApiContext): Promise<Response> {
   let userQuery = supabase
     .from('arcusx_users')
     .select(
-      'id, username, avatar_url, bio, skills, average_rating, total_ratings, completed_tasks_count, created_at, public_profile, is_admin',
+      'id, username, avatar_url, bio, skills, average_rating, total_ratings, completed_tasks_count, created_at, public_profile, is_admin, private_payout_wallet',
     )
     .eq('public_profile', true);
 
@@ -63,9 +65,12 @@ export async function getFreelancers(ctx: ApiContext): Promise<Response> {
   const { data: users, error: usersErr } = await userQuery;
   if (usersErr) return jsonError(req, usersErr.message, 500);
 
-  const eligible = (users ?? []).filter(
-    (u) => !u.is_admin && u.public_profile !== false && u.public_profile !== 0,
-  );
+  const eligible = (users ?? []).filter((u) => {
+    if (u.public_profile === false || u.public_profile === 0) return false;
+    const hasPayout = STELLAR_G.test(String(u.private_payout_wallet ?? '').trim());
+    if (u.is_admin) return hasPayout;
+    return true;
+  });
 
   const userIds = eligible.map((u) => u.id as number);
   if (userIds.length === 0) {
@@ -125,6 +130,10 @@ export async function getFreelancers(ctx: ApiContext): Promise<Response> {
       total_earned: Math.round((tc?.earned ?? 0) * 100) / 100,
       public_profile: true,
       joined_date: String(u.created_at ?? new Date().toISOString()),
+      has_payout_wallet: STELLAR_G.test(String(u.private_payout_wallet ?? '').trim()),
+      private_payout_wallet: STELLAR_G.test(String(u.private_payout_wallet ?? '').trim())
+        ? String(u.private_payout_wallet).trim()
+        : null,
     };
   });
 

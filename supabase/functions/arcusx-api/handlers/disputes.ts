@@ -1,4 +1,5 @@
 import { jsonError, jsonResponse, jsonSuccess } from '../../_shared/arcusx-cors.ts';
+import { insertArcusxNotification } from '../../_shared/arcusx-notifications.ts';
 import type { ApiContext } from './types.ts';
 import { qpInt } from './types.ts';
 import { requireUser, requireAdmin } from './require.ts';
@@ -14,7 +15,7 @@ export async function createDispute(ctx: ApiContext): Promise<Response> {
 
   const { data: task } = await auth.supabase
     .from('arcusx_tasks')
-    .select('id, user_id, accepted_applicant_id')
+    .select('id, title, user_id, accepted_applicant_id')
     .eq('id', taskId)
     .single();
 
@@ -33,6 +34,20 @@ export async function createDispute(ctx: ApiContext): Promise<Response> {
 
   if (error) return jsonError(req, error.message, 500);
   await auth.supabase.from('arcusx_tasks').update({ status: 'disputed' }).eq('id', taskId);
+
+  const otherId =
+    auth.userId === task.user_id
+      ? Number(task.accepted_applicant_id)
+      : Number(task.user_id);
+  if (otherId > 0) {
+    await insertArcusxNotification(auth.supabase, {
+      user_id_mysql: otherId,
+      title: 'Disputa abierta',
+      message: `Se abrió una disputa en "${task.title ?? 'la tarea'}". Revisa los detalles en tu panel.`,
+      type: 'warning',
+    });
+  }
+
   return jsonSuccess(req, { dispute_id: data?.id });
 }
 

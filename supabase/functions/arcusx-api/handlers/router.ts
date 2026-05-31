@@ -11,6 +11,7 @@ import * as ratings from './ratings.ts';
 import * as misc from './misc.ts';
 import * as limits from './limits.ts';
 import * as escrowExtra from './escrow-extra.ts';
+import * as deals from './deals.ts';
 
 const ROUTES: Record<string, ApiHandler> = {
   sync_supabase_user: auth.syncSupabaseUser,
@@ -38,6 +39,7 @@ const ROUTES: Record<string, ApiHandler> = {
 
   create_escrow: escrow.createEscrow,
   select_proposal: escrow.selectProposal,
+  finalize_private_offer: escrow.finalizePrivateOffer,
   complete_task: escrow.completeTask,
 
   mark_work_started: escrowExtra.markWorkStarted,
@@ -74,6 +76,15 @@ const ROUTES: Record<string, ApiHandler> = {
   set_cooldown: limits.setCooldown,
   get_pending_actions: limits.getPendingActions,
   check_disputes: limits.checkDisputes,
+
+  create_deal: deals.createDeal,
+  get_deal_by_token: deals.getDealByToken,
+  get_my_deals: deals.getMyDeals,
+  get_deal_details: deals.getDealDetails,
+  accept_deal: deals.acceptDeal,
+  finalize_deal_escrow: deals.finalizeDealEscrow,
+  complete_deal: deals.completeDeal,
+  mark_deal_released: deals.markDealReleased,
 };
 
 const METHOD_OVERRIDES: Record<string, (ctx: Parameters<ApiHandler>[0]) => Promise<Response>> = {

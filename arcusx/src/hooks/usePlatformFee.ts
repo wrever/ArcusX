@@ -5,6 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { getPlatformFee } from '../services/platformFeeService';
+import { normalizePlatformFeeRate } from '../config/platformFee';
 
 /**
  * Hook para obtener el platform fee
@@ -18,9 +19,9 @@ export function usePlatformFee() {
   useEffect(() => {
     const loadFee = async () => {
       try {
-        const fee = await getPlatformFee();
+        const fee = normalizePlatformFeeRate(await getPlatformFee());
         setPlatformFee(fee);
-        setPlatformFeePercent((fee * 100).toFixed(2));
+        setPlatformFeePercent((fee * 100).toFixed(1));
       } catch (error) {
         // Mantener valores por defecto si falla
       } finally {

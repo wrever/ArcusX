@@ -34,6 +34,15 @@ async function logAdmin(
   });
 }
 
+function paginateMeta(page: number, limit: number, total: number) {
+  return {
+    page,
+    limit,
+    total,
+    total_pages: total > 0 ? Math.ceil(total / limit) : 0,
+  };
+}
+
 async function platformFee(supabase: SupabaseClient): Promise<number> {
   const { data } = await supabase
     .from('arcusx_system_config')
@@ -108,13 +117,29 @@ export async function adminGetUsers(ctx: AdminCtx): Promise<Response> {
   const page = Math.max(1, parseInt(ctx.url.searchParams.get('page') ?? '1', 10));
   const limit = Math.min(100, parseInt(ctx.url.searchParams.get('limit') ?? '20', 10));
   const from = (page - 1) * limit;
-  const { data, count } = await ctx.supabase
-    .from('arcusx_users')
-    .select('*', { count: 'exact' })
-    .order('id', { ascending: false })
-    .range(from, from + limit - 1);
+  let q = ctx.supabase.from('arcusx_users').select('*', { count: 'exact' });
+  const search = ctx.url.searchParams.get('search')?.trim();
+  if (search) {
+    const s = search.replace(/[%_]/g, '');
+    q = q.or(`username.ilike.%${s}%,email.ilike.%${s}%`);
+  }
+  const role = ctx.url.searchParams.get('role');
+  if (role) q = q.eq('role', role);
+  const isAdmin = ctx.url.searchParams.get('is_admin');
+  if (isAdmin === '1') q = q.eq('is_admin', true);
+  else if (isAdmin === '0') q = q.eq('is_admin', false);
+
+  const { data, count } = await q.order('id', { ascending: false }).range(from, from + limit - 1);
+  const total = count ?? 0;
   await logAdmin(ctx.supabase, ctx.userId, 'get_users', 'users', null, { page, limit }, ctx.req);
-  return jsonResponse(ctx.req, { success: true, users: data ?? [], total: count ?? 0, page, limit, pagination: { page, limit, total: count ?? 0 } });
+  return jsonResponse(ctx.req, {
+    success: true,
+    users: data ?? [],
+    total,
+    page,
+    limit,
+    pagination: paginateMeta(page, limit, total),
+  });
 }
 
 export async function adminGetUserDetails(ctx: AdminCtx): Promise<Response> {
@@ -220,11 +245,24 @@ export async function adminWithdrawCommission(ctx: AdminCtx): Promise<Response> 
   await logAdmin(ctx.supabase, ctx.userId, 'withdraw_commission', 'finance', null, {
     amount: ctx.body.amount,
   }, ctx.req);
-  return jsonError(
-    ctx.req,
-    'El retiro automático de comisiones no está habilitado. Opera desde la wallet de plataforma en Stellar.',
-    501,
-  );
+  const { data: rows } = await ctx.supabase
+    .from('arcusx_tasks')
+    .select('price, escrow_amount, escrow_platform_fee')
+    .eq('status', 'completed')
+    .eq('escrow_status', 'completed');
+  const fee = await platformFee(ctx.supabase);
+  let balance = 0;
+  for (const r of rows ?? []) {
+    const worker = Number(r.price ?? 0);
+    const paid = Number(r.escrow_amount ?? worker / (1 - Number(r.escrow_platform_fee ?? fee)));
+    balance += paid - worker;
+  }
+  return jsonResponse(ctx.req, {
+    success: false,
+    message:
+      'El retiro automático de comisiones no está habilitado. Opera desde la wallet de plataforma en Stellar.',
+    balance_usdc: Math.round(balance * 1e6) / 1e6,
+  }, 501);
 }
 
 export async function adminGetConfig(ctx: AdminCtx): Promise<Response> {
@@ -264,14 +302,31 @@ export async function adminGetLogs(ctx: AdminCtx): Promise<Response> {
 }
 
 export async function adminGetDisputes(ctx: AdminCtx): Promise<Response> {
-  const { data } = await ctx.supabase
+  const page = Math.max(1, parseInt(ctx.url.searchParams.get('page') ?? '1', 10));
+  const limit = Math.min(500, parseInt(ctx.url.searchParams.get('limit') ?? '100', 10));
+  const from = (page - 1) * limit;
+  const status = ctx.url.searchParams.get('status');
+  let q = ctx.supabase
     .from('arcusx_disputes')
-    .select('*, arcusx_tasks(title, price, user_id, accepted_applicant_id)')
-    .order('created_at', { ascending: false });
+    .select('*, arcusx_tasks(title, price, user_id, accepted_applicant_id, escrow_id, escrow_status)', {
+      count: 'exact',
+    });
+  if (status) q = q.eq('status', status);
+  const { data, count } = await q.order('created_at', { ascending: false }).range(from, from + limit - 1);
+  const total = count ?? 0;
+  const disputes = (data ?? []).map((row) => {
+    const task = row.arcusx_tasks as Record<string, unknown> | null;
+    return {
+      ...row,
+      task_title: task?.title ?? null,
+      escrow_id: task?.escrow_id ?? null,
+      escrow_status: task?.escrow_status ?? null,
+    };
+  });
   return jsonResponse(ctx.req, {
     success: true,
-    disputes: data ?? [],
-    pagination: { total: data?.length ?? 0 },
+    disputes,
+    pagination: paginateMeta(page, limit, total),
   });
 }
 
@@ -367,11 +422,20 @@ export async function adminGetNotifications(ctx: AdminCtx): Promise<Response> {
     .select('*', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(from, from + limit - 1);
+
+  const total = count ?? 0;
+  const totalPages = total > 0 ? Math.ceil(total / limit) : 0;
+  const notifications = (data ?? []).map((row) => ({
+    ...row,
+    user_id: row.user_id_mysql ?? null,
+    is_global: row.user_id_mysql == null,
+  }));
+
   return jsonResponse(ctx.req, {
     success: true,
-    notifications: data ?? [],
-    total: count ?? 0,
-    pagination: { page, limit, total: count ?? 0 },
+    notifications,
+    total,
+    pagination: { page, limit, total, total_pages: totalPages },
   });
 }
 

@@ -142,10 +142,12 @@ const FreelancerCard = memo(({ freelancer }: FreelancerCardProps) => {
         <Link to={profileUrl} className="freelancer-view-profile-btn">
           {t('freelancers.card.view.profile')}
         </Link>
-        <button type="button" onClick={handleHire} className="freelancer-hire-btn">
-          <FaPlus style={{ marginRight: '6px', fontSize: '12px' }} />
-          {t('freelancers.card.hire')}
-        </button>
+        {freelancer.has_payout_wallet ? (
+          <button type="button" onClick={handleHire} className="freelancer-hire-btn">
+            <FaPlus style={{ marginRight: '6px', fontSize: '12px' }} />
+            {t('freelancers.card.hire')}
+          </button>
+        ) : null}
       </div>
     </div>
   );

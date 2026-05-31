@@ -14,7 +14,7 @@ interface FeeManagementProps {
 
 const FeeManagement: React.FC<FeeManagementProps> = ({ onUpdate }) => {
   const [config, setConfig] = useState<FeeConfig>({
-    platformFeeBps: 500, // 5%
+    platformFeeBps: 300, // 3%
     referralFeeBps: 100, // 1%
     treasury: ''
   });
@@ -41,7 +41,7 @@ const FeeManagement: React.FC<FeeManagementProps> = ({ onUpdate }) => {
       const platformFeeValue = platformFeeConfig?.config_value;
       const platformFeeBps = typeof platformFeeValue === 'number' 
         ? platformFeeValue * 10000 
-        : (typeof platformFeeValue === 'string' ? parseFloat(platformFeeValue) * 10000 : 30); // 0.3% = 30 bps
+        : (typeof platformFeeValue === 'string' ? parseFloat(platformFeeValue) * 10000 : 300); // 3% = 300 bps
       
       const referralFeeValue = referralFeeConfig?.config_value;
       const referralFeeBps = typeof referralFeeValue === 'number' 
@@ -104,7 +104,7 @@ const FeeManagement: React.FC<FeeManagementProps> = ({ onUpdate }) => {
 
   const handleReset = () => {
     setConfig({
-      platformFeeBps: 500,
+      platformFeeBps: 300,
       referralFeeBps: 100,
       treasury: ''
     });

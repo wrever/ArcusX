@@ -1,4 +1,6 @@
 import { jsonError, jsonResponse, jsonSuccess } from '../../_shared/arcusx-cors.ts';
+import { normalizePlatformFeeRate } from '../../_shared/platform-fee.ts';
+import { insertArcusxNotification } from '../../_shared/arcusx-notifications.ts';
 import type { ApiContext } from './types.ts';
 import { qp, qpInt } from './types.ts';
 import { requireUser } from './require.ts';
@@ -28,7 +30,8 @@ export async function getTasks(ctx: ApiContext): Promise<Response> {
       )
     `)
     .eq('status', 'open')
-    .is('accepted_applicant_id', null);
+    .is('accepted_applicant_id', null)
+    .or('is_private_invite.eq.false,is_private_invite.is.null');
 
   if (search) {
     q = q.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
@@ -120,30 +123,33 @@ export async function getTaskDetails(ctx: ApiContext): Promise<Response> {
 
     const { data: worker } = await supabase
       .from('arcusx_users')
-      .select('username, wallet_address')
+      .select('username, private_payout_wallet, wallet_address')
       .eq('id', task.accepted_applicant_id)
       .maybeSingle();
-    if (!workerWallet) workerWallet = worker?.wallet_address ?? null;
+    if (!workerWallet) {
+      const payout = String(worker?.private_payout_wallet ?? '').trim();
+      workerWallet = payout || (worker?.wallet_address ?? null);
+    }
     workerUsername = worker?.username ?? null;
   }
 
-  const canMarkCompleted = Number(task.client_accepted_completion ?? 0) === 0;
+  const canMarkCompleted = Number(task.worker_accepted_completion ?? 0) === 0;
 
   return jsonResponse(req, {
     success: true,
     id: task.id,
-    title: task.title,
-    subtitle: task.subtitle,
-    description: task.description,
+    title: normalizeDisplayText(task.title as string),
+    subtitle: normalizeDisplayText(task.subtitle as string),
+    description: normalizeDisplayText(task.description as string),
     price: task.price,
-    currency: task.currency,
-    difficulty: task.difficulty,
-    category: task.category,
+    currency: normalizeDisplayText(task.currency as string),
+    difficulty: normalizeDisplayText(task.difficulty as string),
+    category: normalizeDisplayText(task.category as string),
     user_id: String(task.user_id),
     status: task.status ?? 'active',
     client_accepted_completion: Number(task.client_accepted_completion ?? 0),
     worker_accepted_completion: Number(task.worker_accepted_completion ?? 0),
-    creator_username: creator?.username ?? '',
+    creator_username: normalizeDisplayText(creator?.username ?? ''),
     created_at: task.created_at,
     files,
     escrow_id: task.escrow_id ?? null,
@@ -248,8 +254,17 @@ export async function createTask(ctx: ApiContext): Promise<Response> {
     if (!invitedUserId || invitedUserId === auth.userId) {
       return jsonError(req, 'invited_user_id inválido o igual al creador.', 400);
     }
-    const { data: invited } = await auth.supabase.from('arcusx_users').select('id').eq('id', invitedUserId).maybeSingle();
+    const { data: invited } = await auth.supabase
+      .from('arcusx_users')
+      .select('id, private_payout_wallet, wallet_address')
+      .eq('id', invitedUserId)
+      .maybeSingle();
     if (!invited) return jsonError(req, 'El freelancer invitado no existe.', 404);
+    const payout = String(invited.private_payout_wallet ?? invited.wallet_address ?? '').trim();
+    const STELLAR_G = /^G[A-Z0-9]{55}$/;
+    if (!STELLAR_G.test(payout)) {
+      return jsonError(req, 'El freelancer invitado no tiene wallet de cobro registrada para ofertas privadas.', 400);
+    }
   }
 
   const insertRow: Record<string, unknown> = {
@@ -340,12 +355,19 @@ export async function applyTask(ctx: ApiContext): Promise<Response> {
 
   const { data: task } = await auth.supabase
     .from('arcusx_tasks')
-    .select('id, status, accepted_applicant_id')
+    .select('id, title, user_id, status, accepted_applicant_id, is_private_invite, invited_user_id')
     .eq('id', taskId)
     .single();
 
   if (!task || task.status !== 'open' || task.accepted_applicant_id) {
     return jsonError(req, 'La tarea no está disponible para postulaciones', 400);
+  }
+
+  if (task.is_private_invite) {
+    const invitedId = Number(task.invited_user_id);
+    if (!invitedId || invitedId !== auth.userId) {
+      return jsonError(req, 'Solo el freelancer invitado puede postular a esta oferta privada', 403);
+    }
   }
 
   const { error } = await auth.supabase.from('arcusx_applications').upsert({
@@ -359,6 +381,24 @@ export async function applyTask(ctx: ApiContext): Promise<Response> {
   }, { onConflict: 'task_id,applicant_id' });
 
   if (error) return jsonError(req, error.message, 500);
+
+  const ownerId = Number(task.user_id);
+  if (ownerId && ownerId !== auth.userId) {
+    const { data: applicant } = await auth.supabase
+      .from('arcusx_users')
+      .select('username')
+      .eq('id', auth.userId)
+      .maybeSingle();
+    const who = applicant?.username ?? 'Un freelancer';
+    const title = String(task.title ?? 'tu tarea');
+    await insertArcusxNotification(auth.supabase, {
+      user_id_mysql: ownerId,
+      title: 'Nueva propuesta',
+      message: `${who} se postuló a "${title}". Revisa las propuestas en tu panel.`,
+      type: 'info',
+    });
+  }
+
   return jsonSuccess(req, { message: 'Postulación enviada correctamente' });
 }
 
@@ -506,15 +546,12 @@ export async function getLandingMarketStats(ctx: ApiContext): Promise<Response> 
 
 export async function getPlatformFee(ctx: ApiContext): Promise<Response> {
   const { req, supabase } = ctx;
-  let platformFee = 0.03;
   const { data } = await supabase
     .from('arcusx_system_config')
     .select('config_value')
     .eq('config_key', 'platform_fee')
     .maybeSingle();
-  if (data?.config_value && !Number.isNaN(Number(data.config_value))) {
-    platformFee = Number(data.config_value);
-  }
+  const platformFee = normalizePlatformFeeRate(data?.config_value);
   return jsonResponse(req, {
     success: true,
     platform_fee: platformFee,

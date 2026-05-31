@@ -4453,6 +4453,72 @@ input[type="search"]::placeholder {
   cursor: not-allowed;
 }
 
+.private-offers-wallet-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.private-offers-wallet-banner.is-registered {
+  background: rgba(16, 221, 136, 0.12);
+  border: 1px solid rgba(16, 221, 136, 0.35);
+  color: var(--text-primary, #e8ecf4);
+}
+
+.private-offers-wallet-banner.is-registered svg {
+  color: var(--primary-green, #10dd88);
+}
+
+.private-offers-wallet-banner.is-missing {
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.4);
+  color: var(--text-primary, #e8ecf4);
+}
+
+.private-offers-wallet-banner.is-missing svg {
+  color: #ffc107;
+}
+
+.private-offers-wallet-code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85em;
+}
+
+.private-offers-wallet-link,
+.private-offers-wallet-link-btn {
+  margin-left: auto;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary-green, #10dd88);
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.private-offers-wallet-link:hover,
+.private-offers-wallet-link-btn:hover {
+  text-decoration: underline;
+}
+
+.private-offers-intro-note {
+  margin-bottom: 0.5rem !important;
+}
+
+.private-offers-freighter-note {
+  margin-bottom: 1.25rem !important;
+  max-width: 42rem;
+  font-size: 0.85rem !important;
+  opacity: 0.75;
+}
+
 .dashboard-private-muted {
   color: var(--text-secondary);
 }

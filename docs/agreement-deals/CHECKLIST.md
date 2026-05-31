@@ -9,7 +9,7 @@
 
 ## Fase 1 MVP
 
-- [ ] Schema `arcusx_agreements`
+- [x] Schema `arcusx_agreements` (migración `20260531120000_arcusx_agreements.sql`)
 - [ ] Wizard completo
 - [ ] Link público + accept
 - [ ] Fund escrow testnet

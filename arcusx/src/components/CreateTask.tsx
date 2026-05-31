@@ -7,6 +7,15 @@ import Popup from './Popup';
 import { arcusxApiUrl } from '../config/arcusxApi';
 import { getPlatformFee } from '../services/platformFeeService';
 import { useI18n } from '../i18n/I18nProvider';
+import { useWallet } from '../hooks/useWallet';
+import {
+  useInitializeEscrow,
+  useFundEscrow,
+  useSendTransaction,
+  useGetEscrowFromIndexerByContractIds,
+} from '@trustless-work/escrow/hooks';
+import { createAndFundPrivateOfferEscrow } from '../services/privateOfferEscrow';
+import { isValidStellarGAddress } from '../utils/stellarAddress';
 
 interface UserLimits {
   can_create: boolean;
@@ -98,6 +107,15 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
   /** URL absoluta a postular (con ?ref=hire); null si no hay task_id. */
   const [postCreateApplyUrl, setPostCreateApplyUrl] = useState<string | null>(null);
   const [copyLinkFeedback, setCopyLinkFeedback] = useState<'success' | 'error' | null>(null);
+  const [invitedWorkerWallet, setInvitedWorkerWallet] = useState<string | null>(null);
+  const [loadingInvitedWallet, setLoadingInvitedWallet] = useState(false);
+  const [escrowStep, setEscrowStep] = useState(false);
+
+  const { address: clientWallet, isConnected, connectWallet, kit } = useWallet();
+  const { deployEscrow } = useInitializeEscrow();
+  const { fundEscrow } = useFundEscrow();
+  const { sendTransaction } = useSendTransaction();
+  const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds();
 
   // Obtener el usuario logeado
   const storedUser = localStorage.getItem('user');
@@ -148,6 +166,31 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!hireContext?.userId) {
+      setInvitedWorkerWallet(null);
+      return;
+    }
+    let cancelled = false;
+    setLoadingInvitedWallet(true);
+    axios
+      .get(arcusxApiUrl('get_user_details', { user_id: hireContext.userId }))
+      .then((res) => {
+        if (cancelled) return;
+        const w = res.data?.private_payout_wallet ?? res.data?.wallet_address;
+        setInvitedWorkerWallet(isValidStellarGAddress(w) ? String(w).trim() : null);
+      })
+      .catch(() => {
+        if (!cancelled) setInvitedWorkerWallet(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingInvitedWallet(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [hireContext?.userId]);
 
   // Función para cargar platform fee del backend
   const loadPlatformFee = async () => {
@@ -319,8 +362,28 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
     // Si no hay límites cargados, permitir crear (usuario nuevo)
     // El backend validará los límites reales
 
+    if (hireContext) {
+      if (!invitedWorkerWallet) {
+        showErrorPopup(
+          t('common.error'),
+          t('hire.error.workerNoWallet').replace(/\{\{username\}\}/g, hireContext.username),
+        );
+        setLoading(false);
+        return;
+      }
+      if (!isConnected || !clientWallet) {
+        showErrorPopup(t('common.error'), t('hire.error.clientWallet'));
+        setLoading(false);
+        return;
+      }
+      if (!kit) {
+        showErrorPopup(t('common.error'), t('hire.error.clientWallet'));
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
-      // Enviar los datos de la tarea a la API PHP
       const response = await axios.post(`${arcusxApiUrl('create_task')}`, {
         ...formData,
         user_id: user.id,
@@ -329,45 +392,114 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
           : {}),
       });
 
-      // Verificar si la respuesta es exitosa (200-299) o si tiene el mensaje de éxito
-      if (response.status >= 200 && response.status < 300 && response.data?.success && response.data?.message) {
-        applyCreatedTaskSuccess(response.data);
-        
-        // Recargar límites del usuario (con manejo de errores)
-        try {
-          const limitsResponse = await axios.get(arcusxApiUrl('task_stats', { user_id: user.id }));
-          if (limitsResponse.data) {
-            setUserLimits(limitsResponse.data);
-          }
-        } catch (limitsError: any) {
-          // No mostrar error al usuario, solo loguear
-          // Recargar límites con valores por defecto
-          setUserLimits({
-            can_create: true,
-            cooldown_remaining: 0,
-            tasks_today: 0,
-            tasks_this_week: 0,
-            next_task_time: 'Ahora'
-          });
-        }
-      } else {
+      const okPayload =
+        (response.status >= 200 && response.status < 300 && response.data?.success) ||
+        response.data?.success;
+      if (!okPayload) {
         showErrorPopup(t('common.error'), t('create.task.error.server'));
+        setLoading(false);
+        return;
       }
 
-    } catch (err: any) {
-      // Si el error es 201 (Created), la tarea se creó exitosamente
-      if (err.response && err.response.status === 201 && err.response.data?.success) {
-        applyCreatedTaskSuccess(err.response.data);
-        
-        // Recargar límites
+      const rawId = response.data?.task_id;
+      const taskId = rawId != null && rawId !== '' ? Number(rawId) : NaN;
+
+      if (hireContext && !Number.isNaN(taskId) && taskId > 0) {
+        setEscrowStep(true);
+        const escrowResult = await createAndFundPrivateOfferEscrow({
+          task: {
+            id: taskId,
+            title: formData.title,
+            description: formData.description,
+            price: formData.price,
+          },
+          clientAddress: clientWallet!,
+          workerAddress: invitedWorkerWallet!,
+          invitedUserId: hireContext.userId,
+          platformFee,
+          hooks: {
+            kit,
+            deployEscrow,
+            fundEscrow,
+            sendTransaction,
+            getEscrowByContractIds: async (contractIds: string[] | { contractIds: string[]; validateOnChain?: boolean }) => {
+              const ids = Array.isArray(contractIds)
+                ? contractIds
+                : contractIds.contractIds;
+              const result = await getEscrowByContractIds({
+                contractIds: ids,
+                validateOnChain: Array.isArray(contractIds) ? true : contractIds.validateOnChain ?? true,
+              });
+              return Array.isArray(result) ? result : (result as { escrows?: unknown[] })?.escrows ?? result ?? [];
+            },
+          },
+        });
+        setEscrowStep(false);
+
+        if (!escrowResult.success) {
+          showErrorPopup(
+            t('common.error'),
+            escrowResult.error || t('create.task.error.create'),
+          );
+          setLoading(false);
+          return;
+        }
+
+        showSuccessPopup(
+          t('hire.success.funded.title'),
+          t('hire.success.funded.message').replace(/\{\{username\}\}/g, hireContext.username),
+        );
+        setFormData({
+          title: '',
+          description: hireContext
+            ? t('hire.context.desc.prefix').replace('{{username}}', hireContext.username)
+            : '',
+          price: '',
+          currency: 'USDC',
+          difficulty: 'Fácil',
+          category: suggestCategoryFromSkill(hireContext?.skill),
+          subtitle: '',
+        });
+        await loadUserLimits();
+        setLoading(false);
+        return;
+      }
+
+      applyCreatedTaskSuccess(response.data);
+      try {
+        const limitsResponse = await axios.get(arcusxApiUrl('task_stats', { user_id: user.id }));
+        if (limitsResponse.data) setUserLimits(limitsResponse.data);
+      } catch {
+        setUserLimits({
+          can_create: true,
+          cooldown_remaining: 0,
+          tasks_today: 0,
+          tasks_this_week: 0,
+          next_task_time: 'Ahora',
+        });
+      }
+    } catch (err: unknown) {
+      const ax = err as { response?: { status?: number; data?: { success?: boolean; message?: string; task_id?: number } } };
+      if (ax.response?.status === 201 && ax.response.data?.success) {
+        if (hireContext && ax.response.data.task_id) {
+          setLoading(false);
+          showErrorPopup(t('common.error'), t('create.task.error.create'));
+          return;
+        }
+        applyCreatedTaskSuccess(ax.response.data);
         try {
           await loadUserLimits();
-        } catch (e) {
+        } catch {
+          /* noop */
         }
       } else {
-        showErrorPopup(t('common.error'), err.response?.data?.message || t('create.task.error.create'));
+        showErrorPopup(
+          t('common.error'),
+          ax.response?.data?.message || t('create.task.error.create'),
+        );
       }
     } finally {
+      setEscrowStep(false);
       setLoading(false);
     }
   };
@@ -395,6 +527,32 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
           <p className="hire-context-private-hint" style={{ marginTop: '0.75rem', fontSize: '0.9rem', opacity: 0.9 }}>
             {t('hire.context.private').replace(/\{\{username\}\}/g, hireContext.username)}
           </p>
+        )}
+        {hireContext && (
+          <div className="hire-context-wallet-status" style={{ marginTop: '0.5rem', fontSize: '0.88rem' }}>
+            {loadingInvitedWallet ? (
+              <span>{t('edit.wallet.loading')}</span>
+            ) : invitedWorkerWallet ? (
+              <span style={{ color: 'var(--primary-green, #10dd88)' }}>
+                ✓ {t('edit.wallet.registered')}: {invitedWorkerWallet.slice(0, 6)}…
+                {invitedWorkerWallet.slice(-6)}
+              </span>
+            ) : (
+              <span style={{ color: '#f59e0b' }}>
+                {t('hire.error.workerNoWallet').replace(/\{\{username\}\}/g, hireContext.username)}
+              </span>
+            )}
+            {!isConnected && (
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ marginTop: '0.5rem', display: 'block' }}
+                onClick={() => void connectWallet()}
+              >
+                {t('hire.error.clientWallet')}
+              </button>
+            )}
+          </div>
         )}
 
         {/* Mostrar límites del usuario */}
@@ -662,17 +820,39 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
 
           {/* Botón de envío */}
           <div className="form-actions">
-            <button 
-              type="submit" 
-              disabled={loading || (userLimits?.can_create === false) || false}
+            <button
+              type="submit"
+              disabled={
+                loading ||
+                userLimits?.can_create === false ||
+                Boolean(
+                  hireContext &&
+                    (loadingInvitedWallet ||
+                      !invitedWorkerWallet ||
+                      !isConnected ||
+                      !clientWallet),
+                )
+              }
               className="submit-button"
               style={{
-                opacity: (loading || (userLimits && userLimits.can_create === false)) ? 0.5 : 1
+                opacity:
+                  loading ||
+                  userLimits?.can_create === false ||
+                  (hireContext &&
+                    (loadingInvitedWallet || !invitedWorkerWallet || !isConnected))
+                    ? 0.5
+                    : 1,
               }}
             >
-              {loading ? t('create.submitting') : 
-               (userLimits && userLimits.can_create === false) ? t('create.limit.reached.title') :
-               t('create.publish')}
+              {escrowStep
+                ? t('hire.escrow.processing')
+                : loading
+                  ? t('create.submitting')
+                  : userLimits?.can_create === false
+                    ? t('create.limit.reached.title')
+                    : hireContext
+                      ? t('hire.submit.private')
+                      : t('create.publish')}
             </button>
           </div>
         </form>

@@ -215,7 +215,6 @@ const SuperviseTask = () => {
     const navigate = useNavigate();
     const { t } = useI18n();
     const [task, setTask] = useState<TaskDetails | null>(null);
-    const [withdrawingFunds, setWithdrawingFunds] = useState(false);
     const [worker, setWorker] = useState<UserDetails | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -1048,7 +1047,7 @@ const SuperviseTask = () => {
             const response = await axios.post(`${arcusxApiUrl('complete_task')}`, {
                 task_id: parseInt(taskId!, 10),
                 action: 'accept',
-                escrow_completed: escrowCompleted,
+                escrow_completed: true,
                 tx_hash: null
             }, {
                 headers: {
@@ -1064,7 +1063,9 @@ const SuperviseTask = () => {
             setTask(prev => prev ? {
                 ...prev,
                 client_accepted_completion: 1,
-                status: response.data.status || prev.status
+                worker_accepted_completion: prev.worker_accepted_completion || 1,
+                status: response.data.status || 'completed',
+                escrow_status: 'completed'
             } : null);
 
             // Recargar datos
@@ -1358,50 +1359,6 @@ const SuperviseTask = () => {
 
     // handleRejectWork ahora es handleCancelTask (mantener compatibilidad con código existente)
 
-    // En Trustless Work, el trabajador NO retira fondos directamente
-    // El cliente debe aprobar y liberar los fondos
-    const handleWithdrawFunds = async () => {
-        if (!task || !task.escrow_id) {
-            setError(t('supervise.error.noEscrow'));
-                return;
-            }
-
-        // Verificar que es el trabajador
-    const isWorker = currentUser?.id === worker?.id;
-        if (!isWorker) {
-            setError(t('supervise.error.onlyWorkerWithdraw'));
-            return;
-        }
-
-        if (!isConnected || !address || !kit) {
-            setError(t('supervise.error.connectFreighterWithdraw'));
-            return;
-        }
-
-        const bothAccepted = task.client_accepted_completion === 1 && 
-                            task.worker_accepted_completion === 1;
-        
-        if (!bothAccepted) {
-            setError(t('supervise.error.bothAcceptWithdraw'));
-            return;
-        }
-
-        setWithdrawingFunds(true);
-        setError(null);
-
-        try {
-            // En Trustless Work, el trabajador NO libera fondos directamente
-            // El cliente debe aprobar el milestone primero y luego liberar los fondos
-            throw new Error(t('supervise.error.clientMustRelease'));
-        } catch (err: any) {
-            const errorMessage = err.response?.data?.message || err.message || 'Error desconocido';
-            
-            setError(t('supervise.error.withdrawFunds') + ' ' + errorMessage);
-        } finally {
-            setWithdrawingFunds(false);
-        }
-    };
-
     // submitCompleteTransaction eliminada - No se usa en Trustless Work
     // getWorkerWalletAddress eliminada - No se usa en Trustless Work
 
@@ -1414,8 +1371,8 @@ const SuperviseTask = () => {
 
         // Mostrar popup de confirmación en lugar de confirm()
         setConfirmDialogConfig({
-            title: t('supervise.confirm.complete.title'),
-            message: t('supervise.confirm.complete.message'),
+            title: t('supervise.confirm.notify.title'),
+            message: t('supervise.confirm.notify.message'),
             type: 'info',
             onConfirm: () => {
                 setShowConfirmDialog(false);
@@ -1441,44 +1398,11 @@ const SuperviseTask = () => {
                 return;
             }
 
-            // Determinar si es trabajador o cliente
-            const isClient = String(currentUser?.id) === String(task?.user_id);
-            const isWorker = String(currentUser?.id) === String(worker?.id);
+            const isWorkerUser = String(currentUser?.id) === String(worker?.id);
+            if (!isWorkerUser) {
+                throw new Error(t('supervise.error.clientUseReleaseFlow'));
+            }
 
-            // SOLO EL TRABAJADOR puede notificar al cliente (sin cambiar milestone)
-            // SOLO EL CLIENTE puede aprobar el milestone y liberar fondos
-            if (isWorker) {
-                // TRABAJADOR: Solo notificar al cliente (actualizar BD)
-                // NO cambiar el estado del milestone - eso solo lo hace el cliente
-                const response = await axios.post(`${arcusxApiUrl('complete_task')}`, 
-                    {
-                        task_id: parseInt(taskId, 10),
-                        action: 'accept'
-                    },
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${token}`
-                        }
-                    }
-                );
-
-                if (!response.data.success) {
-                    throw new Error(response.data.message || 'Error al actualizar estado en BD');
-                }
-
-                // Actualizar estado local
-                setTask(prevTask => {
-                    if (!prevTask) return null;
-                    return { 
-                        ...prevTask, 
-                        status: response.data.status || prevTask.status,
-                        worker_accepted_completion: 1
-                    };
-                });
-            } else if (isClient) {
-                // CLIENTE: Puede aprobar el milestone y liberar fondos
-                // Esto se maneja en otro lugar (handleApproveMilestone, handleReleaseFunds)
-                // Por ahora, solo actualizar BD si es necesario
             const response = await axios.post(`${arcusxApiUrl('complete_task')}`, 
                 {
                     task_id: parseInt(taskId, 10),
@@ -1492,21 +1416,17 @@ const SuperviseTask = () => {
             );
 
             if (!response.data.success) {
-                    throw new Error(response.data.message || 'Error al actualizar estado en BD');
+                throw new Error(response.data.message || 'Error al actualizar estado en BD');
             }
 
-                // Actualizar estado local
             setTask(prevTask => {
                 if (!prevTask) return null;
                 return { 
                     ...prevTask, 
                     status: response.data.status || prevTask.status,
-                        client_accepted_completion: 1
+                    worker_accepted_completion: 1
                 };
             });
-            } else {
-                throw new Error(t('supervise.error.noPermissionComplete'));
-            }
               
             // Recargar datos para actualizar la UI
             setTimeout(() => {
@@ -1794,48 +1714,26 @@ const SuperviseTask = () => {
     // Determinar si se puede mostrar el botón de disputa
     const canShowDisputeButton = condition1 && condition2 && condition3 && condition4 && condition5 && condition6;
 
-    // Determinar el mensaje del botón y si está deshabilitado
-    let buttonText = t('supervise.button.markComplete');
+    // Botón del trabajador: solo aviso informativo (no bloquea liberación del cliente)
+    let buttonText = t('supervise.button.notifyDelivery');
     let isButtonDisabled: boolean = loading;
 
-    //  CRÍTICO: Si el escrow está resuelto, no mostrar ningún botón de completado
-    // El admin debe manejar la liberación en estados resueltos
-    // También verificar que el escrow_status sea 'active' para mostrar botones
-    if (isResolved || task.escrow_status === 'resolved' || task.status === 'resolved' || 
+    if (isResolved || task.escrow_status === 'resolved' || task.status === 'resolved' ||
         (task.escrow_id && task.escrow_status !== 'active' && task.escrow_status !== undefined)) {
         buttonText = t('supervise.button.taskResolved');
         isButtonDisabled = true;
     } else if (task.status === 'completed') {
         buttonText = t('supervise.button.taskCompleted');
         isButtonDisabled = true;
-    } else if (isClient && task.client_accepted_completion === 1) {
-        //  Solo mostrar este mensaje si el escrow está activo
-        if (task.escrow_id && task.escrow_status === 'active') {
-        buttonText = t('supervise.button.waitingWorker');
-        isButtonDisabled = true;
-        } else {
-            buttonText = t('supervise.button.taskResolved');
-            isButtonDisabled = true;
-        }
     } else if (isWorker && task.worker_accepted_completion === 1) {
-        //  Solo mostrar este mensaje si el escrow está activo
-        if (task.escrow_id && task.escrow_status === 'active') {
-        buttonText = t('supervise.button.waitingClient');
+        buttonText = t('supervise.button.deliveryNotified');
         isButtonDisabled = true;
-        } else {
-            buttonText = t('supervise.button.taskResolved');
-            isButtonDisabled = true;
-        }
-    } else if (isWorker && task.client_accepted_completion === 0) {
-        // El trabajador puede marcar como completado para notificar al cliente
-        //  Solo si el escrow está activo
-        if (task.escrow_id && task.escrow_status === 'active') {
-        buttonText = t('supervise.button.markCompleteShort');
-        isButtonDisabled = false; // Permitir que el trabajador marque como completado
-        } else {
-            buttonText = t('supervise.button.taskResolved');
-            isButtonDisabled = true;
-        }
+    } else if (isWorker && task.escrow_id && task.escrow_status === 'active') {
+        buttonText = t('supervise.button.notifyDelivery');
+        isButtonDisabled = false;
+    } else if (isWorker) {
+        buttonText = t('supervise.button.taskResolved');
+        isButtonDisabled = true;
     }
 
     return (
@@ -2144,6 +2042,11 @@ const SuperviseTask = () => {
                     
                     {isClient && (
                         <div className="client-actions">
+                            {task.worker_accepted_completion === 1 && task.client_accepted_completion === 0 && (
+                                <p className="info-message" style={{ marginBottom: '12px' }}>
+                                    {t('supervise.status.workerDeliveryNotified')}
+                                </p>
+                            )}
                             {task.client_accepted_completion === 0 && (
                                 <>
                                     {/*  CRÍTICO: Ocultar botones si el estado del escrow NO es 'active' */}
@@ -2268,38 +2171,15 @@ const SuperviseTask = () => {
                                     )}
                                 </>
                             )}
-                            {task.client_accepted_completion === 1 && task.worker_accepted_completion === 1 && (
+                            {task.client_accepted_completion === 1 && (
                                 <>
-                                    {/* Verificar si el escrow está en disputa o fue reembolsado - Ocultar botones si está en disputa o fue reembolsado */}
                                     {!(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute || isRefunded) ? (
                                 <>
-                                    <p className="info-message" style={{ marginBottom: '10px' }}> {t('supervise.status.bothAcceptedCompletion')}</p>
-                                    {/* Si hay transacción pendiente firmada por el trabajador, el cliente puede completarla */}
-                                    {pendingTransaction?.hasPending && pendingTransaction.signedBy === 'worker' && (
-                                        <>
-                                            <p className="info-message" style={{ marginBottom: '10px', color: '#856404' }}>
-                                                {t('supervise.status.workerSignedCompleteSign')}
-                                            </p>
-                                            <button 
-                                                className="btn-success"
-                                                onClick={handleWithdrawFunds}
-                                                disabled={withdrawingFunds || !isConnected || !address}
-                                                style={{
-                                                    fontSize: '16px',
-                                                    padding: '12px 24px',
-                                                    fontWeight: 'bold'
-                                                }}
-                                            >
-                                                {withdrawingFunds ? ' ' + t('supervise.processing') : ' ' + t('supervise.status.completeSignAndRelease')}
-                                            </button>
-                                        </>
-                                    )}
-                                    {pendingTransaction?.hasPending && pendingTransaction.signedBy === 'client' && (
-                                        <p className="info-message">{t('supervise.status.youSignedWaitingWorker')}</p>
-                                    )}
-                                    {(!pendingTransaction?.hasPending) && (
-                                        <p className="info-message">{t('supervise.status.waitingWorkerWithdraw')}</p>
-                                    )}
+                                    <p className="info-message" style={{ marginBottom: '10px' }}>
+                                        {pendingTransaction?.escrowCompleted
+                                            ? t('supervise.status.fundsReleasedSuccess')
+                                            : t('supervise.status.clientReleaseInProgress')}
+                                    </p>
                                 </>
                                     ) : (
                                         <>
@@ -2349,14 +2229,6 @@ const SuperviseTask = () => {
                                     )}
                                 </>
                             )}
-                            {/*  CRÍTICO: Ocultar mensaje si el escrow está resuelto */}
-                            {task.client_accepted_completion === 1 && 
-                             task.worker_accepted_completion === 0 && 
-                             !isResolved &&
-                             task.escrow_status !== 'resolved' &&
-                             task.status !== 'resolved' && (
-                                <p className="info-message"> {t('supervise.status.youAcceptedWaitingWorker')}</p>
-                            )}
                         </div>
                     )}
 
@@ -2382,87 +2254,23 @@ const SuperviseTask = () => {
                                 </div>
                             )}
                             
-                            {/* Retirar: trabajador cuando cliente y trabajador confirmaron entrega en la app y el flujo on-chain permite retiro */}
-                            {isWorker &&
-                             Number(task.client_accepted_completion) === 1 && 
-                             Number(task.worker_accepted_completion) === 1 && 
-                             task.escrow_id && task.escrow_id.trim() !== '' && 
-                             !(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute || isRefunded || isResolved) && (
-                                <div className="withdraw-funds-section" style={{
+                            {isWorker && pendingTransaction?.escrowCompleted && (
+                                <div style={{
                                     marginBottom: '20px',
                                     padding: '15px',
-                                    backgroundColor: '#f8f9fa',
+                                    backgroundColor: '#d4edda',
                                     borderRadius: '8px',
                                     border: '2px solid #10dd88'
                                 }}>
-                                    <h3 style={{ marginTop: 0, marginBottom: '10px', color: '#28a745', fontSize: '18px' }}> {t('supervise.withdraw.funds')}</h3>
-                                    <p style={{ marginBottom: '15px', color: '#666', fontSize: '14px' }}>
-                                        {t('supervise.status.bothAcceptedClickWithdraw')}
+                                    <p style={{ margin: 0, color: '#155724', fontSize: '14px', fontWeight: 'bold' }}>
+                                        {t('supervise.status.paymentReceived')}
                                     </p>
-                                    <button 
-                                        className="btn-success"
-                                        onClick={handleWithdrawFunds}
-                                        disabled={withdrawingFunds || !isConnected || !address}
-                                        style={{
-                                            fontSize: '16px',
-                                            padding: '12px 24px',
-                                            fontWeight: 'bold',
-                                            width: '100%',
-                                            maxWidth: '400px'
-                                        }}
-                                    >
-                                        {withdrawingFunds ? t('supervise.processing') : t('supervise.withdraw.funds')}
-                                    </button>
-                                    {!isConnected && (
-                                        <p style={{ marginTop: '10px', color: '#dc3545', fontSize: '14px' }}>
-                                             {t('supervise.error.connectFreighterWithdraw')}
-                                        </p>
-                                    )}
+                                    <p style={{ margin: '10px 0 0 0', color: '#155724', fontSize: '13px' }}>
+                                        {t('supervise.status.taskCompletedCheckWallet')}
+                                    </p>
                                 </div>
                             )}
-                            
-                            {/* Mensajes de estado para mostrar el progreso - SOLO para trabajador */}
-                            {isWorker && Number(task.client_accepted_completion) === 1 && 
-                             Number(task.worker_accepted_completion) === 1 && 
-                             task.escrow_id && task.escrow_id.trim() !== '' && 
-                             !(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute || isRefunded || isResolved) && (
-                                <>
-                                    {pendingTransaction?.hasPending && pendingTransaction.signedBy !== 'both' && (
-                                        <div style={{
-                                            marginBottom: '20px',
-                                            padding: '15px',
-                                            backgroundColor: '#fff3cd',
-                                            borderRadius: '8px',
-                                            border: '2px solid #ffc107'
-                                        }}>
-                                            {pendingTransaction.signedBy === 'client' && (
-                                                <p style={{ margin: 0, color: '#856404', fontSize: '14px' }}>
-                                                     {t('supervise.status.clientSignedClickWithdraw')}
-                                                </p>
-                                            )}
-                                            {pendingTransaction.signedBy === 'worker' && (
-                                                <p style={{ margin: 0, color: '#856404', fontSize: '14px' }}>
-                                                     {t('supervise.status.youSignedWaitingClient')}
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
-                                    {!pendingTransaction?.hasPending && (
-                                        <div style={{
-                                            marginBottom: '20px',
-                                            padding: '15px',
-                                            backgroundColor: 'rgba(16, 221, 136, 0.12)',
-                                            borderRadius: '8px',
-                                            border: '2px solid rgba(16, 221, 136, 0.5)'
-                                        }}>
-                                            <p style={{ margin: 0, color: '#10dd88', fontSize: '14px' }}>
-                                                 {t('supervise.status.bothAcceptedClickStart')}
-                                            </p>
-                                        </div>
-                                    )}
-                                </>
-                            )}
-                            
+
                             {/* Notificación para trabajador cuando el escrow está resuelto */}
                             {(isResolved || task.escrow_status === 'resolved' || task.status === 'resolved') && (
                                 <div style={{
@@ -2592,7 +2400,7 @@ const SuperviseTask = () => {
              task.escrow_status !== 'resolved' &&
              task.status !== 'resolved' &&
              (!task.escrow_id || task.status !== 'assigned') && 
-             (isWorker || isClient) && 
+             isWorker && 
              (!task.escrow_id || task.escrow_status === 'active') &&
              task.status !== 'cancelled' &&
              task.status !== 'disputed' &&
