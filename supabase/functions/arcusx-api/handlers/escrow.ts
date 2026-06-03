@@ -350,6 +350,17 @@ export async function completeTask(ctx: ApiContext): Promise<Response> {
   if (isClient && action === 'accept' && escrowCompleted) {
     const workerId = Number(task.accepted_applicant_id);
     if (workerId > 0) {
+      const { data: workerRow } = await auth.supabase
+        .from('arcusx_users')
+        .select('completed_tasks_count')
+        .eq('id', workerId)
+        .maybeSingle();
+      const nextCount = Number(workerRow?.completed_tasks_count ?? 0) + 1;
+      await auth.supabase
+        .from('arcusx_users')
+        .update({ completed_tasks_count: nextCount })
+        .eq('id', workerId);
+
       const { data: lastRating } = await auth.supabase
         .from('arcusx_ratings')
         .select('rating, review')

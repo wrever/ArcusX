@@ -14,7 +14,7 @@
 |------|--------|--------|
 | **0** | Baseline | ✅ |
 | **1** | Cutover prod | ✅ (ops residual: dist v28, E2E manual) |
-| **2** | E2E + confianza | ☐ ops — [`E2E_CHECKLIST.md`](../demo/E2E_CHECKLIST.md) |
+| **2** | E2E + confianza | ☐ ops — [`E2E_CHECKLIST.md`](../demo/E2E_CHECKLIST.md) (incl. badges 10b) |
 | **3** | Trazabilidad | ✅ |
 | **4** | Evidencias MVP | ✅ |
 | **5** | B2B mínimo | ⏸ → POST_TRANCHE2 `Q3-A` |

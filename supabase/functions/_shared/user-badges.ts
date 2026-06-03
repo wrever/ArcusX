@@ -24,19 +24,22 @@ function hasWalletRegistered(ctx: BadgeComputationContext): boolean {
   return STELLAR_G.test(wallet) || STELLAR_G.test(payout);
 }
 
-async function countTasksCreated(supabase: SupabaseClient, userId: number): Promise<number> {
-  const { count } = await supabase
+/** Máximo entre contador en usuario y tareas completadas reales (Edge no siempre incrementa el campo). */
+async function effectiveCompletedTasks(
+  supabase: SupabaseClient,
+  ctx: BadgeComputationContext,
+): Promise<number> {
+  const stored = Number(ctx.completed_tasks_count ?? 0);
+  const { count: asWorker } = await supabase
     .from('arcusx_tasks')
     .select('id', { count: 'exact', head: true })
-    .eq('user_id', userId);
-  return count ?? 0;
+    .eq('accepted_applicant_id', ctx.id)
+    .eq('status', 'completed');
+  return Math.max(stored, asWorker ?? 0);
 }
 
 async function hasPrimerTrabajo(supabase: SupabaseClient, ctx: BadgeComputationContext): Promise<boolean> {
-  const done = Number(ctx.completed_tasks_count ?? 0);
-  if (done >= 1) return true;
-  const created = await countTasksCreated(supabase, ctx.id);
-  if (created >= 1) return true;
+  if ((await effectiveCompletedTasks(supabase, ctx)) >= 1) return true;
   const { count: completedAsClient } = await supabase
     .from('arcusx_tasks')
     .select('id', { count: 'exact', head: true })
@@ -120,10 +123,13 @@ async function isEmbajador(supabase: SupabaseClient, userId: number): Promise<bo
   return (count ?? 0) > 0;
 }
 
-async function hasTopEjecutor(ctx: BadgeComputationContext): Promise<boolean> {
+async function hasTopEjecutor(
+  supabase: SupabaseClient,
+  ctx: BadgeComputationContext,
+): Promise<boolean> {
   const rating = Number(ctx.average_rating ?? 0);
   const totalRatings = Number(ctx.total_ratings ?? 0);
-  const completed = Number(ctx.completed_tasks_count ?? 0);
+  const completed = await effectiveCompletedTasks(supabase, ctx);
   return rating >= 4.5 && totalRatings >= 1 && completed >= 3;
 }
 
@@ -210,7 +216,7 @@ export async function computeUserPublicBadges(
     badges.push('embajador');
   }
 
-  if (await hasTopEjecutor(ctx)) {
+  if (await hasTopEjecutor(supabase, ctx)) {
     badges.push('topEjecutor');
   }
 
