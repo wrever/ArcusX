@@ -307,6 +307,12 @@
   min-width: 0;
 }
 
+.freelancer-name-row .freelancer-name {
+  margin: 0;
+  display: flex;
+  align-items: center;
+}
+
 .freelancer-name-row{
   display:flex;
   align-items:center;

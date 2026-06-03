@@ -59,6 +59,48 @@
   transform: none;
 }
 
+.evidence-error {
+  color: #f87171;
+  font-size: 0.9rem;
+  margin: 0.5rem 0;
+}
+
+.evidence-textarea {
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--white);
+  resize: vertical;
+}
+
+.submit-evidence-btn {
+  margin-top: 1rem;
+  background: var(--gradient-primary);
+  color: var(--white);
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.submit-evidence-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spin {
+  animation: evidence-spin 1s linear infinite;
+}
+
+@keyframes evidence-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 .spinner {
   animation: spin 1s linear infinite;
 }

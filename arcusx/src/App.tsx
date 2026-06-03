@@ -23,6 +23,7 @@ import './css/enterprise-professional.css';
 
 // Code splitting - Lazy load de componentes pesados
 const Dashboard = lazy(() => import('./dashboard'));
+const DashboardKycPage = lazy(() => import('./pages/DashboardKycPage'));
 const CreateTask = lazy(() => import('./components/CreateTask'));
 const ApplyTask = lazy(() => import('./components/ApplyTask'));
 const ProposalReview = lazy(() => import('./components/ProposalReview'));
@@ -141,6 +142,7 @@ function AppContent({ isLoading }: { isLoading: boolean }) {
               <Route path="/supervise-task/:taskId/:acceptedApplicantId" element={<ProtectedRoute><SuperviseTask /></ProtectedRoute>} />
               <Route path="/profile/:userId" element={<UserProfile />} />
               <Route path="/dashboard/settings/profile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
+              <Route path="/dashboard/kyc" element={<ProtectedRoute><DashboardKycPage /></ProtectedRoute>} />
               <Route path="/swap" element={<><Navbar /><SwapPage /></>} />
               <Route path="/tutoriales" element={<><Navbar /><TutorialsPage /></>} />
               <Route path="/empresas" element={<EmpresasRoute />} />

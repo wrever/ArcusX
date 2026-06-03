@@ -1,12 +1,17 @@
 import { supabaseUrl, supabaseAnonKey, hasSupabase } from './supabase';
 
+const forcePhp = import.meta.env.VITE_USE_PHP_API === 'true';
+
 if (!hasSupabase) {
   console.warn('[ArcusX] VITE_SUPABASE_URL no configurado: la API requiere Supabase Edge.');
+} else if (forcePhp) {
+  console.warn('[ArcusX] VITE_USE_PHP_API=true: usando PHP legacy en lugar de Edge.');
 }
 
-export const useSupabaseApi = hasSupabase;
+/** API marketplace vía Supabase Edge (false solo si falta URL o VITE_USE_PHP_API=true) */
+export const useSupabaseApi = hasSupabase && !forcePhp;
 
-const edgeBase = hasSupabase ? `${supabaseUrl}/functions/v1` : '';
+const edgeBase = useSupabaseApi ? `${supabaseUrl}/functions/v1` : '';
 
 function normalizeAction(action: string): string {
   return action.replace(/\.php$/i, '').replace(/^auth\//, '').split('?')[0].split('#')[0].trim();
@@ -16,8 +21,10 @@ export function arcusxApiUrl(
   action: string,
   query?: Record<string, string | number | undefined | null> | URLSearchParams,
 ): string {
-  if (!hasSupabase) {
-    throw new Error('Supabase no configurado (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)');
+  if (!useSupabaseApi) {
+    throw new Error(
+      'API Edge no disponible. Configura VITE_SUPABASE_URL y desactiva VITE_USE_PHP_API.',
+    );
   }
   const u = new URL(`${edgeBase}/arcusx-api`);
   u.searchParams.set('action', normalizeAction(action));
@@ -35,8 +42,10 @@ export function arcusxAdminUrl(
   action: string,
   query?: Record<string, string | number | undefined | null>,
 ): string {
-  if (!hasSupabase) {
-    throw new Error('Supabase no configurado (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)');
+  if (!useSupabaseApi) {
+    throw new Error(
+      'API Edge no disponible. Configura VITE_SUPABASE_URL y desactiva VITE_USE_PHP_API.',
+    );
   }
   const name = action.replace(/\.php$/i, '');
   const u = new URL(`${edgeBase}/arcusx-admin`);

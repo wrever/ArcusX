@@ -30,9 +30,19 @@
 - `get_landing_open_tasks_count()` → lee `arcusx_tasks` (open, sin freelancer asignado)
 - `get_landing_completed_volume_usdc()` → volumen completado on-chain
 
-### Edge Functions activas
+### Edge Functions activas (2026-05-28)
 
 - `referral-admin`, `referral-bind-pending`, `referral-resolve-code`, `referral-attribute-signup`
+- `arcusx-api` **v29** (KYC + evidencias + domain_events completos)
+- `arcusx-admin` **v16** (KYC approve/reject + domain events)
+- `arcusx-webhook-ingress` **v1**
+- `arcusx-escrow-reconcile` **v7**
+- `arcusx-email-worker` **v6**
+
+### Migraciones backend completion (2026-05-31)
+
+- `backend_completion_20260531140000` — Realtime publication, `arcusx_escrow_sync_log`, `arcusx_domain_events`, `arcusx_idempotency_keys`
+- `arcusx_agreements` (Deals)
 
 ### Script de importación
 
@@ -50,11 +60,12 @@ Requiere en `arcusx/.env`: `VITE_SUPABASE_URL`, `ARCUSX_SUPABASE_SERVICE_ROLE_KE
 - `messages`, `notifications` → ya existen `arcusx_task_messages` / `arcusx_notifications` (esquema distinto)
 - `task_progress`, `user_portfolio`, `user_skills`, `user_statistics` → tablas vacías en dump; opcional en fase 2
 
-## Pendiente (fase API)
+## Pendiente (cutover prod)
 
-1. Edge Functions / RPCs para sustituir `backend_externo/*.php` (auth JWT, CRUD tareas, admin)
-2. Dual-write o cutover por endpoint (`MIGRATION_SUPABASE.md`)
-3. Frontend: mantener `VITE_API_URL` hasta cutover; Trustless Work / Stellar sin cambios
+1. Subir `arcusx/dist` con `VITE_SUPABASE_*` y sin `VITE_USE_PHP_API`
+2. Cron cPanel: reconcile + email-worker (`scripts/cpanel-cron-edge.example.sh`)
+3. Logo email en raíz: `arcusxmail.jpg`
+4. Ver `CUTOVER_CHECKLIST.md` y `docs/sprints/TRANCHE2_EXECUTION_PLAN.md`
 
 ## Notas
 

@@ -17,7 +17,7 @@
 |------------|-------------|-------------|
 | API error contract (critical writes) | **Done** | `apply_task.php`, `create_task.php`, `select_proposal.php`, escrow/dispute/cancel paths use `arcusx_require_user_id()` |
 | Frontend Bearer | **Done** | `grep config/axios arcusx/src` → Apply, Create, Proposal, Supervise, dashboard, privateOffers, cancelTask |
-| Hero public stats | **Done** | `Hero.tsx` + `get_landing_market_stats.php`; README § Hero stats |
+| Hero public stats | **Done** | `Hero.tsx`: Supabase RPCs if `VITE_SUPABASE_URL`; else `get_landing_market_stats.php` (PHP). README § Hero stats |
 | Light theme | **Done** | Five-layer CSS in `main.tsx` + per-page overrides; smoke list in § Verification |
 | Reviewer docs | **Done** | `docs/api/ENDPOINTS.md`, `docs/demo/E2E_TESTNET.md` |
 | InstaAwards / mainnet prep | **Done (doc)** | `docs/sprints/instaawards-week3.md` |
@@ -48,9 +48,10 @@
 
 **Public stats (no JWT)**
 
-| Endpoint | Week 3 change |
-|----------|----------------|
-| `get_landing_market_stats.php` | `arcusx_json_success` / `arcusx_json_error`; **GET** only |
+| Source | Week 3 change |
+|--------|----------------|
+| `Hero.tsx` + Supabase | When configured: RPCs `get_landing_*` (preferred in production) |
+| `get_landing_market_stats.php` | Fallback: `arcusx_json_success` / `arcusx_json_error`; **GET** only |
 
 **Nuances (honest scope):**
 

@@ -14,6 +14,9 @@ export interface PrivateOfferTask {
   status: string;
   creator_username: string;
   creator_id?: number;
+  creator_verified?: boolean;
+  creator_verified_enterprise?: boolean;
+  creator_verified_individual?: boolean;
   my_application_count: number;
   escrow_id?: string | null;
   escrow_status?: string | null;

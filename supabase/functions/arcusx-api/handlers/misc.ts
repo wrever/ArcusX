@@ -1,4 +1,6 @@
 import { jsonError, jsonSuccess } from '../../_shared/arcusx-cors.ts';
+import { insertArcusxNotification } from '../../_shared/arcusx-notifications.ts';
+import { logDomainEvent } from '../../_shared/domain-events.ts';
 import type { ApiContext } from './types.ts';
 import { qp, qpInt } from './types.ts';
 import { requireUser } from './require.ts';
@@ -19,7 +21,7 @@ export async function cancelTask(ctx: ApiContext): Promise<Response> {
 
   const { data: task } = await auth.supabase
     .from('arcusx_tasks')
-    .select('id, user_id, accepted_applicant_id, status')
+    .select('id, title, user_id, accepted_applicant_id, status')
     .eq('id', taskId)
     .single();
 
@@ -36,6 +38,31 @@ export async function cancelTask(ctx: ApiContext): Promise<Response> {
   }).eq('id', taskId);
 
   if (error) return jsonError(req, error.message, 500);
+
+  const otherId = auth.userId === task.user_id
+    ? Number(task.accepted_applicant_id)
+    : Number(task.user_id);
+  const taskTitle = String(task.title ?? 'la tarea');
+  if (otherId > 0) {
+    await insertArcusxNotification(auth.supabase, {
+      user_id_mysql: otherId,
+      title: 'Tarea cancelada',
+      message:
+        `La tarea "${taskTitle}" fue cancelada por la otra parte.` +
+        (reason ? ` Motivo: ${reason.slice(0, 200)}` : ''),
+      type: 'warning',
+      email: false,
+    });
+  }
+
+  await logDomainEvent(auth.supabase, {
+    entity_type: 'task',
+    entity_id: taskId,
+    event_type: 'task.cancelled',
+    actor_user_id: auth.userId,
+    payload: reason ? { reason: reason.slice(0, 500) } : null,
+  });
+
   return jsonSuccess(req, { message: 'Tarea cancelada' });
 }
 

@@ -1,4 +1,5 @@
 import { jsonError, jsonSuccess } from '../../_shared/arcusx-cors.ts';
+import { logDomainEvent } from '../../_shared/domain-events.ts';
 import type { ApiContext } from './types.ts';
 import { qp, qpInt } from './types.ts';
 import { requireUser } from './require.ts';
@@ -28,6 +29,14 @@ export async function markWorkStarted(ctx: ApiContext): Promise<Response> {
   }).eq('id', taskId);
 
   if (error) return jsonError(req, error.message, 500);
+
+  await logDomainEvent(auth.supabase, {
+    entity_type: 'task',
+    entity_id: taskId,
+    event_type: 'task.work_started',
+    actor_user_id: auth.userId,
+  });
+
   return jsonSuccess(req, { message: 'Trabajo marcado como iniciado' });
 }
 

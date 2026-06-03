@@ -1,6 +1,7 @@
 # Week 3 — Plan & checklist (CLOSED)
 
-**Closed:** 2026-05-18  
+**Core closed:** 2026-05-18  
+**Light-theme follow-up closed:** 2026-05-28  
 **Deliverable:** [`week-03-changelog-and-architecture.md`](./week-03-changelog-and-architecture.md)
 
 ---

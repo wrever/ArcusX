@@ -110,6 +110,7 @@ Deno.serve(async (req) => {
       case 'referral_create_partner': {
         const name = String(body.display_name ?? '').trim();
         if (!name) return errorResponse(req, 'display_name requerido');
+        const ownerMysql = body.owner_mysql_user_id != null ? Number(body.owner_mysql_user_id) : null;
         const { data, error } = await supabase
           .from('referral_partners')
           .insert({
@@ -117,6 +118,7 @@ Deno.serve(async (req) => {
             contact_email: body.contact_email ?? null,
             notes: body.notes ?? null,
             is_active: true,
+            ...(ownerMysql && ownerMysql > 0 ? { owner_mysql_user_id: ownerMysql } : {}),
           })
           .select()
           .single();

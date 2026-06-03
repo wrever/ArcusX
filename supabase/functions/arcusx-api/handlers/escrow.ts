@@ -1,5 +1,9 @@
 import { jsonError, jsonSuccess } from '../../_shared/arcusx-cors.ts';
-import { insertArcusxNotification } from '../../_shared/arcusx-notifications.ts';
+import {
+  formatFundsReleasedMessage,
+  insertArcusxNotification,
+} from '../../_shared/arcusx-notifications.ts';
+import { logDomainEvent } from '../../_shared/domain-events.ts';
 import type { ApiContext } from './types.ts';
 import { requireUser } from './require.ts';
 
@@ -42,8 +46,16 @@ export async function createEscrow(ctx: ApiContext): Promise<Response> {
         title: 'Escrow fondeado',
         message: `El escrow de "${fundedTask?.title ?? 'tu tarea'}" está activo. Ya puedes comenzar el trabajo.`,
         type: 'success',
+        email: false,
       });
     }
+    await logDomainEvent(auth.supabase, {
+      entity_type: 'task',
+      entity_id: taskId,
+      event_type: 'escrow.funded',
+      actor_user_id: auth.userId,
+      payload: { contract_id: contractAddress, tx: transactionHash },
+    });
     return jsonSuccess(req, { message: 'Firma confirmada' });
   }
 
@@ -66,6 +78,15 @@ export async function createEscrow(ctx: ApiContext): Promise<Response> {
   }).eq('id', taskId);
 
   if (error) return jsonError(req, error.message, 500);
+
+  await logDomainEvent(auth.supabase, {
+    entity_type: 'task',
+    entity_id: taskId,
+    event_type: 'escrow.prepared',
+    actor_user_id: auth.userId,
+    payload: { proposal_id: proposalId },
+  });
+
   return jsonSuccess(req, {
     message: 'Escrow preparado',
     worker_wallet: app.worker_wallet_address,
@@ -127,8 +148,17 @@ export async function selectProposal(ctx: ApiContext): Promise<Response> {
           ? 'El cliente está configurando el escrow; conecta tu wallet cuando corresponda.'
           : 'El cliente creará el escrow a continuación.'),
       type: 'success',
+      email: false,
     });
   }
+
+  await logDomainEvent(auth.supabase, {
+    entity_type: 'task',
+    entity_id: taskId,
+    event_type: 'proposal.selected',
+    actor_user_id: auth.userId,
+    payload: { proposal_id: proposalId, escrow_id: escrowId },
+  });
 
   return jsonSuccess(req, { message: 'Propuesta seleccionada' });
 }
@@ -236,8 +266,9 @@ export async function finalizePrivateOffer(ctx: ApiContext): Promise<Response> {
     title: 'Nueva oferta privada',
     message:
       `${creatorName} te envió una oferta privada fondeada: "${task.title ?? 'Tarea'}". ` +
-      `Monto: ${amount} ${cur}. Revisa la pestaña Ofertas en tu panel.`,
+      `Presupuesto: ${amount} ${cur}. Revisa la pestaña Ofertas en tu panel.`,
     type: 'success',
+    email: true,
   });
 
   return jsonSuccess(req, {
@@ -301,6 +332,13 @@ export async function completeTask(ctx: ApiContext): Promise<Response> {
       message:
         `El freelancer avisó que terminó "${taskTitle}". Revisa la entrega y libera el pago cuando quieras.`,
       type: 'info',
+      email: true,
+    });
+    await logDomainEvent(auth.supabase, {
+      entity_type: 'task',
+      entity_id: taskId,
+      event_type: 'task.delivery_notified',
+      actor_user_id: auth.userId,
     });
     return jsonSuccess(req, {
       message: 'Aviso enviado al cliente. Él decide cuándo liberar el pago.',
@@ -312,17 +350,62 @@ export async function completeTask(ctx: ApiContext): Promise<Response> {
   if (isClient && action === 'accept' && escrowCompleted) {
     const workerId = Number(task.accepted_applicant_id);
     if (workerId > 0) {
+      const { data: lastRating } = await auth.supabase
+        .from('arcusx_ratings')
+        .select('rating, review')
+        .eq('task_id', taskId)
+        .eq('rated_id', workerId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
       await insertArcusxNotification(auth.supabase, {
         user_id_mysql: workerId,
-        title: 'Pago liberado',
-        message: `El cliente liberó el pago de "${taskTitle}". Revisa tu wallet.`,
+        title: 'Ya liberaron tu pago',
+        message: formatFundsReleasedMessage(
+          `"${taskTitle}"`,
+          lastRating?.rating,
+          lastRating?.review,
+        ),
         type: 'success',
+        email: true,
       });
     }
+    await logDomainEvent(auth.supabase, {
+      entity_type: 'task',
+      entity_id: taskId,
+      event_type: 'task.completed',
+      actor_user_id: auth.userId,
+      payload: { escrow_completed: true },
+    });
     return jsonSuccess(req, {
       message: 'Tarea completada y fondos liberados',
       task_id: taskId,
       status: 'completed',
+    });
+  }
+
+  if (isClient && action === 'reject') {
+    const workerId = Number(task.accepted_applicant_id);
+    if (workerId > 0) {
+      await insertArcusxNotification(auth.supabase, {
+        user_id_mysql: workerId,
+        title: 'Entrega rechazada',
+        message:
+          `El cliente rechazó la entrega de "${taskTitle}". Revisa el estado de la tarea y el escrow.`,
+        type: 'warning',
+        email: false,
+      });
+    }
+    await logDomainEvent(auth.supabase, {
+      entity_type: 'task',
+      entity_id: taskId,
+      event_type: 'task.delivery_rejected',
+      actor_user_id: auth.userId,
+    });
+    return jsonSuccess(req, {
+      message: 'Entrega rechazada',
+      task_id: taskId,
+      status: 'rejected',
     });
   }
 

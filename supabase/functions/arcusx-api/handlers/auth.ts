@@ -96,11 +96,23 @@ export async function syncSupabaseUser(ctx: ApiContext): Promise<Response> {
 
   await upsertUserLink(supabase, supabaseUserId, userId);
 
+  const { data: profileRow } = await supabase
+    .from('arcusx_users')
+    .select('account_type, kyc_status')
+    .eq('id', userId)
+    .single();
+
   const token = await signArcusxJwt({ userId, username, email }, 3600 * 24);
 
   return jsonSuccess(req, {
     token,
-    user: { id: userId, username, email },
+    user: {
+      id: userId,
+      username,
+      email,
+      account_type: profileRow?.account_type ?? 'individual',
+      kyc_status: profileRow?.kyc_status ?? 'not_required',
+    },
     is_new_user: isNewUser,
     referral: null,
   });

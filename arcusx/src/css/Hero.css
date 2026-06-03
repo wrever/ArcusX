@@ -817,6 +817,23 @@
   fill: currentColor;
 }
 
+.hero-freelancer-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.hero-freelancer-name-row .hero-freelancer-name-btn {
+  width: auto;
+  flex: 1;
+  min-width: 0;
+}
+
+.hero-freelancer-verified-badge {
+  flex-shrink: 0;
+}
+
 .hero-freelancer-name-btn {
   display: block;
   width: 100%;

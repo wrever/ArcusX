@@ -51,6 +51,7 @@ const ReferralManagement: React.FC = () => {
   const [signups, setSignups] = useState<Record<string, unknown>[]>([]);
 
   const [newPartnerName, setNewPartnerName] = useState('');
+  const [newPartnerOwnerId, setNewPartnerOwnerId] = useState('');
   const [selectedPartnerId, setSelectedPartnerId] = useState('');
   const [newCode, setNewCode] = useState('');
   const [newCodeLabel, setNewCodeLabel] = useState('');
@@ -138,8 +139,13 @@ const ReferralManagement: React.FC = () => {
   const handleCreatePartner = async () => {
     if (!newPartnerName.trim()) return;
     try {
-      await createReferralPartner({ display_name: newPartnerName.trim() });
+      const ownerId = parseInt(newPartnerOwnerId.trim(), 10);
+      await createReferralPartner({
+        display_name: newPartnerName.trim(),
+        ...(Number.isFinite(ownerId) && ownerId > 0 ? { owner_mysql_user_id: ownerId } : {}),
+      });
       setNewPartnerName('');
+      setNewPartnerOwnerId('');
       await load(true);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Error');
@@ -338,6 +344,13 @@ const ReferralManagement: React.FC = () => {
               placeholder="Nombre (ej. María López)"
               value={newPartnerName}
               onChange={(e) => setNewPartnerName(e.target.value)}
+            />
+            <input
+              type="number"
+              min={1}
+              placeholder="ID usuario ArcusX (badge Embajador)"
+              value={newPartnerOwnerId}
+              onChange={(e) => setNewPartnerOwnerId(e.target.value)}
             />
             <button type="button" onClick={() => void handleCreatePartner()}>
               Crear

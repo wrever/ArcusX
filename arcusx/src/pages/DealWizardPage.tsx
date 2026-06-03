@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { FaArrowLeft, FaCopy, FaHandshake } from 'react-icons/fa';
+import { FaArrowLeft, FaHandshake } from 'react-icons/fa';
 import { useI18n } from '../i18n/I18nProvider';
 import { useWallet } from '../hooks/useWallet';
 import { usePlatformFee } from '../hooks/usePlatformFee';
 import { DEAL_TEMPLATES, getDealTemplate, type DealTemplateId } from '../constants/dealTemplates';
-import { createDeal, dealPublicUrl } from '../services/dealsService';
+import { createDeal } from '../services/dealsService';
+import DealShareLink from '../components/DealShareLink';
 import '../css/DealsPages.css';
 
 const STEPS = ['template', 'info', 'payment', 'review'] as const;
@@ -22,8 +23,7 @@ const DealWizardPage = () => {
   const [iReceivePayment, setIReceivePayment] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [createdLink, setCreatedLink] = useState('');
-  const [copied, setCopied] = useState(false);
+  const [createdToken, setCreatedToken] = useState('');
 
   const tpl = useMemo(() => getDealTemplate(templateId), [templateId]);
 
@@ -65,8 +65,7 @@ const DealWizardPage = () => {
         funder_role: funderRole,
       });
       const token = res.deal_token as string;
-      setCreatedLink(dealPublicUrl(token));
-      setStep(4);
+      setCreatedToken(token);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : t('deals.error.generic'));
     } finally {
@@ -74,28 +73,16 @@ const DealWizardPage = () => {
     }
   };
 
-  const copyLink = async () => {
-    if (createdLink) {
-      await navigator.clipboard.writeText(createdLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  if (createdLink) {
+  if (createdToken) {
     return (
       <div className="deals-page">
         <h1><FaHandshake /> {t('deals.wizard.doneTitle')}</h1>
         <p className="deals-lead">{t('deals.wizard.doneLead')}</p>
         <div className="deals-form-card">
-          <div className="deals-link-box">
-            <input type="text" readOnly value={createdLink} aria-label="Payment link" />
-            <button type="button" className="deals-btn primary" onClick={() => void copyLink()}>
-              <FaCopy /> {copied ? t('deals.wizard.copied') : t('deals.wizard.copyLink')}
-            </button>
-          </div>
+          <DealShareLink dealToken={createdToken} hint={t('deals.wizard.shareHint')} />
           <div className="deals-actions">
             <Link to="/dashboard?tab=deals" className="deals-btn secondary">{t('deals.wizard.goDashboard')}</Link>
+            <Link to={`/deal/${createdToken}`} className="deals-btn secondary">{t('deals.list.openLink')}</Link>
           </div>
         </div>
         <p className="deals-disclaimer">{t('deals.disclaimer')}</p>

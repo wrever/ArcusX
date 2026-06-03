@@ -1,6 +1,7 @@
 # Week 4 — Cierre técnico (sin reviewer pack Notion)
 
-**Fecha:** 2026-05-28
+**Fecha:** 2026-05-28  
+**Changelog consolidado (misma entrega):** [`week-04-changelog-and-architecture.md`](./week-04-changelog-and-architecture.md)
 
 ## Resuelto en código
 
@@ -10,7 +11,7 @@
 |------|------------|
 | Utility endpoints expuestos | Scripts **ausentes** del repo; no URL pública de test/reset |
 | `update_user` JWT | Ya exige token + `id` = claim (`update_user.php`) |
-| EvidenceUpload 404 | Componente no-op; sin import en rutas |
+| EvidenceUpload 404 | **Tranche 2:** Edge `upload_milestone_evidence` + UI en `SuperviseTask` |
 | `check_disputes.php` | Texto sin referencia a `create_test_dispute.php` |
 
 **Re-verificación testnet (manual):** OAuth → crear tarea → postular → seleccionar → fondear escrow → supervisar → liberar. Script: `docs/demo/E2E_TESTNET.md`.

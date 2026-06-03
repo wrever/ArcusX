@@ -9,14 +9,15 @@ Use this script for **reviewer demos**, **InstaAwards**, or **SDF** walkthroughs
 3. Two accounts recommended: **Client** and **Freelancer** (can be same machine, different browsers)
 4. Local or staging:
    - Frontend: `cd arcusx && npm run dev` → http://localhost:5173
-   - API: `backend_externo/` served at `VITE_API_URL` (e.g. arcusx.pro/api or local PHP)
+   - API: **Supabase Edge** (`VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`; **no** `VITE_USE_PHP_API=true`)
+   - Smoke sin login: `node scripts/smoke-edge-api.mjs`
 5. Env: `VITE_STELLAR_NETWORK=testnet`, Trustless Work **development** API key
 
 ## Demo flow
 
 ### 1. Landing & trust (1 min)
 
-- Open `/` — point out **live stats** (open tasks, users, volume) from `get_landing_market_stats.php` or Supabase.
+- Open `/` — point out **live stats** (open tasks, users, volume) from Edge `get_landing_market_stats` / RPC Supabase.
 - Toggle **light theme** — navbar, hero, readable contrast.
 - Connect wallet (Freighter) — show address + USDC badge in header.
 
@@ -31,14 +32,14 @@ Use this script for **reviewer demos**, **InstaAwards**, or **SDF** walkthroughs
 
 - Second browser/incognito → login as freelancer.
 - Find task → **Aplicar** → message + portfolio link.
-- Verify wallet if prompted (`verify_wallet.php`).
+- Verify wallet if prompted (Edge `verify_wallet`).
 
 ### 4. Client: select proposal & escrow (3 min)
 
 - **Propuestas** → open task proposals.
 - Review applicant card → **Seleccionar**.
 - **Escrow popup:** Trustless Work creates/funds escrow (client signs in wallet).
-- Note: funds locked until approval; platform fee **3%** on client side (see `get_platform_fee.php`).
+- Note: funds locked until approval; platform fee **3%** on client side (Edge `get_platform_fee`).
 
 ### 5. Work & release (2 min)
 
@@ -61,10 +62,10 @@ Use this script for **reviewer demos**, **InstaAwards**, or **SDF** walkthroughs
 
 | Issue | Check |
 |-------|--------|
-| 401 on API | JWT in `localStorage.token`; `config/axios` Bearer |
-| CORS error | Origin in `backend_externo/cors.php` allowlist |
+| 401 on API | JWT in `localStorage.token`; `arcusxApiHeaders()` + Supabase anon key |
+| CORS error | Origin in Supabase secret `ARCUSX_CORS_ORIGINS` |
 | Escrow fails | Trustless Work env, testnet USDC balance, G-address issuers only |
-| Stats show 0 | DB empty or Supabase RPC not configured — fallback PHP still returns JSON |
+| Stats show 0 | Supabase RPC / Edge `get_landing_market_stats`; revisar `VITE_SUPABASE_URL` |
 
 ## Recording tips
 

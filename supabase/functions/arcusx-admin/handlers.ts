@@ -3,6 +3,8 @@ import {
   jsonResponse,
   jsonSuccess,
 } from '../_shared/arcusx-cors.ts';
+import { insertArcusxNotification, notifyUsers } from '../_shared/arcusx-notifications.ts';
+import { logDomainEvent } from '../_shared/domain-events.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 type AdminCtx = {
@@ -169,8 +171,43 @@ export async function adminGetTasks(ctx: AdminCtx): Promise<Response> {
   const status = ctx.url.searchParams.get('status');
   if (status) q = q.eq('status', status);
   const { data, count } = await q.order('created_at', { ascending: false }).range(from, from + limit - 1);
+  const rows = data ?? [];
+
+  const userIds = [
+    ...rows.map((t) => Number(t.user_id)),
+    ...rows.map((t) => Number(t.accepted_applicant_id)).filter((id) => id > 0),
+  ];
+  const { loadUsersVerificationPublic } = await import('../../_shared/user-verification.ts');
+  const verMap = await loadUsersVerificationPublic(ctx.supabase, userIds);
+
+  const { data: users } = userIds.length
+    ? await ctx.supabase.from('arcusx_users').select('id, username').in('id', [...new Set(userIds)])
+    : { data: [] };
+  const nameMap = new Map((users ?? []).map((u) => [Number(u.id), String(u.username ?? '')]));
+
+  const tasks = rows.map((t) => {
+    const creatorId = Number(t.user_id);
+    const workerId = Number(t.accepted_applicant_id) || 0;
+    const cVer = verMap.get(creatorId);
+    const wVer = workerId > 0 ? verMap.get(workerId) : undefined;
+    return {
+      ...t,
+      creator_username: nameMap.get(creatorId) ?? '',
+      worker_username: workerId > 0 ? (nameMap.get(workerId) ?? '') : '',
+      creator_verified: cVer?.creator_verified ?? false,
+      worker_verified: wVer?.creator_verified ?? false,
+      creator_display_name: cVer?.creator_display_name,
+      worker_display_name: wVer?.creator_display_name,
+    };
+  });
+
   await logAdmin(ctx.supabase, ctx.userId, 'get_tasks', 'tasks', null, { page, limit }, ctx.req);
-  return jsonResponse(ctx.req, { success: true, tasks: data ?? [], total: count ?? 0, pagination: { page, limit, total: count ?? 0 } });
+  return jsonResponse(ctx.req, {
+    success: true,
+    tasks,
+    total: count ?? 0,
+    pagination: { page, limit, total: count ?? 0 },
+  });
 }
 
 export async function adminGetTaskDetails(ctx: AdminCtx): Promise<Response> {
@@ -372,12 +409,41 @@ export async function adminResolveDispute(ctx: AdminCtx): Promise<Response> {
   }).eq('id', disputeId);
 
   if (error) return jsonError(ctx.req, error.message, 500);
+
+  const { data: task } = await ctx.supabase
+    .from('arcusx_tasks')
+    .select('title, user_id, accepted_applicant_id')
+    .eq('id', dispute.task_id)
+    .maybeSingle();
+  const taskTitle = String(task?.title ?? 'la tarea');
+  await notifyUsers(ctx.supabase, [task?.user_id, task?.accepted_applicant_id], {
+    title: 'Disputa resuelta',
+    message:
+      `La disputa de "${taskTitle}" fue resuelta por ArcusX (${decision}). Revisa tu panel para firmar o ver el resultado.`,
+    type: 'info',
+    email: false,
+  });
+
   await logAdmin(ctx.supabase, ctx.userId, 'resolve_dispute', 'dispute', disputeId, { decision }, ctx.req);
+  await logDomainEvent(ctx.supabase, {
+    entity_type: 'dispute',
+    entity_id: disputeId,
+    event_type: 'dispute.resolved',
+    actor_user_id: ctx.userId,
+    payload: { decision, task_id: dispute.task_id },
+  });
   return jsonSuccess(ctx.req, { message: 'Disputa resuelta' });
 }
 
 export async function adminReleaseDisputeFunds(ctx: AdminCtx): Promise<Response> {
   const disputeId = Number(ctx.body.dispute_id);
+
+  const { data: dispute } = await ctx.supabase
+    .from('arcusx_disputes')
+    .select('task_id')
+    .eq('id', disputeId)
+    .maybeSingle();
+
   const { error } = await ctx.supabase.from('arcusx_disputes').update({
     status: 'resolved',
     resolution: 'admin_release',
@@ -385,7 +451,285 @@ export async function adminReleaseDisputeFunds(ctx: AdminCtx): Promise<Response>
     resolved_at: new Date().toISOString(),
   }).eq('id', disputeId);
   if (error) return jsonError(ctx.req, error.message, 500);
+
+  if (dispute?.task_id) {
+    const { data: task } = await ctx.supabase
+      .from('arcusx_tasks')
+      .select('title, user_id, accepted_applicant_id')
+      .eq('id', dispute.task_id)
+      .maybeSingle();
+    const taskTitle = String(task?.title ?? 'la tarea');
+    await notifyUsers(ctx.supabase, [task?.user_id, task?.accepted_applicant_id], {
+      title: 'Disputa resuelta',
+      message:
+        `La disputa de "${taskTitle}" fue resuelta por el equipo ArcusX. Revisa tu panel para los próximos pasos con el escrow.`,
+      type: 'info',
+      email: false,
+    });
+  }
+
+  await logDomainEvent(ctx.supabase, {
+    entity_type: 'dispute',
+    entity_id: disputeId,
+    event_type: 'dispute.admin_release',
+    actor_user_id: ctx.userId,
+    payload: { task_id: dispute?.task_id },
+  });
+
   return jsonSuccess(ctx.req, { message: 'Fondos marcados para liberación (Trustless Work en cliente)' });
+}
+
+export async function adminListKycRequests(ctx: AdminCtx): Promise<Response> {
+  const { req, supabase, url } = ctx;
+  const status = url.searchParams.get('status') ?? 'under_review';
+  const page = Math.max(1, Number(url.searchParams.get('page') || 1));
+  const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit') || 50)));
+  const from = (page - 1) * limit;
+
+  let q = supabase
+    .from('arcusx_kyc_requests')
+    .select(
+      'id, user_id, request_type, status, created_at, reviewed_at, rejection_reason',
+      { count: 'exact' },
+    )
+    .order('created_at', { ascending: false })
+    .range(from, from + limit - 1);
+
+  if (status !== 'all') q = q.eq('status', status);
+
+  const { data, error, count } = await q;
+  if (error) return jsonError(req, error.message, 500);
+
+  const userIds = [...new Set((data ?? []).map((r) => Number(r.user_id)).filter((id) => id > 0))];
+
+  const [
+    { data: users },
+    { data: enterpriseProfiles },
+    { data: individualProfiles },
+  ] = userIds.length
+    ? await Promise.all([
+      supabase
+        .from('arcusx_users')
+        .select('id, username, email, account_type, kyc_status')
+        .in('id', userIds),
+      supabase
+        .from('arcusx_enterprise_profiles')
+        .select('user_id, legal_name, trade_name, tax_id, country')
+        .in('user_id', userIds),
+      supabase
+        .from('arcusx_individual_kyc_profiles')
+        .select('user_id, full_name, document_id, country')
+        .in('user_id', userIds),
+    ])
+    : [{ data: [] }, { data: [] }, { data: [] }];
+
+  const userMap = new Map(
+    (users ?? []).map((u) => [
+      Number(u.id),
+      {
+        username: u.username,
+        email: u.email,
+        account_type: u.account_type,
+        kyc_status: u.kyc_status,
+      },
+    ]),
+  );
+  const enterpriseMap = new Map((enterpriseProfiles ?? []).map((p) => [Number(p.user_id), p]));
+  const individualMap = new Map((individualProfiles ?? []).map((p) => [Number(p.user_id), p]));
+
+  const requests = (data ?? []).map((row) => ({
+    ...row,
+    arcusx_users: userMap.get(Number(row.user_id)) ?? null,
+    enterprise_profile: enterpriseMap.get(Number(row.user_id)) ?? null,
+    individual_profile: individualMap.get(Number(row.user_id)) ?? null,
+  }));
+
+  return jsonSuccess(req, {
+    requests,
+    pagination: paginateMeta(page, limit, count ?? 0),
+  });
+}
+
+const KYC_DOC_LABELS: Record<string, string> = {
+  identity_front: 'Carnet — foto frontal',
+  identity_back: 'Carnet — foto trasera',
+  identity: 'Documento de identidad',
+  registration: 'Documento empresa / registro',
+};
+
+export async function adminGetKycRequestDetail(ctx: AdminCtx): Promise<Response> {
+  const { req, supabase, url } = ctx;
+  const requestId = parseInt(url.searchParams.get('request_id') ?? '0', 10);
+  if (!requestId) return jsonError(req, 'request_id requerido', 400);
+
+  const { data: kycReq, error: reqErr } = await supabase
+    .from('arcusx_kyc_requests')
+    .select('id, user_id, request_type, status, created_at, reviewed_at, rejection_reason, review_notes')
+    .eq('id', requestId)
+    .maybeSingle();
+
+  if (reqErr) return jsonError(req, reqErr.message, 500);
+  if (!kycReq) return jsonError(req, 'Solicitud no encontrada', 404);
+
+  const userId = Number(kycReq.user_id);
+
+  const [
+    { data: user },
+    { data: enterpriseProfile },
+    { data: individualProfile },
+    { data: docRows },
+  ] = await Promise.all([
+    supabase
+      .from('arcusx_users')
+      .select('id, username, email, account_type, kyc_status')
+      .eq('id', userId)
+      .maybeSingle(),
+    supabase
+      .from('arcusx_enterprise_profiles')
+      .select('legal_name, trade_name, tax_id, country, representative_name, representative_role, website, contact_phone')
+      .eq('user_id', userId)
+      .maybeSingle(),
+    supabase
+      .from('arcusx_individual_kyc_profiles')
+      .select('full_name, document_id, country')
+      .eq('user_id', userId)
+      .maybeSingle(),
+    supabase
+      .from('arcusx_kyc_documents')
+      .select('id, document_type, storage_path, original_filename, mime_type, file_size, created_at')
+      .eq('kyc_request_id', requestId)
+      .order('created_at', { ascending: true }),
+  ]);
+
+  const documents: Array<Record<string, unknown>> = [];
+  for (const doc of docRows ?? []) {
+    const path = String(doc.storage_path ?? '');
+    let signed_url: string | null = null;
+    if (path) {
+      const { data: signed, error: signErr } = await supabase.storage
+        .from('kyc-documents')
+        .createSignedUrl(path, 3600);
+      if (!signErr && signed?.signedUrl) signed_url = signed.signedUrl;
+    }
+    const docType = String(doc.document_type ?? 'identity');
+    documents.push({
+      id: doc.id,
+      document_type: docType,
+      label: KYC_DOC_LABELS[docType] ?? docType,
+      original_filename: doc.original_filename,
+      mime_type: doc.mime_type,
+      file_size: doc.file_size,
+      created_at: doc.created_at,
+      signed_url,
+    });
+  }
+
+  await logAdmin(supabase, ctx.userId, 'get_kyc_request_detail', 'kyc_request', requestId, null, req);
+
+  return jsonSuccess(req, {
+    request: kycReq,
+    user: user ?? null,
+    enterprise_profile: enterpriseProfile ?? null,
+    individual_profile: individualProfile ?? null,
+    documents,
+  });
+}
+
+export async function adminApproveKyc(ctx: AdminCtx): Promise<Response> {
+  const { req, supabase, userId, body } = ctx;
+  const requestId = Number(body.request_id);
+  const targetUserId = Number(body.user_id);
+  if (!requestId && !targetUserId) {
+    return jsonError(req, 'request_id o user_id requerido', 400);
+  }
+
+  let uid = targetUserId;
+  let requestType = 'enterprise';
+  if (requestId) {
+    const { data: kycReq } = await supabase
+      .from('arcusx_kyc_requests')
+      .select('user_id, status, request_type')
+      .eq('id', requestId)
+      .single();
+    if (!kycReq) return jsonError(req, 'Solicitud no encontrada', 404);
+    uid = Number(kycReq.user_id);
+    requestType = String(kycReq.request_type ?? 'enterprise');
+  }
+
+  const now = new Date().toISOString();
+  await supabase.from('arcusx_users').update({
+    account_type: requestType === 'individual' ? 'individual' : 'enterprise',
+    kyc_status: 'approved',
+    kyc_reviewed_at: now,
+    kyc_reviewed_by: userId,
+    kyc_rejection_reason: null,
+    updated_at: now,
+  }).eq('id', uid);
+
+  if (requestId) {
+    await supabase.from('arcusx_kyc_requests').update({
+      status: 'approved',
+      reviewed_by: userId,
+      reviewed_at: now,
+      updated_at: now,
+    }).eq('id', requestId);
+  }
+
+  await logAdmin(supabase, userId, 'approve_kyc', 'user', uid, { request_id: requestId }, req);
+  await logDomainEvent(supabase, {
+    entity_type: 'user',
+    entity_id: uid,
+    event_type: 'kyc.approved',
+    actor_user_id: userId,
+    payload: { request_id: requestId },
+  });
+
+  const label = requestType === 'individual' ? 'KYC aprobado' : 'KYB aprobado';
+  return jsonSuccess(req, { message: label, user_id: uid, kyc_status: 'approved', request_type: requestType });
+}
+
+export async function adminRejectKyc(ctx: AdminCtx): Promise<Response> {
+  const { req, supabase, userId, body } = ctx;
+  const requestId = Number(body.request_id);
+  const reason = String(body.reason ?? body.rejection_reason ?? 'Documentación insuficiente').trim();
+  if (!requestId) return jsonError(req, 'request_id requerido', 400);
+
+  const { data: kycReq } = await supabase
+    .from('arcusx_kyc_requests')
+    .select('user_id')
+    .eq('id', requestId)
+    .single();
+  if (!kycReq) return jsonError(req, 'Solicitud no encontrada', 404);
+
+  const uid = Number(kycReq.user_id);
+  const now = new Date().toISOString();
+
+  await supabase.from('arcusx_users').update({
+    kyc_status: 'rejected',
+    kyc_reviewed_at: now,
+    kyc_reviewed_by: userId,
+    kyc_rejection_reason: reason.slice(0, 500),
+    updated_at: now,
+  }).eq('id', uid);
+
+  await supabase.from('arcusx_kyc_requests').update({
+    status: 'rejected',
+    rejection_reason: reason,
+    reviewed_by: userId,
+    reviewed_at: now,
+    updated_at: now,
+  }).eq('id', requestId);
+
+  await logAdmin(supabase, userId, 'reject_kyc', 'user', uid, { request_id: requestId, reason }, req);
+  await logDomainEvent(supabase, {
+    entity_type: 'user',
+    entity_id: uid,
+    event_type: 'kyc.rejected',
+    actor_user_id: userId,
+    payload: { request_id: requestId, reason },
+  });
+
+  return jsonSuccess(req, { message: 'KYB rechazado', user_id: uid });
 }
 
 export async function adminSendNotification(ctx: AdminCtx): Promise<Response> {
@@ -395,17 +739,20 @@ export async function adminSendNotification(ctx: AdminCtx): Promise<Response> {
   const type = String(ctx.body.type ?? 'info');
   if (!title || !message) return jsonError(ctx.req, 'Título y mensaje requeridos', 400);
 
-  const { data, error } = await ctx.supabase.from('arcusx_notifications').insert({
+  const notifId = await insertArcusxNotification(ctx.supabase, {
     user_id_mysql: userIdMysql,
     title,
     message,
-    type,
-    created_at: new Date().toISOString(),
-  }).select('id').single();
+    type: type as 'info' | 'warning' | 'success' | 'error',
+    email: userIdMysql != null,
+  });
 
-  if (error) return jsonError(ctx.req, error.message, 500);
-  await logAdmin(ctx.supabase, ctx.userId, 'send_notification', 'notification', data?.id ?? null, { title }, ctx.req);
-  return jsonSuccess(ctx.req, { notification_id: data?.id });
+  if (notifId == null && userIdMysql != null) {
+    return jsonError(ctx.req, 'No se pudo crear la notificación', 500);
+  }
+
+  await logAdmin(ctx.supabase, ctx.userId, 'send_notification', 'notification', notifId, { title }, ctx.req);
+  return jsonSuccess(ctx.req, { notification_id: notifId });
 }
 
 export async function adminSendBroadcast(ctx: AdminCtx): Promise<Response> {
@@ -439,8 +786,41 @@ export async function adminGetNotifications(ctx: AdminCtx): Promise<Response> {
   });
 }
 
+export async function adminGetDomainEvents(ctx: AdminCtx): Promise<Response> {
+  const { req, supabase, url } = ctx;
+  const page = Math.max(1, Number(url.searchParams.get('page') || 1));
+  const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit') || 50)));
+  const entityType = url.searchParams.get('entity_type')?.trim();
+  const eventType = url.searchParams.get('event_type')?.trim();
+  const from = (page - 1) * limit;
+
+  let q = supabase
+    .from('arcusx_domain_events')
+    .select('id, entity_type, entity_id, event_type, actor_user_id, payload, created_at', {
+      count: 'exact',
+    })
+    .order('created_at', { ascending: false })
+    .range(from, from + limit - 1);
+
+  if (entityType) q = q.eq('entity_type', entityType);
+  if (eventType) q = q.ilike('event_type', `%${eventType}%`);
+
+  const { data, error, count } = await q;
+  if (error) return jsonError(req, error.message, 500);
+
+  return jsonSuccess(req, {
+    events: data ?? [],
+    pagination: paginateMeta(page, limit, count ?? 0),
+  });
+}
+
 export const ADMIN_ROUTES: Record<string, (ctx: AdminCtx) => Promise<Response>> = {
   get_stats: adminGetStats,
+  get_domain_events: adminGetDomainEvents,
+  list_kyc_requests: adminListKycRequests,
+  get_kyc_request_detail: adminGetKycRequestDetail,
+  approve_kyc: adminApproveKyc,
+  reject_kyc: adminRejectKyc,
   get_users: adminGetUsers,
   get_user_details: adminGetUserDetails,
   update_user: adminUpdateUser,

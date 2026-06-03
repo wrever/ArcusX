@@ -1,7 +1,7 @@
 # Week 4 — Plan & checklist (InstaAwards close)
 
 **Target close:** 2026-05-28  
-**Deliverables:** [`instaawards-week4.md`](./instaawards-week4.md) · [`week-04-technical-close.md`](./week-04-technical-close.md) · Engineering alignment with [`PLAN_MES1_REVISORES.md`](../../PLAN_MES1_REVISORES.md) § Week 4
+**Deliverables:** [`week-04-changelog-and-architecture.md`](./week-04-changelog-and-architecture.md) · [`instaawards-week4.md`](./instaawards-week4.md) · [`week-04-technical-close.md`](./week-04-technical-close.md) · Engineering alignment with [`PLAN_MES1_REVISORES.md`](../../PLAN_MES1_REVISORES.md) § Week 4
 
 **Builds on:** Week 3 closed in repo ([`week-03-changelog-and-architecture.md`](./week-03-changelog-and-architecture.md)); light-theme follow-up 2026-05-28.
 
@@ -23,7 +23,7 @@ Finish the **reviewer / SDF month**: demo evidence, pilot outcome, metrics snaps
 | 4 | **Docs** | `instaawards-week4.md` filled; README links Week 4 | ☐ ops |
 | 5 | **Deploy** | `npm run build` + PHP upload; server `.htaccess` `SetEnv` preserved | ☐ ops |
 | 6 | **Light theme** | 8 archivos + gaps en `week-04-light-theme-gaps.md` | ☑ repo |
-| 7 | **Bugs** | Week 2: utilities ausentes, EvidenceUpload no-op, check_disputes | ☑ repo |
+| 7 | **Bugs** | Week 2 utilities; EvidenceUpload **habilitado** (Tranche 2); check_disputes | ☑ repo |
 | 8 | **i18n** | 5 componentes — ver `week-04-technical-close.md` | ☑ repo |
 | 9 | **Console** | devLog/devWarn/devError en 3 archivos + logger | ☑ repo |
 | 10 | **Responsive** | `responsive-critical.css` + chart 480px | ☑ repo |
@@ -38,12 +38,19 @@ Finish the **reviewer / SDF month**: demo evidence, pilot outcome, metrics snaps
 - Light theme **verification** (already implemented — confirm on device).
 - Reviewer pack links in README.
 
+## Tranche 2 (2026-05-28)
+
+- **Cerrado ingeniería:** [`TRANCHE2_CLOSURE.md`](./TRANCHE2_CLOSURE.md)
+- **Próximo backlog:** [`POST_TRANCHE2_TODO.md`](./POST_TRANCHE2_TODO.md)
+- **E2E cierre:** [`docs/demo/E2E_CHECKLIST.md`](../demo/E2E_CHECKLIST.md)
+
 ## Out of scope (next cycle)
 
 - Mainnet flip without smoke test.
 - New product lines (agentic payments, native Soroban escrow in prod).
 - Migrating every PHP endpoint to `arcusx_json_error`.
 - Full i18n of admin panel.
+- B2B org/KYB (→ POST_TRANCHE2 `Q3-A`).
 
 ---
 
@@ -60,13 +67,17 @@ Finish the **reviewer / SDF month**: demo evidence, pilot outcome, metrics snaps
 
 ## Definition of done
 
-Week 4 is **closed** when:
+### Engineering (repo) — ☑ 2026-05-28
 
-1. At least one of: **demo link** or **scheduled live demo** is documented.
-2. Pilot table in `instaawards-week4.md` is complete or retro explains blockers.
-3. Metrics snapshot dated.
-4. `npm run build` passes.
-5. This checklist rows 1, 4, 5, 6, 11 are ☑.
+Rows **6–10** in the table above (light theme verified, bugs, i18n, console, responsive). Changelog: [`week-04-changelog-and-architecture.md`](./week-04-changelog-and-architecture.md).
+
+### InstaAwards sprint (ops + docs) — open until:
+
+1. At least one of: **demo link** or **scheduled live demo** in `instaawards-week4.md` §1.
+2. Pilot table §2 complete or retro with blockers + next date.
+3. Metrics snapshot dated (§3).
+4. `npm run build` passes on release branch.
+5. Checklist rows **1, 4, 5, 11** are ☑.
 
 ---
 

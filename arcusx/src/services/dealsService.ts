@@ -65,9 +65,11 @@ export async function createDeal(payload: {
   return apiPost('create_deal', payload);
 }
 
+export type DealViewerRole = 'initiator' | 'counterparty' | 'guest';
+
 export async function getDealByToken(dealToken: string): Promise<{
   deal: AgreementDeal;
-  viewer_role?: 'initiator' | 'counterparty' | 'guest';
+  viewer_role?: DealViewerRole;
   can_accept?: boolean;
 }> {
   return apiGet('get_deal_by_token', { deal_token: dealToken });

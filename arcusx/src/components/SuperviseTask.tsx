@@ -8,7 +8,9 @@ import {
   sendTaskMessageSupabase,
   ensureArcusxSupabaseUserLink,
 } from '../services/arcusxMessagingSupabase';
+import { useTaskMessagesRealtime } from '../hooks/useTaskMessagesRealtime';
 import '../css/SuperviseTask.css';
+import EvidenceUpload, { type EvidenceFile } from './EvidenceUpload';
 import { jwtDecode } from "jwt-decode"; // Importar jwtDecode
 import { useWallet } from '../hooks/useWallet';
 // ============================================
@@ -271,7 +273,26 @@ const SuperviseTask = () => {
     // Estados para acciones de trabajo
     const [acceptingWork] = useState(false);
     const [showCompleteTaskPopup, setShowCompleteTaskPopup] = useState(false);
-    
+    const [milestoneEvidenceNote, setMilestoneEvidenceNote] = useState('');
+    const [milestoneEvidenceFiles, setMilestoneEvidenceFiles] = useState<EvidenceFile[]>([]);
+
+    const loadMilestoneEvidence = useCallback(async () => {
+        if (!taskId) return;
+        try {
+            const res = await axios.get(
+                arcusxApiUrl('get_milestone_evidence', { task_id: taskId, milestone_index: 0 }),
+            );
+            if (res.data?.success && res.data.evidence) {
+                setMilestoneEvidenceNote(res.data.evidence.note || '');
+                setMilestoneEvidenceFiles(
+                    Array.isArray(res.data.evidence.files) ? res.data.evidence.files : [],
+                );
+            }
+        } catch {
+            /* evidencia opcional */
+        }
+    }, [taskId]);
+
     // Cache para escrow data y debouncing
     const [escrowCache, setEscrowCache] = useState<any>(null);
     const [lastEscrowFetch, setLastEscrowFetch] = useState<number>(0);
@@ -470,6 +491,12 @@ const SuperviseTask = () => {
         }
     }, [taskId, acceptedApplicantId]); // Dependencias del useEffect
 
+    useEffect(() => {
+        if (task?.id && taskId) {
+            loadMilestoneEvidence();
+        }
+    }, [task?.id, taskId, loadMilestoneEvidence]);
+
     // Cargar mensajes: `silent` evita loading en pantalla (polling) para que no parpadee el chat
     const fetchMessages = useCallback(async (opts?: { silent?: boolean }) => {
         const silent = opts?.silent === true;
@@ -538,13 +565,21 @@ const SuperviseTask = () => {
         }
     }, [taskId, t]);
 
-    // Cargar mensajes al obtener los detalles de la tarea, trabajador y usuario actual
+    const taskIdNum = taskId ? parseInt(String(taskId), 10) : null;
+    useTaskMessagesRealtime({
+        taskId: Number.isFinite(taskIdNum) ? taskIdNum : null,
+        enabled: Boolean(task && worker && currentUser),
+        onChange: () => {
+            void fetchMessages({ silent: true });
+        },
+    });
+
     useEffect(() => {
         if (task && worker && currentUser) {
             void fetchMessages();
             const interval = setInterval(() => {
                 void fetchMessages({ silent: true });
-            }, 5000);
+            }, 120000);
             return () => clearInterval(interval);
         }
     }, [task, worker, currentUser, fetchMessages]);
@@ -2047,6 +2082,16 @@ const SuperviseTask = () => {
                                     {t('supervise.status.workerDeliveryNotified')}
                                 </p>
                             )}
+                            {task.worker_accepted_completion === 1 &&
+                             (milestoneEvidenceNote || milestoneEvidenceFiles.length > 0) && (
+                                <EvidenceUpload
+                                    taskId={parseInt(taskId!, 10)}
+                                    milestoneIndex={0}
+                                    readOnly
+                                    existingEvidence={milestoneEvidenceNote}
+                                    existingFiles={milestoneEvidenceFiles}
+                                />
+                            )}
                             {task.client_accepted_completion === 0 && (
                                 <>
                                     {/*  CRÍTICO: Ocultar botones si el estado del escrow NO es 'active' */}
@@ -2234,6 +2279,20 @@ const SuperviseTask = () => {
 
                     {isWorker && (
                         <div className="worker-actions">
+                            {task.escrow_status === 'active' &&
+                             task.worker_accepted_completion === 0 &&
+                             !isResolved && (
+                                <EvidenceUpload
+                                    taskId={parseInt(taskId!, 10)}
+                                    milestoneIndex={0}
+                                    existingEvidence={milestoneEvidenceNote}
+                                    existingFiles={milestoneEvidenceFiles}
+                                    onEvidenceSubmit={(files, noteText) => {
+                                        setMilestoneEvidenceFiles(files);
+                                        setMilestoneEvidenceNote(noteText);
+                                    }}
+                                />
+                            )}
                             {/* Notificación para trabajador cuando el escrow está resuelto */}
                             {isResolved && (
                                 <div style={{

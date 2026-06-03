@@ -222,6 +222,33 @@ async function adminApiCall(action: string, method: string = 'GET', body?: any, 
 /**
  * Obtener estadísticas del sistema
  */
+export interface DomainEventRow {
+  id: number;
+  entity_type: string;
+  entity_id: string;
+  event_type: string;
+  actor_user_id: number | null;
+  payload: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export async function getAdminDomainEvents(params?: {
+  page?: number;
+  limit?: number;
+  entity_type?: string;
+  event_type?: string;
+}): Promise<{
+  events: DomainEventRow[];
+  pagination: { page: number; limit: number; total: number; total_pages: number };
+}> {
+  const query = new URLSearchParams();
+  if (params?.page) query.set('page', String(params.page));
+  if (params?.limit) query.set('limit', String(params.limit));
+  if (params?.entity_type) query.set('entity_type', params.entity_type);
+  if (params?.event_type) query.set('event_type', params.event_type);
+  return adminApiCall('get_domain_events', 'GET', undefined, query);
+}
+
 export async function getAdminStats(): Promise<AdminStats> {
   const data = await adminApiCall('get_stats');
   return data.stats;
@@ -672,6 +699,7 @@ export async function createReferralPartner(payload: {
   display_name: string;
   contact_email?: string;
   notes?: string;
+  owner_mysql_user_id?: number;
 }) {
   return referralAdminCall('referral_create_partner', payload);
 }
@@ -747,6 +775,117 @@ export async function toggleReferralCode(codeId: string, isActive: boolean) {
   return referralAdminCall('referral_toggle_code', {
     code_id: codeId,
     is_active: isActive,
+  });
+}
+
+export interface KycEnterpriseProfile {
+  user_id?: number;
+  legal_name?: string;
+  trade_name?: string;
+  tax_id?: string;
+  country?: string;
+  representative_name?: string;
+  representative_role?: string;
+  website?: string;
+  contact_phone?: string;
+}
+
+export interface KycAdminUser {
+  username?: string;
+  email?: string;
+  account_type?: string;
+  kyc_status?: string;
+}
+
+export interface KycIndividualProfile {
+  user_id?: number;
+  full_name?: string;
+  document_id?: string;
+  country?: string;
+}
+
+export interface KycAdminRequest {
+  id: number;
+  user_id: number;
+  request_type: string;
+  status: string;
+  created_at: string;
+  reviewed_at?: string | null;
+  rejection_reason?: string | null;
+  arcusx_users?: KycAdminUser;
+  enterprise_profile?: KycEnterpriseProfile | null;
+  individual_profile?: KycIndividualProfile | null;
+}
+
+export async function getKycRequests(params?: {
+  status?: string;
+  page?: number;
+  limit?: number;
+}): Promise<{
+  requests: KycAdminRequest[];
+  pagination: { page: number; limit: number; total: number; total_pages: number };
+}> {
+  const query = new URLSearchParams();
+  query.set('status', params?.status ?? 'under_review');
+  query.set('page', String(params?.page ?? 1));
+  query.set('limit', String(params?.limit ?? 50));
+  const data = await adminApiCall('list_kyc_requests', 'GET', undefined, query);
+  return {
+    requests: asArray<KycAdminRequest>(data.requests),
+    pagination: normalizeAdminPagination(data.pagination, {
+      page: params?.page,
+      limit: params?.limit,
+    }),
+  };
+}
+
+export interface KycDocumentView {
+  id: number;
+  document_type: string;
+  label: string;
+  original_filename?: string | null;
+  mime_type?: string | null;
+  file_size?: number | null;
+  created_at?: string;
+  signed_url: string | null;
+}
+
+export interface KycRequestDetail {
+  request: KycAdminRequest & { review_notes?: string | null };
+  user: KycAdminUser | null;
+  enterprise_profile: KycEnterpriseProfile | null;
+  individual_profile: KycIndividualProfile | null;
+  documents: KycDocumentView[];
+}
+
+export async function getKycRequestDetail(requestId: number): Promise<KycRequestDetail> {
+  const query = new URLSearchParams();
+  query.set('request_id', String(requestId));
+  const data = await adminApiCall('get_kyc_request_detail', 'GET', undefined, query);
+  return {
+    request: data.request as KycRequestDetail['request'],
+    user: data.user ?? null,
+    enterprise_profile: data.enterprise_profile ?? null,
+    individual_profile: data.individual_profile ?? null,
+    documents: asArray<KycDocumentView>(data.documents),
+  };
+}
+
+export async function approveKycRequest(body: {
+  request_id: number;
+  user_id?: number;
+}): Promise<{ message?: string }> {
+  return adminApiCall('approve_kyc', 'POST', body);
+}
+
+export async function rejectKycRequest(body: {
+  request_id: number;
+  reason: string;
+}): Promise<{ message?: string }> {
+  return adminApiCall('reject_kyc', 'POST', {
+    request_id: body.request_id,
+    reason: body.reason,
+    rejection_reason: body.reason,
   });
 }
 

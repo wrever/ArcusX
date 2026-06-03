@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { FaArrowLeft, FaUser, FaCheckCircle, FaBriefcase, FaStar, FaDollarSign, FaTasks, FaLock, FaPlus } from 'react-icons/fa';
+import { FaArrowLeft, FaUser, FaBriefcase, FaStar, FaDollarSign, FaTasks, FaLock, FaPlus } from 'react-icons/fa';
+import ProfilePublicBadges from './ProfilePublicBadges';
 import { getUserProfile, getUserPublicStats } from '../services/profileService';
 import type { UserProfile as UserProfileType, UserStatistics } from '../types/profile';
 import RatingDisplay from './RatingDisplay';
@@ -233,16 +234,22 @@ const UserProfile = () => {
               {profile.username?.charAt(0).toUpperCase() || <FaUser />}
             </div>
           )}
-          {profile.verified && (
-            <div className="verified-badge" title={t('profile.verified.title')}>
-              <FaCheckCircle />
-            </div>
-          )}
         </div>
         
         <div className="profile-info">
           <div className="profile-name-row">
-            <h1>{profile.username}</h1>
+            <div className="profile-identity">
+              <h1 className="profile-name-heading">
+                <span className="profile-username-text">
+                  {profile.display_name || profile.username}
+                </span>
+              </h1>
+              <ProfilePublicBadges
+                badgeIds={profile.public_badges}
+                variant="inline"
+                className="profile-identity__badges"
+              />
+            </div>
             {!profile.public_profile && (
               <span className="private-badge" title={t('profile.private.title')}>
                 <FaLock />

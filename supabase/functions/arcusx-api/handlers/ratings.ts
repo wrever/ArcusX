@@ -1,4 +1,5 @@
 import { jsonError, jsonResponse, jsonSuccess } from '../../_shared/arcusx-cors.ts';
+import { logDomainEvent } from '../../_shared/domain-events.ts';
 import type { ApiContext } from './types.ts';
 import { qpInt } from './types.ts';
 import { requireUser } from './require.ts';
@@ -25,6 +26,15 @@ export async function createRating(ctx: ApiContext): Promise<Response> {
   });
 
   if (error) return jsonError(req, error.message, 500);
+
+  await logDomainEvent(auth.supabase, {
+    entity_type: 'task',
+    entity_id: taskId,
+    event_type: 'rating.created',
+    actor_user_id: auth.userId,
+    payload: { rated_id: ratedId, rating },
+  });
+
   return jsonSuccess(req, { message: 'Valoración creada' });
 }
 

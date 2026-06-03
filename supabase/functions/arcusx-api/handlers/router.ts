@@ -1,5 +1,10 @@
-import { jsonError } from '../../_shared/arcusx-cors.ts';
+import { jsonError, jsonResponse } from '../../_shared/arcusx-cors.ts';
 import { authenticateRequest } from '../../_shared/arcusx-auth.ts';
+import {
+  getIdempotentResponse,
+  storeIdempotentResponse,
+  wantsIdempotency,
+} from '../../_shared/idempotency.ts';
 import type { ApiHandler } from './types.ts';
 import { readJsonBody } from './types.ts';
 import * as auth from './auth.ts';
@@ -12,6 +17,9 @@ import * as misc from './misc.ts';
 import * as limits from './limits.ts';
 import * as escrowExtra from './escrow-extra.ts';
 import * as deals from './deals.ts';
+import * as evidence from './evidence.ts';
+import * as kyc from './kyc.ts';
+import * as badges from './badges.ts';
 
 const ROUTES: Record<string, ApiHandler> = {
   sync_supabase_user: auth.syncSupabaseUser,
@@ -67,6 +75,12 @@ const ROUTES: Record<string, ApiHandler> = {
   get_private_offers: misc.getPrivateOffers,
   delete_scheduled_tasks: misc.deleteScheduledTasks,
   upload_avatar: misc.uploadAvatar,
+  upload_milestone_evidence: evidence.uploadMilestoneEvidence,
+  get_milestone_evidence: evidence.getMilestoneEvidence,
+  get_verification_status: kyc.getVerificationStatus,
+  get_my_badges: badges.getMyBadges,
+  submit_enterprise_kyc: kyc.submitEnterpriseKyc,
+  submit_individual_kyc: kyc.submitIndividualKyc,
   manage_portfolio: misc.managePortfolio,
   get_user_transactions: misc.getUserTransactions,
   get_user_earnings_summary: misc.getUserEarningsSummary,
@@ -95,6 +109,9 @@ const METHOD_OVERRIDES: Record<string, (ctx: Parameters<ApiHandler>[0]) => Promi
   },
   manage_portfolio: misc.managePortfolio,
   upload_avatar: misc.uploadAvatar,
+  upload_milestone_evidence: evidence.uploadMilestoneEvidence,
+  submit_enterprise_kyc: kyc.submitEnterpriseKyc,
+  submit_individual_kyc: kyc.submitIndividualKyc,
 };
 
 /** Separa action de query embebida (legacy: action=get_tasks?sort_by=desc). */
@@ -143,6 +160,9 @@ export async function dispatch(req: Request): Promise<Response> {
   const auth = await authenticateRequest(req);
   const needsJson = req.method !== 'GET' && req.method !== 'HEAD' &&
     !(action === 'upload_avatar' && req.method === 'POST') &&
+    !(action === 'upload_milestone_evidence' && req.method === 'POST') &&
+    !(action === 'submit_enterprise_kyc' && req.method === 'POST') &&
+    !(action === 'submit_individual_kyc' && req.method === 'POST') &&
     !(action === 'get_task_details' && req.method === 'POST');
   const body = needsJson ? await readJsonBody(req) : {};
 
@@ -156,8 +176,39 @@ export async function dispatch(req: Request): Promise<Response> {
     body,
   };
 
+  const idempotencyKey = req.headers.get('Idempotency-Key')?.trim() ??
+    req.headers.get('idempotency-key')?.trim();
+  const useIdempotency = Boolean(
+    idempotencyKey && wantsIdempotency(action) &&
+      (req.method === 'POST' || req.method === 'PUT'),
+  );
+
+  if (useIdempotency && idempotencyKey) {
+    const cached = await getIdempotentResponse(auth.supabase, idempotencyKey, action);
+    if (cached) {
+      return jsonResponse(req, cached.body, cached.status);
+    }
+  }
+
   try {
-    return await handler(ctx);
+    const response = await handler(ctx);
+    if (useIdempotency && idempotencyKey && response.ok) {
+      try {
+        const clone = response.clone();
+        const stored = await clone.json() as Record<string, unknown>;
+        await storeIdempotentResponse(
+          auth.supabase,
+          idempotencyKey,
+          action,
+          auth.userId,
+          response.status,
+          stored,
+        );
+      } catch {
+        /* no cachear si body no es JSON */
+      }
+    }
+    return response;
   } catch (e) {
     if (e instanceof Error) {
       if (e.message === 'Unauthorized') {
