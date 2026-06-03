@@ -31,12 +31,14 @@ const DealListCard = ({
 
   const copyLink = () => void navigator.clipboard.writeText(dealPublicUrl(deal.deal_token));
 
+  const statusLabel = t(`deals.status.${deal.status}`, deal.status);
+
   return (
     <li className="deals-list-item deal-list-card">
-      <div className="deal-list-card__main">
-        <div className="deal-list-card__title-row">
-          <strong>{deal.title}</strong>
-          <span className={`deals-status-badge ${deal.status}`}>{deal.status}</span>
+      <div className="deal-list-card__body">
+        <div className="deal-list-card__head">
+          <h4 className="deal-list-card__title">{deal.title}</h4>
+          <span className={`deals-status-badge deals-status-badge--${deal.status}`}>{statusLabel}</span>
         </div>
         <p className="deal-list-card__meta">
           {Number(deal.amount_usdc).toFixed(2)} USDC · {t('deals.list.deposit')}{' '}

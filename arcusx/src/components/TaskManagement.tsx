@@ -6,6 +6,7 @@ import { useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hoo
 import { useI18n } from '../i18n/I18nProvider';
 import '../css/AdminPanel.css';
 import EscrowLifecycle from './EscrowLifecycle';
+import UsernameWithVerified from './UsernameWithVerified';
 
 interface TaskManagementProps {
   onUpdate?: () => void;
@@ -304,8 +305,26 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                         {task.title || t('common.noTitle')}
                       </div>
                     </td>
-                    <td>{task.creator_username || 'N/A'}</td>
-                    <td>{task.worker_username || 'N/A'}</td>
+                    <td>
+                      {task.creator_username ? (
+                        <UsernameWithVerified
+                          name={task.creator_display_name || task.creator_username}
+                          verified={!!task.creator_verified}
+                        />
+                      ) : (
+                        'N/A'
+                      )}
+                    </td>
+                    <td>
+                      {task.worker_username ? (
+                        <UsernameWithVerified
+                          name={task.worker_display_name || task.worker_username}
+                          verified={!!task.worker_verified}
+                        />
+                      ) : (
+                        'N/A'
+                      )}
+                    </td>
                     <td>
                       {task.price ? `${parseFloat(task.price).toFixed(7)} ${task.currency || 'USDC'}` : 'N/A'}
                     </td>
@@ -428,11 +447,29 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                   <div className="detail-grid">
                     <div className="detail-item">
                       <label>{t('admin.tasks.th.client')}:</label>
-                      <span>{selectedTask.creator_username || 'N/A'}</span>
+                      <span>
+                        {selectedTask.creator_username ? (
+                          <UsernameWithVerified
+                            name={selectedTask.creator_display_name || selectedTask.creator_username}
+                            verified={!!selectedTask.creator_verified}
+                          />
+                        ) : (
+                          'N/A'
+                        )}
+                      </span>
                     </div>
                     <div className="detail-item">
                       <label>{t('admin.tasks.th.worker')}:</label>
-                      <span>{selectedTask.worker_username || 'N/A'}</span>
+                      <span>
+                        {selectedTask.worker_username ? (
+                          <UsernameWithVerified
+                            name={selectedTask.worker_display_name || selectedTask.worker_username}
+                            verified={!!selectedTask.worker_verified}
+                          />
+                        ) : (
+                          'N/A'
+                        )}
+                      </span>
                     </div>
                   </div>
                 </div>

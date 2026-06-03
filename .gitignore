@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build / deploy artifacts
+dist/
+*.zip
+Archivo.zip
+*.tar.gz
+supabase/.deploy/
+supabase/.temp/
+escrow-deployment.json
+
+# Environment
+.env
+.env.local
+.env.production
+arcusx/.env
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*

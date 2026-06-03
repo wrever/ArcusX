@@ -16,7 +16,7 @@ export function corsHeaders(req: Request): HeadersInit {
   return {
     'Access-Control-Allow-Origin': ok ? (origin || allowed[0]) : allowed[0],
     'Access-Control-Allow-Headers':
-      'authorization, x-client-info, apikey, content-type, x-referral-internal-secret',
+      'authorization, x-client-info, apikey, content-type, idempotency-key, x-referral-internal-secret',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Credentials': 'true',
   };

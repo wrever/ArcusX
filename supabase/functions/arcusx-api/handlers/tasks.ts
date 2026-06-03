@@ -6,6 +6,9 @@ import { qp, qpInt } from './types.ts';
 import { requireUser } from './require.ts';
 import { uploadTaskFile } from './storage-helpers.ts';
 import { normalizeDisplayText } from '../../_shared/text-encoding.ts';
+import { creatorDisplayFields } from '../../_shared/creator-display.ts';
+import { logDomainEvent } from '../../_shared/domain-events.ts';
+import { loadCreatorEnrichment } from './kyc.ts';
 
 const ALLOWED_CURRENCIES = ['USDC'];
 const ALLOWED_DIFFICULTIES = ['Fácil', 'Intermedio', 'Difícil', 'FÃ¡cil', 'Fácil '];
@@ -58,8 +61,18 @@ export async function getTasks(ctx: ApiContext): Promise<Response> {
   const { data, error } = await q;
   if (error) return jsonError(req, error.message, 500);
 
+  const creatorIds = (data ?? []).map((row) => Number(row.user_id));
+  const enrichment = await loadCreatorEnrichment(supabase, creatorIds);
+
   const tasks = (data ?? []).map((row) => {
     const u = row.arcusx_users as Record<string, unknown> | null;
+    const uid = Number(row.user_id);
+    const box = enrichment.get(uid);
+    const display = creatorDisplayFields(
+      box?.user ?? u,
+      box?.enterpriseProfile ?? null,
+      box?.individualProfile ?? null,
+    );
     return {
       id: row.id,
       title: normalizeDisplayText(row.title as string),
@@ -69,7 +82,11 @@ export async function getTasks(ctx: ApiContext): Promise<Response> {
       currency: normalizeDisplayText(row.currency as string),
       difficulty: normalizeDisplayText(row.difficulty as string),
       category: normalizeDisplayText(row.category as string),
-      creator_username: normalizeDisplayText(u?.username ?? ''),
+      creator_username: normalizeDisplayText(display.creator_username),
+      creator_display_name: normalizeDisplayText(display.creator_display_name),
+      creator_verified: display.creator_verified,
+      creator_verified_enterprise: display.creator_verified_enterprise,
+      creator_verified_individual: display.creator_verified_individual,
       creator_id: u?.id ?? row.user_id,
       creator_rating: u?.average_rating ?? null,
       creator_total_ratings: u?.total_ratings ?? null,
@@ -285,6 +302,23 @@ export async function createTask(ctx: ApiContext): Promise<Response> {
   const { data, error } = await auth.supabase.from('arcusx_tasks').insert(insertRow).select('id').single();
   if (error) return jsonError(req, error.message, 500);
 
+  if (isPrivate && invitedUserId) {
+    const { data: creator } = await auth.supabase
+      .from('arcusx_users')
+      .select('username')
+      .eq('id', auth.userId)
+      .maybeSingle();
+    const who = creator?.username ?? 'Un cliente';
+    await insertArcusxNotification(auth.supabase, {
+      user_id_mysql: invitedUserId,
+      title: 'Invitación a oferta privada',
+      message:
+        `${who} te invitó a la oferta privada "${title}". Revisa Ofertas en tu panel para postular.`,
+      type: 'info',
+      email: true,
+    });
+  }
+
   const { data: userRow } = await auth.supabase
     .from('arcusx_users')
     .select('tasks_today, tasks_this_week')
@@ -299,6 +333,14 @@ export async function createTask(ctx: ApiContext): Promise<Response> {
     last_task_created: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   }).eq('id', auth.userId);
+
+  await logDomainEvent(auth.supabase, {
+    entity_type: 'task',
+    entity_id: data?.id ?? 0,
+    event_type: 'task.created',
+    actor_user_id: auth.userId,
+    payload: { is_private: isPrivate, price },
+  });
 
   return jsonSuccess(req, { task_id: data?.id, message: 'Tarea creada exitosamente' });
 }
@@ -396,8 +438,17 @@ export async function applyTask(ctx: ApiContext): Promise<Response> {
       title: 'Nueva propuesta',
       message: `${who} se postuló a "${title}". Revisa las propuestas en tu panel.`,
       type: 'info',
+      email: true,
     });
   }
+
+  await logDomainEvent(auth.supabase, {
+    entity_type: 'task',
+    entity_id: taskId,
+    event_type: 'task.applied',
+    actor_user_id: auth.userId,
+    payload: { applicant_id: auth.userId },
+  });
 
   return jsonSuccess(req, { message: 'Postulación enviada correctamente' });
 }

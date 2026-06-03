@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaChartLine, FaExclamationTriangle, FaBell, FaGavel, FaUsers, FaSignOutAlt, FaCoins, FaShieldAlt, FaTasks, FaWallet, FaUserPlus } from 'react-icons/fa';
+import { FaChartLine, FaExclamationTriangle, FaBell, FaGavel, FaUsers, FaSignOutAlt, FaCoins, FaShieldAlt, FaTasks, FaWallet, FaUserPlus, FaHistory } from 'react-icons/fa';
+import AdminActivity from './AdminActivity';
 import AdminStats from './AdminStats';
 import NotificationManagement from './NotificationManagement';
 import DisputeManagement from './DisputeManagement';
@@ -10,6 +11,7 @@ import UserManagement from './UserManagement';
 import FeeManagement from './FeeManagement';
 import TokenManagement from './TokenManagement';
 import ReferralManagement from './ReferralManagement';
+import KycManagement from './KycManagement';
 import { getAdminStats, getAdminConfig, getReferralStats, adminLogout } from '../services/adminService';
 import { useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks';
 import '../css/AdminPanel.css';
@@ -180,6 +182,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
     { id: 'notifications', label: 'Notificaciones', icon: <FaBell /> },
     { id: 'disputes', label: 'Arbitraje', icon: <FaGavel /> },
     { id: 'referrals', label: 'Referidos', icon: <FaUserPlus /> },
+    { id: 'kyc', label: 'KYB / KYC', icon: <FaShieldAlt /> },
+    { id: 'activity', label: 'Actividad', icon: <FaHistory /> },
   ];
 
   if (!isAdmin) {
@@ -315,6 +319,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
         {activeTab === 'referrals' && (
           <ReferralManagement />
         )}
+
+        {activeTab === 'kyc' && <KycManagement />}
+
+        {activeTab === 'activity' && <AdminActivity />}
       </div>
     </div>
   );

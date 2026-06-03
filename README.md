@@ -207,7 +207,8 @@ The landing page shows **open tasks**, **registered users**, and **completed vol
 
 - API list: [`docs/api/ENDPOINTS.md`](./docs/api/ENDPOINTS.md)
 - Testnet demo script: [`docs/demo/E2E_TESTNET.md`](./docs/demo/E2E_TESTNET.md)
-- Sprint changelog: [`docs/sprints/week-03-changelog-and-architecture.md`](./docs/sprints/week-03-changelog-and-architecture.md)
+- Sprint changelog: Week 3 [`week-03-changelog-and-architecture.md`](./docs/sprints/week-03-changelog-and-architecture.md) · Week 4 [`week-04-changelog-and-architecture.md`](./docs/sprints/week-04-changelog-and-architecture.md)
+- **Tranche 2 (Q2 2026):** cierre [`TRANCHE2_CLOSURE.md`](./docs/sprints/TRANCHE2_CLOSURE.md) · próximos pasos [`POST_TRANCHE2_TODO.md`](./docs/sprints/POST_TRANCHE2_TODO.md) · E2E [`E2E_CHECKLIST.md`](./docs/demo/E2E_CHECKLIST.md)
 - InstaAwards: Week 3 [`instaawards-week3.md`](./docs/sprints/instaawards-week3.md) · Week 4 close [`instaawards-week4.md`](./docs/sprints/instaawards-week4.md) · checklist [`week-04-plan-and-checklist.md`](./docs/sprints/week-04-plan-and-checklist.md)
 - **ArcusX Guard + agentic payments:** [`docs/agentic-payments/arcusx-guard/`](./docs/agentic-payments/arcusx-guard/) — escrow agéntico + IA protectora
 - **ArcusX Deals (acuerdos modulares):** [`docs/agreement-deals/`](./docs/agreement-deals/) — plantillas + link de pago (alquiler, P2P, coaching…)

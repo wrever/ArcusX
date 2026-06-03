@@ -4,7 +4,8 @@
 
 **Prerequisites:** Week 3 engineering ([`week-03-changelog-and-architecture.md`](./week-03-changelog-and-architecture.md)), pilot framing ([`instaawards-week3.md`](./instaawards-week3.md)), demo script ([`docs/demo/E2E_TESTNET.md`](../demo/E2E_TESTNET.md)).
 
-**Sprint checklist (engineering):** [`week-04-plan-and-checklist.md`](./week-04-plan-and-checklist.md)
+**Sprint changelog (engineering):** [`week-04-changelog-and-architecture.md`](./week-04-changelog-and-architecture.md)  
+**Sprint checklist:** [`week-04-plan-and-checklist.md`](./week-04-plan-and-checklist.md)
 
 ---
 
@@ -161,6 +162,7 @@ Pick **only** what blocks demo or pilot; defer the rest.
 | Resource | Path |
 |----------|------|
 | Week 3 changelog | [`week-03-changelog-and-architecture.md`](./week-03-changelog-and-architecture.md) |
+| Week 4 changelog | [`week-04-changelog-and-architecture.md`](./week-04-changelog-and-architecture.md) |
 | Week 3 InstaAwards | [`instaawards-week3.md`](./instaawards-week3.md) |
 | Month plan (reviewer) | [`PLAN_MES1_REVISORES.md`](../../PLAN_MES1_REVISORES.md) |
 | Panel notes | [`arcusx/docs/PANEL_CODIGO_ALEBRIJE_STELLAR_HOUSE.md`](../../arcusx/docs/PANEL_CODIGO_ALEBRIJE_STELLAR_HOUSE.md) |

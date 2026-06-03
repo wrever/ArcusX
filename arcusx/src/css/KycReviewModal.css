@@ -1,0 +1,209 @@
+.kyc-review-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.kyc-review-modal__panel {
+  width: 100%;
+  max-width: 920px;
+  margin: auto;
+  background: var(--card-bg, #1a2332);
+  border-radius: 14px;
+  border: 1px solid rgba(16, 221, 136, 0.2);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+}
+
+.kyc-review-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.kyc-review-modal__header h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.15rem;
+}
+
+.kyc-review-modal__meta {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+
+.kyc-review-modal__close {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 1.75rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.7;
+  padding: 0 0.25rem;
+}
+
+.kyc-review-modal__close:hover {
+  opacity: 1;
+}
+
+.kyc-review-modal__loading {
+  padding: 2rem;
+  text-align: center;
+  opacity: 0.85;
+}
+
+.kyc-review-modal__loading .spinning {
+  animation: kyc-review-spin 0.9s linear infinite;
+  margin-right: 0.5rem;
+}
+
+@keyframes kyc-review-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.kyc-review-modal__section {
+  padding: 1rem 1.5rem 0;
+}
+
+.kyc-review-modal__section h4 {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+}
+
+.kyc-review-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem 1rem;
+  margin: 0;
+}
+
+.kyc-review-detail-grid dt {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.65;
+  margin-bottom: 0.15rem;
+}
+
+.kyc-review-detail-grid dd {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.kyc-review-docs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+  padding-bottom: 1rem;
+}
+
+.kyc-review-doc-card {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.85rem;
+}
+
+.kyc-review-doc-card h5 {
+  margin: 0 0 0.35rem;
+  font-size: 0.88rem;
+}
+
+.kyc-review-doc-filename {
+  margin: 0 0 0.5rem;
+  font-size: 0.72rem;
+  opacity: 0.7;
+  word-break: break-all;
+}
+
+.kyc-review-doc-img {
+  display: block;
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #0a0f14;
+  cursor: zoom-in;
+}
+
+.kyc-review-doc-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--primary-green, #10dd88);
+  font-size: 0.88rem;
+}
+
+.kyc-review-modal__empty {
+  margin: 0;
+  font-size: 0.88rem;
+  opacity: 0.8;
+  padding: 0.5rem 0 1rem;
+}
+
+.kyc-review-rejection-note {
+  margin: 0 1.5rem 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.12);
+  font-size: 0.88rem;
+}
+
+.kyc-review-modal__footer {
+  padding: 1rem 1.5rem 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.kyc-review-modal__footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.kyc-review-modal__secondary {
+  padding: 0.45rem 0.9rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.kyc-review-reject-form label {
+  display: block;
+  font-size: 0.88rem;
+  margin-bottom: 0.75rem;
+}
+
+.kyc-review-reject-form textarea {
+  display: block;
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.65rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.2);
+  color: inherit;
+  resize: vertical;
+}
+
+:root[data-theme='light'] .kyc-review-doc-card {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+:root[data-theme='light'] .kyc-review-doc-img {
+  background: #f0f2f1;
+}

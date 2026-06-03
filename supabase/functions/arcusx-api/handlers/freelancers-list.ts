@@ -3,6 +3,7 @@ import type { ApiContext } from './types.ts';
 import { qp, qpInt } from './types.ts';
 import { parseSkills } from './stats-helpers.ts';
 import { normalizeDisplayText } from '../../_shared/text-encoding.ts';
+import { loadUsersVerificationPublic } from '../../_shared/user-verification.ts';
 
 const STELLAR_G = /^G[A-Z0-9]{55}$/;
 
@@ -172,10 +173,22 @@ export async function getFreelancers(ctx: ApiContext): Promise<Response> {
   const from = (page - 1) * limit;
   const pageRows = rows.slice(from, from + limit);
 
-  const freelancers = pageRows.map((f) => ({
-    ...f,
-    skills: parseSkills(f.skills),
-  }));
+  const verMap = await loadUsersVerificationPublic(
+    supabase,
+    pageRows.map((f) => f.id),
+  );
+
+  const freelancers = pageRows.map((f) => {
+    const ver = verMap.get(f.id);
+    return {
+      ...f,
+      skills: parseSkills(f.skills),
+      kyc_verified: ver?.creator_verified ?? false,
+      creator_verified: ver?.creator_verified ?? false,
+      display_name: ver?.creator_display_name ?? f.username,
+      public_badges: ver?.public_badges ?? [],
+    };
+  });
 
   return jsonResponse(req, {
     success: true,

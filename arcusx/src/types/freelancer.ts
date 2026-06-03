@@ -18,6 +18,10 @@ export interface Freelancer {
   has_payout_wallet?: boolean;
   /** Presente en API reciente; el front calcula has_payout_wallet si falta */
   private_payout_wallet?: string | null;
+  kyc_verified?: boolean;
+  creator_verified?: boolean;
+  display_name?: string;
+  public_badges?: string[];
 }
 
 export interface FreelancersResponse {

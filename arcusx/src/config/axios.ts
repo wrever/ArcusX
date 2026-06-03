@@ -1,8 +1,9 @@
 import axios from 'axios';
 import { supabaseAnonKey } from './supabase';
+import { useSupabaseApi } from './arcusxApi';
 
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_SUPABASE_URL
+  baseURL: useSupabaseApi && import.meta.env.VITE_SUPABASE_URL
     ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/arcusx-api`
     : (import.meta.env.VITE_API_URL || 'https://arcusx.pro/api'),
   timeout: 30000,

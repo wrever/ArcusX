@@ -1,5 +1,6 @@
 import { jsonError, jsonResponse, jsonSuccess } from '../../_shared/arcusx-cors.ts';
-import { insertArcusxNotification } from '../../_shared/arcusx-notifications.ts';
+import { insertArcusxNotification, notifyUsers } from '../../_shared/arcusx-notifications.ts';
+import { logDomainEvent } from '../../_shared/domain-events.ts';
 import type { ApiContext } from './types.ts';
 import { qpInt } from './types.ts';
 import { requireUser, requireAdmin } from './require.ts';
@@ -45,8 +46,17 @@ export async function createDispute(ctx: ApiContext): Promise<Response> {
       title: 'Disputa abierta',
       message: `Se abrió una disputa en "${task.title ?? 'la tarea'}". Revisa los detalles en tu panel.`,
       type: 'warning',
+      email: false,
     });
   }
+
+  await logDomainEvent(auth.supabase, {
+    entity_type: 'dispute',
+    entity_id: data?.id ?? taskId,
+    event_type: 'dispute.opened',
+    actor_user_id: auth.userId,
+    payload: { task_id: taskId },
+  });
 
   return jsonSuccess(req, { dispute_id: data?.id });
 }
@@ -195,6 +205,12 @@ export async function adminReleaseDisputeFunds(ctx: ApiContext): Promise<Respons
   const disputeId = Number(body.dispute_id);
   const resolution = String(body.resolution ?? 'resolved');
 
+  const { data: dispute } = await auth.supabase
+    .from('arcusx_disputes')
+    .select('task_id')
+    .eq('id', disputeId)
+    .maybeSingle();
+
   const { error } = await auth.supabase.from('arcusx_disputes').update({
     status: 'resolved',
     resolution,
@@ -203,5 +219,29 @@ export async function adminReleaseDisputeFunds(ctx: ApiContext): Promise<Respons
   }).eq('id', disputeId);
 
   if (error) return jsonError(req, error.message, 500);
+
+  if (dispute?.task_id) {
+    const { data: task } = await auth.supabase
+      .from('arcusx_tasks')
+      .select('title, user_id, accepted_applicant_id')
+      .eq('id', dispute.task_id)
+      .maybeSingle();
+    const title = String(task?.title ?? 'la tarea');
+    await notifyUsers(auth.supabase, [task?.user_id, task?.accepted_applicant_id], {
+      title: 'Disputa resuelta',
+      message:
+        `La disputa de "${title}" fue resuelta por el equipo ArcusX. Revisa tu panel para los próximos pasos con el escrow.`,
+      type: 'info',
+      email: false,
+    });
+    await logDomainEvent(auth.supabase, {
+      entity_type: 'dispute',
+      entity_id: disputeId,
+      event_type: 'dispute.resolved',
+      actor_user_id: auth.userId,
+      payload: { task_id: dispute.task_id, resolution },
+    });
+  }
+
   return jsonSuccess(req, { message: 'Disputa resuelta' });
 }

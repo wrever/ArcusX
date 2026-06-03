@@ -18,6 +18,7 @@ import {
 import { createAndFundDealEscrow, funderWallet, type DealEscrowHooks } from '../services/dealEscrow';
 import { dealPlatformFeePercent } from '../utils/dealHelpers';
 import Navbar from '../components/Navbar';
+import DealShareLink from '../components/DealShareLink';
 import '../css/DealsPages.css';
 
 const DealPublicPage = () => {
@@ -32,6 +33,7 @@ const DealPublicPage = () => {
   const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds();
   const [deal, setDeal] = useState<AgreementDeal | null>(null);
   const [canAccept, setCanAccept] = useState(false);
+  const [viewerRole, setViewerRole] = useState<'initiator' | 'counterparty' | 'guest' | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
@@ -43,6 +45,11 @@ const DealPublicPage = () => {
       .then((r) => {
         setDeal(r.deal);
         setCanAccept(Boolean(r.can_accept));
+        setViewerRole(
+          r.viewer_role === 'initiator' || r.viewer_role === 'counterparty'
+            ? r.viewer_role
+            : null,
+        );
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
@@ -104,6 +111,8 @@ const DealPublicPage = () => {
   };
 
   const payerAddr = deal ? funderWallet(deal) : '';
+  const showShareAsOwner =
+    deal?.status === 'sent' && viewerRole === 'initiator' && token;
   const showAccept = deal?.status === 'sent' && canAccept;
   const showFund =
     deal &&
@@ -115,7 +124,7 @@ const DealPublicPage = () => {
   return (
     <>
       <Navbar />
-      <div className="deals-page">
+      <div className="deals-page deals-page--below-nav">
         <h1><FaHandshake /> {t('deals.public.title')}</h1>
         <p className="deals-lead">{t('deals.public.lead')}</p>
 
@@ -164,8 +173,8 @@ const DealPublicPage = () => {
               </p>
             )}
 
-            {isAuthenticated && deal.status === 'sent' && !canAccept && !showAccept && (
-              <p className="deals-disclaimer" style={{ marginTop: '1rem' }}>{t('deals.public.ownDeal')}</p>
+            {showShareAsOwner && (
+              <DealShareLink dealToken={token} hint={t('deals.public.ownDeal')} />
             )}
           </div>
         )}

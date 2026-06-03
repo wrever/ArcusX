@@ -4,6 +4,7 @@ import { qpInt } from './types.ts';
 import { requireUser } from './require.ts';
 import { computeUserPublicStats, isPublicProfile, parseSkills } from './stats-helpers.ts';
 import { normalizeDisplayText } from '../../_shared/text-encoding.ts';
+import { loadUsersVerificationPublic } from '../../_shared/user-verification.ts';
 
 export async function getUserDetails(ctx: ApiContext): Promise<Response> {
   const { req, supabase, url } = ctx;
@@ -28,7 +29,9 @@ export async function getUserProfile(ctx: ApiContext): Promise<Response> {
 
   const { data: user, error } = await supabase
     .from('arcusx_users')
-    .select('id, username, email, avatar_url, bio, portfolio_url, public_profile, created_at, average_rating, total_ratings, skills')
+    .select(
+      'id, username, email, avatar_url, bio, portfolio_url, public_profile, created_at, average_rating, total_ratings, skills, account_type, kyc_status, wallet_address, private_payout_wallet, completed_tasks_count',
+    )
     .eq('id', profileUserId)
     .maybeSingle();
 
@@ -48,6 +51,9 @@ export async function getUserProfile(ctx: ApiContext): Promise<Response> {
     .order('created_at', { ascending: false })
     .limit(50);
 
+  const verMap = await loadUsersVerificationPublic(supabase, [profileUserId]);
+  const ver = verMap.get(profileUserId);
+
   const profile: Record<string, unknown> = {
     id: user.id,
     username: user.username,
@@ -60,7 +66,11 @@ export async function getUserProfile(ctx: ApiContext): Promise<Response> {
     total_ratings: user.total_ratings != null ? Number(user.total_ratings) : 0,
     portfolio: portfolio ?? [],
     skills: parseSkills(user.skills),
-    verified: false,
+    verified: ver?.creator_verified ?? false,
+    kyc_verified: ver?.creator_verified ?? false,
+    kyc_status: ver?.kyc_status ?? user.kyc_status,
+    display_name: ver?.creator_display_name ?? user.username,
+    public_badges: ver?.public_badges ?? [],
   };
   if (isOwner) profile.email = user.email;
 

@@ -13,6 +13,8 @@ import '../css/Hero.css';
 import { useI18n } from '../i18n/I18nProvider';
 import Footer from './Footer';
 import SEO from './SEO';
+import TaskCreatorLine from './TaskCreatorLine';
+import VerifiedEnterpriseBadge from './VerifiedEnterpriseBadge';
 
 /** URL de /create-task con contexto de contratación (también leída por query en CreateTask). */
 function buildHireTaskUrl(freelancer: Freelancer): string {
@@ -53,6 +55,11 @@ interface TaskResult {
   category?: string;
   difficulty?: string;
   creator_username?: string;
+  creator_display_name?: string;
+  creator_verified?: boolean;
+  creator_verified_enterprise?: boolean;
+  creator_verified_individual?: boolean;
+  creator_id?: number;
   created_at?: string;
   proposal_count?: number;
 }
@@ -516,6 +523,23 @@ const Hero = () => {
                                   {task.description.slice(0, 100)}{task.description.length > 100 ? '…' : ''}
                                 </p>
                               )}
+                              {(task.creator_display_name || task.creator_username) && (
+                                <TaskCreatorLine
+                                  displayName={
+                                    task.creator_display_name?.trim() ||
+                                    task.creator_username?.trim() ||
+                                    ''
+                                  }
+                                  username={task.creator_username}
+                                  creatorId={task.creator_id}
+                                  verified={Boolean(
+                                    task.creator_verified ??
+                                      task.creator_verified_enterprise ??
+                                      task.creator_verified_individual,
+                                  )}
+                                  linkToProfile={Boolean(task.creator_id)}
+                                />
+                              )}
                               <div className="landing-hero-search-card-footer">
                                 <span className="landing-hero-search-card-price">
                                   {parseFloat(task.price).toFixed(2)} {task.currency}
@@ -565,6 +589,23 @@ const Hero = () => {
                                 <p className="hero-carousel-card-desc">
                                   {task.description.slice(0, 120)}{task.description.length > 120 ? '…' : ''}
                                 </p>
+                              )}
+                              {(task.creator_display_name || task.creator_username) && (
+                                <TaskCreatorLine
+                                  displayName={
+                                    task.creator_display_name?.trim() ||
+                                    task.creator_username?.trim() ||
+                                    ''
+                                  }
+                                  username={task.creator_username}
+                                  creatorId={task.creator_id}
+                                  verified={Boolean(
+                                    task.creator_verified ??
+                                      task.creator_verified_enterprise ??
+                                      task.creator_verified_individual,
+                                  )}
+                                  linkToProfile={Boolean(task.creator_id)}
+                                />
                               )}
                               <div className="hero-carousel-card-footer">
                                 <span className="hero-carousel-card-price">
@@ -647,13 +688,18 @@ const Hero = () => {
                               )}
                             </div>
                             <div className="hero-freelancer-card-head">
-                              <button
-                                type="button"
-                                className="hero-freelancer-name-btn"
-                                onClick={() => navigate(`/profile/${fl.id}`)}
-                              >
-                                {fl.username}
-                              </button>
+                              <div className="hero-freelancer-name-row">
+                                <button
+                                  type="button"
+                                  className="hero-freelancer-name-btn"
+                                  onClick={() => navigate(`/profile/${fl.id}`)}
+                                >
+                                  {fl.display_name || fl.username}
+                                </button>
+                                {(fl.kyc_verified || fl.creator_verified) && (
+                                  <VerifiedEnterpriseBadge verified size="sm" className="hero-freelancer-verified-badge" />
+                                )}
+                              </div>
                               <span className="hero-carousel-card-meta hero-freelancer-meta-line">{metaLine}</span>
                               {skillsPreview ? (
                                 <span className="hero-freelancer-skills-preview">{skillsPreview}</span>

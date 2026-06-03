@@ -5,7 +5,8 @@
 
 import { memo, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaCheckCircle, FaStar, FaPlus } from 'react-icons/fa';
+import { FaStar, FaPlus } from 'react-icons/fa';
+import UsernameWithVerified from './UsernameWithVerified';
 import RatingDisplay from './RatingDisplay';
 import { useI18n } from '../i18n/I18nProvider';
 import type { Freelancer } from '../types/freelancer';
@@ -99,14 +100,13 @@ const FreelancerCard = memo(({ freelancer }: FreelancerCardProps) => {
       <div className="freelancer-card-content">
         <div className="freelancer-card-header">
           <div className="freelancer-name-row">
-            <h3 className="freelancer-name">{freelancer.username}</h3>
-
-            {signals.isVerified && (
-              <span className="freelancer-badge verified" title={t('freelancers.badge.verified')}>
-                <FaCheckCircle />
-                {t('freelancers.badge.verified')}
-              </span>
-            )}
+            <h3 className="freelancer-name">
+              <UsernameWithVerified
+                name={freelancer.display_name || freelancer.username}
+                verified={freelancer.kyc_verified ?? freelancer.creator_verified ?? signals.isVerified}
+                nameClassName="freelancer-name-text"
+              />
+            </h3>
 
             {signals.badges.includes('topRated') && (
               <span className="freelancer-badge top" title={t('freelancers.badge.top')}>

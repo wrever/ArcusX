@@ -1,5 +1,10 @@
 import { jsonError, jsonSuccess } from '../../_shared/arcusx-cors.ts';
-import { insertArcusxNotification } from '../../_shared/arcusx-notifications.ts';
+import {
+  formatFundsReleasedMessage,
+  insertArcusxNotification,
+  userIdForStellarWallet,
+} from '../../_shared/arcusx-notifications.ts';
+import { logDomainEvent } from '../../_shared/domain-events.ts';
 import { normalizePlatformFeeRate } from '../../_shared/platform-fee.ts';
 import type { ApiContext } from './types.ts';
 import { requireUser } from './require.ts';
@@ -15,6 +20,18 @@ const VALID_TEMPLATES = new Set([
 
 function isStellarG(addr: string): boolean {
   return typeof addr === 'string' && addr.startsWith('G') && addr.length === 56;
+}
+
+/** UUID v4 — un token por deal (UNIQUE en BD); no se aceptan tokens adivinables cortos */
+const DEAL_TOKEN_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isValidDealToken(token: string): boolean {
+  return DEAL_TOKEN_RE.test(token);
+}
+
+function newDealToken(): string {
+  return crypto.randomUUID();
 }
 
 async function platformFeeRate(supabase: ApiContext['supabase']): Promise<number> {
@@ -101,32 +118,72 @@ export async function createDeal(ctx: ApiContext): Promise<Response> {
   const feeRate = await platformFeeRate(auth.supabase);
   const clientTotal = Math.round((amountUsdc / (1 - feeRate)) * 1e7) / 1e7;
   const feeUsdc = Math.round((clientTotal - amountUsdc) * 1e7) / 1e7;
-  const dealToken = crypto.randomUUID();
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const { data, error } = await auth.supabase.from('arcusx_agreements').insert({
-    deal_token: dealToken,
-    template_id: templateId,
-    payment_mode: 'one_time',
-    title,
-    description,
-    initiator_user_id: auth.userId,
-    initiator_wallet: initiatorWallet,
-    counterparty_wallet: counterpartyWallet,
-    release_signer_wallet: releaseSignerWallet,
-    beneficiary_wallet: beneficiaryWallet,
-    funder_role: funderRole,
-    amount_usdc: amountUsdc,
-    fee_usdc: feeUsdc,
-    client_total: clientTotal,
-    platform_fee_rate: feeRate,
-    status: 'sent',
-    expires_at: expiresAt,
-  }).select('*').single();
+  let data: Record<string, unknown> | null = null;
+  let dealToken = '';
+  for (let attempt = 0; attempt < 3; attempt++) {
+    dealToken = newDealToken();
+    const inserted = await auth.supabase.from('arcusx_agreements').insert({
+      deal_token: dealToken,
+      template_id: templateId,
+      payment_mode: 'one_time',
+      title,
+      description,
+      initiator_user_id: auth.userId,
+      initiator_wallet: initiatorWallet,
+      counterparty_wallet: counterpartyWallet,
+      release_signer_wallet: releaseSignerWallet,
+      beneficiary_wallet: beneficiaryWallet,
+      funder_role: funderRole,
+      amount_usdc: amountUsdc,
+      fee_usdc: feeUsdc,
+      client_total: clientTotal,
+      platform_fee_rate: feeRate,
+      status: 'sent',
+      expires_at: expiresAt,
+    }).select('*').single();
 
-  if (error) return jsonError(req, error.message, 500);
+    if (!inserted.error) {
+      data = inserted.data as Record<string, unknown>;
+      break;
+    }
+    if (inserted.error.code !== '23505') {
+      return jsonError(req, inserted.error.message, 500);
+    }
+  }
+
+  if (!data) return jsonError(req, 'No se pudo generar un link único. Reintentá.', 500);
 
   await logDealEvent(auth.supabase, data.id as string, 'created', auth.userId, { template_id: templateId });
+  await logDomainEvent(auth.supabase, {
+    entity_type: 'deal',
+    entity_id: data.id as string,
+    event_type: 'deal.created',
+    actor_user_id: auth.userId,
+    payload: { deal_token: dealToken, template_id: templateId },
+  });
+
+  if (counterpartyWallet) {
+    const { data: invitee } = await auth.supabase
+      .from('arcusx_users')
+      .select('id')
+      .or(
+        `wallet_address.eq.${counterpartyWallet},private_payout_wallet.eq.${counterpartyWallet}`,
+      )
+      .maybeSingle();
+    const inviteeId = Number(invitee?.id);
+    if (inviteeId > 0 && inviteeId !== auth.userId) {
+      await insertArcusxNotification(auth.supabase, {
+        user_id_mysql: inviteeId,
+        title: 'Invitación a un acuerdo',
+        message:
+          `Te invitaron al acuerdo "${title}". Abre el link de pago en ArcusX para revisar y aceptar.`,
+        type: 'info',
+        email: true,
+      });
+    }
+  }
 
   return jsonSuccess(req, {
     agreement: data,
@@ -140,6 +197,7 @@ export async function getDealByToken(ctx: ApiContext): Promise<Response> {
   const token = url.searchParams.get('deal_token')?.trim() ??
     String(ctx.body.deal_token ?? '').trim();
   if (!token) return jsonError(req, 'deal_token requerido', 400);
+  if (!isValidDealToken(token)) return jsonError(req, 'Link de pago inválido', 400);
 
   const { data, error } = await supabase
     .from('arcusx_agreements')
@@ -195,6 +253,7 @@ export async function acceptDeal(ctx: ApiContext): Promise<Response> {
   const dealToken = String(body.deal_token ?? '').trim();
   const wallet = String(body.wallet_address ?? '').trim();
   if (!dealToken) return jsonError(req, 'deal_token requerido', 400);
+  if (!isValidDealToken(dealToken)) return jsonError(req, 'Link de pago inválido', 400);
   if (!isStellarG(wallet)) return jsonError(req, 'Wallet inválida', 400);
 
   const { data: deal } = await auth.supabase
@@ -239,6 +298,7 @@ export async function acceptDeal(ctx: ApiContext): Promise<Response> {
     title: 'Deal aceptado',
     message: `Tu acuerdo "${deal.title}" fue aceptado. El pagador puede fondear el escrow.`,
     type: 'success',
+    email: false,
   });
 
   return jsonSuccess(req, { message: 'Deal aceptado', status: 'accepted' });
@@ -297,6 +357,7 @@ export async function finalizeDealEscrow(ctx: ApiContext): Promise<Response> {
       title: 'Escrow del deal fondeado',
       message: `El acuerdo "${deal.title}" tiene fondos en custodia USDC.`,
       type: 'success',
+      email: false,
     });
   }
 
@@ -370,13 +431,28 @@ export async function markDealReleased(ctx: ApiContext): Promise<Response> {
 
   await logDealEvent(auth.supabase, dealId, 'released', auth.userId, { tx_hash: txHash });
 
-  const notifyIds = [Number(deal.initiator_user_id), Number(deal.counterparty_user_id)].filter(Boolean);
-  for (const uid of notifyIds) {
+  const dealLabel = `"${deal.title}"`;
+  const beneficiaryWallet = String(deal.beneficiary_wallet ?? '').trim();
+  const payeeId = await userIdForStellarWallet(auth.supabase, beneficiaryWallet);
+
+  if (payeeId) {
+    await insertArcusxNotification(auth.supabase, {
+      user_id_mysql: payeeId,
+      title: 'Ya liberaron tus fondos',
+      message: formatFundsReleasedMessage(`el acuerdo ${dealLabel}`),
+      type: 'success',
+      email: true,
+    });
+  }
+
+  for (const uid of [Number(deal.initiator_user_id), Number(deal.counterparty_user_id)]) {
+    if (!uid || uid === payeeId) continue;
     await insertArcusxNotification(auth.supabase, {
       user_id_mysql: uid,
       title: 'Deal completado',
-      message: `Los fondos del acuerdo "${deal.title}" fueron liberados.`,
+      message: `Los fondos del acuerdo ${dealLabel} fueron liberados.`,
       type: 'success',
+      email: false,
     });
   }
 

@@ -14,10 +14,16 @@ import { arcusxApiUrl } from './config/arcusxApi';
 import { useAuth } from './hooks/useAuth';
 import WalletButton from './components/WalletButton';
 import { useScheduledTaskDeletion } from './hooks/useScheduledTaskDeletion';
+import { useNotificationsRealtime } from './hooks/useNotificationsRealtime';
 import DashboardFooter from './components/DashboardFooter';
 import CreateTask from './components/CreateTask';
-// import PendingNotificationsPopup from './components/PendingNotificationsPopup'; // Popup eliminado
-import { getUserNotifications, Notification, markNotificationAsRead as markNotificationAsReadService, dismissNotification } from './services/notificationService';
+import {
+  getUserNotifications,
+  Notification,
+  markNotificationAsRead as markNotificationAsReadService,
+  dismissNotification,
+  isNotificationSessionError,
+} from './services/notificationService';
 import { getUserDisputes, UserDispute } from './services/disputeService';
 import { getUserTransactions, getUserEarningsSummary, Transaction } from './services/transactionService';
 import { getUserProfile, getUserPublicStats } from './services/profileService';
@@ -40,6 +46,11 @@ import { fetchPrivateOffers, type PrivateOfferTask } from './services/privateOff
 import { authService } from './services/authService';
 import PrivateOfferWalletModal from './components/PrivateOfferWalletModal';
 import DashboardDealsPanel from './components/DashboardDealsPanel';
+import SettingsVerificationSection from './components/SettingsVerificationSection';
+import SettingsBadgesCatalog from './components/SettingsBadgesCatalog';
+import './css/SettingsVerificationSection.css';
+import './css/SettingsBadgesCatalog.css';
+import TaskCreatorLine from './components/TaskCreatorLine';
 import { isValidStellarGAddress } from './utils/stellarAddress';
 
 interface UserData {
@@ -59,6 +70,10 @@ interface TaskData {
   difficulty: string;
   category: string;
   creator_username: string; // Nombre del usuario que creó la tarea
+  creator_display_name?: string;
+  creator_verified?: boolean;
+  creator_verified_enterprise?: boolean;
+  creator_verified_individual?: boolean;
   creator_id?: number; // ID del creador
   creator_rating?: number; // Rating promedio del creador
   creator_total_ratings?: number; // Total de ratings del creador
@@ -81,7 +96,18 @@ function normalizeTaskForDisplay(task: TaskData): TaskData {
     creator_username: task.creator_username
       ? normalizeDisplayText(task.creator_username)
       : task.creator_username,
+    creator_display_name: task.creator_display_name
+      ? normalizeDisplayText(task.creator_display_name)
+      : task.creator_display_name,
   };
+}
+
+function taskCreatorLabel(task: TaskData): string {
+  return (
+    task.creator_display_name?.trim() ||
+    task.creator_username?.trim() ||
+    ''
+  );
 }
 
 const Dashboard = () => {
@@ -297,6 +323,12 @@ const Dashboard = () => {
     if (searchParams.get('tab') !== 'deals' || !showEnterpriseTab('deals')) return;
     setActiveTab('deals');
   }, [searchParams, enterprise]);
+
+  useEffect(() => {
+    if (searchParams.get('tab') === 'settings') {
+      setActiveTab('settings');
+    }
+  }, [searchParams]);
 
   // Si cambian condiciones de modo, mantener al usuario en un tab permitido
   useEffect(() => {
@@ -680,14 +712,18 @@ const Dashboard = () => {
     setLoadingNotifications(true);
     setNotificationsActionError('');
     try {
-      const data = await getUserNotifications({ page: 1, limit: 50 });
+      const data = await getUserNotifications({
+        page: 1,
+        limit: 50,
+        mysqlUserId: Number(user.id),
+      });
       setNotifications(data.notifications);
       setUnreadCount(data.unread_count);
     } catch (error: unknown) {
       setNotifications([]);
       setUnreadCount(0);
       const msg = error instanceof Error ? error.message : String(error);
-      if (msg.includes('link_required') || msg.includes('not authenticated')) {
+      if (isNotificationSessionError(msg)) {
         setNotificationsActionError(t('dashboard.notifications.error.session'));
       } else {
         setNotificationsActionError(t('dashboard.notifications.error.load'));
@@ -697,18 +733,24 @@ const Dashboard = () => {
     }
   };
 
-  // Cargar notificaciones y disputas al montar el componente y cuando cambie el usuario
+  useNotificationsRealtime({
+    enabled: Boolean(user?.id),
+    onInsert: () => {
+      void fetchNotifications();
+    },
+  });
+
+  // Cargar notificaciones y disputas; fallback polling si Realtime falla
   useEffect(() => {
     if (user?.id) {
       fetchNotifications();
       fetchPendingDisputes();
-      
-      // Actualizar notificaciones y disputas cada 30 segundos
+
       const interval = setInterval(() => {
         fetchNotifications();
         fetchPendingDisputes();
-      }, 30000);
-      
+      }, 5 * 60 * 1000);
+
       return () => clearInterval(interval);
     }
   }, [user?.id]);
@@ -717,7 +759,7 @@ const Dashboard = () => {
   const markNotificationAsRead = async (notificationId: number) => {
     try {
       // Llamar al servicio para persistir en el backend
-      await markNotificationAsReadService(notificationId);
+      await markNotificationAsReadService(notificationId, user?.id ? Number(user.id) : undefined);
       
       // Actualizar estado local
       setNotifications(prev => 
@@ -739,9 +781,11 @@ const Dashboard = () => {
       // Marcar todas las notificaciones no leídas como leídas
       const unreadNotifications = notifications.filter(n => !n.is_read);
       await Promise.all(
-        unreadNotifications.map(notification => 
-          markNotificationAsReadService(notification.id).catch(() => {
-          })
+        unreadNotifications.map((notification) =>
+          markNotificationAsReadService(
+            notification.id,
+            user?.id ? Number(user.id) : undefined,
+          ).catch(() => undefined),
         )
       );
       
@@ -781,10 +825,10 @@ const Dashboard = () => {
     const notification = notifications.find((n) => n.id === notificationId);
     setNotificationsActionError('');
     try {
-      if (user?.id) {
-        await ensureArcusxSupabaseUserLink(Number(user.id));
-      }
-      await dismissNotification(notificationId);
+      await dismissNotification(
+        notificationId,
+        user?.id ? Number(user.id) : undefined,
+      );
     } catch (err: unknown) {
       const raw = err instanceof Error ? err.message : String(err);
       if (import.meta.env.DEV) {
@@ -1402,13 +1446,16 @@ const Dashboard = () => {
                       <div className="task-detail">
                         <span className="task-detail-label">{t('dashboard.tasks.creator')}</span>
                         <div className="task-creator-wrap">
-                          <Link 
-                            to={`/profile/${task.creator_id || task.id}`}
-                            className="task-creator-link"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {task.creator_username}
-                          </Link>
+                          <TaskCreatorLine
+                            displayName={taskCreatorLabel(task)}
+                            username={task.creator_username}
+                            creatorId={task.creator_id}
+                            verified={Boolean(
+                              task.creator_verified ??
+                                task.creator_verified_enterprise ??
+                                task.creator_verified_individual,
+                            )}
+                          />
                           {task.creator_rating !== undefined && task.creator_rating > 0 && (
                             <RatingDisplay
                               averageRating={task.creator_rating}
@@ -1827,13 +1874,17 @@ const Dashboard = () => {
                         <div className="task-detail">
                           <span className="task-detail-label">{t('dashboard.tasks.creator')}</span>
                           <div className="task-creator-wrap">
-                            <Link
-                              to={`/profile/${task.creator_id ?? task.id}`}
-                              className="task-creator-link"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {task.creator_username}
-                            </Link>
+                            <TaskCreatorLine
+                              creatorId={task.creator_id}
+                              displayName={task.creator_username}
+                              username={task.creator_username}
+                              verified={
+                                task.creator_verified ??
+                                task.creator_verified_enterprise ??
+                                task.creator_verified_individual
+                              }
+                              linkToProfile
+                            />
                           </div>
                         </div>
                       </div>
@@ -1888,20 +1939,13 @@ const Dashboard = () => {
           {activeTab === 'support' && (
             <SupportPage />
           )}
-          
+
           {/* Settings Tab */}
           {activeTab === 'settings' && (
             <div className="settings-container">
               <div className="settings-header">
-              <h2>{t('dashboard.settings.title')}</h2>
-                <Link 
-                  to="/dashboard/settings/profile" 
-                  className="edit-profile-button"
-                >
-                  <FaUser />
-                  <span>{t('dashboard.settings.edit.profile')}</span>
-                </Link>
-                  </div>
+                <h2>{t('dashboard.settings.title')}</h2>
+              </div>
 
               {loadingProfile ? (
                 <div className="settings-loading">
@@ -2076,6 +2120,10 @@ const Dashboard = () => {
                     <p className="edit-hint">{t('dashboard.settings.edit.hint')}</p>
                   </div>
 
+                  <SettingsVerificationSection />
+
+                  <SettingsBadgesCatalog userStats={userStats} />
+
                   {/* Botón para cerrar sesión */}
                   <div className="settings-logout-section">
                     <button 
@@ -2147,29 +2195,20 @@ const Dashboard = () => {
                             </span>
                         </div>
                         )}
-                        {(task.creator_username || task.creator_id) && (
+                        {(taskCreatorLabel(task) || task.creator_id) && (
                           <div className="task-detail">
                             <span className="task-detail-label">{t('dashboard.tasks.creator')}</span>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                              <Link 
-                                to={`/profile/${task.creator_id ?? task.id}`}
-                                className="task-creator-link"
-                                style={{
-                                  color: 'var(--primary-blue)',
-                                  textDecoration: 'none',
-                                  fontWeight: 500,
-                                  transition: 'all 0.3s ease'
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.textDecoration = 'underline';
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.textDecoration = 'none';
-                                }}
-                              >
-                                {task.creator_username || t('dashboard.tasks.creator.unknown')}
-                              </Link>
+                              <TaskCreatorLine
+                                displayName={taskCreatorLabel(task) || t('dashboard.tasks.creator.unknown')}
+                                username={task.creator_username}
+                                creatorId={task.creator_id}
+                                verified={Boolean(
+                              task.creator_verified ??
+                                task.creator_verified_enterprise ??
+                                task.creator_verified_individual,
+                            )}
+                              />
                               {task.creator_rating !== undefined && task.creator_rating > 0 && (
                                 <RatingDisplay
                                   averageRating={task.creator_rating}
@@ -2260,16 +2299,6 @@ const Dashboard = () => {
       {/* Footer */}
       <DashboardFooter />
 
-      {/* Popup de Notificaciones Pendientes - ELIMINADO */}
-      {/* <PendingNotificationsPopup
-        isOpen={showPendingNotificationsPopup}
-        onClose={() => setShowPendingNotificationsPopup(false)}
-        pendingTasks={pendingActionsTasks}
-        onSendNotifications={async () => {
-          alert(`Se enviarán notificaciones a ${pendingActionsTasks.length} trabajador(es). Esta funcionalidad estará disponible próximamente.`);
-          setShowPendingNotificationsPopup(false);
-        }}
-      /> */}
       <PrivateOfferWalletModal
         open={showPrivateWalletGate}
         onClose={() => {

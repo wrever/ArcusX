@@ -13,9 +13,32 @@ Las entradas siguen espíritu **[Keep a Changelog](https://keepachangelog.com/es
 
 ---
 
+## 2026-05-28 — Tranche 2 Q2: cierre Supabase, evidencias, trazabilidad
+
+**Cierre:** [`docs/sprints/TRANCHE2_CLOSURE.md`](./docs/sprints/TRANCHE2_CLOSURE.md) · **Próximos pasos:** [`docs/sprints/POST_TRANCHE2_TODO.md`](./docs/sprints/POST_TRANCHE2_TODO.md)
+
+### Backend / Supabase
+
+- Edge `arcusx-api` v28: `upload_milestone_evidence`, `get_milestone_evidence`, ampliación `domain_events`.
+- Edge `arcusx-admin` v15: `get_domain_events`.
+- Migración `milestone-evidence` (bucket + tabla).
+- Cutover prod documentado; smoke Edge 7/7.
+
+### Frontend
+
+- `EvidenceUpload` activo en `SuperviseTask` (freelancer + vista cliente).
+- Admin: pestaña **Actividad** (`AdminActivity.tsx`).
+- E2E: [`docs/demo/E2E_CHECKLIST.md`](./docs/demo/E2E_CHECKLIST.md).
+
+### Diferido post–Tranche 2
+
+- B2B org/KYB, growth pack completo, multi-hito, escrow nativo Soroban en prod.
+
+---
+
 ## 2026-05-28 — Semana 4 (cierre técnico): i18n, consola, responsive, QA docs
 
-**Detalle:** [`docs/sprints/week-04-technical-close.md`](./docs/sprints/week-04-technical-close.md)
+**Detalle:** [`docs/sprints/week-04-changelog-and-architecture.md`](./docs/sprints/week-04-changelog-and-architecture.md) · [`docs/sprints/week-04-technical-close.md`](./docs/sprints/week-04-technical-close.md)
 
 ### Frontend
 
