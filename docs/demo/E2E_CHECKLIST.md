@@ -32,6 +32,7 @@ Marcar aquí tras ejecutar en **prod** o **localhost** con Freighter testnet.
 | 8 | Cliente: ver evidencia + liberar pago | ☐ | Stellar Expert tx |
 | 9 | Notificación in-app (y email si aplica) | ☐ | |
 | 10 | Chat SuperviseTask (Realtime o refresh) | ☐ | |
+| 10b | Perfil: iconos badge + Configuración → Badges (`get_my_badges`) | ☐ | Listado freelancers/Hero muestra `public_badges` |
 
 ---
 

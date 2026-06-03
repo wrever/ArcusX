@@ -123,4 +123,21 @@ Admin CORS/JWT: `admin_common.php` (same origin allowlist as `cors.php`).
 
 ---
 
-*Week 3 — 2026-05-18*
+## Edge `arcusx-api` (cutover; `arcusxApiUrl('action')`)
+
+Cuando `VITE_SUPABASE_URL` está configurado y **no** hay `VITE_USE_PHP_API`, el marketplace usa  
+`POST/GET https://<project>.supabase.co/functions/v1/arcusx-api?action=<name>` con Bearer JWT app.
+
+| action | Auth | Used by | Notes |
+|--------|------|---------|-------|
+| `get_my_badges` | Bearer | `badgesService.ts`, `SettingsBadgesCatalog` | `public_badges[]`, `earned_count` — reglas en `user-badges.ts` |
+| `get_verification_status` | Bearer | `kycService.ts` | KYC/KYB manual (admin) |
+| `submit_enterprise_kyc` | Bearer | `EnterpriseKycPanel` | KYB empresa |
+| `upload_milestone_evidence` | Bearer | `EvidenceUpload` | Storage `milestone-evidence` |
+| `get_freelancers` | Public/Bearer | `freelancerService.ts` | Incluye `public_badges` por usuario |
+
+Paridad completa: `docs/supabase/PARITY_MATRIX.md`.
+
+---
+
+*Week 3 — 2026-05-18 · Edge badges — 2026-05-28*

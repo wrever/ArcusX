@@ -14,7 +14,9 @@ import { useI18n } from '../i18n/I18nProvider';
 import Footer from './Footer';
 import SEO from './SEO';
 import TaskCreatorLine from './TaskCreatorLine';
+import ProfilePublicBadges from './ProfilePublicBadges';
 import VerifiedEnterpriseBadge from './VerifiedEnterpriseBadge';
+import { isProfileVerified } from '../utils/profileVerification';
 
 /** URL de /create-task con contexto de contratación (también leída por query en CreateTask). */
 function buildHireTaskUrl(freelancer: Freelancer): string {
@@ -696,9 +698,15 @@ const Hero = () => {
                                 >
                                   {fl.display_name || fl.username}
                                 </button>
-                                {(fl.kyc_verified || fl.creator_verified) && (
+                                {fl.public_badges && fl.public_badges.length > 0 ? (
+                                  <ProfilePublicBadges
+                                    badgeIds={fl.public_badges}
+                                    iconSize={24}
+                                    className="profile-public-badges--compact hero-freelancer-badges"
+                                  />
+                                ) : isProfileVerified(fl) ? (
                                   <VerifiedEnterpriseBadge verified size="sm" className="hero-freelancer-verified-badge" />
-                                )}
+                                ) : null}
                               </div>
                               <span className="hero-carousel-card-meta hero-freelancer-meta-line">{metaLine}</span>
                               {skillsPreview ? (

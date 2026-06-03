@@ -1,6 +1,6 @@
 # Post–Tranche 2 · Todo list (priorizado)
 
-**Última actualización:** 2026-05-28  
+**Última actualización:** 2026-05-28 (badges listados + B2B UI marcados en repo)  
 **Tranche 2 cierre:** [`TRANCHE2_CLOSURE.md`](./TRANCHE2_CLOSURE.md)
 
 Leyenda: `P0` urgente · `P1` siguiente sprint · `P2` Q3+ · `OPS` operación manual
@@ -29,9 +29,9 @@ Leyenda: `P0` urgente · `P1` siguiente sprint · `P2` Q3+ · `OPS` operación m
 |----|-----|-------|--------|
 | B2B-01 | ✅ | Alcance: perfil empresa + KYB + badge en listados (no multi-usuario) | Cerrado |
 | B2B-02 | ✅ | Migración + Edge KYC (v29/v16) | Hecho backend |
-| B2B-03 | **P0** | **Frontend:** form KYB en empresas + admin moderación UI | Backend listo |
-| B2B-04 | **P0** | **Frontend:** badge «Verificado» en Hero / tarjetas (API ya expone campos) | B2B-03 |
-| B2B-05 | P1 | KYC liviano freelancer (wallet + perfil) si aplica confianza bilateral | B2B-03 |
+| B2B-03 | ✅ | Frontend KYB (`EnterpriseKycPanel`, `/dashboard/kyc`) + admin `KycManagement` | Repo |
+| B2B-04 | ✅ | Badge verificado en Hero/tareas (`TaskCreatorLine`, `UsernameWithVerified`) | Repo |
+| B2B-05 | ✅ | KYC individual manual (`IndividualKycPanel`) | Repo |
 | — | ⏸ | Invitaciones, org multi-miembro, roles RR.HH./finanzas | **Fuera de alcance** hasta tracción |
 | — | ⏸ | Plan completo `PLAN_CUENTA_EMPRESA_KYC.md` | Referencia futura, no sprint activo |
 
@@ -54,7 +54,8 @@ Leyenda: `P0` urgente · `P1` siguiente sprint · `P2` Q3+ · `OPS` operación m
 
 | ID | Pri | Tarea | Estado base |
 |----|-----|-------|-------------|
-| GR-01 | P2 | Badges persistidos (logros, no UI decorativa) | — |
+| GR-01 | ✅ | Badges persistidos (`get_my_badges`, `public_badges`, 12 live) | ☐ redeploy api + dist |
+| GR-01b | P1 | 3 badges `coming_soon` (respuestaRapida, certix, blockchain) | — |
 | GR-02 | P2 | Leaderboard / rankings | — |
 | GR-03 | P2 | Suscripciones / tiers fee | Solo doc estrategia |
 | GR-04 | P2 | Analytics admin (funnels, cohortes) | Stats básicos ✅ |

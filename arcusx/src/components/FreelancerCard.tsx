@@ -5,14 +5,15 @@
 
 import { memo, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaStar, FaPlus } from 'react-icons/fa';
+import { FaPlus } from 'react-icons/fa';
 import UsernameWithVerified from './UsernameWithVerified';
+import ProfilePublicBadges from './ProfilePublicBadges';
 import RatingDisplay from './RatingDisplay';
 import { useI18n } from '../i18n/I18nProvider';
 import type { Freelancer } from '../types/freelancer';
 import { getAvatarUrl } from '../utils/avatarUtils';
 import { normalizeDisplayText } from '../utils/utf8Mojibake';
-import { getFreelancerSignals } from '../utils/web3Identity';
+import { isProfileVerified } from '../utils/profileVerification';
 import '../css/FreelancerCard.css';
 
 interface FreelancerCardProps {
@@ -47,7 +48,7 @@ const FreelancerCard = memo(({ freelancer }: FreelancerCardProps) => {
     [freelancer.avatar_url]
   );
 
-  const signals = useMemo(() => getFreelancerSignals(freelancer), [freelancer]);
+  const verified = useMemo(() => isProfileVerified(freelancer), [freelancer]);
 
   const skills = useMemo(() => {
     const list = freelancer.skills || [];
@@ -103,17 +104,15 @@ const FreelancerCard = memo(({ freelancer }: FreelancerCardProps) => {
             <h3 className="freelancer-name">
               <UsernameWithVerified
                 name={freelancer.display_name || freelancer.username}
-                verified={freelancer.kyc_verified ?? freelancer.creator_verified ?? signals.isVerified}
+                verified={verified}
                 nameClassName="freelancer-name-text"
               />
             </h3>
-
-            {signals.badges.includes('topRated') && (
-              <span className="freelancer-badge top" title={t('freelancers.badge.top')}>
-                <FaStar />
-                {t('freelancers.badge.top')}
-              </span>
-            )}
+            <ProfilePublicBadges
+              badgeIds={freelancer.public_badges}
+              iconSize={26}
+              className="profile-public-badges--compact freelancer-card-badges"
+            />
           </div>
         </div>
 

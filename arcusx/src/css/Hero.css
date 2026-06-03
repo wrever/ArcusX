@@ -830,8 +830,13 @@
   min-width: 0;
 }
 
-.hero-freelancer-verified-badge {
+.hero-freelancer-verified-badge,
+.hero-freelancer-badges {
   flex-shrink: 0;
+}
+
+.hero-freelancer-name-row .hero-freelancer-badges {
+  margin-left: 0.15rem;
 }
 
 .hero-freelancer-name-btn {

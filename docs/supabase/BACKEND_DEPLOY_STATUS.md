@@ -33,7 +33,7 @@
 ### Edge Functions activas (2026-05-28)
 
 - `referral-admin`, `referral-bind-pending`, `referral-resolve-code`, `referral-attribute-signup`
-- `arcusx-api` **v29** (KYC + evidencias + domain_events completos)
+- `arcusx-api` **v29** (KYC + evidencias + domain_events) — **pendiente redeploy** con `get_my_badges`, `user-badges`, fix `completed_tasks_count` en liberar
 - `arcusx-admin` **v16** (KYC approve/reject + domain events)
 - `arcusx-webhook-ingress` **v1**
 - `arcusx-escrow-reconcile` **v7**
