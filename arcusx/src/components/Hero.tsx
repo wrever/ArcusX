@@ -14,9 +14,11 @@ import { useI18n } from '../i18n/I18nProvider';
 import Footer from './Footer';
 import SEO from './SEO';
 import TaskCreatorLine from './TaskCreatorLine';
-import ProfilePublicBadges from './ProfilePublicBadges';
-import VerifiedEnterpriseBadge from './VerifiedEnterpriseBadge';
-import { isProfileVerified } from '../utils/profileVerification';
+import UsernameWithVerified from './UsernameWithVerified';
+import {
+  hasEnterpriseVerifiedBadge,
+  hasIndividualVerifiedBadge,
+} from '../utils/profileVerification';
 
 /** URL de /create-task con contexto de contratación (también leída por query en CreateTask). */
 function buildHireTaskUrl(freelancer: Freelancer): string {
@@ -450,12 +452,12 @@ const Hero = () => {
           </div>
           <div className="landing-hero-inner">
             <h1 className="landing-hero-title">
-              {t('hero.title.line1')}{' '}
+            {t('hero.title.line1')}{' '}
               <span className="landing-hero-highlight">{t('hero.title.web3')}</span>{' '}
-              {t('hero.title.for')}{' '}
+            {t('hero.title.for')}{' '}
               <span className="landing-hero-highlight">{t('hero.title.talent')}</span>{' '}
-              {t('hero.title.latam')}
-            </h1>
+            {t('hero.title.latam')}
+          </h1>
             <p className="landing-hero-desc">{t('hero.desc')}</p>
             {/* Stats arriba del buscador (lupa) */}
             <div className="landing-hero-trust" role="list" aria-label={t('hero.stats.aria')}>
@@ -534,11 +536,8 @@ const Hero = () => {
                                   }
                                   username={task.creator_username}
                                   creatorId={task.creator_id}
-                                  verified={Boolean(
-                                    task.creator_verified ??
-                                      task.creator_verified_enterprise ??
-                                      task.creator_verified_individual,
-                                  )}
+                                  verifiedEnterprise={Boolean(task.creator_verified_enterprise)}
+                                  verifiedIndividual={Boolean(task.creator_verified_individual)}
                                   linkToProfile={Boolean(task.creator_id)}
                                 />
                               )}
@@ -553,14 +552,14 @@ const Hero = () => {
                                 >
                                   {t('hero.search.apply')} <FaArrowRight />
                                 </button>
-                              </div>
-                            </div>
+              </div>
+            </div>
                           </li>
                         ))}
                       </ul>
                     </>
                   )}
-                </div>
+              </div>
               )}
             </div>
 
@@ -593,21 +592,23 @@ const Hero = () => {
                                 </p>
                               )}
                               {(task.creator_display_name || task.creator_username) && (
-                                <TaskCreatorLine
-                                  displayName={
-                                    task.creator_display_name?.trim() ||
-                                    task.creator_username?.trim() ||
-                                    ''
-                                  }
-                                  username={task.creator_username}
-                                  creatorId={task.creator_id}
-                                  verified={Boolean(
-                                    task.creator_verified ??
-                                      task.creator_verified_enterprise ??
-                                      task.creator_verified_individual,
-                                  )}
-                                  linkToProfile={Boolean(task.creator_id)}
-                                />
+                                <div className="hero-carousel-card-creator">
+                                  <span className="hero-carousel-card-creator-label">
+                                    {t('hero.carousel.creator')}
+                                  </span>
+                                  <TaskCreatorLine
+                                    displayName={
+                                      task.creator_display_name?.trim() ||
+                                      task.creator_username?.trim() ||
+                                      ''
+                                    }
+                                    username={task.creator_username}
+                                    creatorId={task.creator_id}
+                                    verifiedEnterprise={Boolean(task.creator_verified_enterprise)}
+                                    verifiedIndividual={Boolean(task.creator_verified_individual)}
+                                    linkToProfile={Boolean(task.creator_id)}
+                                  />
+              </div>
                               )}
                               <div className="hero-carousel-card-footer">
                                 <span className="hero-carousel-card-price">
@@ -616,20 +617,20 @@ const Hero = () => {
                                 <button type="button" className="hero-carousel-card-apply" onClick={() => handleApplyClick(task.id)}>
                                   {t('hero.search.apply')} <FaArrowRight />
                                 </button>
-                              </div>
+              </div>
                             </article>
                           ))}
-                        </div>
-                      </div>
+              </div>
+            </div>
                       <button type="button" className="hero-carousel-btn hero-carousel-btn-next" onClick={() => scrollCarousel('right')} aria-label={t('hero.carousel.next')}>
                         <FaChevronRight />
                       </button>
-                    </div>
+              </div>
                   )}
-                </div>
+              </div>
               </section>
             )}
-          </div>
+              </div>
         </header>
 
         {/* — Trust strip: rápido y seguro — */}
@@ -688,32 +689,33 @@ const Hero = () => {
                                   {freelancerDisplayInitials(fl.username)}
                                 </span>
                               )}
-                            </div>
+            </div>
                             <div className="hero-freelancer-card-head">
                               <div className="hero-freelancer-name-row">
-                                <button
-                                  type="button"
-                                  className="hero-freelancer-name-btn"
-                                  onClick={() => navigate(`/profile/${fl.id}`)}
-                                >
-                                  {fl.display_name || fl.username}
-                                </button>
-                                {fl.public_badges && fl.public_badges.length > 0 ? (
-                                  <ProfilePublicBadges
-                                    badgeIds={fl.public_badges}
-                                    iconSize={24}
-                                    className="profile-public-badges--compact hero-freelancer-badges"
-                                  />
-                                ) : isProfileVerified(fl) ? (
-                                  <VerifiedEnterpriseBadge verified size="sm" className="hero-freelancer-verified-badge" />
-                                ) : null}
-                              </div>
+                                <UsernameWithVerified
+                                  name={fl.display_name || fl.username}
+                                  userId={fl.id}
+                                  verifiedEnterprise={Boolean(
+                                    fl.creator_verified_enterprise ||
+                                      hasEnterpriseVerifiedBadge(fl.public_badges),
+                                  )}
+                                  verifiedIndividual={Boolean(
+                                    fl.creator_verified_individual ||
+                                      hasIndividualVerifiedBadge(fl.public_badges),
+                                  )}
+                                  linkToProfile
+                                  compact
+                                  tooltipPlacement="below"
+                                  className="hero-freelancer-verified-row"
+                                  nameClassName="hero-freelancer-name-text"
+                                />
+              </div>
                               <span className="hero-carousel-card-meta hero-freelancer-meta-line">{metaLine}</span>
                               {skillsPreview ? (
                                 <span className="hero-freelancer-skills-preview">{skillsPreview}</span>
                               ) : null}
-                            </div>
-                          </div>
+                  </div>
+                </div>
                           <p className="hero-carousel-card-desc hero-freelancer-bio">{bioText}</p>
                           <div className="hero-carousel-card-footer hero-freelancer-card-footer">
                             {fl.has_payout_wallet ? (
@@ -739,13 +741,13 @@ const Hero = () => {
                                 {t('hero.freelancer.carousel.viewProfile')}
                               </button>
                             )}
-                          </div>
+                  </div>
                         </article>
                       );
                     })}
                   </div>
                 </div>
-                <button
+                <button 
                   type="button"
                   className="hero-carousel-btn hero-carousel-btn-next"
                   onClick={() => scrollFreelancerCarousel('right')}
@@ -755,8 +757,8 @@ const Hero = () => {
                 </button>
               </div>
             )}
-          </div>
-        </section>
+        </div>
+      </section>
 
         {/* — Value: trabajo real, pago real — */}
         <section id="valor" className="landing-value">
@@ -785,7 +787,7 @@ const Hero = () => {
                 </li>
               </ul>
               <Link to="/register" className="landing-value-cta">{t('solution.button.start')} <FaArrowRight /></Link>
-            </div>
+              </div>
             <div className="landing-value-visual" aria-hidden="true">
               <div className="landing-value-diagram">
                 <div className="landing-value-node landing-value-node-talent" title={t('solution.stat1.label')}>
@@ -799,7 +801,7 @@ const Hero = () => {
                 <div className="landing-value-node landing-value-node-escrow" title={t('solution.stat4.label')}>
                   <FaLock className="landing-value-node-icon" />
                   <span className="landing-value-node-label">{t('solution.stat4.label')}</span>
-                </div>
+                  </div>
                 <div className="landing-value-connector landing-value-connector-diag-left" aria-hidden="true">
                   <span className="landing-value-connector-line" />
                   <span className="landing-value-connector-flow" />
@@ -807,7 +809,7 @@ const Hero = () => {
                 <div className="landing-value-node landing-value-node-pay" title={t('solution.stat3.label')}>
                   <FaMoneyBillWave className="landing-value-node-icon" />
                   <span className="landing-value-node-label">{t('solution.stat3.label')}</span>
-                </div>
+                  </div>
                 <div className="landing-value-connector landing-value-connector-diag-right" aria-hidden="true">
                   <span className="landing-value-connector-line" />
                   <span className="landing-value-connector-flow" />
@@ -865,7 +867,7 @@ const Hero = () => {
               </motion.div>
             </div>
           </motion.div>
-        </section>
+      </section>
 
         {/* — Features: grilla 2x2 con más info — */}
         <section id="caracteristicas" className="landing-features">
@@ -897,8 +899,8 @@ const Hero = () => {
                 transition={{ duration: 0.45, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
               >
                 <div className="landing-feature-icon"><FaRocket /></div>
-                <h3>{t('features.card1.title')}</h3>
-                <p>{t('features.card1.desc')}</p>
+              <h3>{t('features.card1.title')}</h3>
+              <p>{t('features.card1.desc')}</p>
                 <span className="landing-feature-bullet">{t('features.card1.bullet')}</span>
               </motion.article>
               <motion.article
@@ -933,13 +935,13 @@ const Hero = () => {
                 transition={{ duration: 0.45, delay: 0.32, ease: [0.22, 1, 0.36, 1] }}
               >
                 <div className="landing-feature-icon"><FaUsers /></div>
-                <h3>{t('features.card2.title')}</h3>
-                <p>{t('features.card2.desc')}</p>
+              <h3>{t('features.card2.title')}</h3>
+              <p>{t('features.card2.desc')}</p>
                 <span className="landing-feature-bullet">{t('features.card2.bullet')}</span>
               </motion.article>
-            </div>
           </div>
-        </section>
+        </div>
+      </section>
 
         {/* — Roadmap ArcusX: timeline vertical alternado + animación al scroll — */}
         <section id="roadmap" className="landing-roadmap landing-roadmap--arcusx">
@@ -995,12 +997,12 @@ const Hero = () => {
                         <li>{t('roadmap.mvp.2')}</li>
                         <li>{t('roadmap.mvp.3')}</li>
                       </ul>
-                    </div>
+                </div>
                   </div>
                 </div>
                 <div className="landing-roadmap-node" aria-hidden="true">
                   <FaCheck />
-                </div>
+              </div>
                 <div className="landing-roadmap-spacer" aria-hidden="true" />
               </motion.div>
               <motion.div
@@ -1072,7 +1074,7 @@ const Hero = () => {
                         <li>{t('roadmap.now.3')}</li>
                         <li>{t('roadmap.now.4')}</li>
                       </ul>
-                    </div>
+                </div>
                   </div>
                 </div>
                 <div className="landing-roadmap-node" aria-hidden="true">
@@ -1093,7 +1095,7 @@ const Hero = () => {
                 <div className="landing-roadmap-spacer" aria-hidden="true" />
                 <div className="landing-roadmap-node" aria-hidden="true">
                   <FaMapMarkedAlt />
-                </div>
+              </div>
                 <div className="landing-roadmap-content">
                   <div className="landing-roadmap-card">
                     <button
@@ -1114,9 +1116,9 @@ const Hero = () => {
                         <li>{t('roadmap.next.2')}</li>
                         <li>{t('roadmap.next.3')}</li>
                       </ul>
-                    </div>
-                  </div>
-                </div>
+            </div>
+          </div>
+        </div>
               </motion.div>
               <motion.div
                 className={`landing-roadmap-item ${expandedRoadmap.has(4) ? 'landing-roadmap-item--expanded' : ''}`}
@@ -1148,16 +1150,16 @@ const Hero = () => {
                         <li>{t('roadmap.vision.2')}</li>
                         <li>{t('roadmap.vision.3')}</li>
                       </ul>
-                    </div>
-                  </div>
-                </div>
+              </div>
+            </div>
+              </div>
                 <div className="landing-roadmap-node" aria-hidden="true">
                   <FaMapMarkedAlt />
-                </div>
+            </div>
                 <div className="landing-roadmap-spacer" aria-hidden="true" />
               </motion.div>
             </div>
-          </div>
+              </div>
         </section>
 
         {/* — FAQ: 2x2 — */}
@@ -1213,9 +1215,9 @@ const Hero = () => {
                 <h3 className="landing-faq-q">{t('faq.q4')}</h3>
                 <p className="landing-faq-a">{t('faq.a4')}</p>
               </motion.article>
-            </div>
           </div>
-        </section>
+        </div>
+      </section>
 
         {/* — CTA final — */}
         <section className="landing-cta">
@@ -1234,10 +1236,10 @@ const Hero = () => {
           </motion.div>
         </section>
 
-        <Footer />
-      </div>
+      <Footer />
+    </div>
     </>
   );
 };
 
-export default Hero;
+export default Hero; 

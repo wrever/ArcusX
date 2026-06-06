@@ -165,6 +165,11 @@
   line-height: 1.6;
 }
 
+.task-details-section__deletion {
+  margin-top: auto;
+  padding-top: 1rem;
+}
+
 /* Chat Section */
 .chat-section {
   background: var(--bg-card);
@@ -825,6 +830,33 @@
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+.supervise-escrow-setup-banner {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.supervise-escrow-setup-banner--pending {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.supervise-escrow-setup-banner p {
+  margin: 0 0 0.65rem;
+}
+
+.supervise-escrow-cta {
+  display: inline-block;
+  text-decoration: none;
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
 }
 
 /* Blockchain Status Styles - Diseño Mejorado */

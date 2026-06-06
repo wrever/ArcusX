@@ -1,4 +1,5 @@
 import { supabase, hasSupabase } from '../config/supabase';
+import { formatArcusxMessagingError } from './arcusxMessagingSupabase';
 import type { NotificationsResponse, Notification } from '../types/notification';
 
 function mapNotificationRow(r: Record<string, unknown>): Notification {
@@ -29,7 +30,7 @@ export async function getUserNotificationsSupabase(params?: {
     p_page: page,
     p_limit: limit,
   });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(formatArcusxMessagingError(error.message));
   const raw = data as Record<string, unknown> | null;
   if (!raw || raw.success === false) {
     throw new Error(String(raw?.message ?? 'Error al obtener notificaciones'));
@@ -58,7 +59,7 @@ export async function markNotificationAsReadSupabase(
   const { data, error } = await supabase.rpc('arcusx_mark_notification_read', {
     p_notification_id: notificationId,
   });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(formatArcusxMessagingError(error.message));
   const row = data as { success?: boolean; message?: string } | null;
   return {
     success: Boolean(row?.success),
@@ -72,7 +73,7 @@ export async function dismissNotificationSupabase(
   const { data, error } = await supabase.rpc('arcusx_dismiss_notification', {
     p_notification_id: notificationId,
   });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(formatArcusxMessagingError(error.message));
   const row = data as { success?: boolean; message?: string } | null;
   return {
     success: Boolean(row?.success),

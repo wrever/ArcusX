@@ -12,7 +12,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import AuthCallback from './components/AuthCallback';
 import Preloader from './components/Preloader';
-import AdminLogin from './components/AdminLogin';
+import AdminLoginRedirect from './components/AdminLoginRedirect';
 import AdminRoute from './components/AdminRoute';
 import ProtectedRoute from './components/ProtectedRoute';
 import UserProfile from './components/UserProfile';
@@ -147,9 +147,9 @@ function AppContent({ isLoading }: { isLoading: boolean }) {
               <Route path="/tutoriales" element={<><Navbar /><TutorialsPage /></>} />
               <Route path="/empresas" element={<EmpresasRoute />} />
               <Route path="/landing" element={<Navigate to="/empresas" replace />} />
-              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin/login" element={<AdminLoginRedirect />} />
               <Route path="/admin/dashboard" element={<AdminRoute><AdminPanel isAdmin={true} /></AdminRoute>} />
-              <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
+              <Route path="/admin" element={<AdminLoginRedirect />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>

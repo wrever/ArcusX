@@ -5,10 +5,11 @@ import { publicAssetUrl } from '../config/arcusxApi';
 import '../css/AdminPanel.css';
 
 interface DisputeChatViewProps {
-  disputeId: number;
+  disputeId?: number;
+  taskId?: number;
 }
 
-const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
+const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId, taskId }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [participants, setParticipants] = useState<ChatParticipants>({});
   const [stats, setStats] = useState<ChatStats | null>(null);
@@ -25,7 +26,7 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
       setLoading(true);
       setError(null);
       try {
-        const data = await getDisputeChat(disputeId);
+        const data = await getDisputeChat(disputeId, taskId);
         setMessages(data.messages);
         setParticipants(data.participants);
         setStats(data.stats);
@@ -36,10 +37,10 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId }) => {
       }
     };
 
-    if (disputeId) {
+    if (disputeId || taskId) {
       fetchChat();
     }
-  }, [disputeId]);
+  }, [disputeId, taskId]);
 
   // Filtrar mensajes
   const filteredMessages = useMemo(() => {

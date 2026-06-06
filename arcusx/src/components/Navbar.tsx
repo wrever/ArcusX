@@ -6,6 +6,8 @@ import logoLight from '../images/arcusxlogoclaro.png';
 import { useAuth } from '../hooks/useAuth';
 import { useI18n } from '../i18n/I18nProvider';
 import { useTheme } from '../contexts/ThemeContext';
+import { dashboardTabHref } from '../config/dashboardTabs';
+import { useEnterpriseMode } from '../hooks/useEnterpriseMode';
 
 function normalizePath(p: string) {
   return p.replace(/\/index\.html$/i, '').replace(/\/$/, '') || '/';
@@ -19,7 +21,9 @@ const Navbar = () => {
   const { isAuthenticated, logout } = useAuth();
   const { t } = useI18n();
   const { theme } = useTheme();
+  const enterprise = useEnterpriseMode();
   const logo = theme === 'light' ? logoLight : logoDark;
+  const privateOffersHref = dashboardTabHref('private-offers', enterprise);
 
   const path = useMemo(() => normalizePath(pathname), [pathname]);
 
@@ -132,7 +136,7 @@ const Navbar = () => {
                     {t('nav.dashboard')}
                   </Link>
                   <Link
-                    to="/dashboard?tab=private-offers"
+                    to={privateOffersHref}
                     className={`nav-button login${
                       path === '/dashboard' && searchParams.get('tab') === 'private-offers'
                         ? ' nav-button--active'

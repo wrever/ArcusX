@@ -129,7 +129,7 @@ const IndividualKycPanel: React.FC<Props> = ({ embedded = false, onSubmitted }) 
       return (
         <div className="enterprise-kyc-status is-approved">
           <FaCheckCircle /> {t('kyc.individual.status.approved')}
-          <VerifiedEnterpriseBadge verified size="md" />
+          <VerifiedEnterpriseBadge kind="individual" verified size="md" />
         </div>
       );
     }
@@ -180,7 +180,7 @@ const IndividualKycPanel: React.FC<Props> = ({ embedded = false, onSubmitted }) 
       {!embedded && (
         <>
           <div className="enterprise-kyc-panel__hero">
-            <img src={KYC_BADGE_ASSETS.enterpriseVerified} alt="" className="enterprise-kyc-panel__hero-badge" />
+            <img src={KYC_BADGE_ASSETS.individualVerified} alt="" className="enterprise-kyc-panel__hero-badge" />
             <div>
               <h2>{t('kyc.individual.panel.title')}</h2>
               <p className="text-muted" style={{ marginBottom: 0 }}>

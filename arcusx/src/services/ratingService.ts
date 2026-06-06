@@ -42,7 +42,8 @@ export interface RatingsResponse {
 }
 
 export interface CreateRatingPayload {
-  task_id: number;
+  task_id?: number;
+  agreement_id?: string;
   rated_user_id: number;
   rating: number;
   review?: string;
@@ -78,6 +79,9 @@ export async function createRating(payload: CreateRatingPayload): Promise<{ succ
     }
 
     const data = await response.json();
+    if (data?.success === false) {
+      throw new Error(data.message || 'Error al crear rating');
+    }
     return data;
   } catch (error: any) {
     if (error.message) {

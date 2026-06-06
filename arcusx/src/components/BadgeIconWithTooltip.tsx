@@ -11,6 +11,12 @@ type Props = {
   dimmed?: boolean;
   /** Perfil público: texto objetivo sobre el logro; configuración: cómo obtenerlo. */
   tooltipContext?: 'profile' | 'settings';
+  /** Evita recorte en cards con overflow (p. ej. listado freelancers) */
+  placement?: 'above' | 'below';
+  /** Tooltip nativo breve (p. ej. tarjetas de tarea en modo compact) */
+  title?: string;
+  /** false = solo title nativo, sin tarjeta hover (listados estrechos) */
+  showCard?: boolean;
 };
 
 const BadgeIconWithTooltip: React.FC<Props> = ({
@@ -19,6 +25,9 @@ const BadgeIconWithTooltip: React.FC<Props> = ({
   className = '',
   dimmed = false,
   tooltipContext = 'settings',
+  placement = 'above',
+  title: nativeTitle,
+  showCard = true,
 }) => {
   const { t } = useI18n();
   const [imgFailed, setImgFailed] = useState(false);
@@ -36,8 +45,9 @@ const BadgeIconWithTooltip: React.FC<Props> = ({
 
   return (
     <span
-      className={`badge-icon-tooltip ${dimmed ? 'is-dimmed' : ''} ${className}`.trim()}
+      className={`badge-icon-tooltip badge-icon-tooltip--${placement} ${dimmed ? 'is-dimmed' : ''} ${className}`.trim()}
       tabIndex={0}
+      title={nativeTitle}
       aria-label={title}
       aria-describedby={description ? tipId : undefined}
     >
@@ -55,7 +65,7 @@ const BadgeIconWithTooltip: React.FC<Props> = ({
           ★
         </span>
       )}
-      {(title || description) && (
+      {showCard && (title || description) && (
         <span id={tipId} className="badge-icon-tooltip__card" role="tooltip">
           {title ? <strong className="badge-icon-tooltip__card-title">{title}</strong> : null}
           {description ? <span className="badge-icon-tooltip__card-desc">{description}</span> : null}

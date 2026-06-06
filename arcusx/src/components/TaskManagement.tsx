@@ -7,6 +7,7 @@ import { useI18n } from '../i18n/I18nProvider';
 import '../css/AdminPanel.css';
 import EscrowLifecycle from './EscrowLifecycle';
 import UsernameWithVerified from './UsernameWithVerified';
+import { parseTaskExchangeFiles, taskHasExchangeFiles } from '../utils/taskExchangeFiles';
 
 interface TaskManagementProps {
   onUpdate?: () => void;
@@ -309,7 +310,8 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                       {task.creator_username ? (
                         <UsernameWithVerified
                           name={task.creator_display_name || task.creator_username}
-                          verified={!!task.creator_verified}
+                          verifiedEnterprise={!!task.creator_verified_enterprise}
+                          verifiedIndividual={!!task.creator_verified_individual}
                         />
                       ) : (
                         'N/A'
@@ -441,6 +443,41 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                   )}
                 </div>
 
+                {/* Intercambio de archivos (= evidencia de entrega) */}
+                <div className="dispute-details-section">
+                  <h4>Intercambio de archivos</h4>
+                  {(() => {
+                    const exchangeFiles = parseTaskExchangeFiles(selectedTask.files);
+                    const blocksCancel = taskHasExchangeFiles(selectedTask.files);
+                    return (
+                      <>
+                        <div className="detail-grid">
+                          <div className="detail-item">
+                            <label>Archivos en intercambio</label>
+                            <span>{exchangeFiles.length}</span>
+                          </div>
+                          <div className="detail-item">
+                            <label>Cancelación cliente (reembolso directo)</label>
+                            <span className={`badge ${blocksCancel ? 'warning' : 'success'}`}>
+                              {blocksCancel ? 'Bloqueada — usar disputa' : 'Permitida'}
+                            </span>
+                          </div>
+                        </div>
+                        {exchangeFiles.length > 0 && (
+                          <ul style={{ marginTop: '12px', paddingLeft: '20px', fontSize: '14px' }}>
+                            {exchangeFiles.map((f, idx) => (
+                              <li key={String(f.id ?? idx)}>
+                                {String(f.filename ?? f.name ?? 'archivo')}
+                                {f.uploaded_by != null ? ` (usuario #${f.uploaded_by})` : ''}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+
                 {/* Información de usuarios */}
                 <div className="dispute-details-section">
                   <h4>{t('admin.tasks.section.users')}</h4>
@@ -451,7 +488,8 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                         {selectedTask.creator_username ? (
                           <UsernameWithVerified
                             name={selectedTask.creator_display_name || selectedTask.creator_username}
-                            verified={!!selectedTask.creator_verified}
+                            verifiedEnterprise={!!selectedTask.creator_verified_enterprise}
+                            verifiedIndividual={!!selectedTask.creator_verified_individual}
                           />
                         ) : (
                           'N/A'

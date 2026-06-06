@@ -26,6 +26,14 @@ export const BADGE_CATALOG: BadgeCatalogEntry[] = [
     live: true,
   },
   {
+    id: 'arcusxVerificadoEmpresa',
+    image: ARCUSX_BADGE_ASSETS.arcusxVerificadoEmpresa,
+    titleKey: 'badges.catalog.arcusxVerificadoEmpresa.title',
+    howKey: 'badges.catalog.arcusxVerificadoEmpresa.how',
+    availability: 'live',
+    live: true,
+  },
+  {
     id: 'clienteEmpresa',
     image: ARCUSX_BADGE_ASSETS.clienteEmpresa,
     titleKey: 'badges.catalog.clienteEmpresa.title',

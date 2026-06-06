@@ -76,19 +76,19 @@ export async function cancelTask(
       }
     );
 
-    if (response.data.success) {
-      // Normalizar campos: convertir snake_case a camelCase si es necesario
+    const data = response.data;
+    if (data.success && data.allowed !== false) {
       return {
-        ...response.data,
-        requiresSignature: response.data.requiresSignature ?? response.data.requires_signature ?? false,
-        refundAmount: response.data.refundAmount ?? response.data.refund_amount ?? 0,
-        escrowId: response.data.escrowId ?? response.data.escrow_id,
-        escrowStatus: response.data.escrowStatus ?? response.data.escrow_status,
-        requiresDispute: response.data.requiresDispute ?? response.data.requires_dispute ?? false
+        ...data,
+        allowed: data.allowed ?? true,
+        requiresSignature: data.requiresSignature ?? data.requires_signature ?? false,
+        refundAmount: data.refundAmount ?? data.refund_amount ?? 0,
+        escrowId: data.escrowId ?? data.escrow_id,
+        escrowStatus: data.escrowStatus ?? data.escrow_status,
+        requiresDispute: data.requiresDispute ?? data.requires_dispute ?? false,
       };
-    } else {
-      throw new Error(response.data.message || 'Error al cancelar tarea');
     }
+    throw new Error(data.message || 'Error al cancelar tarea');
   } catch (error: any) {
     const errorMessage = error.response?.data?.message || error.message || 'Error desconocido';
     throw new Error(errorMessage);

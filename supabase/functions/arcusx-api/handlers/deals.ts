@@ -6,6 +6,7 @@ import {
 } from '../../_shared/arcusx-notifications.ts';
 import { logDomainEvent } from '../../_shared/domain-events.ts';
 import { normalizePlatformFeeRate } from '../../_shared/platform-fee.ts';
+import { quoteEscrowCommission } from '../../_shared/escrow-fee-quote.ts';
 import type { ApiContext } from './types.ts';
 import { requireUser } from './require.ts';
 
@@ -25,6 +26,15 @@ function isStellarG(addr: string): boolean {
 /** UUID v4 — un token por deal (UNIQUE en BD); no se aceptan tokens adivinables cortos */
 const DEAL_TOKEN_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function resolvedSigningWallet(
+  body: Record<string, unknown>,
+  profileWallet: string,
+): string {
+  const fromBody = String(body.wallet_address ?? '').trim();
+  const fromProfile = String(profileWallet ?? '').trim();
+  return fromBody || fromProfile;
+}
 
 function isValidDealToken(token: string): boolean {
   return DEAL_TOKEN_RE.test(token);
@@ -116,8 +126,9 @@ export async function createDeal(ctx: ApiContext): Promise<Response> {
   }
 
   const feeRate = await platformFeeRate(auth.supabase);
-  const clientTotal = Math.round((amountUsdc / (1 - feeRate)) * 1e7) / 1e7;
-  const feeUsdc = Math.round((clientTotal - amountUsdc) * 1e7) / 1e7;
+  const feeQuote = quoteEscrowCommission(amountUsdc, feeRate);
+  const clientTotal = Math.round(feeQuote.fundAmount * 1e7) / 1e7;
+  const feeUsdc = Math.round(feeQuote.totalCommission * 1e7) / 1e7;
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
   let data: Record<string, unknown> | null = null;
@@ -153,7 +164,7 @@ export async function createDeal(ctx: ApiContext): Promise<Response> {
     }
   }
 
-  if (!data) return jsonError(req, 'No se pudo generar un link único. Reintentá.', 500);
+  if (!data) return jsonError(req, 'No se pudo generar un link único. Reintenta.', 500);
 
   await logDealEvent(auth.supabase, data.id as string, 'created', auth.userId, { template_id: templateId });
   await logDomainEvent(auth.supabase, {
@@ -266,6 +277,14 @@ export async function acceptDeal(ctx: ApiContext): Promise<Response> {
   if (deal.initiator_user_id === auth.userId) {
     return jsonError(req, 'No puedes aceptar tu propio deal', 400);
   }
+  if (String(deal.status) === 'accepted' && deal.counterparty_user_id === auth.userId) {
+    await auth.supabase.from('arcusx_users').update({
+      wallet_address: wallet,
+      private_payout_wallet: wallet,
+      updated_at: new Date().toISOString(),
+    }).eq('id', auth.userId);
+    return jsonSuccess(req, { message: 'Deal ya aceptado', status: 'accepted' });
+  }
   if (String(deal.status) !== 'sent') {
     return jsonError(req, 'Este deal ya no acepta participantes', 400);
   }
@@ -281,7 +300,10 @@ export async function acceptDeal(ctx: ApiContext): Promise<Response> {
     updated_at: new Date().toISOString(),
   };
 
-  if (deal.funder_role === 'initiator') {
+  if (deal.funder_role === 'counterparty') {
+    // Comercio / link de pago: el comprador fondea y libera al recibir el bien
+    patch.release_signer_wallet = wallet;
+  } else {
     patch.beneficiary_wallet = wallet;
   }
 
@@ -291,6 +313,12 @@ export async function acceptDeal(ctx: ApiContext): Promise<Response> {
     .eq('id', deal.id);
 
   if (error) return jsonError(req, error.message, 500);
+
+  await auth.supabase.from('arcusx_users').update({
+    wallet_address: wallet,
+    private_payout_wallet: wallet,
+    updated_at: new Date().toISOString(),
+  }).eq('id', auth.userId);
 
   await logDealEvent(auth.supabase, deal.id as string, 'accepted', auth.userId, { wallet });
   await insertArcusxNotification(auth.supabase, {
@@ -302,6 +330,91 @@ export async function acceptDeal(ctx: ApiContext): Promise<Response> {
   });
 
   return jsonSuccess(req, { message: 'Deal aceptado', status: 'accepted' });
+}
+
+export async function prepareDealEscrow(ctx: ApiContext): Promise<Response> {
+  const { req, body } = ctx;
+  const auth = await requireUser(ctx);
+
+  const dealId = String(body.agreement_id ?? body.deal_id ?? '');
+  const escrowId = String(body.escrow_id ?? body.escrow_contract_id ?? '').trim();
+  const txHash = body.transaction_hash ? String(body.transaction_hash) : null;
+
+  if (!dealId || !escrowId) return jsonError(req, 'agreement_id y escrow_id requeridos', 400);
+
+  const { data: deal } = await auth.supabase
+    .from('arcusx_agreements')
+    .select('*')
+    .eq('id', dealId)
+    .single();
+
+  if (!deal) return jsonError(req, 'Deal no encontrado', 404);
+  if (!['sent', 'accepted'].includes(String(deal.status))) {
+    return jsonError(req, 'Este deal ya no admite preparar escrow', 400);
+  }
+
+  const isCommerce = deal.funder_role === 'counterparty';
+  if (isCommerce) {
+    if (String(deal.status) !== 'accepted') {
+      return jsonError(req, 'Debes aceptar el link antes de crear el contrato escrow', 400);
+    }
+    if (deal.counterparty_user_id !== auth.userId) {
+      return jsonError(req, 'Solo quien aceptó el deal puede registrar el contrato', 403);
+    }
+    const payer = String(deal.counterparty_wallet ?? '').trim();
+    const signer = String(deal.release_signer_wallet ?? '').trim();
+    if (!payer || payer !== signer) {
+      return jsonError(req, 'Falta la wallet del pagador como release signer', 400);
+    }
+  } else if (deal.initiator_user_id !== auth.userId) {
+    return jsonError(req, 'Solo quien creó el link puede registrar el contrato', 403);
+  }
+
+  if (deal.escrow_contract_id) {
+    return jsonSuccess(req, {
+      message: 'Contrato ya registrado',
+      escrow_contract_id: deal.escrow_contract_id,
+    });
+  }
+
+  const { data: actor } = await auth.supabase
+    .from('arcusx_users')
+    .select('wallet_address')
+    .eq('id', auth.userId)
+    .single();
+  const signingWallet = resolvedSigningWallet(body, String(actor?.wallet_address ?? ''));
+  const expectedWallet = isCommerce
+    ? String(deal.counterparty_wallet ?? '').trim()
+    : String(deal.initiator_wallet ?? '').trim();
+  if (!signingWallet || signingWallet !== expectedWallet) {
+    return jsonError(
+      req,
+      isCommerce
+        ? 'Conecta la wallet con la que aceptaste el deal'
+        : 'Conecta la wallet del pagador que creó el link',
+      403,
+    );
+  }
+
+  const { error } = await auth.supabase.from('arcusx_agreements').update({
+    escrow_contract_id: escrowId,
+    escrow_deploy_tx_hash: txHash,
+    escrow_tx_hash: txHash,
+    updated_at: new Date().toISOString(),
+  }).eq('id', dealId);
+
+  if (error) return jsonError(req, error.message, 500);
+
+  await logDealEvent(auth.supabase, dealId, 'escrow_prepared', auth.userId, {
+    escrow_id: escrowId,
+    deploy_tx: txHash,
+  });
+
+  return jsonSuccess(req, {
+    message: 'Contrato escrow listo para recibir el pago',
+    escrow_contract_id: escrowId,
+    status: deal.status,
+  });
 }
 
 export async function finalizeDealEscrow(ctx: ApiContext): Promise<Response> {
@@ -324,23 +437,32 @@ export async function finalizeDealEscrow(ctx: ApiContext): Promise<Response> {
 
   const funderWallet = String(
     deal.funder_role === 'initiator' ? deal.initiator_wallet : deal.counterparty_wallet,
-  );
+  ).trim();
   const { data: actor } = await auth.supabase
     .from('arcusx_users')
     .select('wallet_address')
     .eq('id', auth.userId)
     .single();
-  const actorWallet = String(actor?.wallet_address ?? '').trim();
+  const signingWallet = resolvedSigningWallet(body, String(actor?.wallet_address ?? ''));
   const isParty = deal.initiator_user_id === auth.userId ||
     deal.counterparty_user_id === auth.userId;
   if (!isParty) return jsonError(req, 'Sin permisos', 403);
-  if (!funderWallet || actorWallet !== funderWallet) {
+  if (!funderWallet || !signingWallet || signingWallet !== funderWallet) {
     return jsonError(req, 'Solo el pagador puede confirmar el fondeo', 403);
+  }
+
+  if (['funded', 'active', 'completed'].includes(String(deal.status))) {
+    return jsonSuccess(req, {
+      message: 'Escrow ya fondeado',
+      status: deal.status,
+      escrow_contract_id: deal.escrow_contract_id,
+    });
   }
 
   const { error } = await auth.supabase.from('arcusx_agreements').update({
     escrow_contract_id: escrowId,
-    escrow_tx_hash: txHash,
+    escrow_fund_tx_hash: txHash,
+    escrow_tx_hash: txHash ?? deal.escrow_tx_hash,
     status: 'funded',
     funded_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -348,7 +470,10 @@ export async function finalizeDealEscrow(ctx: ApiContext): Promise<Response> {
 
   if (error) return jsonError(req, error.message, 500);
 
-  await logDealEvent(auth.supabase, dealId, 'funded', auth.userId, { escrow_id: escrowId });
+  await logDealEvent(auth.supabase, dealId, 'funded', auth.userId, {
+    escrow_id: escrowId,
+    fund_tx: txHash,
+  });
 
   const notifyIds = [Number(deal.initiator_user_id), Number(deal.counterparty_user_id)].filter(Boolean);
   for (const uid of notifyIds) {
@@ -416,14 +541,33 @@ export async function markDealReleased(ctx: ApiContext): Promise<Response> {
     .single();
 
   const wallet = String(user?.wallet_address ?? '').trim();
-  if (wallet !== String(deal.release_signer_wallet)) {
-    return jsonError(req, 'Solo el release signer puede marcar fondos liberados', 403);
+  const releaseWallet = String(deal.release_signer_wallet ?? '').trim();
+  const uid = auth.userId;
+  const canRelease =
+    (wallet && releaseWallet && wallet === releaseWallet) ||
+    (deal.funder_role === 'counterparty' && uid === Number(deal.counterparty_user_id)) ||
+    (deal.funder_role === 'initiator' && uid === Number(deal.initiator_user_id));
+  if (!canRelease) {
+    return jsonError(req, 'Solo quien libera fondos en este deal puede confirmar', 403);
+  }
+
+  if (!deal.escrow_contract_id) {
+    return jsonError(req, 'No hay contrato escrow registrado para este deal.', 400);
+  }
+
+  if (!['funded', 'active'].includes(String(deal.status))) {
+    return jsonError(req, 'El deal debe estar fondeado antes de confirmar la liberación.', 400);
+  }
+
+  if (!txHash) {
+    return jsonError(req, 'transaction_hash es requerido tras liberar fondos on-chain.', 400);
   }
 
   const { error } = await auth.supabase.from('arcusx_agreements').update({
     status: 'completed',
     completed_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
+    escrow_release_tx_hash: txHash,
     escrow_tx_hash: txHash ?? deal.escrow_tx_hash,
   }).eq('id', dealId);
 

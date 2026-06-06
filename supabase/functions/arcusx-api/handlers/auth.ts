@@ -52,18 +52,22 @@ export async function syncSupabaseUser(ctx: ApiContext): Promise<Response> {
 
   const { data: existing } = await supabase
     .from('arcusx_users')
-    .select('id, username, email, supabase_user_id')
+    .select('id, username, email, supabase_user_id, is_admin, role')
     .or(`email.eq.${email},supabase_user_id.eq.${supabaseUserId}`)
     .limit(1)
     .maybeSingle();
 
   let userId: number;
   let username: string;
+  let isAdmin = false;
+  let role = 'user';
   let isNewUser = false;
 
   if (existing) {
     userId = existing.id as number;
     username = existing.username as string;
+    isAdmin = existing.is_admin === true || existing.role === 'admin';
+    role = String(existing.role ?? (isAdmin ? 'admin' : 'user'));
     if (!existing.supabase_user_id) {
       await supabase.from('arcusx_users').update({
         supabase_user_id: supabaseUserId,
@@ -92,17 +96,30 @@ export async function syncSupabaseUser(ctx: ApiContext): Promise<Response> {
       return jsonError(req, error?.message ?? 'Error al crear usuario', 500);
     }
     userId = inserted.id as number;
+    isAdmin = false;
+    role = 'user';
   }
 
   await upsertUserLink(supabase, supabaseUserId, userId);
 
   const { data: profileRow } = await supabase
     .from('arcusx_users')
-    .select('account_type, kyc_status')
+    .select('account_type, kyc_status, is_admin, role')
     .eq('id', userId)
     .single();
 
-  const token = await signArcusxJwt({ userId, username, email }, 3600 * 24);
+  if (profileRow) {
+    isAdmin = profileRow.is_admin === true || profileRow.role === 'admin';
+    role = String(profileRow.role ?? (isAdmin ? 'admin' : 'user'));
+  }
+
+  const token = await signArcusxJwt({
+    userId,
+    username,
+    email,
+    isAdmin,
+    role,
+  }, 3600 * 24 * 7);
 
   return jsonSuccess(req, {
     token,
@@ -110,6 +127,8 @@ export async function syncSupabaseUser(ctx: ApiContext): Promise<Response> {
       id: userId,
       username,
       email,
+      is_admin: isAdmin,
+      role,
       account_type: profileRow?.account_type ?? 'individual',
       kyc_status: profileRow?.kyc_status ?? 'not_required',
     },

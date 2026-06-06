@@ -1,5 +1,12 @@
 import { arcusxAdminUrl, arcusxApiHeaders } from '../config/arcusxApi';
 import { supabase, hasSupabase } from '../config/supabase';
+import { authService } from './authService';
+import {
+  clearAdminSessionMarkers,
+  isAdminFromJwt,
+  isPlatformAdmin,
+  syncAdminSessionFromMarketplaceToken,
+} from '../utils/platformAdmin';
 
 export interface AdminUser {
   id: number;
@@ -43,16 +50,30 @@ export async function adminLogin(email: string, password: string): Promise<Admin
   try {
     const response = await fetch(arcusxAdminUrl('admin_login'), {
       method: 'POST',
-      headers: arcusxApiHeaders({ 'X-Requested-With': 'XMLHttpRequest' }),
-      body: JSON.stringify({ email, password }),
+      headers: arcusxApiHeaders(
+        { 'X-Requested-With': 'XMLHttpRequest' },
+        { skipAuth: true },
+      ),
+      body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
     });
 
-    const data = await response.json();
+    const raw = await response.text();
+    let data: AdminLoginResponse & { message?: string };
+    try {
+      data = raw ? JSON.parse(raw) : { success: false, message: 'Respuesta vacía del servidor' };
+    } catch {
+      return {
+        success: false,
+        message: response.ok
+          ? 'Respuesta inválida del servidor admin'
+          : `Error ${response.status}: ${raw.slice(0, 120) || response.statusText}`,
+      };
+    }
 
     if (!response.ok) {
       return {
         success: false,
-        message: data.message || 'Error al iniciar sesión',
+        message: data.message || `Error al iniciar sesión (${response.status})`,
         is_admin: data.is_admin || false,
       };
     }
@@ -74,9 +95,16 @@ export async function adminLogin(email: string, password: string): Promise<Admin
       message: data.message || 'Error al iniciar sesión',
     };
   } catch (error) {
+    const detail = error instanceof Error ? error.message : '';
+    const hint =
+      error instanceof Error && error.message.includes('API Edge no disponible')
+        ? 'Configura VITE_SUPABASE_URL en el build de producción.'
+        : detail.includes('Failed to fetch') || detail.includes('NetworkError')
+        ? 'No se pudo conectar con arcusx-admin (red o CORS). ¿VITE_SUPABASE_URL correcto?'
+        : detail || 'Error de conexión. Por favor, intenta nuevamente.';
     return {
       success: false,
-      message: 'Error de conexión. Por favor, intenta nuevamente.',
+      message: hint,
     };
   }
 }
@@ -85,7 +113,7 @@ export async function adminLogin(email: string, password: string): Promise<Admin
  * Obtener token de admin del localStorage
  */
 export function getAdminToken(): string | null {
-  return localStorage.getItem('admin_token');
+  return localStorage.getItem('admin_token') || localStorage.getItem('token');
 }
 
 /**
@@ -105,17 +133,24 @@ export function getAdminUser(): AdminUser | null {
  * Verificar si hay una sesión de admin activa
  */
 export function isAdminLoggedIn(): boolean {
+  if (!authService.isAuthenticated()) return false;
   const token = getAdminToken();
-  const user = getAdminUser();
-  return !!(token && user && user.is_admin);
+  if (!token) return false;
+
+  syncAdminSessionFromMarketplaceToken();
+
+  const marketplaceUser = authService.getUser() as AdminUser | null;
+  if (isPlatformAdmin(marketplaceUser)) return true;
+
+  const adminUser = getAdminUser();
+  if (isPlatformAdmin(adminUser)) return true;
+
+  return isAdminFromJwt(token);
 }
 
-/**
- * Cerrar sesión de admin
- */
+/** Salir del panel admin sin cerrar sesión OAuth del marketplace */
 export function adminLogout(): void {
-  localStorage.removeItem('admin_token');
-  localStorage.removeItem('admin_user');
+  clearAdminSessionMarkers();
 }
 
 function normalizeAdminPagination(
@@ -445,12 +480,25 @@ export async function getAdminDisputeDetails(disputeId: number): Promise<any> {
 }
 
 /**
+ * Asegura registro en arcusx_disputes para una tarea (disputas virtuales TW).
+ */
+export async function ensureAdminDispute(taskId: number): Promise<number> {
+  const data = await adminApiCall('ensure_dispute', 'POST', { task_id: taskId });
+  const id = Number(data.dispute_id);
+  if (!id) throw new Error('No se pudo crear la disputa en BD');
+  return id;
+}
+
+/**
  * Resolver una disputa
  */
 export async function resolveAdminDispute(disputeId: number, resolution: {
   decision: 'client' | 'worker' | 'split';
   reason: string;
   refund_percentage?: number; // Para split
+  /** Tras liberar fondos on-chain con Trustless Work */
+  funds_released_on_chain?: boolean;
+  tx_hash?: string;
 }): Promise<any> {
   return await adminApiCall('resolve_dispute', 'POST', {
     dispute_id: disputeId,

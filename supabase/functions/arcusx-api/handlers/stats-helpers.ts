@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { quoteEscrowFundAmount } from '../../_shared/escrow-fee-quote.ts';
 
 export async function getPlatformFee(supabase: SupabaseClient): Promise<number> {
   const { data } = await supabase
@@ -7,7 +8,7 @@ export async function getPlatformFee(supabase: SupabaseClient): Promise<number> 
     .eq('config_key', 'platform_fee')
     .maybeSingle();
   const v = Number(data?.config_value);
-  return Number.isFinite(v) ? v : 0.03;
+  return Number.isFinite(v) ? v : 0.027;
 }
 
 export function parseSkills(raw: unknown): Array<{ name: string; level: string }> {
@@ -70,7 +71,7 @@ export function calcNetAmount(
 ): number {
   if (type === 'received') return price;
   if (escrowAmount != null && Number(escrowAmount) > 0) return Number(escrowAmount);
-  return price / (1 - platformFee);
+  return quoteEscrowFundAmount(price, platformFee);
 }
 
 export async function computeUserPublicStats(
@@ -79,11 +80,36 @@ export async function computeUserPublicStats(
 ): Promise<Record<string, unknown>> {
   const platformFee = await getPlatformFee(supabase);
 
-  const { data: user } = await supabase
-    .from('arcusx_users')
-    .select('average_rating, total_ratings')
-    .eq('id', userId)
-    .maybeSingle();
+  const [{ data: user }, { data: ratingRows }] = await Promise.all([
+    supabase
+      .from('arcusx_users')
+      .select('average_rating, total_ratings')
+      .eq('id', userId)
+      .maybeSingle(),
+    supabase
+      .from('arcusx_ratings')
+      .select('rating')
+      .eq('rated_id', userId),
+  ]);
+
+  let averageRating = Number(user?.average_rating ?? 0);
+  let totalRatings = Number(user?.total_ratings ?? 0);
+  const liveRatings = ratingRows ?? [];
+  if (liveRatings.length > 0) {
+    let sum = 0;
+    let count = 0;
+    for (const row of liveRatings) {
+      const n = Number(row.rating);
+      if (n >= 1 && n <= 5) {
+        sum += n;
+        count += 1;
+      }
+    }
+    if (count > 0) {
+      averageRating = Math.round((sum / count) * 100) / 100;
+      totalRatings = count;
+    }
+  }
 
   const [{ count: tasksCreated }, { data: workerTasks }, { data: clientTasks }] = await Promise.all([
     supabase.from('arcusx_tasks').select('*', { count: 'exact', head: true }).eq('user_id', userId),
@@ -121,9 +147,9 @@ export async function computeUserPublicStats(
     if (escrowAmount != null) {
       totalSpent += escrowAmount;
     } else if (t.escrow_platform_fee != null) {
-      totalSpent += price / (1 - fee);
+      totalSpent += quoteEscrowFundAmount(price, fee);
     } else {
-      totalSpent += price / (1 - platformFee);
+      totalSpent += quoteEscrowFundAmount(price, platformFee);
     }
   }
 
@@ -138,8 +164,8 @@ export async function computeUserPublicStats(
     tasks_created: created,
     total_earned: totalEarned,
     total_spent: totalSpent,
-    average_rating: Number(user?.average_rating ?? 0),
-    total_ratings: Number(user?.total_ratings ?? 0),
+    average_rating: averageRating,
+    total_ratings: totalRatings,
     completion_rate: completionRate,
     response_time_avg: null,
   };

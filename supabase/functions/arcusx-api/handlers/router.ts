@@ -47,7 +47,10 @@ const ROUTES: Record<string, ApiHandler> = {
 
   create_escrow: escrow.createEscrow,
   select_proposal: escrow.selectProposal,
+  reset_pending_escrow: escrow.resetPendingEscrow,
   finalize_private_offer: escrow.finalizePrivateOffer,
+  accept_private_offer: escrow.acceptPrivateOffer,
+  reject_private_offer: escrow.rejectPrivateOffer,
   complete_task: escrow.completeTask,
 
   mark_work_started: escrowExtra.markWorkStarted,
@@ -96,6 +99,7 @@ const ROUTES: Record<string, ApiHandler> = {
   get_my_deals: deals.getMyDeals,
   get_deal_details: deals.getDealDetails,
   accept_deal: deals.acceptDeal,
+  prepare_deal_escrow: deals.prepareDealEscrow,
   finalize_deal_escrow: deals.finalizeDealEscrow,
   complete_deal: deals.completeDeal,
   mark_deal_released: deals.markDealReleased,

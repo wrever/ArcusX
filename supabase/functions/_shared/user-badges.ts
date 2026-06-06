@@ -16,6 +16,8 @@ export type BadgeComputationContext = {
   average_rating?: number | string | null;
   total_ratings?: number | null;
   creator_verified: boolean;
+  creator_verified_enterprise: boolean;
+  creator_verified_individual: boolean;
 };
 
 function hasWalletRegistered(ctx: BadgeComputationContext): boolean {
@@ -181,7 +183,10 @@ export async function computeUserPublicBadges(
   const kycStatus = String(ctx.kyc_status ?? 'not_required');
   const accountType = String(ctx.account_type ?? 'individual');
 
-  if (ctx.creator_verified) {
+  if (ctx.creator_verified_enterprise) {
+    badges.push('arcusxVerificadoEmpresa');
+  }
+  if (ctx.creator_verified_individual) {
     badges.push('arcusxVerificado');
   }
 
@@ -265,5 +270,7 @@ export function badgeContextFromUserRow(
     average_rating: user.average_rating,
     total_ratings: user.total_ratings,
     creator_verified: display.creator_verified,
+    creator_verified_enterprise: display.creator_verified_enterprise,
+    creator_verified_individual: display.creator_verified_individual,
   };
 }

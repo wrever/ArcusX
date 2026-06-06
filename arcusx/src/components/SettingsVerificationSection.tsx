@@ -72,7 +72,9 @@ const SettingsVerificationSection: React.FC = () => {
   const tone = isRejected ? 'rejected' : isReview ? 'review' : 'action';
   const badgeSrc = isReview && enterprise
     ? KYC_BADGE_ASSETS.enterprisePending
-    : KYC_BADGE_ASSETS.enterpriseVerified;
+    : enterprise
+      ? KYC_BADGE_ASSETS.enterpriseVerified
+      : KYC_BADGE_ASSETS.individualVerified;
 
   return (
     <section

@@ -9,8 +9,10 @@ import { authService } from '../services/authService';
 import {
   captureRefFromSearch,
   getStoredRefCode,
+  isReferralRefCode,
   normalizeRefCode,
 } from '../utils/referralCapture';
+import { persistPostLoginRedirect, safeAppRedirect } from '../config/dashboardTabs';
 import { useI18n } from '../i18n/I18nProvider';
 import SEO from './SEO';
 
@@ -21,10 +23,10 @@ const Login = () => {
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const redirectTo = searchParams.get('redirect') || '/dashboard';
+  const redirectTo = safeAppRedirect(searchParams.get('redirect'), '/dashboard');
   const { isAuthenticated } = useAuth();
   const refFromUrl = searchParams.get('ref') ?? searchParams.get('r');
-  const refCode = refFromUrl
+  const refCode = refFromUrl && isReferralRefCode(refFromUrl)
     ? normalizeRefCode(refFromUrl)
     : getStoredRefCode();
 
@@ -32,11 +34,16 @@ const Login = () => {
     captureRefFromSearch(window.location.search);
   }, [searchParams, refFromUrl]);
 
+  useEffect(() => {
+    if (redirectTo !== '/dashboard') {
+      persistPostLoginRedirect(redirectTo);
+    }
+  }, [redirectTo]);
+
   // Verificar si el usuario ya está autenticado al cargar el componente
   useEffect(() => {
     if (isAuthenticated) {
-      const path = redirectTo.startsWith('/') ? redirectTo : `/${redirectTo}`;
-      navigate(path, { replace: true });
+      navigate(redirectTo, { replace: true });
     }
   }, [isAuthenticated, navigate, redirectTo]);
 
@@ -45,6 +52,7 @@ const Login = () => {
     setOauthLoading('google');
     try {
       captureRefFromSearch(window.location.search);
+      persistPostLoginRedirect(redirectTo);
       await authService.signInWithGoogle();
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : '';
@@ -58,6 +66,7 @@ const Login = () => {
     setOauthLoading('github');
     try {
       captureRefFromSearch(window.location.search);
+      persistPostLoginRedirect(redirectTo);
       await authService.signInWithGitHub();
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : '';

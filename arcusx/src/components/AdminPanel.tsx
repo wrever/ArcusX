@@ -82,11 +82,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
       const treasuryConfig = configs.find(c => c.config_key === 'treasury_address');
       const arbitratorConfig = configs.find(c => c.config_key === 'arbitrator_address');
       
-      // platform_fee en BD es decimal (0.03 = 3%); mostrar como porcentaje legible
+      // platform_fee en BD es decimal (0.027 = 2.7% ArcusX)
       const platformFeeValue = platformFeeConfig?.config_value;
       const platformFeeDisplay = typeof platformFeeValue === 'number' 
         ? platformFeeValue * 100 
-        : (typeof platformFeeValue === 'string' ? parseFloat(platformFeeValue) * 100 : 3);
+        : (typeof platformFeeValue === 'string' ? parseFloat(platformFeeValue) * 100 : 2.7);
       
       //  MEJORA: Obtener disputas activas consultando Trustless Work para estados reales
       let activeDisputes = 0;
@@ -151,7 +151,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
         totalVolume: backendStats.total_volume_usdc || 0,
         totalFees: backendStats.total_commission_usdc || 0,
         activeDisputes: activeDisputes,
-        platformFee: platformFeeDisplay || 3,
+        platformFee: platformFeeDisplay || 2.7,
         referralFee: referralFeeConfig?.config_value || 0,
         treasury: treasuryConfig?.config_value || '',
         arbitrator: arbitratorConfig?.config_value || '',
@@ -226,7 +226,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
 
   const handleLogout = () => {
     adminLogout();
-    navigate('/admin/login');
+    navigate('/dashboard');
   };
 
   return (

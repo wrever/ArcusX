@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { FaCopy, FaExternalLinkAlt, FaHandshake, FaWallet, FaUnlock } from 'react-icons/fa';
+import { FaCopy, FaExternalLinkAlt, FaFileContract, FaHandshake, FaWallet, FaUnlock } from 'react-icons/fa';
 import { useI18n } from '../i18n/I18nProvider';
 import type { AgreementDeal } from '../services/dealsService';
 import { dealPublicUrl } from '../services/dealsService';
@@ -11,8 +11,10 @@ type DealListCardProps = {
   userId: number | null;
   walletAddress: string | null;
   onFund?: (deal: AgreementDeal) => void;
+  onPrepare?: (deal: AgreementDeal) => void;
   onRelease?: (deal: AgreementDeal) => void;
   fundLoading?: boolean;
+  prepareLoading?: boolean;
   releaseLoading?: boolean;
 };
 
@@ -21,8 +23,10 @@ const DealListCard = ({
   userId,
   walletAddress,
   onFund,
+  onPrepare,
   onRelease,
   fundLoading,
+  prepareLoading,
   releaseLoading,
 }: DealListCardProps) => {
   const { t } = useI18n();
@@ -67,6 +71,16 @@ const DealListCard = ({
             {t('deals.public.accept')}
           </Link>
         )}
+        {actions.includes('prepare_escrow') && onPrepare && (
+          <button
+            type="button"
+            className="dashboard-deals-btn primary"
+            disabled={prepareLoading}
+            onClick={() => onPrepare(deal)}
+          >
+            <FaFileContract /> {prepareLoading ? '…' : t('deals.wizard.createContract')}
+          </button>
+        )}
         {actions.includes('fund') && onFund && (
           <button
             type="button"
@@ -74,7 +88,7 @@ const DealListCard = ({
             disabled={fundLoading}
             onClick={() => onFund(deal)}
           >
-            <FaWallet /> {fundLoading ? '…' : t('deals.public.fundEscrow')}
+            <FaWallet /> {fundLoading ? '…' : t('deals.public.payEscrow')}
           </button>
         )}
         {actions.includes('release') && onRelease && (

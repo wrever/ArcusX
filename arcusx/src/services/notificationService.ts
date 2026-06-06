@@ -10,7 +10,7 @@ import type { NotificationsResponse } from '../types/notification';
 export type { Notification, NotificationsResponse } from '../types/notification';
 
 export function isNotificationSessionError(message: string): boolean {
-  return /not_authenticated|not authenticated|link_required|no hay sesión|sesión supabase|jwt expired|invalid refresh|refresh token|auth session|supabase_not_configured/i.test(
+  return /not_authenticated|not authenticated|link_required|permission_denied|permission denied|no hay sesión|sesión supabase|jwt expired|invalid refresh|refresh token|auth session|supabase_not_configured/i.test(
     message,
   );
 }

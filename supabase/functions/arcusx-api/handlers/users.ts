@@ -110,12 +110,13 @@ export async function updateUser(ctx: ApiContext): Promise<Response> {
   };
 
   if (newPassword) {
-    const { compare, hash } = await import('https://deno.land/x/bcrypt@v0.4.1/mod.ts');
+    const { hash } = await import('https://deno.land/x/bcrypt@v0.4.1/mod.ts');
+    const { verifyPassword } = await import('../../_shared/password-verify.ts');
     const stored = String(user.password_hash ?? '');
     if (!stored || !currentPassword) {
       return jsonError(req, 'La contraseña actual es incorrecta', 400);
     }
-    const ok = await compare(currentPassword, stored);
+    const ok = await verifyPassword(String(currentPassword), stored);
     if (!ok) return jsonError(req, 'La contraseña actual es incorrecta', 400);
     patch.password_hash = await hash(newPassword);
   }

@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaShieldAlt } from 'react-icons/fa';
 import AccountVerificationPanel from '../components/AccountVerificationPanel';
+import { dashboardTabHref } from '../config/dashboardTabs';
 import { useEnterpriseMode } from '../hooks/useEnterpriseMode';
 import { useI18n } from '../i18n/I18nProvider';
 import '../css/DashboardKycPage.css';
@@ -11,13 +12,15 @@ const DashboardKycPage: React.FC = () => {
   const { t } = useI18n();
   const enterprise = useEnterpriseMode();
 
+  const settingsHref = dashboardTabHref('settings', enterprise);
+
   const goBack = useCallback(() => {
-    navigate('/dashboard?tab=settings');
-  }, [navigate]);
+    navigate(settingsHref);
+  }, [navigate, settingsHref]);
 
   const handleSubmitted = useCallback(() => {
-    navigate('/dashboard?tab=settings', { replace: true });
-  }, [navigate]);
+    navigate(settingsHref, { replace: true });
+  }, [navigate, settingsHref]);
 
   return (
     <div className="dashboard-kyc-page">

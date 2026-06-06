@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { FaCheckCircle, FaExclamationTriangle, FaTimes } from 'react-icons/fa';
 import '../css/Popup.css';
 
@@ -26,13 +27,13 @@ const Popup: React.FC<PopupProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  return (
-    <div className="popup-overlay">
+  const modal = (
+    <div className="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="popup-title">
       <div className={`popup-container${children ? ' popup-container--extra' : ''}`}>
-        <button className="popup-close" onClick={onClose}>
+        <button type="button" className="popup-close" onClick={onClose} aria-label="Cerrar">
           <FaTimes />
         </button>
-        
+
         <div className="popup-content">
           <div className="popup-icon">
             {type === 'success' ? (
@@ -41,20 +42,25 @@ const Popup: React.FC<PopupProps> = ({
               <FaExclamationTriangle className="error-icon" />
             )}
           </div>
-          
-          <h3 className="popup-title">{title}</h3>
+
+          <h3 id="popup-title" className="popup-title">{title}</h3>
           <p className="popup-message">{message}</p>
           {children}
-          <button 
-            className={`popup-button ${type === 'success' ? 'success-button' : 'error-button'}`}
-            onClick={onButtonClick}
-          >
-            {buttonText}
-          </button>
+          <div className="popup-actions">
+            <button
+              type="button"
+              className={`popup-button ${type === 'success' ? 'success-button' : 'error-button'}`}
+              onClick={onButtonClick}
+            >
+              {buttonText}
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modal, document.body) : modal;
 };
 
 export default Popup;

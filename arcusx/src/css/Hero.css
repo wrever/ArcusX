@@ -761,7 +761,52 @@
   color: var(--text-secondary);
   line-height: 1.45;
   flex: 1;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
+  min-height: 0;
+}
+
+/* Bloque creador en carrusel de tareas (separado del precio / CTA) */
+.hero-carousel-card-creator {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+  width: 100%;
+  min-width: 0;
+  margin-top: 0.5rem;
+  margin-bottom: 0.9rem;
+  padding: 0.65rem 0 0;
+  border-top: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+}
+
+.hero-carousel-card-creator-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted, rgba(255, 255, 255, 0.45));
+  line-height: 1;
+}
+
+.hero-carousel-card-creator .task-creator-line,
+.hero-carousel-card-creator .task-creator-line__verified {
+  width: 100%;
+  max-width: 100%;
+}
+
+.hero-carousel-card-creator .task-creator-line__name,
+.hero-carousel-card-creator .username-with-verified__name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.hero-carousel-card-creator .username-with-verified__link {
+  max-width: 100%;
+}
+
+.hero-carousel-card:not(.hero-freelancer-card) .hero-carousel-card-footer {
+  padding-top: 0.15rem;
 }
 
 .hero-carousel-card-footer {
@@ -822,60 +867,41 @@
   align-items: center;
   gap: 0.4rem;
   width: 100%;
-}
-
-.hero-freelancer-name-row .hero-freelancer-name-btn {
-  width: auto;
-  flex: 1;
   min-width: 0;
 }
 
-.hero-freelancer-verified-badge,
-.hero-freelancer-badges {
-  flex-shrink: 0;
+.hero-freelancer-verified-row,
+.hero-freelancer-verified-row .username-with-verified__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
-.hero-freelancer-name-row .hero-freelancer-badges {
-  margin-left: 0.15rem;
-}
-
-.hero-freelancer-name-btn {
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: 0;
-  margin: 0;
-  border: none !important;
-  background: transparent !important;
-  background-color: transparent !important;
-  cursor: pointer;
+.hero-freelancer-name-text {
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.25;
-  transition: color 0.2s ease, text-decoration 0.2s ease;
 }
 
-.hero-freelancer-name-btn:hover,
-.hero-freelancer-name-btn:focus-visible {
-  background: transparent !important;
-  background-color: transparent !important;
-  border-color: transparent !important;
+.hero-freelancer-verified-row .username-with-verified__link:hover .hero-freelancer-name-text {
   color: var(--primary-green, #10dd88);
   text-decoration: underline;
 }
 
-:root[data-theme="dark"] .hero-carousel-card:hover .hero-freelancer-name-btn,
-:root:not([data-theme]) .hero-carousel-card:hover .hero-freelancer-name-btn {
+:root[data-theme="dark"] .hero-carousel-card:hover .hero-freelancer-name-text,
+:root:not([data-theme]) .hero-carousel-card:hover .hero-freelancer-name-text {
   color: #ffffff;
 }
 
-:root[data-theme="dark"] .hero-carousel-card:hover .hero-freelancer-name-btn:hover,
-:root:not([data-theme]) .hero-carousel-card:hover .hero-freelancer-name-btn:hover {
+:root[data-theme="dark"] .hero-carousel-card:hover .hero-freelancer-verified-row .username-with-verified__link:hover .hero-freelancer-name-text,
+:root:not([data-theme]) .hero-carousel-card:hover .hero-freelancer-verified-row .username-with-verified__link:hover .hero-freelancer-name-text {
   color: var(--primary-green, #10dd88);
 }
 
-:root[data-theme="light"] .hero-carousel-card:hover .hero-freelancer-name-btn {
+:root[data-theme="light"] .hero-carousel-card:hover .hero-freelancer-name-text {
   color: var(--text-primary);
 }
 

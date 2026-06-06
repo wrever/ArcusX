@@ -5,7 +5,7 @@ import { useSupabaseApi } from './arcusxApi';
 const axiosInstance = axios.create({
   baseURL: useSupabaseApi && import.meta.env.VITE_SUPABASE_URL
     ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/arcusx-api`
-    : (import.meta.env.VITE_API_URL || 'https://arcusx.pro/api'),
+    : '',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',

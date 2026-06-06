@@ -1,29 +1,37 @@
 import type { AgreementDeal } from '../services/dealsService';
-import { funderWallet } from '../services/dealEscrow';
+import { funderWallet, releaseSignerWallet } from '../services/dealEscrow';
 import { normalizePlatformFeeRate, STANDARD_PLATFORM_FEE_RATE } from '../config/platformFee';
+import { quoteEscrowFundAmount } from './escrowFeeQuote';
 
 export function dealDepositAmount(deal: AgreementDeal): number {
   const total = Number(deal.client_total);
   if (Number.isFinite(total) && total > 0) return total;
   const net = Number(deal.amount_usdc);
   const rate = dealPlatformFeeRate(deal);
-  return net / (1 - rate);
+  if (!Number.isFinite(net) || net <= 0) return 0;
+  return quoteEscrowFundAmount(net, rate);
 }
 
 export function dealPlatformFeeRate(deal: AgreementDeal): number {
   if (deal.platform_fee_rate != null) {
     return normalizePlatformFeeRate(deal.platform_fee_rate);
   }
-  const net = Number(deal.amount_usdc);
-  const total = Number(deal.client_total);
-  if (net > 0 && total > net) {
-    return normalizePlatformFeeRate((total - net) / total);
-  }
   return STANDARD_PLATFORM_FEE_RATE;
 }
 
 export function dealPlatformFeePercent(deal: AgreementDeal): number {
   return dealPlatformFeeRate(deal) * 100;
+}
+
+/** Usuario a calificar cuando el release signer completa el deal. */
+export function dealRatedUserId(deal: AgreementDeal, raterUserId: number): number | null {
+  if (deal.initiator_user_id === raterUserId) {
+    return deal.counterparty_user_id ?? null;
+  }
+  if (deal.counterparty_user_id === raterUserId) {
+    return deal.initiator_user_id ?? null;
+  }
+  return null;
 }
 
 export function partitionDeals(deals: AgreementDeal[], userId: number) {
@@ -40,6 +48,7 @@ export type DealActionKind =
   | 'copy_link'
   | 'open_link'
   | 'accept'
+  | 'prepare_escrow'
   | 'fund'
   | 'release'
   | 'workspace';
@@ -53,7 +62,7 @@ export function getDealActions(
   const isCreator = userId != null && deal.initiator_user_id === userId;
   const isCounterparty = userId != null && deal.counterparty_user_id === userId;
   const payer = walletAddress && walletAddress === funderWallet(deal);
-  const releaser = walletAddress && walletAddress === deal.release_signer_wallet;
+  const releaser = walletAddress && walletAddress === releaseSignerWallet(deal);
 
   if (isCreator) {
     actions.push('copy_link');
@@ -65,11 +74,11 @@ export function getDealActions(
     if (deal.status === 'sent' || deal.status === 'accepted') actions.push('open_link');
   }
 
-  if (
-    payer &&
-    deal.status === 'accepted' &&
-    !deal.escrow_contract_id
-  ) {
+  if (payer && deal.status === 'accepted' && deal.escrow_contract_id) {
+    actions.push('fund');
+  }
+
+  if (payer && deal.status === 'accepted' && !deal.escrow_contract_id) {
     actions.push('fund');
   }
 

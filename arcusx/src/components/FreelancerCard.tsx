@@ -7,13 +7,11 @@ import { memo, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaPlus } from 'react-icons/fa';
 import UsernameWithVerified from './UsernameWithVerified';
-import ProfilePublicBadges from './ProfilePublicBadges';
 import RatingDisplay from './RatingDisplay';
 import { useI18n } from '../i18n/I18nProvider';
 import type { Freelancer } from '../types/freelancer';
 import { getAvatarUrl } from '../utils/avatarUtils';
 import { normalizeDisplayText } from '../utils/utf8Mojibake';
-import { isProfileVerified } from '../utils/profileVerification';
 import '../css/FreelancerCard.css';
 
 interface FreelancerCardProps {
@@ -48,7 +46,22 @@ const FreelancerCard = memo(({ freelancer }: FreelancerCardProps) => {
     [freelancer.avatar_url]
   );
 
-  const verified = useMemo(() => isProfileVerified(freelancer), [freelancer]);
+  const verifiedEnterprise = useMemo(
+    () =>
+      Boolean(
+        freelancer.creator_verified_enterprise ||
+          freelancer.public_badges?.includes('arcusxVerificadoEmpresa'),
+      ),
+    [freelancer],
+  );
+  const verifiedIndividual = useMemo(
+    () =>
+      Boolean(
+        freelancer.creator_verified_individual ||
+          freelancer.public_badges?.includes('arcusxVerificado'),
+      ),
+    [freelancer],
+  );
 
   const skills = useMemo(() => {
     const list = freelancer.skills || [];
@@ -104,15 +117,13 @@ const FreelancerCard = memo(({ freelancer }: FreelancerCardProps) => {
             <h3 className="freelancer-name">
               <UsernameWithVerified
                 name={freelancer.display_name || freelancer.username}
-                verified={verified}
+                verifiedEnterprise={verifiedEnterprise}
+                verifiedIndividual={verifiedIndividual}
+                richTooltip
+                tooltipPlacement="below"
                 nameClassName="freelancer-name-text"
               />
             </h3>
-            <ProfilePublicBadges
-              badgeIds={freelancer.public_badges}
-              iconSize={26}
-              className="profile-public-badges--compact freelancer-card-badges"
-            />
           </div>
         </div>
 

@@ -16,6 +16,16 @@ export function normalizeRefCode(code: string): string {
   return code.trim().toUpperCase().replace(/\s+/g, '-');
 }
 
+/** Valores de ?ref= que no son códigos de embajador (p. ej. hire en apply-task). */
+const NON_REFERRAL_REF_VALUES = new Set(['HIRE']);
+
+export function isReferralRefCode(raw: string | null | undefined): boolean {
+  if (!raw?.trim()) return false;
+  const normalized = normalizeRefCode(raw);
+  if (!normalized || normalized.length < 2) return false;
+  return !NON_REFERRAL_REF_VALUES.has(normalized);
+}
+
 function scheduleServerReferralBind(code: string): void {
   void import('../services/referralBindService').then(({ bindReferralPending }) => {
     void bindReferralPending(code);
@@ -23,6 +33,7 @@ function scheduleServerReferralBind(code: string): void {
 }
 
 export function storeRefCode(code: string): void {
+  if (!isReferralRefCode(code)) return;
   const normalized = normalizeRefCode(code);
   if (!normalized) return;
   try {
@@ -44,24 +55,32 @@ export function storeRefCode(code: string): void {
   scheduleServerReferralBind(normalized);
 }
 
+function readStoredRefCandidate(raw: string | null): string | null {
+  if (!raw || !isReferralRefCode(raw)) return null;
+  return normalizeRefCode(raw);
+}
+
 export function getStoredRefCode(): string | null {
   try {
-    const fromLs = localStorage.getItem(REF_KEY);
-    if (fromLs) return normalizeRefCode(fromLs);
+    const fromLs = readStoredRefCandidate(localStorage.getItem(REF_KEY));
+    if (fromLs) return fromLs;
   } catch {
     /* ignore */
   }
   try {
-    const fromSs = sessionStorage.getItem(REF_SESSION_KEY);
-    if (fromSs) return normalizeRefCode(fromSs);
-    const pending = sessionStorage.getItem(REF_PENDING_KEY);
-    if (pending) return normalizeRefCode(pending);
+    const fromSs = readStoredRefCandidate(sessionStorage.getItem(REF_SESSION_KEY));
+    if (fromSs) return fromSs;
+    const pending = readStoredRefCandidate(sessionStorage.getItem(REF_PENDING_KEY));
+    if (pending) return pending;
   } catch {
     /* ignore */
   }
   try {
     const match = document.cookie.match(new RegExp(`(?:^|; )${REF_COOKIE}=([^;]*)`));
-    if (match?.[1]) return normalizeRefCode(decodeURIComponent(match[1]));
+    if (match?.[1]) {
+      const fromCookie = readStoredRefCandidate(decodeURIComponent(match[1]));
+      if (fromCookie) return fromCookie;
+    }
   } catch {
     /* ignore */
   }
@@ -114,7 +133,7 @@ export function captureRefFromSearch(search: string): string | null {
   try {
     const params = new URLSearchParams(search.startsWith('?') ? search : `?${search}`);
     const raw = params.get('ref') ?? params.get('r');
-    if (!raw) return null;
+    if (!raw || !isReferralRefCode(raw)) return null;
     const normalized = normalizeRefCode(raw);
     if (!normalized) return null;
     storeRefCode(normalized);

@@ -1,4 +1,4 @@
-import { jsonError, jsonSuccess } from '../../_shared/arcusx-cors.ts';
+import { jsonError, jsonResponse, jsonSuccess } from '../../_shared/arcusx-cors.ts';
 import { insertArcusxNotification } from '../../_shared/arcusx-notifications.ts';
 import { logDomainEvent } from '../../_shared/domain-events.ts';
 import type { ApiContext } from './types.ts';
@@ -12,58 +12,215 @@ import {
   getPlatformFee,
   isTransactionTask,
 } from './stats-helpers.ts';
+import {
+  computeTaskRefundAmount,
+  taskCancellationRequiresDispute,
+} from './cancellation-helpers.ts';
+import { taskHasExchangeFiles } from '../../_shared/task-exchange-files.ts';
+import { purgeTaskAndRelated } from '../../_shared/task-purge.ts';
 
+const TASK_CANCEL_SELECT =
+  'id, title, user_id, accepted_applicant_id, status, escrow_id, escrow_status, escrow_amount, price, escrow_platform_fee, files, cancellation_allowed';
+
+/** Fase 1: validar y devolver datos para TW. Fase 2 (tx_hash): confirmar cancelación en BD. */
 export async function cancelTask(ctx: ApiContext): Promise<Response> {
   const { req, body } = ctx;
   const auth = await requireUser(ctx);
   const taskId = Number(body.task_id);
   const reason = body.reason ? String(body.reason) : null;
+  const txHash = body.tx_hash ? String(body.tx_hash).trim() : null;
 
   const { data: task } = await auth.supabase
     .from('arcusx_tasks')
-    .select('id, title, user_id, accepted_applicant_id, status')
+    .select(TASK_CANCEL_SELECT)
     .eq('id', taskId)
     .single();
 
   if (!task) return jsonError(req, 'Tarea no encontrada', 404);
-  const allowed = task.user_id === auth.userId || task.accepted_applicant_id === auth.userId;
-  if (!allowed) return jsonError(req, 'No autorizado', 403);
+  if (task.user_id !== auth.userId) {
+    return jsonError(req, 'No tienes permiso para cancelar esta tarea. Solo el cliente puede cancelar.', 403);
+  }
 
-  const { error } = await auth.supabase.from('arcusx_tasks').update({
-    status: 'cancelled',
-    cancellation_reason: reason,
-    cancellation_initiated_by: auth.userId,
-    cancellation_requested_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  }).eq('id', taskId);
-
-  if (error) return jsonError(req, error.message, 500);
-
-  const otherId = auth.userId === task.user_id
-    ? Number(task.accepted_applicant_id)
-    : Number(task.user_id);
   const taskTitle = String(task.title ?? 'la tarea');
-  if (otherId > 0) {
+
+  if (['cancelled', 'rejected'].includes(String(task.status ?? ''))) {
+    return jsonError(req, 'Esta tarea ya fue cancelada anteriormente.', 400);
+  }
+
+  if (String(task.status ?? '') === 'private_offer_rejected' && txHash) {
+    const refundAmount = await computeTaskRefundAmount(task, auth.supabase);
+    const now = new Date().toISOString();
+    const cancelReason = reason ?? 'Reembolso tras rechazo de oferta privada';
+
+    const { error } = await auth.supabase.from('arcusx_tasks').update({
+      status: 'private_offer_rejected',
+      escrow_status: 'disputed',
+      cancellation_tx_hash: txHash,
+      cancellation_initiated_by: auth.userId,
+      cancellation_reason: cancelReason,
+      cancellation_requested_at: now,
+      updated_at: now,
+    }).eq('id', taskId);
+    if (error) return jsonError(req, error.message, 500);
+
+    const { data: existingDispute } = await auth.supabase
+      .from('arcusx_disputes')
+      .select('id')
+      .eq('task_id', taskId)
+      .eq('status', 'pending')
+      .maybeSingle();
+
+    if (!existingDispute?.id) {
+      const { error: disputeErr } = await auth.supabase.from('arcusx_disputes').insert({
+        task_id: taskId,
+        created_by: auth.userId,
+        reason: cancelReason,
+        tx_hash: txHash,
+        status: 'pending',
+        created_at: now,
+      });
+      if (disputeErr) return jsonError(req, disputeErr.message, 500);
+    }
+
     await insertArcusxNotification(auth.supabase, {
-      user_id_mysql: otherId,
-      title: 'Tarea cancelada',
+      user_id_mysql: auth.userId,
+      title: 'Reembolso en arbitraje',
       message:
-        `La tarea "${taskTitle}" fue cancelada por la otra parte.` +
-        (reason ? ` Motivo: ${reason.slice(0, 200)}` : ''),
-      type: 'warning',
+        `Iniciaste el reembolso de "${taskTitle}". Esperando liberación por arbitraje: ` +
+        'el equipo de ArcusX liberará el 100% a tu wallet. Te avisaremos cuando esté listo.',
+      type: 'info',
       email: false,
+    });
+
+    return jsonSuccess(req, {
+      message:
+        'Solicitud de reembolso registrada. Un administrador liberará los fondos del escrow a tu wallet.',
+      txHash,
+      tx_hash: txHash,
+      refundAmount,
+      refund_amount: refundAmount,
+      status: 'private_offer_rejected',
+      refund_pending: true,
     });
   }
 
-  await logDomainEvent(auth.supabase, {
-    entity_type: 'task',
-    entity_id: taskId,
-    event_type: 'task.cancelled',
-    actor_user_id: auth.userId,
-    payload: reason ? { reason: reason.slice(0, 500) } : null,
-  });
+  if (task.status === 'completed') {
+    return jsonError(req, 'La tarea ya está completada y pagada. No se puede cancelar.', 400);
+  }
 
-  return jsonSuccess(req, { message: 'Tarea cancelada' });
+  if (txHash) {
+    const refundAmount = await computeTaskRefundAmount(task, auth.supabase);
+    const { error } = await auth.supabase.from('arcusx_tasks').update({
+      status: 'cancelled',
+      escrow_status: 'refunded',
+      cancellation_tx_hash: txHash,
+      cancellation_initiated_by: auth.userId,
+      cancellation_reason: reason,
+      cancellation_requested_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq('id', taskId);
+
+    if (error) return jsonError(req, error.message, 500);
+
+    const workerId = Number(task.accepted_applicant_id);
+    if (workerId > 0) {
+      await insertArcusxNotification(auth.supabase, {
+        user_id_mysql: workerId,
+        title: 'Tarea cancelada',
+        message: `La tarea "${taskTitle}" fue cancelada. Se procesó el reembolso al cliente.`,
+        type: 'warning',
+        email: false,
+      });
+    }
+
+    await logDomainEvent(auth.supabase, {
+      entity_type: 'task',
+      entity_id: taskId,
+      event_type: 'task.cancelled',
+      actor_user_id: auth.userId,
+      payload: { reason: reason?.slice(0, 500), tx_hash: txHash },
+    });
+
+    return jsonSuccess(req, {
+      message: 'Tarea cancelada exitosamente. Reembolso registrado.',
+      txHash,
+      tx_hash: txHash,
+      refundAmount,
+      refund_amount: refundAmount,
+      status: 'cancelled',
+    });
+  }
+
+  if (!task.escrow_id) {
+    if (task.status === 'open') {
+      const { error: cancelErr } = await auth.supabase.from('arcusx_tasks').update({
+        status: 'cancelled',
+        cancellation_initiated_by: auth.userId,
+        cancellation_reason: reason ?? 'Cancelada sin escrow',
+        cancellation_requested_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }).eq('id', taskId);
+      if (cancelErr) return jsonError(req, cancelErr.message, 500);
+      return jsonSuccess(req, {
+        message: 'Tarea cancelada (sin escrow fondeado).',
+        status: 'cancelled',
+        allowed: true,
+      });
+    }
+    return jsonError(req, 'No hay escrow configurado para esta tarea. No se puede procesar reembolso.', 400);
+  }
+
+  if (taskCancellationRequiresDispute(task)) {
+    return jsonResponse(req, {
+      success: false,
+      message:
+        'No puedes cancelar esta tarea: hay archivos en el intercambio. Usa Denuncia para que un administrador resuelva el reembolso o el pago.',
+      requires_dispute: true,
+      requiresDispute: true,
+      worker_protection: {
+        has_exchange_files: true,
+        has_messages: false,
+      },
+    }, 400);
+  }
+
+  if (task.escrow_status === 'completed') {
+    return jsonError(req, 'El escrow ya fue liberado. No se puede reembolsar por cancelación.', 400);
+  }
+
+  const allowed =
+    task.cancellation_allowed !== false &&
+    (task.escrow_status === 'active' ||
+      String(task.status ?? '') === 'private_offer_rejected');
+
+  if (!allowed) {
+    return jsonSuccess(req, {
+      allowed: false,
+      requires_dispute: false,
+      requiresDispute: false,
+      can_refund: false,
+      refund_percentage: 0,
+      reason: 'La cancelación con reembolso no está permitida en el estado actual del escrow.',
+    });
+  }
+
+  const refundAmount = await computeTaskRefundAmount(task, auth.supabase);
+  if (refundAmount <= 0) {
+    return jsonError(req, 'No se puede determinar el monto de reembolso. Verifica que el escrow esté fondeado.', 400);
+  }
+
+  return jsonSuccess(req, {
+    allowed: true,
+    message: 'Cancelación permitida. Inicia disputa en Trustless Work; el admin resolverá el reembolso.',
+    requiresSignature: true,
+    requires_signature: true,
+    refundAmount,
+    refund_amount: refundAmount,
+    escrowId: task.escrow_id,
+    escrow_id: task.escrow_id,
+    escrowStatus: task.escrow_status,
+    escrow_status: task.escrow_status,
+  });
 }
 
 export async function checkCancellationAllowed(ctx: ApiContext): Promise<Response> {
@@ -74,7 +231,7 @@ export async function checkCancellationAllowed(ctx: ApiContext): Promise<Respons
 
   const { data: task } = await auth.supabase
     .from('arcusx_tasks')
-    .select('id, user_id, accepted_applicant_id, status, escrow_id, escrow_status, worker_started_at, cancellation_allowed')
+    .select(TASK_CANCEL_SELECT)
     .eq('id', taskId)
     .single();
 
@@ -84,8 +241,7 @@ export async function checkCancellationAllowed(ctx: ApiContext): Promise<Respons
   }
 
   const workerProtection = {
-    has_started: Boolean(task.worker_started_at),
-    has_deliveries: false,
+    has_exchange_files: taskHasExchangeFiles(task),
     hours_since_assignment: 0,
     has_messages: false,
   };
@@ -105,8 +261,8 @@ export async function checkCancellationAllowed(ctx: ApiContext): Promise<Respons
 
   if (!task.escrow_id) {
     return jsonSuccess(req, {
-      allowed: task.cancellation_allowed !== false && task.status !== 'cancelled',
-      reason: task.escrow_id ? undefined : 'No hay escrow configurado para esta tarea. No se puede procesar reembolso.',
+      allowed: false,
+      reason: 'No hay escrow configurado para esta tarea. No se puede procesar reembolso.',
       requires_dispute: false,
       requiresDispute: false,
       can_refund: false,
@@ -116,9 +272,23 @@ export async function checkCancellationAllowed(ctx: ApiContext): Promise<Respons
     });
   }
 
+  if (taskCancellationRequiresDispute(task)) {
+    return jsonSuccess(req, {
+      allowed: false,
+      reason:
+        'Hay archivos en el intercambio. El cliente no puede cancelar con reembolso directo; debe abrir una disputa.',
+      requires_dispute: true,
+      requiresDispute: true,
+      can_refund: false,
+      refund_percentage: 0,
+      worker_protection: workerProtection,
+      workerProtection,
+    });
+  }
+
   const allowed = task.cancellation_allowed !== false &&
-    task.status !== 'completed' &&
-    task.escrow_status !== 'completed';
+    (task.escrow_status === 'active' ||
+      String(task.status ?? '') === 'private_offer_rejected');
 
   return jsonSuccess(req, {
     allowed,
@@ -139,13 +309,14 @@ export async function getPrivateOffers(ctx: ApiContext): Promise<Response> {
     .from('arcusx_tasks')
     .select(`
       id, title, subtitle, description, price, currency, difficulty, category,
-      created_at, status, user_id, escrow_id, escrow_status, accepted_applicant_id,
+      created_at, status, user_id, escrow_id, escrow_status, escrow_fund_tx_hash,
+      accepted_applicant_id,
       arcusx_users!arcusx_tasks_user_id_fkey (username)
     `)
     .eq('is_private_invite', true)
     .eq('invited_user_id', auth.userId)
     .or(
-      `and(status.eq.open,accepted_applicant_id.is.null),and(status.eq.in_progress,accepted_applicant_id.eq.${auth.userId})`,
+      `and(status.in.(open,private_offer_pending),accepted_applicant_id.is.null),and(status.in.(assigned,in_progress),accepted_applicant_id.eq.${auth.userId})`,
     )
     .order('created_at', { ascending: false });
 
@@ -179,8 +350,18 @@ export async function getPrivateOffers(ctx: ApiContext): Promise<Response> {
       my_application_count: count ?? 0,
       escrow_id: row.escrow_id ?? null,
       escrow_status: row.escrow_status ?? null,
+      escrow_fund_tx_hash: row.escrow_fund_tx_hash ?? null,
       accepted_applicant_id: row.accepted_applicant_id ?? null,
-      is_funded: row.escrow_status === 'active' && Boolean(row.escrow_id),
+      is_funded:
+        Boolean(row.escrow_id) &&
+        Boolean(row.escrow_fund_tx_hash) &&
+        (row.escrow_status === 'active' ||
+          row.status === 'assigned' ||
+          row.status === 'private_offer_pending'),
+      awaiting_response:
+        Boolean(row.escrow_id) &&
+        !row.accepted_applicant_id &&
+        (row.status === 'open' || row.status === 'private_offer_pending'),
     };
   }));
 
@@ -193,14 +374,41 @@ export async function deleteScheduledTasks(ctx: ApiContext): Promise<Response> {
   if (token !== 'arcusx_scheduled_deletion_2025') {
     return jsonError(req, 'Forbidden', 403);
   }
-  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { error } = await ctx.supabase
+
+  const now = new Date().toISOString();
+  const { data: due, error: listError } = await ctx.supabase
     .from('arcusx_tasks')
-    .delete()
-    .eq('status', 'cancelled')
-    .lt('scheduled_deletion_at', cutoff);
-  if (error) return jsonError(req, error.message, 500);
-  return jsonSuccess(req, { message: 'Tareas programadas eliminadas' });
+    .select('id, files, scheduled_deletion_at, status, escrow_status')
+    .not('scheduled_deletion_at', 'is', null)
+    .lte('scheduled_deletion_at', now)
+    .order('scheduled_deletion_at', { ascending: true })
+    .limit(25);
+
+  if (listError) return jsonError(req, listError.message, 500);
+
+  const purged: number[] = [];
+  const failures: Array<{ task_id: number; error: string }> = [];
+
+  for (const row of due ?? []) {
+    const taskId = Number(row.id);
+    try {
+      await purgeTaskAndRelated(ctx.supabase, taskId, row.files);
+      purged.push(taskId);
+    } catch (e) {
+      failures.push({
+        task_id: taskId,
+        error: e instanceof Error ? e.message : 'purge_failed',
+      });
+    }
+  }
+
+  return jsonSuccess(req, {
+    message: 'Purga de tareas programadas completada',
+    due_count: due?.length ?? 0,
+    purged_count: purged.length,
+    purged_task_ids: purged,
+    failures,
+  });
 }
 
 export async function uploadAvatar(ctx: ApiContext): Promise<Response> {

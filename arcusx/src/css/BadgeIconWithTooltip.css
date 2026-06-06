@@ -124,6 +124,30 @@
   bottom: calc(100% + 12px);
 }
 
+/* Listados (freelancers): tooltip debajo del icono */
+.badge-icon-tooltip--below .badge-icon-tooltip__card {
+  bottom: auto;
+  top: calc(100% + 10px);
+  transform: translateX(-50%) translateY(-6px);
+}
+
+.badge-icon-tooltip--below:hover .badge-icon-tooltip__card,
+.badge-icon-tooltip--below:focus-within .badge-icon-tooltip__card,
+.badge-icon-tooltip--below:focus .badge-icon-tooltip__card {
+  transform: translateX(-50%) translateY(0);
+}
+
+.badge-icon-tooltip--below .badge-icon-tooltip__card::after {
+  top: auto;
+  bottom: 100%;
+  border-top-color: transparent;
+  border-bottom-color: rgba(12, 18, 28, 0.97);
+}
+
+:root[data-theme='light'] .badge-icon-tooltip--below .badge-icon-tooltip__card::after {
+  border-bottom-color: #fff;
+}
+
 @media (max-width: 767px) {
   .badge-icon-tooltip__card {
     left: auto;

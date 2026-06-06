@@ -14,8 +14,19 @@ import {
   useSendTransaction,
   useGetEscrowFromIndexerByContractIds,
 } from '@trustless-work/escrow/hooks';
-import { createAndFundPrivateOfferEscrow } from '../services/privateOfferEscrow';
+import {
+  createPrivateOfferEscrow,
+  fundPrivateOfferEscrow,
+  sendPrivateOffer,
+} from '../services/privateOfferEscrow';
+import { finalizePrivateOffer } from '../services/privateOfferService';
+import PrivateOfferEscrowPopup from './PrivateOfferEscrowPopup';
+import { USDC_ISSUER } from '../config/usdc';
+import { quoteEscrowFundAmount } from '../utils/escrowFeeQuote';
 import { isValidStellarGAddress } from '../utils/stellarAddress';
+import { quoteEscrowCommission } from '../utils/escrowFeeQuote';
+import { clientFeePercents } from '../utils/escrowFeeDisplay';
+import EscrowFeeBreakdown from './EscrowFeeBreakdown';
 
 interface UserLimits {
   can_create: boolean;
@@ -95,21 +106,31 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
   // Estados para monto del trabajador, comisión y total a pagar
   const [workerAmount, setWorkerAmount] = useState<string>('');
   const [commissionAmount, setCommissionAmount] = useState<string>('');
+  const [platformCommissionAmount, setPlatformCommissionAmount] = useState<string>('');
+  const [protocolCommissionAmount, setProtocolCommissionAmount] = useState<string>('');
   const [totalAmount, setTotalAmount] = useState<string>('');
-  const [platformFee, setPlatformFee] = useState<number>(0.03); // 3% por defecto
-  const [platformFeePercent, setPlatformFeePercent] = useState<string>('0.3');
+  const [platformFee, setPlatformFee] = useState<number>(0.027);
+  const [totalClientFeePercent, setTotalClientFeePercent] = useState<string>('3');
   
   // Estados para el popup
   const [showPopup, setShowPopup] = useState(false);
   const [popupType, setPopupType] = useState<'success' | 'error'>('success');
   const [popupTitle, setPopupTitle] = useState('');
   const [popupMessage, setPopupMessage] = useState('');
-  /** URL absoluta a postular (con ?ref=hire); null si no hay task_id. */
+  /** URL absoluta a postular (con ?from=hire); null si no hay task_id. */
   const [postCreateApplyUrl, setPostCreateApplyUrl] = useState<string | null>(null);
   const [copyLinkFeedback, setCopyLinkFeedback] = useState<'success' | 'error' | null>(null);
   const [invitedWorkerWallet, setInvitedWorkerWallet] = useState<string | null>(null);
   const [loadingInvitedWallet, setLoadingInvitedWallet] = useState(false);
-  const [escrowStep, setEscrowStep] = useState(false);
+  const [showPrivateOfferEscrowPopup, setShowPrivateOfferEscrowPopup] = useState(false);
+  const [pendingPrivateTask, setPendingPrivateTask] = useState<{
+    id: number;
+    title: string;
+    description: string;
+    price: string;
+    deployTxHash?: string;
+    contractId?: string;
+  } | null>(null);
 
   const { address: clientWallet, isConnected, connectWallet, kit } = useWallet();
   const { deployEscrow } = useInitializeEscrow();
@@ -196,8 +217,9 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
   const loadPlatformFee = async () => {
     try {
       const fee = await getPlatformFee();
+      const percents = clientFeePercents(fee);
       setPlatformFee(fee);
-      setPlatformFeePercent((fee * 100).toFixed(2));
+      setTotalClientFeePercent(percents.totalPercent);
     } catch (error) {
       // Mantener valores por defecto si falla
     }
@@ -208,26 +230,26 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
     if (formData.price && formData.price.trim() !== '') {
       const workerAmountValue = parseFloat(formData.price);
       if (!isNaN(workerAmountValue) && workerAmountValue > 0) {
-        // IMPORTANTE: Usar la misma fórmula que en ProposalReview
-        // Trustless Work calcula la comisión sobre el amount del escrow al liberar
-        // Para que el trabajador reciba exactamente workerAmount:
-        // escrowAmount = workerAmount / (1 - platformFee)
-        // commission = escrowAmount - workerAmount
-        const escrowAmount = workerAmountValue / (1 - platformFee);
-        const commission = escrowAmount - workerAmountValue;
-        const total = escrowAmount; // Total que debe pagar el cliente
+        const q = quoteEscrowCommission(workerAmountValue, platformFee);
+        const total = q.fundAmount;
         
         setWorkerAmount(workerAmountValue.toFixed(2));
-        setCommissionAmount(commission.toFixed(7));
+        setCommissionAmount(q.totalCommission.toFixed(7));
+        setPlatformCommissionAmount(q.platformCommission.toFixed(7));
+        setProtocolCommissionAmount(q.protocolCommission.toFixed(7));
         setTotalAmount(total.toFixed(7));
       } else {
         setWorkerAmount('');
         setCommissionAmount('');
+        setPlatformCommissionAmount('');
+        setProtocolCommissionAmount('');
         setTotalAmount('');
       }
     } else {
       setWorkerAmount('');
       setCommissionAmount('');
+      setPlatformCommissionAmount('');
+      setProtocolCommissionAmount('');
       setTotalAmount('');
     }
   }, [formData.price, platformFee]);
@@ -314,7 +336,7 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
     const taskId = raw != null && raw !== '' ? Number(raw) : NaN;
     const applyUrl =
       !Number.isNaN(taskId) && taskId > 0
-        ? `${window.location.origin}/apply-task/${taskId}?ref=hire`
+        ? `${window.location.origin}/apply-task/${taskId}?from=hire`
         : null;
     setPostCreateApplyUrl(applyUrl);
 
@@ -405,62 +427,13 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
       const taskId = rawId != null && rawId !== '' ? Number(rawId) : NaN;
 
       if (hireContext && !Number.isNaN(taskId) && taskId > 0) {
-        setEscrowStep(true);
-        const escrowResult = await createAndFundPrivateOfferEscrow({
-          task: {
-            id: taskId,
-            title: formData.title,
-            description: formData.description,
-            price: formData.price,
-          },
-          clientAddress: clientWallet!,
-          workerAddress: invitedWorkerWallet!,
-          invitedUserId: hireContext.userId,
-          platformFee,
-          hooks: {
-            kit,
-            deployEscrow,
-            fundEscrow,
-            sendTransaction,
-            getEscrowByContractIds: async (contractIds: string[] | { contractIds: string[]; validateOnChain?: boolean }) => {
-              const ids = Array.isArray(contractIds)
-                ? contractIds
-                : contractIds.contractIds;
-              const result = await getEscrowByContractIds({
-                contractIds: ids,
-                validateOnChain: Array.isArray(contractIds) ? true : contractIds.validateOnChain ?? true,
-              });
-              return Array.isArray(result) ? result : (result as { escrows?: unknown[] })?.escrows ?? result ?? [];
-            },
-          },
+        setPendingPrivateTask({
+          id: taskId,
+          title: formData.title,
+          description: formData.description,
+          price: formData.price,
         });
-        setEscrowStep(false);
-
-        if (!escrowResult.success) {
-          showErrorPopup(
-            t('common.error'),
-            escrowResult.error || t('create.task.error.create'),
-          );
-          setLoading(false);
-          return;
-        }
-
-        showSuccessPopup(
-          t('hire.success.funded.title'),
-          t('hire.success.funded.message').replace(/\{\{username\}\}/g, hireContext.username),
-        );
-        setFormData({
-          title: '',
-          description: hireContext
-            ? t('hire.context.desc.prefix').replace('{{username}}', hireContext.username)
-            : '',
-          price: '',
-          currency: 'USDC',
-          difficulty: 'Fácil',
-          category: suggestCategoryFromSkill(hireContext?.skill),
-          subtitle: '',
-        });
-        await loadUserLimits();
+        setShowPrivateOfferEscrowPopup(true);
         setLoading(false);
         return;
       }
@@ -499,9 +472,48 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
         );
       }
     } finally {
-      setEscrowStep(false);
       setLoading(false);
     }
+  };
+
+  const privateEscrowHooks = {
+    kit,
+    deployEscrow,
+    fundEscrow,
+    sendTransaction,
+    getEscrowByContractIds: async (
+      contractIds: string[] | { contractIds: string[]; validateOnChain?: boolean },
+    ) => {
+      const ids = Array.isArray(contractIds) ? contractIds : contractIds.contractIds;
+      const result = await getEscrowByContractIds({
+        contractIds: ids,
+        validateOnChain: Array.isArray(contractIds)
+          ? false
+          : contractIds.validateOnChain ?? false,
+      });
+      return Array.isArray(result) ? result : (result as { escrows?: unknown[] })?.escrows ?? result ?? [];
+    },
+  };
+
+  const handlePrivateOfferComplete = async () => {
+    if (!hireContext) return;
+    showSuccessPopup(
+      t('hire.success.sent.title'),
+      t('hire.success.sent.message').replace(/\{\{username\}\}/g, hireContext.username),
+    );
+    setFormData({
+      title: '',
+      description: hireContext
+        ? t('hire.context.desc.prefix').replace('{{username}}', hireContext.username)
+        : '',
+      price: '',
+      currency: 'USDC',
+      difficulty: 'Fácil',
+      category: suggestCategoryFromSkill(hireContext?.skill),
+      subtitle: '',
+    });
+    setPendingPrivateTask(null);
+    await loadUserLimits();
   };
 
   return (
@@ -701,9 +713,13 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
                 <p className="net-amount-text">
                    {t('create.worker.receives')} <strong>{workerAmount} USDC</strong>
                 </p>
-                <p className="commission-text">
-                   {t('create.commission.label')} ({platformFeePercent}%): {commissionAmount} USDC
-                </p>
+                <EscrowFeeBreakdown
+                  className="commission-text"
+                  platformFee={platformFee}
+                  totalUsdc={commissionAmount}
+                  platformUsdc={platformCommissionAmount}
+                  protocolUsdc={protocolCommissionAmount}
+                />
                 <p className="total-amount-text" style={{ fontWeight: 'bold', color: '#10dd88', fontSize: '1.1em' }}>
                   <FaCreditCard style={{ marginRight: '6px' }} /> {t('create.total.pay')} <strong>{totalAmount} USDC</strong>
                 </p>
@@ -721,7 +737,7 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
                 </label>
                 <p className="helper-text" style={{ fontSize: '0.85em', color: 'var(--text-muted)', marginTop: '0.25rem', marginBottom: '0.5rem' }}>
                   <FaInfoCircle style={{ marginRight: '4px', fontSize: '12px' }} />
-                  {t('create.helper.payment').replace('{{p}}', String(platformFeePercent))}
+                  {t('create.helper.payment').replace('{{p}}', String(totalClientFeePercent))}
                 </p>
                 <input
                   type="number"
@@ -809,9 +825,14 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
               <p style={{ marginTop: '1rem' }}><strong> {t('create.costs.title')}</strong></p>
               <ul>
                 <li>{t('create.costs.bullet.worker')}</li>
-                <li>{t('create.costs.bullet.commission').replace('{{p}}', String(platformFeePercent))}</li>
+                <li>
+                  {t('create.costs.bullet.commission')
+                    .replace('{{total}}', String(totalClientFeePercent))
+                    .replace('{{platform}}', clientFeePercents(platformFee).platformPercent)
+                    .replace('{{protocol}}', clientFeePercents(platformFee).protocolPercent)}
+                </li>
                 <li>{t('create.costs.bullet.currency')}</li>
-                <li>{t('create.costs.bullet.total').replace('{{p}}', String(platformFeePercent))}</li>
+                <li>{t('create.costs.bullet.total').replace('{{p}}', String(totalClientFeePercent))}</li>
                 <li>{t('create.costs.bullet.fees')}</li>
                 <li>{t('create.costs.bullet.note')}</li>
               </ul>
@@ -844,7 +865,7 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
                     : 1,
               }}
             >
-              {escrowStep
+              {showPrivateOfferEscrowPopup
                 ? t('hire.escrow.processing')
                 : loading
                   ? t('create.submitting')
@@ -895,6 +916,92 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
           ) : undefined
         }
       />
+
+      {showPrivateOfferEscrowPopup && pendingPrivateTask && hireContext && invitedWorkerWallet && clientWallet && (
+        <PrivateOfferEscrowPopup
+          isOpen={showPrivateOfferEscrowPopup}
+          onClose={() => {
+            setShowPrivateOfferEscrowPopup(false);
+          }}
+          onComplete={handlePrivateOfferComplete}
+          taskTitle={pendingPrivateTask.title}
+          taskPrice={pendingPrivateTask.price}
+          workerName={hireContext.username}
+          onCreateEscrow={async () => {
+            const result = await createPrivateOfferEscrow({
+              task: pendingPrivateTask,
+              clientAddress: clientWallet,
+              workerAddress: invitedWorkerWallet,
+              platformFee,
+              hooks: privateEscrowHooks,
+            });
+            if (result.contractId) {
+              setPendingPrivateTask((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      contractId: result.contractId,
+                      deployTxHash: result.deployTxHash,
+                    }
+                  : prev,
+              );
+            }
+            return {
+              success: result.success,
+              escrowId: result.contractId,
+              contractId: result.contractId,
+              deployTxHash: result.deployTxHash,
+              error: result.error,
+            };
+          }}
+          onFundEscrow={async (contractId) =>
+            fundPrivateOfferEscrow({
+              contractId,
+              task: pendingPrivateTask,
+              clientAddress: clientWallet,
+              platformFee,
+              hooks: privateEscrowHooks,
+            })
+          }
+          onSendOffer={async (contractId, fundTxHash) => {
+            const sent = await sendPrivateOffer({
+              taskId: pendingPrivateTask.id,
+              invitedUserId: hireContext.userId,
+              workerAddress: invitedWorkerWallet,
+              clientAddress: clientWallet,
+              contractId,
+              fundTxHash,
+              deployTxHash: pendingPrivateTask.deployTxHash,
+              task: pendingPrivateTask,
+              platformFee,
+            });
+            if (!sent.success && pendingPrivateTask.contractId) {
+              try {
+                const amount = quoteEscrowFundAmount(
+                  parseFloat(String(pendingPrivateTask.price)),
+                  platformFee,
+                );
+                await finalizePrivateOffer({
+                  task_id: pendingPrivateTask.id,
+                  invited_user_id: hireContext.userId,
+                  worker_wallet_address: invitedWorkerWallet,
+                  escrow_id: contractId,
+                  transaction_hash: fundTxHash,
+                  deploy_transaction_hash: pendingPrivateTask.deployTxHash,
+                  escrow_amount: amount,
+                  platform_fee: platformFee,
+                  trustline_address: USDC_ISSUER,
+                  client_wallet_address: clientWallet,
+                });
+                return { success: true };
+              } catch {
+                return sent;
+              }
+            }
+            return sent;
+          }}
+        />
+      )}
     </div>
   );
 };

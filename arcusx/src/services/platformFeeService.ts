@@ -20,7 +20,7 @@ function storeFee(fee: number): number {
 }
 
 /**
- * Obtiene el platform fee del backend (decimal 0.03 = 3 %)
+ * Obtiene el platform fee del backend (decimal 0.027 = 2.7 % ArcusX)
  */
 export async function getPlatformFee(useCache: boolean = true): Promise<number> {
   if (useCache && cachedFee !== null && Date.now() - cacheTimestamp < CACHE_DURATION) {

@@ -20,8 +20,10 @@ export interface PrivateOfferTask {
   my_application_count: number;
   escrow_id?: string | null;
   escrow_status?: string | null;
+  escrow_fund_tx_hash?: string | null;
   accepted_applicant_id?: number | null;
   is_funded?: boolean;
+  awaiting_response?: boolean;
 }
 
 export async function fetchPrivateOffers(): Promise<PrivateOfferTask[]> {

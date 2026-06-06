@@ -6,6 +6,8 @@ import { authService } from '../services/authService';
 import { useWallet } from '../hooks/useWallet';
 import type { UserProfile, Skill } from '../types/profile';
 import { getAvatarUrl } from '../utils/avatarUtils';
+import { dashboardTabHref, getDefaultDashboardTab } from '../config/dashboardTabs';
+import { useEnterpriseMode } from '../hooks/useEnterpriseMode';
 import { useI18n } from '../i18n/I18nProvider';
 import '../css/EditProfile.css';
 
@@ -21,6 +23,7 @@ const STELLAR_G_ADDRESS = /^G[A-Z0-9]{55}$/;
 
 const EditProfile: React.FC = () => {
   const navigate = useNavigate();
+  const enterprise = useEnterpriseMode();
   const { t } = useI18n();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { address: connectedWalletAddress, isConnected: walletConnected } = useWallet();
@@ -277,7 +280,11 @@ const EditProfile: React.FC = () => {
       const returnToOffers = window.location.hash === '#private-payout-wallet';
       setTimeout(() => {
         setSuccess(null);
-        navigate(returnToOffers ? '/dashboard?tab=private-offers' : '/dashboard');
+        navigate(
+          returnToOffers
+            ? dashboardTabHref('private-offers', enterprise)
+            : dashboardTabHref(getDefaultDashboardTab(enterprise), enterprise),
+        );
       }, 1500);
     } catch (err: any) {
       const message =
