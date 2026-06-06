@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { FaUser, FaTasks, FaWallet, FaChartLine, FaBell, FaCog, FaSignOutAlt, FaPlus, FaTimes, FaExclamationTriangle, FaUsers, FaCheckCircle, FaGlobe, FaLock, FaStar, FaGraduationCap, FaExchangeAlt, FaQuestionCircle, FaEnvelope, FaHandshake } from 'react-icons/fa';
+import { FaUser, FaTasks, FaWallet, FaChartLine, FaBell, FaCog, FaSignOutAlt, FaPlus, FaTimes, FaExclamationTriangle, FaUsers, FaCheckCircle, FaGlobe, FaLock, FaStar, FaGraduationCap, FaExchangeAlt, FaQuestionCircle, FaEnvelope, FaHandshake, FaUserShield } from 'react-icons/fa';
 import ThemeToggle from './components/ThemeToggle';
 import LanguageFab from './components/LanguageFab';
 import { FiMenu } from 'react-icons/fi';
@@ -24,10 +24,13 @@ import {
   dismissNotification,
   isNotificationSessionError,
 } from './services/notificationService';
-import { getUserDisputes, UserDispute } from './services/disputeService';
 import { getUserTransactions, getUserEarningsSummary, Transaction } from './services/transactionService';
 import { getUserProfile, getUserPublicStats } from './services/profileService';
 import type { UserProfile as UserProfileType, UserStatistics } from './types/profile';
+import {
+  canAccessTaskSupervision,
+  clientCanSuperviseAcceptedTask,
+} from './utils/escrowStatus';
 import RatingDisplay from './components/RatingDisplay';
 import { getUserRatingSummary } from './services/ratingService';
 import { useI18n } from './i18n/I18nProvider';
@@ -41,9 +44,17 @@ import { normalizeDisplayText } from './utils/utf8Mojibake';
 import { useTheme } from './contexts/ThemeContext';
 import { useEnterpriseMode } from './hooks/useEnterpriseMode';
 import { hasSupabase } from './config/supabase';
-import { ensureArcusxSupabaseUserLink } from './services/arcusxMessagingSupabase';
+import { prepareSupabaseArcusxSession } from './services/arcusxMessagingSupabase';
 import { fetchPrivateOffers, type PrivateOfferTask } from './services/privateOffersService';
+import TaskDeletionNotice from './components/TaskDeletionNotice';
+import SentPrivateOfferCard from './components/SentPrivateOfferCard';
+import { useSentPrivateOffersChainMap } from './hooks/useSentPrivateOffersChainMap';
 import { authService } from './services/authService';
+import {
+  isAdminFromJwt,
+  isPlatformAdmin,
+  syncAdminSessionFromMarketplaceToken,
+} from './utils/platformAdmin';
 import PrivateOfferWalletModal from './components/PrivateOfferWalletModal';
 import DashboardDealsPanel from './components/DashboardDealsPanel';
 import SettingsVerificationSection from './components/SettingsVerificationSection';
@@ -52,6 +63,14 @@ import './css/SettingsVerificationSection.css';
 import './css/SettingsBadgesCatalog.css';
 import TaskCreatorLine from './components/TaskCreatorLine';
 import { isValidStellarGAddress } from './utils/stellarAddress';
+import {
+  buildDashboardSearchParams,
+  isDashboardTabQuery,
+  isDashboardTabVisible,
+  resolveDashboardTab,
+  shouldNormalizeDashboardTabUrl,
+  type DashboardTabId,
+} from './config/dashboardTabs';
 
 interface UserData {
   id: number;
@@ -83,6 +102,19 @@ interface TaskData {
   proposal_count?: number; // Añadir campo para el conteo de propuestas (opcional inicialmente)
   has_accepted_proposal?: boolean; // **Añadido de nuevo**
   accepted_applicant_id?: number | null; // **Añadido de nuevo**
+  escrow_id?: string | null;
+  escrow_status?: string | null;
+  escrow_fund_tx_hash?: string | null;
+  is_private_invite?: boolean;
+  invited_user_id?: number | null;
+  invited_worker_username?: string | null;
+  awaiting_private_worker?: boolean;
+  scheduled_deletion_at?: string | null;
+  cancellation_tx_hash?: string | null;
+  cancellation_requested_at?: string | null;
+  escrow_completed_at?: string | null;
+  escrow_release_tx_hash?: string | null;
+  completed_at?: string | null;
 }
 
 function normalizeTaskForDisplay(task: TaskData): TaskData {
@@ -115,7 +147,10 @@ const Dashboard = () => {
   const enterprise = useEnterpriseMode();
   const { theme } = useTheme();
   const arcusLogo = theme === 'light' ? arcusLogoLight : arcusLogoDark;
-  const [activeTab, setActiveTab] = useState(enterprise ? 'manage-tasks' : 'tasks');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<DashboardTabId>(() =>
+    resolveDashboardTab(searchParams.get('tab'), enterprise),
+  );
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [difficultyFilter, setDifficultyFilter] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
@@ -149,8 +184,6 @@ const Dashboard = () => {
   const [payoutWalletRegistered, setPayoutWalletRegistered] = useState<boolean | null>(null);
   const [payoutWalletAddress, setPayoutWalletAddress] = useState<string | null>(null);
 
-  const [searchParams] = useSearchParams();
-
   // Estado para notificaciones
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
@@ -161,7 +194,6 @@ const Dashboard = () => {
   const notificationDropdownRef = useRef<HTMLDivElement>(null);
   
   // Estado para disputas
-  const [pendingDisputes, setPendingDisputes] = useState<UserDispute[]>([]);
   
   // Verificar y eliminar tareas programadas automáticamente
   useScheduledTaskDeletion();
@@ -180,10 +212,27 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
 
+  const navigateToDashboardTab = (tab: DashboardTabId, options?: { replace?: boolean }) => {
+    const resolved = resolveDashboardTab(tab, enterprise);
+    if (!isDashboardTabQuery(searchParams, resolved, enterprise)) {
+      setSearchParams(buildDashboardSearchParams(resolved, enterprise, searchParams), {
+        replace: options?.replace ?? false,
+      });
+    }
+    setActiveTab(resolved);
+  };
+
   useEffect(() => {
     if (!user?.id || !hasSupabase) return;
-    void ensureArcusxSupabaseUserLink(Number(user.id));
+    syncAdminSessionFromMarketplaceToken();
+    void prepareSupabaseArcusxSession(Number(user.id)).catch(() => {
+      /* reintento al abrir notificaciones o chat */
+    });
   }, [user?.id]);
+
+  const showAdminPanel =
+    isPlatformAdmin(authService.getUser()) ||
+    isAdminFromJwt(authService.getToken());
 
   const refreshPayoutWallet = async (): Promise<{ registered: boolean; address: string | null }> => {
     setPayoutWalletLoading(true);
@@ -235,7 +284,7 @@ const Dashboard = () => {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, user?.id, searchParams]);
+  }, [activeTab, user?.id]);
 
   useEffect(() => {
     if (activeTab !== 'private-offers') return;
@@ -285,57 +334,24 @@ const Dashboard = () => {
   const [userRating, setUserRating] = useState<{ average_rating: number; total_ratings: number } | null>(null);
   const [loadingRating, setLoadingRating] = useState(false);
 
-  // Tabs permitidas por modo (empresas = crear/supervisar + operación)
-  const allowedEnterpriseTabs = [
-    'create-task',
-    'manage-tasks',
-    'freelancers',
-    'private-offers',
-    'deals',
-    'swap',
-    'tutorials',
-    'notifications',
-    'settings',
-    'support'
-  ];
-  const showEnterpriseTab = (tab: string) => !enterprise || allowedEnterpriseTabs.includes(tab);
+  const showEnterpriseTab = (tab: DashboardTabId) => isDashboardTabVisible(tab, enterprise);
 
   const openPrivateOffersTab = async () => {
-    setActiveTab('private-offers');
+    navigateToDashboardTab('private-offers');
     const { registered } = await refreshPayoutWallet();
     if (!registered) setShowPrivateWalletGate(true);
   };
 
+  /** Sincroniza pestaña desde `?tab=` (atrás/adelante, links externos) */
   useEffect(() => {
-    if (searchParams.get('tab') !== 'private-offers' || !showEnterpriseTab('private-offers')) return;
-    let cancelled = false;
-    setActiveTab('private-offers');
-    void refreshPayoutWallet().then(({ registered }) => {
-      if (cancelled) return;
-      if (!registered) setShowPrivateWalletGate(true);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [searchParams, enterprise]);
+    const raw = searchParams.get('tab');
+    const tab = resolveDashboardTab(raw, enterprise);
+    setActiveTab((prev) => (prev === tab ? prev : tab));
 
-  useEffect(() => {
-    if (searchParams.get('tab') !== 'deals' || !showEnterpriseTab('deals')) return;
-    setActiveTab('deals');
-  }, [searchParams, enterprise]);
-
-  useEffect(() => {
-    if (searchParams.get('tab') === 'settings') {
-      setActiveTab('settings');
+    if (shouldNormalizeDashboardTabUrl(raw, enterprise)) {
+      setSearchParams(buildDashboardSearchParams(tab, enterprise, searchParams), { replace: true });
     }
-  }, [searchParams]);
-
-  // Si cambian condiciones de modo, mantener al usuario en un tab permitido
-  useEffect(() => {
-    if (enterprise && !allowedEnterpriseTabs.includes(activeTab)) {
-      setActiveTab('manage-tasks');
-    }
-  }, [enterprise, activeTab]);
+  }, [searchParams, enterprise, setSearchParams]);
   
   // Las tareas ya vienen filtradas del backend, solo excluir asignadas
   const filteredTasks = fetchedTasks.filter(task => task.status !== 'assigned');
@@ -498,47 +514,67 @@ const Dashboard = () => {
   }, [user?.id]); // Ejecutar este efecto cuando el user.id cambie (es decir, al logearse)
   // -------------------------------------------- //
 
-  // --- Lógica para obtener tareas del usuario desde la API --- //
-  useEffect(() => {
-    if (activeTab === 'manage-tasks' && user?.id) { // Cargar tareas del usuario solo cuando la pestaña 'manage-tasks' está activa y el usuario está logeado
-      const fetchUserTasks = async () => {
-        setLoadingUserTasks(true);
-        setUserTasksError('');
-        try {
-          const response = await axios.get(arcusxApiUrl('get_user_tasks', { user_id: user.id }));
-          if (Array.isArray(response.data)) {
-            const base = response.data.map((row: TaskData) => normalizeTaskForDisplay(row));
-            const enriched = await Promise.all(
-              base.map(async (task) => {
-                if (task.proposal_count !== undefined) return task;
-                try {
-                  const pr = await axios.get(
-                    arcusxApiUrl('get_task_proposals', { task_id: task.id }),
-                  );
-                  const count = Array.isArray(pr.data) ? pr.data.length : 0;
-                  return { ...task, proposal_count: count };
-                } catch {
-                  return { ...task, proposal_count: 0 };
-                }
-              }),
-            );
-            setUserTasks(enriched);
-          } else {
-            setUserTasksError(t('dashboard.manage.tasks.error.format'));
-            setUserTasks([]); // Limpiar tareas si el formato es incorrecto
-          }
-        } catch (error: any) {
-          setUserTasksError(t('dashboard.manage.tasks.error.load') + ': ' + (error.response?.data?.message || error.message));
-          setUserTasks([]);
-        } finally {
-          setLoadingUserTasks(false);
-        }
-      };
-
-      fetchUserTasks();
+  const reloadUserTasks = useCallback(async () => {
+    if (!user?.id) return;
+    setLoadingUserTasks(true);
+    setUserTasksError('');
+    try {
+      const response = await axios.get(arcusxApiUrl('get_user_tasks', { user_id: user.id }));
+      if (Array.isArray(response.data)) {
+        const base = response.data.map((row: TaskData) => normalizeTaskForDisplay(row));
+        const enriched = await Promise.all(
+          base.map(async (task) => {
+            if (task.proposal_count !== undefined) return task;
+            try {
+              const pr = await axios.get(arcusxApiUrl('get_task_proposals', { task_id: task.id }));
+              const count = Array.isArray(pr.data) ? pr.data.length : 0;
+              return { ...task, proposal_count: count };
+            } catch {
+              return { ...task, proposal_count: 0 };
+            }
+          }),
+        );
+        setUserTasks(enriched);
+      } else {
+        setUserTasksError(t('dashboard.manage.tasks.error.format'));
+        setUserTasks([]);
+      }
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
+      setUserTasksError(
+        t('dashboard.manage.tasks.error.load') +
+          ': ' +
+          (err.response?.data?.message || err.message || ''),
+      );
+      setUserTasks([]);
+    } finally {
+      setLoadingUserTasks(false);
     }
-  }, [activeTab, user?.id]);
+  }, [user?.id, t]);
 
+  // --- Tareas creadas por el usuario (públicas + ofertas privadas enviadas) --- //
+  useEffect(() => {
+    if ((activeTab === 'manage-tasks' || activeTab === 'private-offers') && user?.id) {
+      void reloadUserTasks();
+    }
+  }, [activeTab, user?.id, reloadUserTasks]);
+
+  const publicManageTasks = useMemo(
+    () => userTasks.filter((task) => !task.is_private_invite),
+    [userTasks],
+  );
+  const sentPrivateOffers = useMemo(
+    () => userTasks.filter((task) => task.is_private_invite),
+    [userTasks],
+  );
+
+  const sentOffersChainSource =
+    activeTab === 'private-offers' ? sentPrivateOffers : [];
+  const {
+    chainLoaded: sentOfferChainLoaded,
+    refreshChainMap: refreshSentOfferChainMap,
+    lookupTwRow: lookupSentOfferTwRow,
+  } = useSentPrivateOffersChainMap(sentOffersChainSource);
 
   // --- Lógica para obtener tareas aceptadas por el usuario desde la API --- //
   useEffect(() => {
@@ -549,10 +585,16 @@ const Dashboard = () => {
         try {
           // Llamada al nuevo script de backend
           const response = await axios.get(arcusxApiUrl('get_accepted_tasks', { user_id: user.id }));
-          if (Array.isArray(response.data)) {
-            const base = response.data.map((row: TaskData) => normalizeTaskForDisplay(row));
+          const payload = response.data;
+          const list = Array.isArray(payload)
+            ? payload
+            : Array.isArray(payload?.tasks)
+              ? payload.tasks
+              : null;
+          if (list !== null) {
+            const base = (list as TaskData[]).map((row) => normalizeTaskForDisplay(row));
             const enriched = await Promise.all(
-              base.map(async (task) => {
+              base.map(async (task: TaskData) => {
                 if (task.creator_username) return task;
                 try {
                   const detail = await axios.get(
@@ -569,10 +611,19 @@ const Dashboard = () => {
                 }
               }),
             );
-            setAcceptedTasks(enriched);
+            const fundedOnly = enriched.filter((task) =>
+              canAccessTaskSupervision(
+                task.escrow_id,
+                task.escrow_status,
+                task.escrow_fund_tx_hash,
+              ),
+            );
+            setAcceptedTasks(fundedOnly);
+          } else if (payload && typeof payload === 'object' && payload.success === false) {
+            setAcceptedTasksError(payload.message || t('dashboard.in.progress.error.format'));
+            setAcceptedTasks([]);
           } else {
-            setAcceptedTasksError(t('dashboard.in.progress.error.format'));
-            setAcceptedTasks([]); // Limpiar tareas si el formato es incorrecto
+            setAcceptedTasks([]);
           }
         } catch (error: any) {
           setAcceptedTasksError(t('dashboard.in.progress.error.load') + ': ' + (error.response?.data?.message || error.message));
@@ -655,7 +706,7 @@ const Dashboard = () => {
   // Función para navegar a la página de creación de tarea
   const handleCreateTaskClick = () => {
     if (enterprise) {
-      setActiveTab('create-task');
+      navigateToDashboardTab('create-task');
       return;
     }
     navigate('/create-task');
@@ -667,18 +718,29 @@ const Dashboard = () => {
   };
   
   // Función para navegar a la página de supervisión (nueva)
-  const handleSuperviseTaskClick = (taskId: number, acceptedApplicantId: number | null | undefined) => {
-      // TODO: Define la ruta correcta a tu página de supervisión/comunicación
-      // Asegúrate de pasar ambos IDs: el de la tarea y el del aplicante aceptado
-      if (acceptedApplicantId) {
-           navigate(`/supervise-task/${taskId}/${acceptedApplicantId}`);
-      } else {
-           // Manejar el caso (poco probable si has_accepted_proposal es true) donde no hay ID de aplicante aceptado
-           // Opcional: Mostrar un mensaje al usuario
-           // alert('No se pudo encontrar al trabajador asignado para esta tarea.');
-      }
+  const handleSuperviseTaskClick = (
+    taskId: number,
+    acceptedApplicantId: number | null | undefined,
+    escrowStatus?: string | null,
+    escrowId?: string | null,
+    fundTxHash?: string | null,
+    /** API ya validó escrow fondeado (get_user_tasks.has_accepted_proposal) */
+    readyForSupervision?: boolean,
+  ) => {
+    const funded =
+      readyForSupervision === true ||
+      canAccessTaskSupervision(escrowId, escrowStatus, fundTxHash);
+    if (!funded) {
+      navigate(`/proposals/${taskId}`);
+      return;
+    }
+    if (acceptedApplicantId) {
+      navigate(`/supervise-task/${taskId}/${acceptedApplicantId}`);
+    } else {
+      navigate(`/proposals/${taskId}`);
+    }
   };
-  
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -689,21 +751,6 @@ const Dashboard = () => {
       window.location.href = '/';
     }
   };
-  
-  // Cargar disputas pendientes
-  const fetchPendingDisputes = async () => {
-    if (!user?.id) return;
-    
-    try {
-      const data = await getUserDisputes();
-      setPendingDisputes(data.disputes);
-    } catch (error: any) {
-    }
-  };
-  
-  // Nota: La funcionalidad de firmar transacciones de disputa ha sido eliminada.
-  // Las disputas ahora se resuelven automáticamente a través de Trustless Work
-  // en el panel de administración (DisputeManagement.tsx).
   
   // Cargar notificaciones del usuario
   const fetchNotifications = async () => {
@@ -740,15 +787,13 @@ const Dashboard = () => {
     },
   });
 
-  // Cargar notificaciones y disputas; fallback polling si Realtime falla
+  // Cargar notificaciones; fallback polling si Realtime falla
   useEffect(() => {
     if (user?.id) {
       fetchNotifications();
-      fetchPendingDisputes();
 
       const interval = setInterval(() => {
         fetchNotifications();
-        fetchPendingDisputes();
       }, 5 * 60 * 1000);
 
       return () => clearInterval(interval);
@@ -805,6 +850,9 @@ const Dashboard = () => {
   
   const dismissNotificationErrorMessage = (raw: string): string => {
     const msg = raw.toLowerCase();
+    if (/permission_denied|permission denied for table|42501|row-level security/.test(msg)) {
+      return t('supervise.error.messaging.permission');
+    }
     if (/link_required|arcusx_user_link|link\s*required/.test(msg)) {
       return t('dashboard.notifications.delete.failed.link');
     }
@@ -1020,21 +1068,21 @@ const Dashboard = () => {
               </li>
             )}
             {showEnterpriseTab('tasks') && (
-              <li className={activeTab === 'tasks' ? 'active' : ''} onClick={() => setActiveTab('tasks')}>
+              <li className={activeTab === 'tasks' ? 'active' : ''} onClick={() => navigateToDashboardTab('tasks')}>
                 <FaTasks /> <span>{t('dashboard.tabs.tasks')}</span>
               </li>
             )}
             {showEnterpriseTab('in-progress') && (
-              <li className={activeTab === 'in-progress' ? 'active' : ''} onClick={() => setActiveTab('in-progress')}>
+              <li className={activeTab === 'in-progress' ? 'active' : ''} onClick={() => navigateToDashboardTab('in-progress')}>
                 <FaTasks /> <span>{t('dashboard.tabs.in.progress')}</span>
               </li>
             )}
-             <li className={activeTab === 'manage-tasks' ? 'active' : ''} onClick={() => setActiveTab('manage-tasks')}>
+             <li className={activeTab === 'manage-tasks' ? 'active' : ''} onClick={() => navigateToDashboardTab('manage-tasks')}>
               <FaTasks />
               <span>{t('dashboard.tabs.manage.tasks')}</span>
             </li>
             {showEnterpriseTab('freelancers') && (
-              <li className={activeTab === 'freelancers' ? 'active' : ''} onClick={() => setActiveTab('freelancers')}>
+              <li className={activeTab === 'freelancers' ? 'active' : ''} onClick={() => navigateToDashboardTab('freelancers')}>
                 <FaUsers /> <span>{t('dashboard.tabs.freelancers')}</span>
               </li>
             )}
@@ -1047,35 +1095,43 @@ const Dashboard = () => {
               </li>
             )}
             {showEnterpriseTab('deals') && (
-              <li className={activeTab === 'deals' ? 'active' : ''} onClick={() => setActiveTab('deals')}>
+              <li className={activeTab === 'deals' ? 'active' : ''} onClick={() => navigateToDashboardTab('deals')}>
                 <FaHandshake /> <span>{t('dashboard.tabs.deals')}</span>
               </li>
             )}
             {showEnterpriseTab('wallet') && (
-              <li className={activeTab === 'wallet' ? 'active' : ''} onClick={() => setActiveTab('wallet')}>
+              <li className={activeTab === 'wallet' ? 'active' : ''} onClick={() => navigateToDashboardTab('wallet')}>
                 <FaWallet /> <span>{t('dashboard.tabs.wallet')}</span>
               </li>
             )}
             {showEnterpriseTab('swap') && (
-              <li className={activeTab === 'swap' ? 'active' : ''} onClick={() => setActiveTab('swap')}>
+              <li className={activeTab === 'swap' ? 'active' : ''} onClick={() => navigateToDashboardTab('swap')}>
                 <FaExchangeAlt /> <span>{t('dashboard.tabs.swap')}</span>
               </li>
             )}
             {showEnterpriseTab('tutorials') && (
-              <li className={activeTab === 'tutorials' ? 'active' : ''} onClick={() => setActiveTab('tutorials')}>
+              <li className={activeTab === 'tutorials' ? 'active' : ''} onClick={() => navigateToDashboardTab('tutorials')}>
                 <FaGraduationCap /> <span>{t('dashboard.tabs.tutorials')}</span>
               </li>
             )}
-            <li className={activeTab === 'notifications' ? 'active' : ''} onClick={() => setActiveTab('notifications')}>
+            <li className={activeTab === 'notifications' ? 'active' : ''} onClick={() => navigateToDashboardTab('notifications')}>
               <FaBell /> <span>{t('dashboard.tabs.notifications')}</span>
               {unreadCount > 0 && (
                 <span className="notification-badge">{unreadCount}</span>
               )}
             </li>
-            <li className={activeTab === 'support' ? 'active' : ''} onClick={() => setActiveTab('support')}>
+            <li className={activeTab === 'support' ? 'active' : ''} onClick={() => navigateToDashboardTab('support')}>
               <FaQuestionCircle /> <span>{t('dashboard.tabs.support')}</span>
             </li>
-            <li className={activeTab === 'settings' ? 'active' : ''} onClick={() => setActiveTab('settings')}>
+            {showAdminPanel && (
+              <li
+                className="dashboard-admin-entry"
+                onClick={() => navigate('/admin/dashboard')}
+              >
+                <FaUserShield /> <span>{t('dashboard.admin.panel')}</span>
+              </li>
+            )}
+            <li className={activeTab === 'settings' ? 'active' : ''} onClick={() => navigateToDashboardTab('settings')}>
               <FaCog /> <span>{t('dashboard.tabs.settings')}</span>
             </li>
            
@@ -1151,7 +1207,7 @@ const Dashboard = () => {
                               markNotificationAsRead(notification.id);
                             }
                             setShowNotificationDropdown(false);
-                            setActiveTab('notifications');
+                            navigateToDashboardTab('notifications');
                           }}
                         >
                           <div className="notification-dropdown-icon" style={{ color: getNotificationColor(notification.type) }}>
@@ -1193,7 +1249,7 @@ const Dashboard = () => {
                         className="view-all-notifications-btn"
                         onClick={() => {
                           setShowNotificationDropdown(false);
-                          setActiveTab('notifications');
+                          navigateToDashboardTab('notifications');
                         }}
                       >
                         {t('dashboard.notifications.view.all')}
@@ -1205,7 +1261,7 @@ const Dashboard = () => {
             </div>
             <button 
               className="user-menu"
-              onClick={() => setActiveTab('settings')}
+              onClick={() => navigateToDashboardTab('settings')}
             >
               <div className="user-avatar">
                 {userData.name.charAt(0)}
@@ -1235,42 +1291,6 @@ const Dashboard = () => {
           )}
           
           {/* Tasks Tab */}
-          {/* Sección de Disputas Pendientes de Firma */}
-          {pendingDisputes.length > 0 && (
-            <div className="pending-disputes-section dashboard-pending-disputes">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
-                <FaExclamationTriangle className="dashboard-dispute-icon" />
-                <h2>{t('dashboard.disputes.pending')} ({pendingDisputes.length})</h2>
-              </div>
-              <p className="dashboard-muted-text" style={{ marginBottom: '1rem' }}>
-                Tienes disputas resueltas que requieren tu firma para liberar los fondos. Por favor, firma las transacciones desde tu wallet Freighter.
-              </p>
-              {pendingDisputes.map((dispute) => (
-                <div key={dispute.dispute_id} className="dashboard-pending-dispute-item">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                    <div>
-                      <h3>{t('dashboard.disputes.task')} {dispute.task_title}</h3>
-                      <p>
-                        {dispute.user_role === 'client' 
-                          ? `${t('dashboard.disputes.refund')} ${dispute.refund_amount.toFixed(2)} USDC`
-                          : `${t('dashboard.disputes.payment')} ${dispute.payment_amount.toFixed(2)} USDC`
-                        }
-                      </p>
-                      {dispute.resolution_reason && (
-                        <p className="dashboard-dispute-reason">
-                          {t('dashboard.disputes.reason')} {dispute.resolution_reason}
-                        </p>
-                      )}
-                    </div>
-                    {/* Nota: La funcionalidad de firmar transacciones de disputa ha sido eliminada.
-                         Las disputas ahora se resuelven automáticamente a través de Trustless Work
-                         en el panel de administración. */}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
           {!enterprise && activeTab === 'tasks' && (
             <div className="tasks-container">
               <div className="tasks-header">
@@ -1450,11 +1470,8 @@ const Dashboard = () => {
                             displayName={taskCreatorLabel(task)}
                             username={task.creator_username}
                             creatorId={task.creator_id}
-                            verified={Boolean(
-                              task.creator_verified ??
-                                task.creator_verified_enterprise ??
-                                task.creator_verified_individual,
-                            )}
+                            verifiedEnterprise={Boolean(task.creator_verified_enterprise)}
+                            verifiedIndividual={Boolean(task.creator_verified_individual)}
                           />
                           {task.creator_rating !== undefined && task.creator_rating > 0 && (
                             <RatingDisplay
@@ -1830,15 +1847,47 @@ const Dashboard = () => {
                   </>
                 )}
               </div>
-              <p className="task-description private-offers-intro-note">
-                {t('dashboard.privateOffers.intro')}
-              </p>
-              <p className="task-description private-offers-freighter-note">
-                {t('dashboard.privateOffers.freighterNote')}
-              </p>
-              {!payoutWalletRegistered && !payoutWalletLoading && (
-                <p className="dashboard-private-muted">{t('dashboard.privateOffers.walletRequired')}</p>
-              )}
+              <section className="private-offers-section">
+                <h3>{t('dashboard.privateOffers.sent.title')}</h3>
+                {loadingUserTasks && (
+                  <p className="dashboard-private-muted">{t('dashboard.manage.tasks.loading')}</p>
+                )}
+                {userTasksError && (
+                  <p className="error-message" role="alert">
+                    {userTasksError}
+                  </p>
+                )}
+                {!loadingUserTasks && sentPrivateOffers.length === 0 && !userTasksError && (
+                  <p className="dashboard-private-muted">{t('dashboard.privateOffers.sent.empty')}</p>
+                )}
+                {!loadingUserTasks && sentPrivateOffers.length > 0 && (
+                  <div className="user-tasks-list user-tasks-list--sent-offers">
+                    {sentPrivateOffers.map((task) => (
+                      <SentPrivateOfferCard
+                        key={task.id}
+                        task={task}
+                        twRow={lookupSentOfferTwRow(task.escrow_id)}
+                        chainLoaded={sentOfferChainLoaded}
+                        onRefresh={() => void reloadUserTasks()}
+                        onRefreshChain={() => void refreshSentOfferChainMap()}
+                        onSupervise={handleSuperviseTaskClick}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section className="private-offers-section">
+                <h3>{t('dashboard.privateOffers.received.title')}</h3>
+                <p className="task-description private-offers-intro-note">
+                  {t('dashboard.privateOffers.intro')}
+                </p>
+                <p className="task-description private-offers-freighter-note">
+                  {t('dashboard.privateOffers.freighterNote')}
+                </p>
+                {!payoutWalletRegistered && !payoutWalletLoading && (
+                  <p className="dashboard-private-muted">{t('dashboard.privateOffers.walletRequired')}</p>
+                )}
               {loadingPrivateOffers && (
                 <p className="dashboard-private-muted">{t('dashboard.privateOffers.loading')}</p>
               )}
@@ -1878,11 +1927,8 @@ const Dashboard = () => {
                               creatorId={task.creator_id}
                               displayName={task.creator_username}
                               username={task.creator_username}
-                              verified={
-                                task.creator_verified ??
-                                task.creator_verified_enterprise ??
-                                task.creator_verified_individual
-                              }
+                              verifiedEnterprise={Boolean(task.creator_verified_enterprise)}
+                              verifiedIndividual={Boolean(task.creator_verified_individual)}
                               linkToProfile
                             />
                           </div>
@@ -1899,7 +1945,17 @@ const Dashboard = () => {
                           {t('dashboard.privateOffers.funded')}
                         </p>
                       )}
-                      {task.is_funded && task.accepted_applicant_id === user?.id ? (
+                      {task.awaiting_response || (task.is_funded && !task.accepted_applicant_id) ? (
+                        <button
+                          type="button"
+                          className="task-button btn-primary"
+                          onClick={() =>
+                            navigate(`/apply-task/${task.id}?from=private-offer`)
+                          }
+                        >
+                          {t('dashboard.privateOffers.viewDetails')}
+                        </button>
+                      ) : task.accepted_applicant_id === user?.id ? (
                         <button
                           type="button"
                           className="task-button btn-primary"
@@ -1913,7 +1969,7 @@ const Dashboard = () => {
                         <button
                           type="button"
                           className="task-button"
-                          onClick={() => navigate(`/apply-task/${task.id}?ref=hire`)}
+                          onClick={() => navigate(`/apply-task/${task.id}?from=hire`)}
                         >
                           {t('dashboard.privateOffers.review')}
                         </button>
@@ -1922,6 +1978,7 @@ const Dashboard = () => {
                   ))}
                 </div>
               )}
+              </section>
             </div>
           )}
           
@@ -2203,11 +2260,8 @@ const Dashboard = () => {
                                 displayName={taskCreatorLabel(task) || t('dashboard.tasks.creator.unknown')}
                                 username={task.creator_username}
                                 creatorId={task.creator_id}
-                                verified={Boolean(
-                              task.creator_verified ??
-                                task.creator_verified_enterprise ??
-                                task.creator_verified_individual,
-                            )}
+                                verifiedEnterprise={Boolean(task.creator_verified_enterprise)}
+                            verifiedIndividual={Boolean(task.creator_verified_individual)}
                               />
                               {task.creator_rating !== undefined && task.creator_rating > 0 && (
                                 <RatingDisplay
@@ -2225,7 +2279,13 @@ const Dashboard = () => {
                        <button
                            className="task-button btn-primary" // Puedes usar una clase de botón existente o definir una nueva
                            onClick={() => {
-                               handleSuperviseTaskClick(task.id, task.accepted_applicant_id);
+                               handleSuperviseTaskClick(
+                                 task.id,
+                                 task.accepted_applicant_id,
+                                 task.escrow_status,
+                                 task.escrow_id,
+                                 task.escrow_fund_tx_hash,
+                               );
                            }}
                        >
                            Trabajar
@@ -2246,40 +2306,73 @@ const Dashboard = () => {
               {/* Aquí se listarán las tareas creadas por el usuario */}
               {loadingUserTasks && <p>{t('dashboard.manage.tasks.loading')}</p>}
               {userTasksError && <p className="error-message">{userTasksError}</p>}
-              {!loadingUserTasks && userTasks.length === 0 && !userTasksError && <p>{t('dashboard.manage.tasks.empty')}</p>}
+              {!loadingUserTasks && publicManageTasks.length === 0 && !userTasksError && (
+                <p>{t('dashboard.manage.tasks.empty')}</p>
+              )}
 
-              {!loadingUserTasks && userTasks.length > 0 && (
+              {!loadingUserTasks && publicManageTasks.length > 0 && (
                 <div className="user-tasks-list">
-                  {userTasks.map(task => (
+                  {publicManageTasks.map((task) => (
                     <div key={task.id} className="user-task-item">
                       <h3>{task.title}</h3>
                       <p>{task.subtitle}</p>
+                      {task.scheduled_deletion_at ? (
+                        <div className="user-task-deletion-countdown">
+                          <TaskDeletionNotice
+                            variant="compact"
+                            scheduledDeletionAt={task.scheduled_deletion_at}
+                            completedAt={task.completed_at ?? task.escrow_completed_at}
+                            escrowStatus={task.escrow_status}
+                            status={task.status}
+                            closureHints={{
+                              isRefunded:
+                                task.escrow_status === 'refunded' ||
+                                task.escrow_status === 'resolved',
+                            }}
+                          />
+                        </div>
+                      ) : null}
                       <div className="task-actions">
-                         {task.has_accepted_proposal ? (
-                             <button
-                                 className="btn-primary"
-                                 onClick={() => handleSuperviseTaskClick(task.id, task.accepted_applicant_id)}
-                             >
-                                 {t('dashboard.manage.tasks.supervise')}
-                             </button>
-                         ) : (
-                             <button
-                                 className="btn-secondary"
-                                 onClick={() => navigate(`/proposals/${task.id}`)}
-                             >
-                                 {enterprise
-                                   ? t('dashboard.manage.tasks.view.proposals')
-                                   : task.proposal_count !== undefined
-                                     ? `${t('dashboard.manage.tasks.view.proposals')} (${task.proposal_count})`
-                                     : t('common.loading.proposals')}
-                             </button>
-                         )}
-                         {/* Botón de Editar Tarea (opcional, para más tarde) */}
-                         {/* <button className="btn-secondary">Editar</button> */}
+                        {task.has_accepted_proposal ||
+                        clientCanSuperviseAcceptedTask(
+                          task.accepted_applicant_id,
+                          task.escrow_id,
+                          task.escrow_status,
+                          task.escrow_fund_tx_hash,
+                        ) ? (
+                          <button
+                            className="btn-primary"
+                            onClick={() =>
+                              handleSuperviseTaskClick(
+                                task.id,
+                                task.accepted_applicant_id,
+                                task.escrow_status,
+                                task.escrow_id,
+                                task.escrow_fund_tx_hash,
+                                true,
+                              )
+                            }
+                          >
+                            {task.escrow_status?.toLowerCase() === 'disputed'
+                              ? t('dashboard.manage.tasks.supervise.dispute')
+                              : t('dashboard.manage.tasks.supervise')}
+                          </button>
+                        ) : (
+                          <button
+                            className="btn-secondary"
+                            onClick={() => navigate(`/proposals/${task.id}`)}
+                          >
+                            {enterprise
+                              ? t('dashboard.manage.tasks.view.proposals')
+                              : task.proposal_count !== undefined
+                                ? `${t('dashboard.manage.tasks.view.proposals')} (${task.proposal_count})`
+                                : t('common.loading.proposals')}
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
-              </div>
+                </div>
               )}
 
             </div>

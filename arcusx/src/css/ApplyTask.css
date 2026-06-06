@@ -463,3 +463,61 @@
   border-color: rgba(10, 184, 106, 0.35);
   color: #0f172a;
 }
+
+.apply-private-offer-banner {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+:root[data-theme="light"] .apply-private-offer-banner {
+  background: rgba(255, 247, 230, 0.95);
+  border-color: rgba(180, 120, 20, 0.35);
+  color: #1e293b;
+}
+
+.private-offer-decision-card h3 {
+  margin-top: 0;
+}
+
+.private-offer-decision-hints {
+  margin: 0 0 1rem;
+  padding-left: 1.2rem;
+  color: var(--text-muted, rgba(255, 255, 255, 0.72));
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.private-offer-decision-hints li + li {
+  margin-top: 0.35rem;
+}
+
+.private-offer-decision-funded {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0 0 1.25rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid rgba(16, 221, 136, 0.35);
+  background: rgba(16, 221, 136, 0.08);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+:root[data-theme="light"] .private-offer-decision-hints {
+  color: #475569;
+}
+
+:root[data-theme="light"] .private-offer-decision-funded {
+  background: rgba(10, 184, 106, 0.08);
+  border-color: rgba(10, 184, 106, 0.3);
+  color: #0f172a;
+}

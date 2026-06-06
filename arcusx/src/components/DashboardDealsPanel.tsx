@@ -1,29 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FaHandshake, FaPlus, FaSearch } from 'react-icons/fa';
-import {
-  useInitializeEscrow,
-  useFundEscrow,
-  useGetEscrowFromIndexerByContractIds,
-  useSendTransaction,
-  useApproveMilestone,
-  useReleaseFunds,
-} from '@trustless-work/escrow';
 import { useI18n } from '../i18n/I18nProvider';
 import { useAuth } from '../hooks/useAuth';
 import { useWallet } from '../hooks/useWallet';
 import { dealsEnabled } from '../config/deals';
-import {
-  getMyDeals,
-  getDealDetails,
-  type AgreementDeal,
-} from '../services/dealsService';
-import { createAndFundDealEscrow, type DealEscrowHooks } from '../services/dealEscrow';
-import {
-  approveMilestoneTrustlessEscrow,
-  releaseFundsTrustlessEscrow,
-} from '../services/trustlessWorkEscrowService';
-import { markDealReleased } from '../services/dealsService';
+import { getMyDeals, type AgreementDeal } from '../services/dealsService';
 import { partitionDeals } from '../utils/dealHelpers';
 import DealListCard from './DealListCard';
 import '../css/DashboardDealsPanel.css';
@@ -33,20 +15,12 @@ const DashboardDealsPanel = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const { address, kit, connectWallet } = useWallet();
-  const { deployEscrow } = useInitializeEscrow();
-  const { fundEscrow } = useFundEscrow();
-  const { sendTransaction } = useSendTransaction();
-  const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds();
-  const { approveMilestone } = useApproveMilestone();
-  const { releaseFunds } = useReleaseFunds();
+  const { address } = useWallet();
 
   const [deals, setDeals] = useState<AgreementDeal[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [linkInput, setLinkInput] = useState('');
-  const [fundId, setFundId] = useState<string | null>(null);
-  const [releaseId, setReleaseId] = useState<string | null>(null);
 
   const userId = user?.id != null ? Number(user.id) : null;
 
@@ -73,81 +47,9 @@ const DashboardDealsPanel = () => {
     ? partitionDeals(deals, userId)
     : { created: [], received: [] };
 
-  const escrowHooks: DealEscrowHooks = {
-    kit,
-    deployEscrow: deployEscrow as DealEscrowHooks['deployEscrow'],
-    fundEscrow: fundEscrow as DealEscrowHooks['fundEscrow'],
-    sendTransaction: sendTransaction as DealEscrowHooks['sendTransaction'],
-    getEscrowByContractIds: async (contractIds) => {
-      const ids = Array.isArray(contractIds) ? contractIds : contractIds.contractIds;
-      const result = await getEscrowByContractIds({
-        contractIds: ids,
-        validateOnChain: Array.isArray(contractIds) ? true : contractIds.validateOnChain ?? true,
-      });
-      return Array.isArray(result) ? result : (result as { escrows?: unknown[] })?.escrows ?? result ?? [];
-    },
-  };
-
-  const handleFund = async (deal: AgreementDeal) => {
-    if (!address || !kit) {
-      await connectWallet();
-      return;
-    }
-    setFundId(deal.id);
-    setError('');
-    try {
-      const fresh = await getDealDetails(deal.id);
-      const result = await createAndFundDealEscrow({
-        deal: fresh.deal,
-        funderAddress: address,
-        hooks: escrowHooks,
-      });
-      if (!result.success) throw new Error(result.error);
-      loadDeals();
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : t('deals.error.generic'));
-    } finally {
-      setFundId(null);
-    }
-  };
-
-  const handleRelease = async (deal: AgreementDeal) => {
-    if (!address || !kit || !deal.escrow_contract_id) {
-      await connectWallet();
-      return;
-    }
-    setReleaseId(deal.id);
-    setError('');
-    try {
-      const contractId = deal.escrow_contract_id;
-      const approveResult = await approveMilestoneTrustlessEscrow(
-        contractId,
-        '0',
-        address,
-        kit,
-        approveMilestone,
-        sendTransaction,
-      );
-      if (!approveResult.success && !approveResult.alreadyApproved) {
-        throw new Error(approveResult.error);
-      }
-      const releaseResult = await releaseFundsTrustlessEscrow(
-        contractId,
-        address,
-        kit,
-        releaseFunds,
-        sendTransaction,
-      );
-      if (!releaseResult.success && !releaseResult.alreadyReleased) {
-        throw new Error(releaseResult.error);
-      }
-      await markDealReleased(deal.id, releaseResult.txHash);
-      loadDeals();
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : t('deals.error.generic'));
-    } finally {
-      setReleaseId(null);
-    }
+  const openDealWorkspace = (deal: AgreementDeal, action?: 'escrow' | 'release') => {
+    const q = action ? `?action=${action}` : '';
+    navigate(`/deals/workspace/${deal.id}${q}`);
   };
 
   const openPastedLink = () => {
@@ -220,10 +122,9 @@ const DashboardDealsPanel = () => {
                     deal={d}
                     userId={userId}
                     walletAddress={address}
-                    onFund={handleFund}
-                    onRelease={handleRelease}
-                    fundLoading={fundId === d.id}
-                    releaseLoading={releaseId === d.id}
+                    onFund={(deal) => openDealWorkspace(deal, 'escrow')}
+                    onPrepare={(deal) => openDealWorkspace(deal, 'escrow')}
+                    onRelease={(deal) => openDealWorkspace(deal, 'release')}
                   />
                 ))}
               </ul>
@@ -242,10 +143,9 @@ const DashboardDealsPanel = () => {
                     deal={d}
                     userId={userId}
                     walletAddress={address}
-                    onFund={handleFund}
-                    onRelease={handleRelease}
-                    fundLoading={fundId === d.id}
-                    releaseLoading={releaseId === d.id}
+                    onFund={(deal) => openDealWorkspace(deal, 'escrow')}
+                    onPrepare={(deal) => openDealWorkspace(deal, 'escrow')}
+                    onRelease={(deal) => openDealWorkspace(deal, 'release')}
                   />
                 ))}
               </ul>

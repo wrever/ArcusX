@@ -1,7 +1,7 @@
 import { handleOptions, jsonError, jsonSuccess } from '../_shared/arcusx-cors.ts';
 import { supabaseService } from '../_shared/referral-db.ts';
 import { signArcusxJwt, bearerToken, verifyArcusxJwt } from '../_shared/arcusx-jwt.ts';
-import { compare } from 'https://deno.land/x/bcrypt@v0.4.1/mod.ts';
+import { verifyPassword } from '../_shared/password-verify.ts';
 import { ADMIN_ROUTES } from './handlers.ts';
 
 async function requireAdmin(req: Request) {
@@ -31,16 +31,29 @@ async function adminLogin(req: Request, body: Record<string, unknown>) {
     return jsonError(req, 'Credenciales incorrectas.', 401);
   }
 
-  const ok = await compare(password, user.password_hash);
+  const ok = await verifyPassword(password, String(user.password_hash));
   if (!ok) return jsonError(req, 'Credenciales incorrectas.', 401);
 
-  const token = await signArcusxJwt({
+  let token: string;
+  try {
+    token = await signArcusxJwt({
     userId: user.id as number,
     username: user.username as string,
     email: user.email as string,
-    isAdmin: true,
-    role: 'admin',
-  }, 3600 * 24 * 7);
+      isAdmin: true,
+      role: 'admin',
+    }, 3600 * 24 * 7);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Error al firmar sesión';
+    console.error('admin_login signArcusxJwt:', msg);
+    return jsonError(
+      req,
+      msg.includes('ARCUSX_JWT_SECRET')
+        ? 'Servidor admin sin ARCUSX_JWT_SECRET en Edge Secrets'
+        : 'Error interno al iniciar sesión',
+      500,
+    );
+  }
 
   return jsonSuccess(req, {
     message: 'Login exitoso',
@@ -69,7 +82,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    if (action === 'admin_login' || (!action && url.pathname.endsWith('admin_login'))) {
+    const isAdminLogin =
+      action === 'admin_login' ||
+      (!action && req.method === 'POST' && url.pathname.includes('arcusx-admin'));
+    if (isAdminLogin) {
       if (req.method !== 'POST') return jsonError(req, 'Método no permitido', 405);
       return adminLogin(req, body);
     }
@@ -89,7 +105,11 @@ Deno.serve(async (req) => {
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Error';
-    const status = msg === 'Unauthorized' ? 401 : msg === 'Forbidden' ? 403 : 500;
+    console.error('arcusx-admin:', action, msg);
+    const status = msg === 'Unauthorized' ? 401
+      : msg === 'Forbidden' ? 403
+      : msg.includes('Supabase URL/service key') ? 503
+      : 500;
     return jsonError(req, msg, status);
   }
 });

@@ -17,7 +17,11 @@ export function computeEarnedBadgesLocal(input: {
   const earned: BadgeEarnedMap = {};
 
   if (status === 'approved' && verification?.can_show_verified_badge) {
-    earned.arcusxVerificado = true;
+    if (enterpriseMode) {
+      earned.arcusxVerificadoEmpresa = true;
+    } else {
+      earned.arcusxVerificado = true;
+    }
   }
 
   if (enterpriseMode && inReview) {

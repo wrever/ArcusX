@@ -998,6 +998,19 @@
   color: var(--ax-ent-primary-strong) !important;
 }
 
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .private-offer-pending-badge {
+  border: 1px solid rgba(180, 120, 20, 0.35) !important;
+  background: rgba(255, 247, 230, 0.95) !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .private-offer-pending-badge__label {
+  color: #b45309 !important;
+}
+
+:root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .private-offer-pending-badge__message {
+  color: #1e293b !important;
+}
+
 :root[data-app-variant="enterprise"] .dashboard.dashboard--enterprise .manage-tasks-container .create-task-button {
   background: linear-gradient(90deg, #0f6ab4, #0a4e86) !important;
   color: #ffffff !important;

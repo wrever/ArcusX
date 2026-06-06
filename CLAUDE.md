@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ArcusX is a decentralized freelancing platform on the Stellar blockchain. The repo contains three independent sub-projects:
 
 - **`arcusx/`** — Main React 19 + TypeScript + Vite frontend (freelancing marketplace)
-- **`backend_externo/`** — PHP REST API with MySQL (authentication, task management, escrow coordination)
+- **`supabase/functions/`** — Backend marketplace: Edge Functions (`arcusx-api`, `arcusx-admin`, referidos, etc.) + Postgres
 - **`CertiX/`** — Next.js 14 app for blockchain-based verifiable certifications (separate product)
 - **`Miraes/`** — Separate project (minimal, standalone)
 - **`docs/escrow-native/`** — Escrow nativo Soroban (Edge Supabase + WASM en `contracts/arcusx-escrow/`). **Todo el sistema escrow nuevo vive solo en esta carpeta.**
@@ -28,11 +28,10 @@ npm run preview      # Preview production build locally
 npm run deploy:stellar  # Deploy Stellar escrow contract (tsx scripts/)
 ```
 
-### backend_externo (PHP)
+### Supabase Edge (API marketplace)
 ```bash
-cd backend_externo
-composer install     # Install PHP dependencies (Firebase JWT)
-# Serve via a local PHP server or configure Apache/Nginx pointing to this directory
+node scripts/bundle-edge-fn.mjs arcusx-api
+SUPABASE_ACCESS_TOKEN=... node scripts/deploy-edge-from-bundle.mjs arcusx-api
 ```
 
 ### Escrow nativo (Soroban)
@@ -61,13 +60,6 @@ VITE_ADMIN_WALLET=<Stellar G... address>
 VITE_STELLAR_NETWORK=testnet               # or 'mainnet'
 VITE_SUPABASE_URL=<supabase project URL>
 VITE_SUPABASE_ANON_KEY=<supabase anon key>
-# VITE_API_URL=http://arcusx.pro/api       # optional; defaults to arcusx.pro/api
-```
-
-### `backend_externo` (env vars, not a .env file)
-```
-ARCUSX_DB_PASSWORD=<mysql password>
-ARCUSX_JWT_SECRET=<jwt secret>
 ```
 
 ## Architecture
@@ -104,7 +96,7 @@ Critical escrow rules (documented in the service file header):
 **Key config files**:
 | File | Purpose |
 |------|---------|
-| `config/database.ts` | Backend API base URL (defaults to arcusx.pro/api) |
+| `config/arcusxApi.ts` | URLs Edge: `arcusx-api` / `arcusx-admin` (requiere `VITE_SUPABASE_URL`) |
 | `config/trustlessWork.ts` | Trustless Work API key, env, platform/admin wallets, `PLATFORM_FEE_BPS = 3.0` (3% en el flujo de escrow) |
 | `config/commission.ts` | `DEFAULT_COMMISSION_RATE = 0.03`; preferir fee desde `system_config.platform_fee` / API |
 | `config/supabase.ts` | Supabase client (graceful no-op if unconfigured) |
@@ -115,9 +107,9 @@ Critical escrow rules (documented in the service file header):
 - JS banners are injected into the bundle for the same AV reason
 - `.htaccess` is auto-copied to `/dist` on every build for SPA routing on shared hosting
 
-### Backend (`backend_externo/`)
+### Backend (Supabase)
 
-65 flat PHP files, each a self-contained REST endpoint. `config.php` establishes the MySQL connection and JWT secret. CORS preflight (OPTIONS) is handled inside each PHP file; `.htaccess` handles URL rewriting and SPA fallback. There is no router — files are accessed directly by path.
+Marketplace: función **`arcusx-api`** (`supabase/functions/arcusx-api/`) con router por `?action=`. Auth: JWT ArcusX + Supabase Auth. Datos: Postgres (`arcusx_*` tables). Admin: **`arcusx-admin`**. No hay PHP en el path de producción.
 
 ### CertiX (`CertiX/`)
 

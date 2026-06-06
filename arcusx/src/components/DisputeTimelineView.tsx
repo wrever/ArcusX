@@ -7,10 +7,11 @@ import { getDisputeTimeline, TimelineEvent } from '../services/disputeService';
 import '../css/AdminPanel.css';
 
 interface DisputeTimelineViewProps {
-  disputeId: number;
+  disputeId?: number;
+  taskId?: number;
 }
 
-const DisputeTimelineView: React.FC<DisputeTimelineViewProps> = ({ disputeId }) => {
+const DisputeTimelineView: React.FC<DisputeTimelineViewProps> = ({ disputeId, taskId }) => {
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +21,7 @@ const DisputeTimelineView: React.FC<DisputeTimelineViewProps> = ({ disputeId }) 
       setLoading(true);
       setError(null);
       try {
-        const data = await getDisputeTimeline(disputeId);
+        const data = await getDisputeTimeline(disputeId, taskId);
         setTimeline(data.timeline);
       } catch (err: any) {
         setError(err.message || 'Error al cargar el timeline');
@@ -29,10 +30,10 @@ const DisputeTimelineView: React.FC<DisputeTimelineViewProps> = ({ disputeId }) 
       }
     };
 
-    if (disputeId) {
+    if (disputeId || taskId) {
       fetchTimeline();
     }
-  }, [disputeId]);
+  }, [disputeId, taskId]);
 
   const getEventIcon = (type: TimelineEvent['type']) => {
     switch (type) {

@@ -72,6 +72,12 @@
   color: inherit;
 }
 
+.deals-form-card input::placeholder,
+.deals-form-card textarea::placeholder {
+  color: var(--text-muted, rgba(255, 255, 255, 0.45));
+  opacity: 1;
+}
+
 .deals-template-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -299,4 +305,35 @@
   font-size: 0.8rem;
   color: var(--text-secondary, #9ca3af);
   margin-top: 1rem;
+}
+
+.deals-commerce-steps {
+  margin: 0 0 1.25rem;
+  padding-left: 1.25rem;
+  line-height: 1.55;
+  color: var(--text-secondary, #9ca3af);
+}
+
+.deals-commerce-steps--compact {
+  margin-bottom: 1rem;
+  font-size: 0.88rem;
+}
+
+.deals-commerce-steps li {
+  margin-bottom: 0.35rem;
+}
+
+.deals-commerce-steps li.is-done {
+  color: var(--primary-green, #10dd88);
+}
+
+.deals-commerce-steps li.is-current {
+  color: var(--text-primary, #fff);
+  font-weight: 600;
+}
+
+.deals-commerce-ready {
+  color: var(--primary-green, #10dd88);
+  font-weight: 600;
+  margin: 0 0 1rem;
 }

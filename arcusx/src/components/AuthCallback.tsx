@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
+import { consumePostLoginRedirect } from '../config/dashboardTabs';
 import { captureRefFromSearch } from '../utils/referralCapture';
 import { supabase, hasSupabase } from '../config/supabase';
 import { useI18n } from '../i18n/I18nProvider';
@@ -40,18 +41,18 @@ const AuthCallback = () => {
 
     let cancelled = false;
 
-    const goDashboard = () => {
+    const goAfterLogin = () => {
       if (finishedRef.current) return;
       finishedRef.current = true;
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       stripOAuthParamsFromUrl();
-      window.location.replace('/dashboard');
+      window.location.replace(consumePostLoginRedirect('/dashboard'));
     };
 
     const fail = (message: string) => {
       if (finishedRef.current) return;
       if (authService.isAuthenticated()) {
-        goDashboard();
+        goAfterLogin();
         return;
       }
       finishedRef.current = true;
@@ -80,12 +81,12 @@ const AuthCallback = () => {
           return false;
         }
 
-        goDashboard();
+        goAfterLogin();
         return true;
       } catch (err: unknown) {
         syncingRef.current = false;
         if (authService.isAuthenticated()) {
-          goDashboard();
+          goAfterLogin();
           return true;
         }
         const msg = err && typeof err === 'object' && 'response' in err
@@ -147,7 +148,7 @@ const AuthCallback = () => {
 
   if (error) {
     if (authService.isAuthenticated()) {
-      window.location.replace('/dashboard');
+      window.location.replace(consumePostLoginRedirect('/dashboard'));
       return null;
     }
     return (
@@ -162,7 +163,7 @@ const AuthCallback = () => {
               className="login-button"
               onClick={() => {
                 if (authService.isAuthenticated()) {
-                  window.location.replace('/dashboard');
+                  window.location.replace(consumePostLoginRedirect('/dashboard'));
                 } else if (hasSupabase) {
                   void (async () => {
                     setError(null);
@@ -171,7 +172,7 @@ const AuthCallback = () => {
                     syncingRef.current = false;
                     const ok = await authService.handleSupabaseCallback();
                     if (ok?.user?.id && localStorage.getItem('token')) {
-                      window.location.replace('/dashboard');
+                      window.location.replace(consumePostLoginRedirect('/dashboard'));
                     } else {
                       setLoading(false);
                       setError(t('auth.callback.error.process'));

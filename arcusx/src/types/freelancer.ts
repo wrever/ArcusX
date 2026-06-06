@@ -20,6 +20,8 @@ export interface Freelancer {
   private_payout_wallet?: string | null;
   kyc_verified?: boolean;
   creator_verified?: boolean;
+  creator_verified_enterprise?: boolean;
+  creator_verified_individual?: boolean;
   display_name?: string;
   public_badges?: string[];
 }

@@ -5,12 +5,13 @@ import { publicAssetUrl } from '../config/arcusxApi';
 import '../css/AdminPanel.css';
 
 interface DisputeFilesViewProps {
-  disputeId: number;
+  disputeId?: number;
+  taskId?: number;
 }
 
 type FileTabType = 'task_files' | 'chat_files' | 'delivery_files';
 
-const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
+const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId, taskId }) => {
   const [files, setFiles] = useState<DisputeFiles>({
     task_files: [],
     chat_files: [],
@@ -27,7 +28,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
       setLoading(true);
       setError(null);
       try {
-        const data = await getDisputeFiles(disputeId);
+        const data = await getDisputeFiles(disputeId, taskId);
         setFiles(data.files);
         setSummary(data.summary);
       } catch (err: any) {
@@ -37,10 +38,10 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId }) => {
       }
     };
 
-    if (disputeId) {
+    if (disputeId || taskId) {
       fetchFiles();
     }
-  }, [disputeId]);
+  }, [disputeId, taskId]);
 
   const getFileIcon = (type: string) => {
     if (type.includes('pdf')) return <FaFilePdf style={{ color: '#ef4444' }} />;

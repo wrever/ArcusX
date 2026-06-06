@@ -7,8 +7,10 @@ export interface FinalizePrivateOfferPayload {
   worker_wallet_address: string;
   escrow_id: string;
   transaction_hash?: string;
+  deploy_transaction_hash?: string;
   escrow_amount?: number;
   platform_fee?: number;
+  trustline_address?: string;
   client_wallet_address?: string;
 }
 
@@ -21,6 +23,30 @@ export async function finalizePrivateOffer(
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
+  });
+  return response.data;
+}
+
+export async function acceptPrivateOffer(
+  taskId: number,
+): Promise<{ success: boolean; message?: string }> {
+  const response = await axios.post(arcusxApiUrl('accept_private_offer'), { task_id: taskId });
+  return response.data;
+}
+
+export async function rejectPrivateOffer(
+  taskId: number,
+  reason?: string,
+): Promise<{
+  success: boolean;
+  message?: string;
+  requires_client_refund?: boolean;
+  refund_amount?: number;
+  escrow_id?: string;
+}> {
+  const response = await axios.post(arcusxApiUrl('reject_private_offer'), {
+    task_id: taskId,
+    reason: reason ?? null,
   });
   return response.data;
 }

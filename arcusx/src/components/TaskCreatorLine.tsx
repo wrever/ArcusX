@@ -5,31 +5,40 @@ type Props = {
   displayName: string;
   username?: string;
   creatorId?: number;
-  verified?: boolean;
+  verifiedEnterprise?: boolean;
+  verifiedIndividual?: boolean;
   pending?: boolean;
   linkToProfile?: boolean;
 };
 
-/** Línea de cliente en tarjetas de tarea: «San Jorge S.A» + badge o username. */
+/** Línea de cliente en tarjetas de tarea: razón social + badge KYB o nombre + KYC. */
 const TaskCreatorLine: React.FC<Props> = ({
   displayName,
   username,
   creatorId,
-  verified = false,
+  verifiedEnterprise,
+  verifiedIndividual,
   pending = false,
   linkToProfile = true,
 }) => {
   const name = (displayName || username || '').trim();
   if (!name) return null;
 
+  const ent = Boolean(verifiedEnterprise);
+  const ind = Boolean(verifiedIndividual);
+
   return (
     <span className="task-creator-line">
       <UsernameWithVerified
         name={name}
         userId={creatorId}
-        verified={verified}
+        verifiedEnterprise={ent}
+        verifiedIndividual={ind}
         pending={pending}
         linkToProfile={linkToProfile && Boolean(creatorId)}
+        compact
+        tooltipPlacement="below"
+        className="task-creator-line__verified"
         nameClassName="task-creator-line__name"
       />
     </span>

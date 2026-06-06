@@ -1,0 +1,22 @@
+# ArcusX — hosting estático (dist/) + API en Supabase Edge
+# No requiere PHP ni reglas /api/
+
+DirectoryIndex index.html
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Assets del build Vite
+  RewriteCond %{REQUEST_URI} ^/assets/
+  RewriteRule . - [L]
+
+  # Archivos estáticos (incluye PWA, favicon, etc.)
+  RewriteCond %{REQUEST_URI} \.(css|js|mjs|map|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|webp|json|xml|txt|webmanifest)$ [NC]
+  RewriteRule . - [L]
+
+  # SPA: todo lo demás → index.html
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>

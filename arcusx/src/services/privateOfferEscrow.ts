@@ -4,6 +4,8 @@ import {
 } from './trustlessWorkEscrowService';
 import { finalizePrivateOffer } from './privateOfferService';
 import { devLog, devError } from '../utils/logger';
+import { quoteEscrowFundAmount } from '../utils/escrowFeeQuote';
+import { USDC_ISSUER } from '../config/usdc';
 
 export type PrivateEscrowHooks = {
   kit: unknown;
@@ -20,23 +22,20 @@ export type PrivateEscrowTaskInput = {
   price: string | number;
 };
 
-export async function createAndFundPrivateOfferEscrow(params: {
+export async function createPrivateOfferEscrow(params: {
   task: PrivateEscrowTaskInput;
   clientAddress: string;
   workerAddress: string;
-  invitedUserId: number;
   platformFee: number;
   hooks: PrivateEscrowHooks;
-}): Promise<{ success: boolean; error?: string; contractId?: string }> {
-  const { task, clientAddress, workerAddress, invitedUserId, platformFee, hooks } = params;
+}): Promise<{ success: boolean; error?: string; contractId?: string; deployTxHash?: string }> {
+  const { task, clientAddress, workerAddress, platformFee, hooks } = params;
   const workerAmount = parseFloat(String(task.price));
   if (!Number.isFinite(workerAmount) || workerAmount <= 0) {
     return { success: false, error: 'Monto de la tarea inválido' };
   }
 
-  const escrowAmount = workerAmount / (1 - platformFee);
-  const roundedAmount = Math.round(escrowAmount * 10000000) / 10000000;
-  const amount = parseFloat(roundedAmount.toFixed(7));
+  const amount = quoteEscrowFundAmount(workerAmount, platformFee);
   const engagementId = `arcusx-private-${task.id}-${Date.now()}`;
 
   const createResult = await createTrustlessEscrow(
@@ -50,6 +49,7 @@ export async function createAndFundPrivateOfferEscrow(params: {
       serviceProvider: workerAddress,
       receiver: workerAddress,
       milestoneDescription: `Oferta privada: ${task.title}`,
+      platformFeeOverride: platformFee,
     },
     hooks.kit,
     hooks.deployEscrow,
@@ -60,8 +60,24 @@ export async function createAndFundPrivateOfferEscrow(params: {
     return { success: false, error: createResult.error || 'No se pudo crear el escrow' };
   }
 
-  const contractId = createResult.contractId;
-  devLog('Private offer escrow created:', contractId);
+  devLog('Private offer escrow created:', createResult.contractId);
+  return {
+    success: true,
+    contractId: createResult.contractId,
+    deployTxHash: createResult.txHash,
+  };
+}
+
+export async function fundPrivateOfferEscrow(params: {
+  contractId: string;
+  task: PrivateEscrowTaskInput;
+  clientAddress: string;
+  platformFee: number;
+  hooks: PrivateEscrowHooks;
+}): Promise<{ success: boolean; error?: string; txHash?: string }> {
+  const { contractId, task, clientAddress, platformFee, hooks } = params;
+  const workerAmount = parseFloat(String(task.price));
+  const amount = quoteEscrowFundAmount(workerAmount, platformFee);
 
   let fundResult: { success: boolean; txHash?: string; error?: string } | null = null;
   for (let attempt = 1; attempt <= 3; attempt++) {
@@ -90,26 +106,108 @@ export async function createAndFundPrivateOfferEscrow(params: {
     return { success: false, error: fundResult?.error || 'No se pudo fondear el escrow' };
   }
 
-  try {
-    await finalizePrivateOffer({
-      task_id: task.id,
-      invited_user_id: invitedUserId,
-      worker_wallet_address: workerAddress,
-      escrow_id: contractId,
-      transaction_hash: fundResult.txHash,
-      escrow_amount: amount,
-      platform_fee: platformFee,
-      client_wallet_address: clientAddress,
-    });
-  } catch (e: unknown) {
-    devError('finalize_private_offer failed', e);
+  return { success: true, txHash: fundResult.txHash };
+}
+
+export async function sendPrivateOffer(params: {
+  taskId: number;
+  invitedUserId: number;
+  workerAddress: string;
+  clientAddress: string;
+  contractId: string;
+  fundTxHash: string;
+  deployTxHash?: string;
+  task: PrivateEscrowTaskInput;
+  platformFee: number;
+}): Promise<{ success: boolean; error?: string }> {
+  const workerAmount = parseFloat(String(params.task.price));
+  const amount = quoteEscrowFundAmount(workerAmount, params.platformFee);
+
+  const finalizePayload = {
+    task_id: params.taskId,
+    invited_user_id: params.invitedUserId,
+    worker_wallet_address: params.workerAddress,
+    escrow_id: params.contractId,
+    transaction_hash: params.fundTxHash,
+    deploy_transaction_hash: params.deployTxHash,
+    escrow_amount: amount,
+    platform_fee: params.platformFee,
+    trustline_address: USDC_ISSUER,
+    client_wallet_address: params.clientAddress,
+  };
+
+  let finalizeErr: unknown = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      await finalizePrivateOffer(finalizePayload);
+      finalizeErr = null;
+      break;
+    } catch (e: unknown) {
+      finalizeErr = e;
+      devError(`finalize_private_offer attempt ${attempt} failed`, e);
+      if (attempt < 3) {
+        await new Promise((r) => setTimeout(r, attempt === 1 ? 2000 : 5000));
+      }
+    }
+  }
+
+  if (finalizeErr) {
     return {
       success: false,
       error:
-        'El escrow se creó en blockchain pero falló guardar en la plataforma. Contacta soporte con el ID de tarea.',
-      contractId,
+        'El pago está en blockchain. Recarga el panel o reintenta enviar la oferta.',
     };
   }
 
-  return { success: true, contractId };
+  return { success: true };
+}
+
+/** @deprecated Usar createPrivateOfferEscrow + fundPrivateOfferEscrow + sendPrivateOffer */
+export async function createAndFundPrivateOfferEscrow(params: {
+  task: PrivateEscrowTaskInput;
+  clientAddress: string;
+  workerAddress: string;
+  invitedUserId: number;
+  platformFee: number;
+  hooks: PrivateEscrowHooks;
+}): Promise<{ success: boolean; error?: string; contractId?: string }> {
+  const created = await createPrivateOfferEscrow({
+    task: params.task,
+    clientAddress: params.clientAddress,
+    workerAddress: params.workerAddress,
+    platformFee: params.platformFee,
+    hooks: params.hooks,
+  });
+  if (!created.success || !created.contractId) {
+    return { success: false, error: created.error };
+  }
+
+  const funded = await fundPrivateOfferEscrow({
+    contractId: created.contractId,
+    task: params.task,
+    clientAddress: params.clientAddress,
+    platformFee: params.platformFee,
+    hooks: params.hooks,
+  });
+  if (!funded.success || !funded.txHash) {
+    return { success: false, error: funded.error, contractId: created.contractId };
+  }
+
+  const sent = await sendPrivateOffer({
+    taskId: params.task.id,
+    invitedUserId: params.invitedUserId,
+    workerAddress: params.workerAddress,
+    clientAddress: params.clientAddress,
+    contractId: created.contractId,
+    fundTxHash: funded.txHash,
+    deployTxHash: created.deployTxHash,
+    task: params.task,
+    platformFee: params.platformFee,
+  });
+
+  if (!sent.success) {
+    return { success: false, error: sent.error, contractId: created.contractId };
+  }
+
+  return { success: true, contractId: created.contractId };
 }

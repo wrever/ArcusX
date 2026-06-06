@@ -1,143 +1,178 @@
-# ArcusX — Frontend API endpoints
+# ArcusX — API (Supabase Edge, producción)
 
-Base URL: `VITE_API_URL` or default `https://arcusx.pro/api` (see `arcusx/src/config/database.ts`).
+**Base URL (marketplace):**  
+`https://<project_ref>.supabase.co/functions/v1/arcusx-api?action=<nombre>`
 
-**Auth:** User routes expect `Authorization: Bearer <JWT>` from `sync_supabase_user.php` unless marked **Public**.
+**Admin:**  
+`https://<project_ref>.supabase.co/functions/v1/arcusx-admin?action=<nombre>`
 
-**Response contract (Week 3+):** Critical write routes use `arcusx_json_exit` / `arcusx_require_user_id()` — JSON body with `success` boolean; **401** includes `error: invalid_or_missing_token`.
+**Cliente:** `arcusxApiUrl('action')` / `arcusxAdminUrl('action')` en `arcusx/src/config/arcusxApi.ts`.
+
+**Auth:** `Authorization: Bearer <JWT app>` (emitido por `sync_supabase_user`) + header `apikey: <VITE_SUPABASE_ANON_KEY>`.
+
+**On-chain (escrow):** Trustless Work **solo en el navegador** (`trustlessWorkEscrowService.ts`). Edge persiste estado y valida `tx_hash` / `transaction_hash` donde aplica.
+
+**Legacy PHP:** `backend_externo/` — no usar en producción; mantener solo referencia histórica.
 
 | Status | Meaning |
 |--------|---------|
-| 401 | Missing/invalid JWT |
-| 403 | JWT valid but identity/resource mismatch |
-| 400 | Validation error |
-| 405 | Wrong HTTP method |
-| 410 | Deprecated (`confirm_escrow_signature.php`) |
+| 401 | JWT ausente o inválido (`invalid_or_missing_token`) |
+| 403 | Sin permiso sobre el recurso |
+| 400 | Validación |
+| 410 | Endpoint deprecado (secrets escrow legacy) |
+| 501 | `action` no implementado |
 
 ---
 
-## Public (no JWT)
+## Configuración frontend
 
-| Endpoint | Method | Used by | Notes |
-|----------|--------|---------|-------|
-| `/auth/get_landing_market_stats.php` | GET | `Hero.tsx` | `open_tasks`, `total_users`, `total_volume_usdc` |
-| `/auth/get_platform_fee.php` | GET | `platformFeeService.ts` | Commission rate |
-| `/auth/get_tasks.php` | GET | `Hero.tsx`, `dashboard.tsx` | Marketplace listing |
-| `/auth/get_freelancers.php` | GET | `freelancerService.ts` | Directory |
-| `/auth/sync_supabase_user.php` | POST | `authService.ts` | OAuth → app JWT |
-| `/auth/admin_login.php` | POST | `adminService.ts` | Admin JWT (separate flow) |
+| Variable | Requerido | Notas |
+|----------|-----------|-------|
+| `VITE_SUPABASE_URL` | Sí | Activa Edge automáticamente |
+| `VITE_SUPABASE_ANON_KEY` | Sí | Header `apikey` |
+| `VITE_USE_PHP_API` | No | `true` = legacy (solo dev de migración) |
 
-**Hero stats fallback:** If `VITE_SUPABASE_URL` is set, `Hero.tsx` prefers Supabase RPCs; otherwise MySQL via `get_landing_market_stats.php`.
+Sin Supabase configurado, `arcusxApiUrl` lanza error (no hay fallback PHP en build actual).
 
 ---
 
-## Auth — tasks & proposals
+## Público / auth inicial
 
-| Endpoint | Method | Used by | Week 3 |
-|----------|--------|---------|--------|
-| `/auth/create_task.php` | POST | `CreateTask.tsx` | JWT + `user_id` match |
-| `/auth/apply_task.php` | POST | `ApplyTask.tsx` | JWT + `applicantId` match |
-| `/auth/select_proposal.php` | POST | `ProposalReview.tsx` | JWT (task owner) |
-| `/auth/get_task_details.php` | GET | Apply, Proposal, Supervise | Bearer |
-| `/auth/get_task_proposals.php` | GET | `ProposalReview.tsx` | Bearer |
-| `/auth/get_tasks.php` | GET | Dashboard | Bearer optional filters |
-| `/auth/get_user_tasks.php` | GET | Dashboard | Bearer |
-| `/auth/get_accepted_tasks.php` | GET | Dashboard | Bearer |
-| `/auth/get_completed_tasks_count.php` | GET | Dashboard | Bearer |
-| `/auth/task_stats.php` | GET | `CreateTask.tsx` | Limits/cooldown |
-| `/auth/check_user_limits.php` | GET | Limits | Bearer |
-| `/auth/cancel_task.php` | POST | `cancelTaskService.ts` | JWT |
-| `/auth/check_cancellation_allowed.php` | GET | `cancelTaskService.ts` | JWT |
-| `/auth/delete_scheduled_tasks.php` | GET | Cron hook | Token query param |
+| action | Método | Usado por |
+|--------|--------|-----------|
+| `get_landing_market_stats` | GET | `Hero.tsx` |
+| `get_platform_fee` | GET | `platformFeeService.ts` |
+| `get_tasks` | GET | `Hero.tsx`, `dashboard.tsx` |
+| `get_freelancers` | GET | `freelancerService.ts` |
+| `sync_supabase_user` | POST | `authService.ts` |
+
+Admin login: `arcusx-admin` → `admin_login`.
 
 ---
 
-## Auth — escrow & completion
+## Tareas y propuestas
 
-| Endpoint | Method | Used by | Week 3 |
-|----------|--------|---------|--------|
-| `/auth/create_escrow.php` | POST | `ProposalReview.tsx` | JWT |
-| `/auth/complete_task.php` | POST | `SuperviseTask.tsx` | JWT |
-| `/auth/mark_work_started.php` | POST | Supervise | Bearer |
-| `/auth/get_escrow_status.php` | GET | Escrow UI | Bearer |
-| `/auth/save_escrow_secret.php` | POST | Legacy paths | Bearer |
-| `/auth/get_escrow_secret.php` | GET | Legacy | Bearer |
-| `/auth/confirm_escrow_signature.php` | * | — | **410 Gone** |
-
-Primary escrow UX: **Trustless Work** SDK in browser (`trustlessWorkEscrowService.ts`), PHP persists metadata.
-
----
-
-## Auth — wallet & profile
-
-| Endpoint | Method | Used by | Week 3 |
-|----------|--------|---------|--------|
-| `/auth/register_wallet.php` | POST | `authService.ts`, profile | JWT |
-| `/auth/verify_wallet.php` | GET | Apply, auth | JWT |
-| `/auth/get_user_profile.php` | GET | `profileService.ts` | Bearer |
-| `/auth/update_user.php` | PUT/PATCH | Profile | JWT = body `id` |
-| `/auth/update_user_profile.php` | POST | Profile | Bearer |
-| `/auth/upload_avatar.php` | POST | Profile | Bearer |
-| `/auth/manage_portfolio.php` | GET/POST/DELETE | Portfolio | Bearer |
-| `/auth/get_user_public_stats.php` | GET | Profile cards | Public read |
+| action | Método | Usado por |
+|--------|--------|-----------|
+| `create_task` | POST | `CreateTask.tsx` |
+| `apply_task` | POST | `ApplyTask.tsx` |
+| `select_proposal` | POST | `ProposalReview.tsx` |
+| `get_task_details` | GET/POST/DELETE | Supervise, Apply, archivos |
+| `get_task_proposals` | GET | `ProposalReview.tsx` |
+| `get_user_tasks` | GET | Dashboard |
+| `get_accepted_tasks` | GET | Dashboard |
+| `get_completed_tasks_count` | GET | Dashboard |
+| `task_stats` | GET | `CreateTask.tsx` |
+| `check_user_limits` | GET | Límites |
+| `cancel_task` | POST | `cancelTaskService.ts` — fase 1 sin `tx_hash` valida; fase 2 confirma |
+| `check_cancellation_allowed` | GET | `cancelTaskService.ts` |
+| `delete_scheduled_tasks` | GET | Cron (`ARCUSX_CRON_SECRET`) |
 
 ---
 
-## Auth — disputes, ratings, transactions
+## Escrow marketplace (Trustless Work + Edge)
 
-| Endpoint | Method | Used by |
-|----------|--------|---------|
-| `/auth/create_dispute.php` | POST | `SuperviseTask.tsx` |
-| `/auth/get_user_disputes.php` | GET | `disputeService.ts` |
-| `/auth/get_dispute_chat.php` | GET | Dispute UI |
-| `/auth/get_dispute_files.php` | GET | Dispute UI |
-| `/auth/get_dispute_timeline.php` | GET | Dispute UI |
-| `/auth/create_rating.php` | POST | `ratingService.ts` |
-| `/auth/get_ratings.php` | GET | Ratings |
-| `/auth/get_user_rating_summary.php` | GET | Ratings |
-| `/auth/get_user_transactions.php` | GET | `transactionService.ts` |
-| `/auth/get_user_earnings_summary.php` | GET | Dashboard wallet |
-| `/auth/get_private_offers.php` | GET | `privateOffersService.ts` |
+| action | Método | Usado por | Notas |
+|--------|--------|-----------|-------|
+| `create_escrow` | POST | `ProposalReview.tsx` | Metadata BD |
+| `finalize_private_offer` | POST | `privateOfferService.ts` | Oferta privada |
+| `complete_task` | POST | `SuperviseTask.tsx` | `escrow_completed` + **`tx_hash` obligatorio** |
+| `mark_work_started` | POST | `taskEscrowService.ts` → Supervise | Protección cancelación |
+| `get_escrow_status` | GET | `taskEscrowService.ts` | BD + campos milestone; balance vía indexer en cliente |
+| `save_escrow_secret` | * | — | **410** deprecado |
+| `get_escrow_secret` | GET | — | **410** |
+| `save_pending_transaction` | POST | — | **410** |
+| `get_pending_transaction` | GET | — | **410** |
+| `submit_complete_transaction` | POST | — | **410** |
+| `confirm_escrow_signature` | * | — | **410** |
 
----
+**Flujo TW (tarea):** deploy/fund → trabajador `mark_work_started` (auto al abrir supervisión) → entrega (`complete_task` worker) → cliente approve + release → `complete_task` + `tx_hash`.
 
-## Referrals & admin
-
-| Endpoint | Method | Notes |
-|----------|--------|-------|
-| `/referral_bind.php` | POST | Post-OAuth referral code |
-| `/auth/admin.php` | GET/POST | Admin panel actions |
-| `/auth/admin_release_dispute_funds.php` | POST | Admin dispute resolution |
-
-Admin CORS/JWT: `admin_common.php` (same origin allowlist as `cors.php`).
+**Cancelación:** `startDispute` (cliente) → admin `resolveDispute` → `cancel_task` con `tx_hash`.
 
 ---
 
-## Stability labels
+## Deals (acuerdos comerciales)
 
-| Label | Routes |
-|-------|--------|
-| **Stable** | CORS helpers, `auth_bearer`, apply/create task, wallet verify/register, landing stats, platform fee |
-| **In review** | Remaining PHP endpoints migrating to `arcusx_json_error` for all exit paths |
-| **Deprecated** | `confirm_escrow_signature.php` |
-
----
-
-## Edge `arcusx-api` (cutover; `arcusxApiUrl('action')`)
-
-Cuando `VITE_SUPABASE_URL` está configurado y **no** hay `VITE_USE_PHP_API`, el marketplace usa  
-`POST/GET https://<project>.supabase.co/functions/v1/arcusx-api?action=<name>` con Bearer JWT app.
-
-| action | Auth | Used by | Notes |
-|--------|------|---------|-------|
-| `get_my_badges` | Bearer | `badgesService.ts`, `SettingsBadgesCatalog` | `public_badges[]`, `earned_count` — reglas en `user-badges.ts` |
-| `get_verification_status` | Bearer | `kycService.ts` | KYC/KYB manual (admin) |
-| `submit_enterprise_kyc` | Bearer | `EnterpriseKycPanel` | KYB empresa |
-| `upload_milestone_evidence` | Bearer | `EvidenceUpload` | Storage `milestone-evidence` |
-| `get_freelancers` | Public/Bearer | `freelancerService.ts` | Incluye `public_badges` por usuario |
-
-Paridad completa: `docs/supabase/PARITY_MATRIX.md`.
+| action | Método | Usado por |
+|--------|--------|-----------|
+| `create_deal` | POST | `dealsService.ts` |
+| `get_deal_by_token` | GET | Landing deal |
+| `get_my_deals` | GET | Dashboard deals |
+| `get_deal_details` | GET | `DealWorkspacePage` |
+| `accept_deal` | POST | Aceptación |
+| `prepare_deal_escrow` | POST | Tras deploy (commerce) |
+| `finalize_deal_escrow` | POST | Tras fund |
+| `complete_deal` | POST | `funded` → `active` |
+| `mark_deal_released` | POST | Tras release TW — **`transaction_hash` obligatorio** |
 
 ---
 
-*Week 3 — 2026-05-18 · Edge badges — 2026-05-28*
+## Disputas, ratings, wallet
+
+| action | Método | Usado por |
+|--------|--------|-----------|
+| `create_dispute` | POST | `SuperviseTask.tsx` |
+| `get_user_disputes` | GET | `disputeService.ts` |
+| `get_dispute_chat` | GET | Admin / disputa |
+| `get_dispute_files` | GET | Disputa |
+| `get_dispute_timeline` | GET | Disputa |
+| `admin_release_dispute_funds` | POST | Admin (metadata post-resolve TW) |
+| `create_rating` | POST | `ratingService.ts` |
+| `get_ratings` | GET | Ratings |
+| `get_user_rating_summary` | GET | Perfil |
+| `register_wallet` | POST | `authService.ts` |
+| `verify_wallet` | GET | Apply, auth |
+| `get_private_offers` | GET | `privateOffersService.ts` |
+
+---
+
+## Perfil, KYC, badges, evidencia
+
+| action | Método | Usado por |
+|--------|--------|-----------|
+| `get_user_profile` | GET | `profileService.ts` |
+| `update_user` | POST | Perfil |
+| `update_user_profile` | POST | Perfil |
+| `upload_avatar` | POST | Perfil |
+| `manage_portfolio` | GET/POST/DELETE | Portfolio |
+| `get_user_public_stats` | GET | Cards públicas |
+| `get_user_details` | GET | Varios |
+| `get_verification_status` | GET | `kycService.ts` |
+| `submit_enterprise_kyc` | POST | KYB |
+| `submit_individual_kyc` | POST | KYC |
+| `get_my_badges` | GET | `badgesService.ts` |
+| `upload_milestone_evidence` | POST | `EvidenceUpload` |
+| `get_milestone_evidence` | GET | Supervise |
+| `get_user_transactions` | GET | `transactionService.ts` |
+| `get_user_earnings_summary` | GET | Dashboard |
+
+---
+
+## Mensajería y notificaciones (Supabase directo)
+
+No pasan por `arcusx-api`:
+
+- Mensajes de tarea: RPC / Realtime (`arcusxMessagingSupabase.ts`)
+- Inbox notificaciones: RPC Supabase
+
+Ver `docs/supabase/EMAIL_NOTIFICATIONS.md`.
+
+---
+
+## Admin (`arcusx-admin`)
+
+Stats, usuarios, tareas, escrows, disputas, config, KYC admin, referidos. Ver matriz en `docs/supabase/PARITY_MATRIX.md`.
+
+---
+
+## Deploy Edge
+
+```bash
+node scripts/bundle-edge-fn.mjs arcusx-api
+SUPABASE_MCP_ACCESS_TOKEN=... node scripts/mcp-deploy-from-bundle-file.mjs arcusx-api
+```
+
+Paridad PHP ↔ Edge: `docs/supabase/PARITY_MATRIX.md` · Cutover: `docs/supabase/CUTOVER_CHECKLIST.md`.
+
+*Actualizado 2026-05-28 — Supabase 100 % marketplace*

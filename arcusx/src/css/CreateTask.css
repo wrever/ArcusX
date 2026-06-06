@@ -1177,46 +1177,48 @@ input[type="date"]:focus {
 }
 
 /* Popup éxito: enlace para postular (flujo contratar / compartir) */
-.hire-success-extras {
-  margin-top: 1rem;
+.popup-container--extra .hire-success-extras {
+  margin: 0 0 0.85rem;
   text-align: left;
   width: 100%;
-}
-
-.hire-success-label {
-  display: block;
-  font-size: 0.8rem;
-  color: var(--text-muted, rgba(255, 255, 255, 0.75));
-  margin-bottom: 0.4rem;
-}
-
-.hire-success-url-row {
-  display: flex;
-  gap: 0.5rem;
-  align-items: stretch;
-  flex-wrap: wrap;
-}
-
-.hire-success-url-input {
-  flex: 1 1 160px;
+  max-width: 100%;
   min-width: 0;
-  font-size: 0.72rem;
-  padding: 0.5rem 0.6rem;
-  border-radius: 8px;
+}
+
+.popup-container--extra .hire-success-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted, rgba(255, 255, 255, 0.75));
+  margin-bottom: 0.35rem;
+}
+
+.popup-container--extra .hire-success-url-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: stretch;
+}
+
+.popup-container--extra .hire-success-url-input {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 0.7rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
   border: 1px solid var(--border-color, rgba(255, 255, 255, 0.2));
   background: var(--bg-input, rgba(0, 0, 0, 0.25));
   color: var(--text-primary, #fff);
   word-break: break-all;
 }
 
-.hire-success-copy-btn {
-  flex: 0 0 auto;
-  padding: 0.5rem 0.85rem;
-  border-radius: 8px;
+.popup-container--extra .hire-success-copy-btn {
+  align-self: flex-start;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
   border: none;
   cursor: pointer;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   background: linear-gradient(135deg, #10dd88, #0ab86a);
   color: #0a1628;
 }
@@ -1225,9 +1227,9 @@ input[type="date"]:focus {
   filter: brightness(1.05);
 }
 
-.hire-copy-feedback {
-  margin: 0.5rem 0 0;
-  font-size: 0.8rem;
+.popup-container--extra .hire-copy-feedback {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
 }
 
 .hire-copy-feedback--ok {

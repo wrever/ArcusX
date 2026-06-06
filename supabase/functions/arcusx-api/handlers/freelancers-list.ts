@@ -185,6 +185,8 @@ export async function getFreelancers(ctx: ApiContext): Promise<Response> {
       skills: parseSkills(f.skills),
       kyc_verified: ver?.creator_verified ?? false,
       creator_verified: ver?.creator_verified ?? false,
+      creator_verified_enterprise: ver?.creator_verified_enterprise ?? false,
+      creator_verified_individual: ver?.creator_verified_individual ?? false,
       display_name: ver?.creator_display_name ?? f.username,
       public_badges: ver?.public_badges ?? [],
     };

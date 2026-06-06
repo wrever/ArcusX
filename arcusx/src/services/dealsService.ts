@@ -91,11 +91,28 @@ export async function finalizeDealEscrow(payload: {
   agreement_id: string;
   escrow_id: string;
   transaction_hash?: string;
+  wallet_address?: string;
 }) {
   return apiPost('finalize_deal_escrow', {
     agreement_id: payload.agreement_id,
     escrow_id: payload.escrow_id,
     transaction_hash: payload.transaction_hash,
+    wallet_address: payload.wallet_address,
+  });
+}
+
+/** Vendedor: contrato desplegado, aún sin USDC del comprador. */
+export async function prepareDealEscrow(payload: {
+  agreement_id: string;
+  escrow_id: string;
+  transaction_hash?: string;
+  wallet_address?: string;
+}) {
+  return apiPost('prepare_deal_escrow', {
+    agreement_id: payload.agreement_id,
+    escrow_id: payload.escrow_id,
+    transaction_hash: payload.transaction_hash,
+    wallet_address: payload.wallet_address,
   });
 }
 
@@ -104,6 +121,11 @@ export async function markDealReleased(agreementId: string, transactionHash?: st
     agreement_id: agreementId,
     transaction_hash: transactionHash,
   });
+}
+
+/** Tras fondear: pasa el deal de `funded` → `active` (ejecución del acuerdo). */
+export async function completeDeal(agreementId: string) {
+  return apiPost('complete_deal', { agreement_id: agreementId });
 }
 
 export function dealPublicUrl(dealToken: string): string {

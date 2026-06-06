@@ -6,10 +6,11 @@
 |---------|--------|----------------|
 | Auth | sync_supabase_user, register_wallet, verify_wallet | ✅ `arcusx-api` |
 | Tareas | CRUD, proposals, apply, stats, landing stats | ✅ `arcusx-api` |
-| Escrow | create, select_proposal, complete, secrets, pending tx | ✅ `arcusx-api` |
+| Escrow | create, select_proposal, complete, mark_work_started, get_escrow_status | ✅ `arcusx-api` |
+| Escrow legacy | secrets, pending tx, confirm_escrow_signature | ✅ `arcusx-api` (410 Gone) |
 | Disputas | create, chat, files, timeline, admin release | ✅ `arcusx-api` |
 | Ratings | create, get, summary | ✅ `arcusx-api` |
-| Deals | create, token, accept, escrow, release | ✅ `arcusx-api` |
+| Deals | create, token, accept, prepare/finalize escrow, complete_deal, release | ✅ `arcusx-api` |
 | Mensajes tarea | list, send | ✅ RPC Supabase |
 | Notificaciones usuario | inbox, read, dismiss | ✅ RPC Supabase |
 | Admin | stats, users, tasks, escrows, config, disputes, notify | ✅ `arcusx-admin` |

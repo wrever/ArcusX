@@ -20,12 +20,18 @@ export async function markWorkStarted(ctx: ApiContext): Promise<Response> {
     return jsonError(req, 'No autorizado o tarea no encontrada', 403);
   }
   if (task.worker_started_at) {
-    return jsonSuccess(req, { message: 'El trabajo ya fue marcado como iniciado' });
+    return jsonSuccess(req, {
+      message: 'Ya habías marcado que comenzaste a trabajar.',
+      already_marked: true,
+      started_at: task.worker_started_at,
+    });
   }
 
+  const startedAt = new Date().toISOString();
   const { error } = await auth.supabase.from('arcusx_tasks').update({
-    worker_started_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    worker_started_at: startedAt,
+    status: 'in_progress',
+    updated_at: startedAt,
   }).eq('id', taskId);
 
   if (error) return jsonError(req, error.message, 500);
@@ -37,7 +43,12 @@ export async function markWorkStarted(ctx: ApiContext): Promise<Response> {
     actor_user_id: auth.userId,
   });
 
-  return jsonSuccess(req, { message: 'Trabajo marcado como iniciado' });
+  return jsonSuccess(req, {
+    message:
+      'Has marcado que comenzaste a trabajar. Esto protege tu trabajo de cancelaciones automáticas.',
+    started_at: startedAt,
+    already_marked: false,
+  });
 }
 
 export async function getEscrowStatus(ctx: ApiContext): Promise<Response> {
@@ -48,6 +59,8 @@ export async function getEscrowStatus(ctx: ApiContext): Promise<Response> {
 
   let q = auth.supabase.from('arcusx_tasks').select(`
     id, escrow_id, escrow_status, escrow_created_at, escrow_completed_at,
+    escrow_amount, price, cancellation_allowed,
+    worker_started_at, worker_accepted_completion, client_accepted_completion,
     status, user_id, accepted_applicant_id
   `);
 
@@ -72,7 +85,16 @@ export async function getEscrowStatus(ctx: ApiContext): Promise<Response> {
       task_status: row.status,
       escrow_created_at: row.escrow_created_at,
       escrow_completed_at: row.escrow_completed_at,
+      escrow_amount: row.escrow_amount,
+      price: row.price,
+      worker_started_at: row.worker_started_at,
+      worker_accepted_completion: Number(row.worker_accepted_completion) === 1,
+      client_accepted_completion: Number(row.client_accepted_completion) === 1,
+      cancellation_allowed: row.cancellation_allowed,
       balance: null,
+      balance_source: 'database_only',
+      balance_hint:
+        'Consulta el balance on-chain con Trustless Work (getEscrowByContractIds) en el cliente.',
       task_id: row.id,
       client_id: row.user_id,
       worker_id: row.accepted_applicant_id,

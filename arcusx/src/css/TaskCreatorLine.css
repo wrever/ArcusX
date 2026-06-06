@@ -1,9 +1,36 @@
 .task-creator-line {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 0.85rem;
+}
+
+.task-creator-line__verified,
+.task-creator-line__verified .username-with-verified__link {
   display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: 0.35rem;
-  font-size: 0.85rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.task-creator-line__verified .username-with-verified__name,
+.task-creator-line__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-creator-line .username-with-verified__badge--compact .badge-icon-tooltip__img,
+.task-creator-line .username-with-verified__badge--compact .badge-icon-tooltip__fallback {
+  width: 18px !important;
+  height: 18px !important;
+  flex-shrink: 0;
+}
+
+.task-creator-line .badge-icon-tooltip--below .badge-icon-tooltip__card {
+  z-index: 40;
 }
 
 .task-creator-line__link {

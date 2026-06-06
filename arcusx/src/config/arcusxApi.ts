@@ -1,15 +1,11 @@
 import { supabaseUrl, supabaseAnonKey, hasSupabase } from './supabase';
 
-const forcePhp = import.meta.env.VITE_USE_PHP_API === 'true';
-
 if (!hasSupabase) {
-  console.warn('[ArcusX] VITE_SUPABASE_URL no configurado: la API requiere Supabase Edge.');
-} else if (forcePhp) {
-  console.warn('[ArcusX] VITE_USE_PHP_API=true: usando PHP legacy en lugar de Edge.');
+  console.error('[ArcusX] VITE_SUPABASE_URL es obligatorio. La API solo usa Supabase Edge.');
 }
 
-/** API marketplace vía Supabase Edge (false solo si falta URL o VITE_USE_PHP_API=true) */
-export const useSupabaseApi = hasSupabase && !forcePhp;
+/** API marketplace: exclusivamente Supabase Edge (`arcusx-api`). */
+export const useSupabaseApi = hasSupabase;
 
 const edgeBase = useSupabaseApi ? `${supabaseUrl}/functions/v1` : '';
 
@@ -21,10 +17,8 @@ export function arcusxApiUrl(
   action: string,
   query?: Record<string, string | number | undefined | null> | URLSearchParams,
 ): string {
-  if (!useSupabaseApi) {
-    throw new Error(
-      'API Edge no disponible. Configura VITE_SUPABASE_URL y desactiva VITE_USE_PHP_API.',
-    );
+  if (!useSupabaseApi || !supabaseUrl) {
+    throw new Error('API no disponible. Configura VITE_SUPABASE_URL en el build.');
   }
   const u = new URL(`${edgeBase}/arcusx-api`);
   u.searchParams.set('action', normalizeAction(action));
@@ -42,16 +36,12 @@ export function arcusxAdminUrl(
   action: string,
   query?: Record<string, string | number | undefined | null>,
 ): string {
-  if (!useSupabaseApi) {
-    throw new Error(
-      'API Edge no disponible. Configura VITE_SUPABASE_URL y desactiva VITE_USE_PHP_API.',
-    );
+  if (!useSupabaseApi || !supabaseUrl) {
+    throw new Error('API no disponible. Configura VITE_SUPABASE_URL en el build.');
   }
   const name = action.replace(/\.php$/i, '');
   const u = new URL(`${edgeBase}/arcusx-admin`);
-  if (name !== 'admin_login') {
-    u.searchParams.set('action', name);
-  }
+  u.searchParams.set('action', name);
   if (query) {
     for (const [k, v] of Object.entries(query)) {
       if (v != null && v !== '') u.searchParams.set(k, String(v));
@@ -75,7 +65,10 @@ export function publicAssetUrl(path: string | null | undefined): string {
   return `${siteBaseUrl()}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
-export function arcusxApiHeaders(extra?: HeadersInit): Headers {
+export function arcusxApiHeaders(
+  extra?: HeadersInit,
+  opts?: { skipAuth?: boolean },
+): Headers {
   const headers = new Headers(extra);
   if (!headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
@@ -83,10 +76,12 @@ export function arcusxApiHeaders(extra?: HeadersInit): Headers {
   if (supabaseAnonKey) {
     headers.set('apikey', supabaseAnonKey);
   }
-  const token =
-    localStorage.getItem('token') ||
-    localStorage.getItem('admin_token') ||
-    localStorage.getItem('supabase_access_token');
-  if (token) headers.set('Authorization', `Bearer ${token}`);
+  if (!opts?.skipAuth) {
+    const token =
+      localStorage.getItem('token') ||
+      localStorage.getItem('admin_token') ||
+      localStorage.getItem('supabase_access_token');
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+  }
   return headers;
 }

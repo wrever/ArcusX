@@ -28,12 +28,18 @@ import type {
   SingleReleaseStartDisputePayload,
   SingleReleaseResolveDisputePayload
 } from '@trustless-work/escrow';
-import { TransactionBuilder, Networks } from '@stellar/stellar-sdk';
-import Server from '@stellar/stellar-sdk';
+import { Horizon, TransactionBuilder } from '@stellar/stellar-sdk';
+import { stellarNetworkPassphrase } from '../utils/stellarNetwork';
 import { PLATFORM_WALLET, ADMIN_WALLET } from '../config/trustlessWork';
 import { getPlatformFeeForTrustlessWork } from './platformFeeService';
+import { toTrustlessWorkPlatformFee } from '../utils/escrowFeeQuote';
 import { USDC_ISSUER } from '../config/usdc';
 import { devLog, devWarn, devError } from '../utils/logger';
+import {
+  isDealEscrowReleased,
+  isDealMilestoneApproved,
+  type DealEscrowIndexerRow,
+} from '../utils/dealEscrowVerification';
 
 // ============================================================================
 // CONSTANTS
@@ -44,7 +50,7 @@ const RETRY_CONFIG = {
   INITIAL_WAIT_AFTER_CREATION: 0,
   NORMALIZE_ERROR_DELAY: 5000,
   GENERAL_ERROR_DELAY: 2000,
-  INDEXING_MAX_WAIT: 10000,
+  INDEXING_MAX_WAIT: 45000,
   INDEXING_CHECK_INTERVAL: 1000
 } as const;
 
@@ -52,15 +58,15 @@ const TRUSTLINE_CONFIG = {
   SYMBOL: 'USDC'
 } as const;
 
-// Horizon Server para verificar transacciones y balances
-const getHorizonServer = () => {
+// Horizon Server (v11: import nombrado Horizon — el default export no expone .Horizon)
+const getHorizonServer = (): Horizon.Server => {
   const isTestnet = import.meta.env.VITE_STELLAR_NETWORK === 'testnet' || 
                     !import.meta.env.VITE_STELLAR_NETWORK || 
                     (typeof window !== 'undefined' && window.location.hostname === 'localhost');
   const horizonUrl = isTestnet 
     ? 'https://horizon-testnet.stellar.org'
     : 'https://horizon.stellar.org';
-  return new Server(horizonUrl);
+  return new Horizon.Server(horizonUrl);
 };
 
 // ============================================================================
@@ -208,6 +214,57 @@ const getTrustlineConfig = (): { address: string; symbol: string } => {
   };
 };
 
+/** Verifica trustline USDC y saldo antes de fondear (evita firmar tx que no puede completarse). */
+export const assertClientUsdcReady = async (
+  signer: string,
+  requiredUsdc: number,
+): Promise<void> => {
+  const horizon = getHorizonServer();
+  const account = await horizon.loadAccount(signer);
+  type AssetBalance = {
+    asset_type: string;
+    asset_code?: string;
+    asset_issuer?: string;
+    balance?: string;
+  };
+  const line = (account.balances as AssetBalance[]).find((b) => {
+    if (b.asset_type === 'native') return false;
+    return (
+      'asset_code' in b &&
+      b.asset_code === 'USDC' &&
+      b.asset_issuer === USDC_ISSUER
+    );
+  });
+  if (!line || !('balance' in line)) {
+    throw new Error(
+      `Tu wallet no tiene trustline USDC en ${import.meta.env.VITE_STELLAR_NETWORK === 'mainnet' ? 'mainnet' : 'testnet'}. ` +
+        `En Freighter añade el activo USDC con issuer ${USDC_ISSUER.slice(0, 8)}… antes de fondear.`,
+    );
+  }
+  const available = parseFloat(line.balance ?? '0');
+  if (!Number.isFinite(available) || available + 1e-7 < requiredUsdc) {
+    throw new Error(
+      `Saldo USDC insuficiente: tienes ${available.toFixed(7)} USDC y necesitas ${requiredUsdc.toFixed(7)} USDC para fondear el escrow.`,
+    );
+  }
+};
+
+const logFundingTransactionPreview = (unsignedXdr: string, amount: number): void => {
+  try {
+    const tx = TransactionBuilder.fromXDR(unsignedXdr, stellarNetworkPassphrase());
+    if (!('operations' in tx)) {
+      devWarn('Transacción de fondeo: FeeBump (revisa detalles en Freighter).');
+      return;
+    }
+    devLog(`Fondeo: ${amount.toFixed(7)} USDC — Freighter puede mostrar solo el fee en XLM; expande "Transaction details".`);
+    tx.operations.forEach((op: { type?: string }, index: number) => {
+      devLog(`  Op ${index + 1}: ${op.type ?? 'unknown'}`);
+    });
+  } catch (e: unknown) {
+    devWarn('No se pudo inspeccionar XDR de fondeo:', e instanceof Error ? e.message : String(e));
+  }
+};
+
 const waitForEscrowIndexing = async (
   contractId: string,
   getEscrowFromIndexer: (contractIds: string[]) => Promise<any>,
@@ -235,12 +292,42 @@ const waitForEscrowIndexing = async (
   return false;
 };
 
+/** Espera balance > 0 en indexer tras enviar tx de fondeo (evita marcar éxito sin fondos bloqueados). */
+export const waitForEscrowFundedOnChain = async (
+  contractId: string,
+  getEscrowFromIndexer: (params: {
+    contractIds: string[];
+    validateOnChain?: boolean;
+  }) => Promise<unknown>,
+  maxWaitMs: number = 45000,
+  checkIntervalMs: number = 2000,
+): Promise<void> => {
+  const start = Date.now();
+  while (Date.now() - start < maxWaitMs) {
+    try {
+      const result = await getEscrowFromIndexer({ contractIds: [contractId], validateOnChain: true });
+      const escrows = Array.isArray(result) ? result : (result as { escrows?: unknown[] })?.escrows || [];
+      const esc = escrows[0] as { balance?: string | number; isActive?: boolean } | undefined;
+      if (esc) {
+        const balance = esc.balance != null ? parseFloat(String(esc.balance)) : 0;
+        if (balance > 0 || esc.isActive === true) {
+          devLog('Fondeo confirmado on-chain. Balance:', balance);
+          return;
+        }
+      }
+    } catch (e: unknown) {
+      devWarn('Esperando confirmación de fondeo:', e instanceof Error ? e.message : String(e));
+    }
+    await new Promise((r) => setTimeout(r, checkIntervalMs));
+  }
+  throw new Error(
+    'El fondeo no se confirmó en la red: el escrow sigue sin saldo. No se asignó al trabajador.',
+  );
+};
+
 const verifyEscrowState = (escrowFromIndexer: any, contractId: string): void => {
   if (!escrowFromIndexer) {
     throw new Error(`No se pudo obtener el escrow ${contractId} del indexer. Verifica que el escrow exista y esté indexado.`);
-  }
-  if (escrowFromIndexer.isActive === false) {
-    throw new Error(`El escrow ${contractId} no está activo. Solo se pueden fondear escrows activos.`);
   }
   if (!escrowFromIndexer.trustline || !escrowFromIndexer.trustline.address) {
     throw new Error(`El escrow ${contractId} no tiene trustline configurado. No se puede fondear sin trustline.`);
@@ -281,7 +368,7 @@ export const signWithWallet = async (
   try {
     const { signedTxXdr } = await kit.signTransaction(unsignedXdr, {
       address: address,
-      networkPassphrase: Networks.TESTNET
+      networkPassphrase: stellarNetworkPassphrase(),
     });
 
     return signedTxXdr;
@@ -305,7 +392,7 @@ export const createAndSendTransaction = async (
 ): Promise<{ success: boolean; txHash?: string; contractId?: string; error?: string }> => {
   try {
     try {
-      const tx = TransactionBuilder.fromXDR(unsignedXdr, Networks.TESTNET);
+      const tx = TransactionBuilder.fromXDR(unsignedXdr, stellarNetworkPassphrase());
       if ('operations' in tx) {
         const fee = typeof tx.fee === 'string' ? parseInt(tx.fee, 10) : tx.fee;
         const operations = tx.operations;
@@ -333,7 +420,7 @@ export const createAndSendTransaction = async (
     // Nota: Las transacciones Soroban pueden causar "Bad union switch" al decodificar
     // Intentamos validar, pero si falla con ese error específico, continuamos de todas formas
     try {
-      const tx = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
+      const tx = TransactionBuilder.fromXDR(signedXdr, stellarNetworkPassphrase());
       const txHash = tx.hash().toString('hex');
       devLog('XDR validado correctamente. Hash:', txHash);
       
@@ -366,7 +453,7 @@ export const createAndSendTransaction = async (
     try {
       // Intentar extraer el hash, pero si falla con "Bad union switch", usar método alternativo
       try {
-        const tx = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
+        const tx = TransactionBuilder.fromXDR(signedXdr, stellarNetworkPassphrase());
         txHash = tx.hash().toString('hex');
         devLog(`Hash de la transacción: ${txHash}`);
       } catch (hashError: any) {
@@ -382,13 +469,14 @@ export const createAndSendTransaction = async (
       
       // Verificar si la transacción ya fue enviada consultando Horizon
       try {
+        if (!txHash) throw new Error('txHash no disponible');
         const horizon = getHorizonServer();
         const existingTx = await horizon.transactions().transaction(txHash).call();
         if (existingTx && existingTx.successful) {
           devLog('La transacción ya fue enviada exitosamente anteriormente');
           return { success: true, txHash: txHash };
         } else if (existingTx && !existingTx.successful) {
-          devWarn('La transacción existe pero falló:', existingTx.result_code);
+          devWarn('La transacción existe pero falló:', (existingTx as { result_code?: string }).result_code);
         }
       } catch (horizonError: any) {
         // Si no se encuentra la transacción, es normal (no ha sido enviada aún)
@@ -511,14 +599,14 @@ export const createAndSendTransaction = async (
         try {
           const horizon = getHorizonServer();
           const horizonResponse = await horizon.submitTransaction(
-            TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET)
+            TransactionBuilder.fromXDR(signedXdr, stellarNetworkPassphrase())
           );
           
           if (horizonResponse.successful) {
             devLog('Transacción enviada exitosamente directamente a Horizon');
             return { success: true, txHash: txHash };
           } else {
-            devError('La transacción fue rechazada por Horizon:', horizonResponse.result_codes);
+            devError('La transacción fue rechazada por Horizon:', (horizonResponse as { result_codes?: unknown }).result_codes);
           }
         } catch (horizonError: any) {
           devError('Error al enviar a Horizon:', horizonError?.message);
@@ -564,7 +652,7 @@ export const createAndSendTransaction = async (
     if (response?.status === 'SUCCESS') {
       let txHash: string | undefined;
       try {
-        const tx = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
+        const tx = TransactionBuilder.fromXDR(signedXdr, stellarNetworkPassphrase());
         txHash = tx.hash().toString('hex');
         devLog('TxHash extraído:', txHash);
       } catch (hashError: any) {
@@ -673,8 +761,13 @@ export const createTrustlessEscrow = async (
     validateConfiguration();
     devLog('Wallets de plataforma configuradas');
     
-    const platformFee = payload.platformFeeOverride ?? await getPlatformFeeForTrustlessWork();
-    devLog('Platform fee:', platformFee, `(${(platformFee * 100).toFixed(2)}%)`);
+    const platformFeeDecimal = payload.platformFeeOverride ?? await getPlatformFeeForTrustlessWork();
+    const platformFee = toTrustlessWorkPlatformFee(platformFeeDecimal);
+    devLog(
+      'Platform fee TW API:',
+      platformFee,
+      `% (decimal interno ${platformFeeDecimal})`,
+    );
     
     const normalizedAmount = normalizeAmount(payload.amount);
     devLog('Amount normalizado:', normalizedAmount);
@@ -723,18 +816,26 @@ export const createTrustlessEscrow = async (
       sendTransaction
     );
 
-    if (result.success) {
-      const contractId = result.contractId || 
-        (initResponse && 'contractId' in initResponse ? (initResponse as InitializeSingleReleaseEscrowResponse).contractId : undefined);
-
-      if (contractId) {
-        return { success: true, contractId, txHash: result.txHash };
-      }
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error || 'Error al enviar la transacción de creación del escrow',
+      };
     }
-    
+
+    const contractId =
+      result.contractId ||
+      (initResponse && 'contractId' in initResponse
+        ? (initResponse as InitializeSingleReleaseEscrowResponse).contractId
+        : undefined);
+
+    if (contractId) {
+      return { success: true, contractId, txHash: result.txHash };
+    }
+
     return {
       success: false,
-      error: 'No se pudo obtener el contractId. Verifica la respuesta del servicio de escrow.'
+      error: 'No se pudo obtener el contractId. Verifica la respuesta del servicio de escrow.',
     };
     
   } catch (error: any) {
@@ -757,6 +858,7 @@ export const fundTrustlessEscrow = async (
 ): Promise<{ success: boolean; txHash?: string; error?: string }> => {
   try {
     validateFundingParams(contractId, amount, signer, kit);
+    await assertClientUsdcReady(signer, amount);
     devLog('Amount recibido para fondear:', amount);
     
     // Obtener escrow del indexer para usar el amount exacto
@@ -772,7 +874,7 @@ export const fundTrustlessEscrow = async (
         }
         try {
           devLog('   Llamando a getEscrowFromIndexer con contractIds:', contractIds);
-          const result = await getEscrowFromIndexer({ contractIds, validateOnChain: true });
+          const result = await getEscrowFromIndexer({ contractIds, validateOnChain: false });
           devLog('   Resultado del indexer (raw):', result);
           return result;
         } catch (error: any) {
@@ -784,7 +886,9 @@ export const fundTrustlessEscrow = async (
       
       const isIndexed = await waitForEscrowIndexing(contractId, indexerWrapper);
       if (!isIndexed) {
-        throw new Error(`El escrow ${contractId} no está disponible en el indexer después de ${RETRY_CONFIG.INDEXING_MAX_WAIT / 1000} segundos. Intenta de nuevo.`);
+        devWarn(
+          `Indexer aún no tiene ${contractId}; se intentará fondear con el monto calculado.`,
+        );
       }
       
       try {
@@ -792,7 +896,7 @@ export const fundTrustlessEscrow = async (
           throw new Error('Contract ID está vacío o inválido');
         }
         devLog('   Obteniendo escrow del indexer (segunda llamada para datos completos)...');
-        const result = await getEscrowFromIndexer({ contractIds: [contractId], validateOnChain: true });
+        const result = await getEscrowFromIndexer({ contractIds: [contractId], validateOnChain: false });
         devLog('   Resultado completo del indexer:', JSON.stringify(result, null, 2));
         
         const escrows = Array.isArray(result) ? result : (result as any)?.escrows || [];
@@ -958,7 +1062,7 @@ export const fundTrustlessEscrow = async (
       precision: finalAmount.toString().split('.')[1]?.length || 0
     });
     
-    return await fundWithRetries(
+    const fundResult = await fundWithRetries(
       fundingPayload,
       fundEscrow,
       sendTransaction,
@@ -966,6 +1070,12 @@ export const fundTrustlessEscrow = async (
       signer,
       escrowFromIndexer
     );
+
+    if (fundResult.success && fundResult.txHash && getEscrowFromIndexer) {
+      await waitForEscrowFundedOnChain(contractId, getEscrowFromIndexer);
+    }
+
+    return fundResult;
     
   } catch (error: any) {
     const errorMessage = error.response?.data?.message || error.message || 'Error desconocido';
@@ -993,6 +1103,8 @@ const fundWithRetries = async (
       if (!fundResponse?.unsignedTransaction) {
         throw new Error('Unsigned transaction is missing');
       }
+
+      logFundingTransactionPreview(fundResponse.unsignedTransaction, payload.amount);
       
       const result = await createAndSendTransaction(
         fundResponse.unsignedTransaction,
@@ -1093,28 +1205,8 @@ export const changeMilestoneStatusTrustlessEscrow = async (
   }
 };
 
-const isMilestoneAlreadyApproved = (escrow: any, milestoneIndex: string): boolean => {
-  try {
-    if (!escrow || !escrow.milestones || !Array.isArray(escrow.milestones)) {
-      return false;
-    }
-    const index = parseInt(milestoneIndex, 10);
-    const milestone = escrow.milestones[index];
-    if (!milestone) {
-      return false;
-    }
-    if (milestone.approved === true || milestone.status === 'approved' || milestone.state === 'approved') {
-      return true;
-    }
-    if (escrow.flags && escrow.flags.approved === true) {
-      return true;
-    }
-    return false;
-  } catch (error) {
-    devWarn('Error al verificar estado del milestone:', error);
-    return false;
-  }
-};
+const isMilestoneAlreadyApproved = (escrow: unknown, _milestoneIndex: string): boolean =>
+  isDealMilestoneApproved(escrow as DealEscrowIndexerRow | null);
 
 export const approveMilestoneTrustlessEscrow = async (
   contractId: string,
@@ -1195,10 +1287,27 @@ export const releaseFundsTrustlessEscrow = async (
   releaseSigner: string,
   kit: any,
   releaseFunds: (payload: SingleReleaseReleaseFundsPayload, type: 'single-release') => Promise<EscrowRequestResponse>,
-  sendTransaction: (signedXdr: string) => Promise<SendTransactionResponse>
+  sendTransaction: (signedXdr: string) => Promise<SendTransactionResponse>,
+  getEscrowFromIndexer?: (contractIds: string[]) => Promise<unknown>
 ): Promise<{ success: boolean; txHash?: string; error?: string; alreadyReleased?: boolean }> => {
   try {
     devLog('Iniciando liberación de fondos...');
+
+    if (getEscrowFromIndexer) {
+      try {
+        const escrowResult = await getEscrowFromIndexer([contractId]);
+        const escrows = Array.isArray(escrowResult)
+          ? escrowResult
+          : (escrowResult as { escrows?: unknown[] })?.escrows ?? [];
+        if (escrows.length > 0 && isDealEscrowReleased(escrows[0] as DealEscrowIndexerRow)) {
+          devLog('Los fondos ya están liberados (indexer). Saltando release…');
+          return { success: true, alreadyReleased: true, txHash: undefined };
+        }
+      } catch (indexerError: unknown) {
+        const msg = indexerError instanceof Error ? indexerError.message : String(indexerError);
+        devWarn('No se pudo verificar liberación en indexer:', msg);
+      }
+    }
     
     const payload: SingleReleaseReleaseFundsPayload = {
       contractId,
@@ -1208,6 +1317,15 @@ export const releaseFundsTrustlessEscrow = async (
     const response = await releaseFunds(payload, 'single-release');
     
     if (!response?.unsignedTransaction) {
+      const errorMessage = (response as { message?: string })?.message || '';
+      if (
+        errorMessage.includes('funds have been released') ||
+        errorMessage.includes('already released') ||
+        errorMessage.includes('escrow funds have been released')
+      ) {
+        devLog('Fondos ya liberados (detectado desde API)');
+        return { success: true, alreadyReleased: true, txHash: undefined };
+      }
       throw new Error('Unsigned transaction is missing from releaseFunds response.');
     }
 
@@ -1279,13 +1397,18 @@ export const startDisputeTrustlessEscrow = async (
 export const resolveDisputeTrustlessEscrow = async (
   contractId: string,
   disputeResolver: string,
-  distribution: { address: string; amount: number },
+  distribution: { address: string; amount: number } | Array<{ address: string; amount: number }>,
   kit: any,
   resolveDispute: (payload: SingleReleaseResolveDisputePayload, type: 'single-release') => Promise<EscrowRequestResponse>,
   sendTransaction: (signedXdr: string) => Promise<SendTransactionResponse>,
   getEscrowFromIndexer?: (params: { contractIds: string[]; validateOnChain?: boolean }) => Promise<any>
 ): Promise<{ success: boolean; txHash?: string; error?: string; verificationResult?: any; warning?: string; requiresTrustline?: boolean; message?: string }> => {
   try {
+    const distributionList = Array.isArray(distribution) ? distribution : [distribution];
+    if (distributionList.length === 0) {
+      throw new Error('Se requiere al menos un destinatario para resolver la disputa');
+    }
+
     // MEJORA CRÍTICA: Validar parámetros de entrada
     if (!contractId || typeof contractId !== 'string' || contractId.trim().length === 0) {
       throw new Error('Contract ID es requerido y debe ser válido');
@@ -1327,10 +1450,24 @@ export const resolveDisputeTrustlessEscrow = async (
             throw new Error(`El escrow ${contractId} no tiene balance disponible. No se puede distribuir fondos.`);
           }
           
-          // Verificar que el amount a distribuir no exceda el balance
-          if (distribution.amount > balance) {
-            devWarn(`El amount a distribuir (${distribution.amount}) excede el balance del escrow (${balance}). Ajustando al balance disponible.`);
-            distribution.amount = balance;
+          const totalStroops = Math.round(balance * 10_000_000);
+          const distStroops = distributionList.reduce(
+            (sum, d) => sum + Math.round(Number(d.amount) * 10_000_000),
+            0,
+          );
+          if (distStroops > totalStroops) {
+            throw new Error(
+              `La suma a distribuir excede el balance del escrow (${balance})`,
+            );
+          }
+          if (
+            distributionList.length > 1 &&
+            distStroops !== totalStroops
+          ) {
+            throw new Error(
+              `En split, la suma debe igualar el balance del escrow (${balance}). ` +
+                `Revisa los porcentajes.`,
+            );
           }
         } else {
           devWarn('No se pudo obtener información del escrow desde el indexer. Continuando de todas formas...');
@@ -1341,33 +1478,28 @@ export const resolveDisputeTrustlessEscrow = async (
       }
     }
 
-    // MEJORA CRÍTICA: Normalizar amount y validar address
-    const normalizedAmount = normalizeAmount(distribution.amount);
-    
-    // Validar que el address sea válido
-    if (!distribution.address || typeof distribution.address !== 'string' || distribution.address.trim().length === 0) {
-      throw new Error('La dirección del receptor es requerida y debe ser válida');
-    }
-    
-    // Validar que el address sea una dirección Stellar válida (empieza con G)
-    if (!distribution.address.startsWith('G')) {
-      throw new Error(`La dirección del receptor no es una dirección Stellar válida: ${distribution.address}`);
-    }
+    const normalizedDistributions = distributionList.map((entry) => {
+      if (!entry.address || typeof entry.address !== 'string' || entry.address.trim().length === 0) {
+        throw new Error('La dirección del receptor es requerida y debe ser válida');
+      }
+      if (!entry.address.startsWith('G')) {
+        throw new Error(`La dirección del receptor no es una dirección Stellar válida: ${entry.address}`);
+      }
+      return {
+        address: entry.address.trim(),
+        amount: normalizeAmount(entry.amount),
+      };
+    });
     
     devLog('Payload de resolución de disputa:');
     devLog('   Contract ID:', contractId);
     devLog('   Dispute Resolver:', disputeResolver);
-    devLog('   Distribution Address:', distribution.address);
-    devLog('   Distribution Amount (original):', distribution.amount);
-    devLog('   Distribution Amount (normalizado):', normalizedAmount);
+    devLog('   Distributions:', normalizedDistributions);
     
     const payload: SingleReleaseResolveDisputePayload = {
       contractId,
       disputeResolver,
-      distributions: [{
-        address: distribution.address.trim(),
-        amount: normalizedAmount
-      }] as [{ address: string; amount: number }]
+      distributions: normalizedDistributions as [{ address: string; amount: number }],
     };
 
     devLog('Enviando payload a resolveDispute:', JSON.stringify(payload, null, 2));
@@ -1392,8 +1524,8 @@ export const resolveDisputeTrustlessEscrow = async (
     // Extraer txHash antes de enviar
     let txHash: string | undefined;
     try {
-      const { TransactionBuilder, Networks } = await import('@stellar/stellar-sdk');
-      const tx = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
+      const { TransactionBuilder: TxBuilder } = await import('@stellar/stellar-sdk');
+      const tx = TxBuilder.fromXDR(signedXdr, stellarNetworkPassphrase());
       txHash = tx.hash().toString('hex');
       devLog('TxHash extraído:', txHash);
     } catch (hashError: any) {
@@ -1410,31 +1542,35 @@ export const resolveDisputeTrustlessEscrow = async (
         devLog('Resolución de disputa procesada exitosamente');
         devLog('Los fondos han sido transferidos');
         
-        // MEJORA: Verificar que la transacción se completó exitosamente y el cliente recibió el dinero
+        const primaryDist = normalizedDistributions[0];
+        // MEJORA: Verificar que la transacción se completó (primer destinatario en split)
         try {
-          devLog('Verificando transacción y balance del cliente...');
+          devLog('Verificando transacción y balance del receptor...');
           devLog(`   Hash de transacción: ${txHash}`);
-          devLog(`   Dirección del receptor: ${distribution.address}`);
-          devLog(`   Monto esperado: ${normalizedAmount}`);
+          devLog(`   Dirección del receptor: ${primaryDist.address}`);
+          devLog(`   Monto esperado: ${primaryDist.amount}`);
           
-          const verificationResult = await verifyTransactionAndBalance(txHash!, distribution.address, normalizedAmount);
+          const verificationResult = await verifyTransactionAndBalance(
+            txHash!,
+            primaryDist.address,
+            primaryDist.amount,
+          );
           
-          devLog('Verificación completada: El cliente tiene trustline y puede recibir USDC');
+          devLog('Verificación completada: el receptor tiene trustline y puede recibir USDC');
           
-          // Retornar información adicional sobre la verificación
           return { 
             success: true, 
             txHash: txHash,
             verificationResult: verificationResult,
-            message: `Disputa resuelta exitosamente. ${normalizedAmount} USDC transferidos al cliente ${distribution.address}. Hash: ${txHash}`
+            message: `Disputa resuelta exitosamente. Hash: ${txHash}`,
           };
         } catch (verifyError: any) {
           devError('Error al verificar transacción o balance:', verifyError.message);
           devError('   Esto puede significar que:');
-          devError('   1. El cliente no tiene trustline configurado para USDC');
+          devError('   1. El receptor no tiene trustline configurado para USDC');
           devError('   2. La transacción no transfirió los fondos correctamente');
           devError('   3. Hay un problema con la verificación');
-          devError(`   Cliente: ${distribution.address}`);
+          devError(`   Receptor: ${primaryDist.address}`);
           devError(`   Issuer de USDC requerido: ${USDC_ISSUER}`);
           
           // No fallar la operación si la verificación falla, pero registrar la advertencia
@@ -1566,14 +1702,16 @@ const verifyTransactionAndBalance = async (
     const transaction = await horizon.transactions().transaction(txHash).call();
     
     if (transaction.successful !== true) {
-      throw new Error(`La transacción ${txHash} no fue exitosa. Resultado: ${transaction.result_code || 'unknown'}`);
+      throw new Error(
+        `La transacción ${txHash} no fue exitosa. Resultado: ${(transaction as { result_code?: string }).result_code || 'unknown'}`,
+      );
     }
     
     devLog('Transacción verificada como exitosa');
     
     // 2. Verificar las operaciones de la transacción para ver si realmente transfirió fondos
     devLog(`Analizando operaciones de la transacción...`);
-    const operations = await horizon.transactions().transaction(txHash).operations().call();
+    const operations = await horizon.operations().forTransaction(txHash).call();
     
     devLog(`Operaciones en la transacción: ${operations.records.length}`);
     let paymentFound = false;
@@ -1877,6 +2015,8 @@ export const cancelTaskTrustlessEscrow = async (
     const normalizedAmount = normalizeAmount(refundAmount);
     devLog('Monto normalizado para reembolso:', normalizedAmount);
     
+    let disputeStartTxHash: string | undefined;
+
     // 3. Si el escrow NO está en disputa, iniciar disputa primero
     if (!isInDispute) {
       devLog('El escrow no está en disputa. Iniciando disputa primero...');
@@ -1908,7 +2048,8 @@ export const cancelTaskTrustlessEscrow = async (
           throw new Error(startDisputeResult.error || 'Error al firmar o enviar la transacción de inicio de disputa');
         }
         
-        devLog('Disputa iniciada exitosamente. TxHash:', startDisputeResult.txHash);
+        disputeStartTxHash = startDisputeResult.txHash;
+        devLog('Disputa iniciada exitosamente. TxHash:', disputeStartTxHash);
         devLog('⏳ Esperando 3 segundos para que la disputa se procese en la blockchain...');
         
         // Esperar un poco para que la disputa se procese en la blockchain
@@ -1942,14 +2083,15 @@ export const cancelTaskTrustlessEscrow = async (
     devLog('Disputa iniciada exitosamente');
     devLog('IMPORTANTE: La resolución de la disputa debe ser procesada por el ADMIN');
     devLog('El cliente NO puede firmar la resolución porque resolveDispute requiere que el disputeResolver la firme');
-    devLog('El sistema procesará el reembolso automáticamente. El cliente recibirá una notificación cuando esté completo.');
+    devLog('Un administrador debe resolver la disputa. El cliente recibirá una notificación cuando se resuelva.');
     
-    // Retornar éxito pero indicar que la resolución será procesada por el ADMIN
     return {
       success: true,
       requiresAdminResolution: true,
-      message: 'Disputa iniciada exitosamente. El sistema procesará tu reembolso automáticamente. Recibirás una notificación cuando esté completo.',
-      unsignedTransaction: undefined // No hay transacción para que el cliente firme
+      txHash: disputeStartTxHash,
+      message:
+        'Disputa iniciada correctamente. Un administrador revisará tu caso y decidirá cómo devolver los fondos de forma segura. Recibirás una notificación cuando se resuelva.',
+      unsignedTransaction: undefined,
     };
     
   } catch (error: any) {
@@ -1988,8 +2130,8 @@ export const signAndSendRefundTransaction = async (
         // Extraer txHash de la transacción firmada
         let txHash: string | undefined;
         try {
-          const { TransactionBuilder, Networks } = await import('@stellar/stellar-sdk');
-          const tx = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
+          const { TransactionBuilder: TxBuilder } = await import('@stellar/stellar-sdk');
+          const tx = TxBuilder.fromXDR(signedXdr, stellarNetworkPassphrase());
           txHash = tx.hash().toString('hex');
           devLog('TxHash extraído:', txHash);
         } catch (hashError: any) {

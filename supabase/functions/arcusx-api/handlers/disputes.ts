@@ -4,6 +4,21 @@ import { logDomainEvent } from '../../_shared/domain-events.ts';
 import type { ApiContext } from './types.ts';
 import { qpInt } from './types.ts';
 import { requireUser, requireAdmin } from './require.ts';
+import {
+  buildDisputeChatPayload,
+  buildDisputeFilesPayload,
+  buildDisputeTimelinePayload,
+  loadDisputeContext,
+  loadDisputeContextByTaskId,
+} from '../../_shared/arcusx-dispute-helpers.ts';
+
+async function resolveDisputeContext(supabase: ApiContext['supabase'], url: URL) {
+  const disputeId = qpInt(url, 'dispute_id');
+  const taskId = qpInt(url, 'task_id');
+  if (disputeId) return loadDisputeContext(supabase, disputeId);
+  if (taskId) return loadDisputeContextByTaskId(supabase, taskId);
+  return null;
+}
 
 export async function createDispute(ctx: ApiContext): Promise<Response> {
   const { req, body } = ctx;
@@ -16,13 +31,31 @@ export async function createDispute(ctx: ApiContext): Promise<Response> {
 
   const { data: task } = await auth.supabase
     .from('arcusx_tasks')
-    .select('id, title, user_id, accepted_applicant_id')
+    .select('id, title, user_id, accepted_applicant_id, status, escrow_status, escrow_id')
     .eq('id', taskId)
     .single();
 
   if (!task) return jsonError(req, 'Tarea no encontrada', 404);
   const allowed = task.user_id === auth.userId || task.accepted_applicant_id === auth.userId;
   if (!allowed) return jsonError(req, 'No autorizado', 403);
+
+  if (!task.escrow_id) {
+    return jsonError(req, 'No se puede abrir disputa sin escrow configurado.', 400);
+  }
+
+  const escrowSt = String(task.escrow_status ?? '');
+  if (!['active', 'completed', 'disputed'].includes(escrowSt)) {
+    return jsonError(
+      req,
+      `No se puede abrir disputa. El escrow debe estar activo o completado. Estado: ${escrowSt || 'sin estado'}`,
+      400,
+    );
+  }
+
+  const validStatuses = ['assigned', 'in_progress', 'completed', 'disputed'];
+  if (!validStatuses.includes(String(task.status ?? ''))) {
+    return jsonError(req, 'No se puede abrir disputa en el estado actual de la tarea', 400);
+  }
 
   const { data, error } = await auth.supabase.from('arcusx_disputes').insert({
     task_id: taskId,
@@ -34,7 +67,14 @@ export async function createDispute(ctx: ApiContext): Promise<Response> {
   }).select('id').single();
 
   if (error) return jsonError(req, error.message, 500);
-  await auth.supabase.from('arcusx_tasks').update({ status: 'disputed' }).eq('id', taskId);
+  const taskPatch: Record<string, unknown> = {
+    status: 'disputed',
+    updated_at: new Date().toISOString(),
+  };
+  if (escrowSt === 'active') {
+    taskPatch.escrow_status = 'disputed';
+  }
+  await auth.supabase.from('arcusx_tasks').update(taskPatch).eq('id', taskId);
 
   const otherId =
     auth.userId === task.user_id
@@ -90,8 +130,13 @@ export async function getUserDisputes(ctx: ApiContext): Promise<Response> {
       user_id: number;
       accepted_applicant_id: number | null;
     } | null;
-    if (!task || task.escrow_status !== 'pending_dispute_resolution') continue;
-    if (task.user_id !== auth.userId && task.accepted_applicant_id !== auth.userId) continue;
+    if (!task) continue;
+    if (String(task.escrow_status ?? '') !== 'pending_dispute_resolution') {
+      continue;
+    }
+    if (task.user_id !== auth.userId && task.accepted_applicant_id !== auth.userId) {
+      continue;
+    }
 
     let resolution: Record<string, unknown> | null = null;
     if (row.resolution) {
@@ -114,13 +159,13 @@ export async function getUserDisputes(ctx: ApiContext): Promise<Response> {
       userRole = 'client';
       if (decision === 'client' || decision === 'split') {
         needsSignature = true;
-        refundAmount = Number(resolution?.refund_to_client ?? 0);
+        refundAmount = Number(resolution?.refund_to_client ?? task.price ?? 0);
       }
     } else if (task.accepted_applicant_id === auth.userId) {
       userRole = 'worker';
       if (decision === 'worker' || decision === 'split') {
         needsSignature = true;
-        paymentAmount = Number(resolution?.pay_to_worker ?? 0);
+        paymentAmount = Number(resolution?.pay_to_worker ?? task.price ?? 0);
       }
     }
 
@@ -148,100 +193,71 @@ export async function getDisputeChat(ctx: ApiContext): Promise<Response> {
   const { req, url } = ctx;
   await requireAdmin(ctx);
   const disputeId = qpInt(url, 'dispute_id');
-  if (!disputeId) return jsonError(req, 'dispute_id requerido', 400);
+  const taskId = qpInt(url, 'task_id');
+  if (!disputeId && !taskId) return jsonError(req, 'dispute_id o task_id requerido', 400);
 
-  const { data: dispute } = await ctx.supabase
-    .from('arcusx_disputes')
-    .select('task_id')
-    .eq('id', disputeId)
-    .single();
+  const loaded = await resolveDisputeContext(ctx.supabase, url);
+  if (!loaded) return jsonError(req, 'Disputa no encontrada', 404);
 
-  if (!dispute?.task_id) return jsonError(req, 'Disputa no encontrada', 404);
-
-  const { data: messages } = await ctx.supabase
-    .from('arcusx_task_messages')
-    .select('*')
-    .eq('task_id', dispute.task_id)
-    .order('created_at', { ascending: true });
-
-  return jsonResponse(req, { success: true, messages: messages ?? [] });
+  const payload = await buildDisputeChatPayload(ctx.supabase, loaded.task);
+  return jsonResponse(req, { success: true, ...payload });
 }
 
 export async function getDisputeFiles(ctx: ApiContext): Promise<Response> {
   const { req, url } = ctx;
   await requireAdmin(ctx);
   const disputeId = qpInt(url, 'dispute_id');
-  const { data: dispute } = await ctx.supabase
-    .from('arcusx_disputes')
-    .select('task_id')
-    .eq('id', disputeId ?? 0)
-    .single();
+  const taskId = qpInt(url, 'task_id');
+  if (!disputeId && !taskId) return jsonError(req, 'dispute_id o task_id requerido', 400);
 
-  const { data: task } = await ctx.supabase
-    .from('arcusx_tasks')
-    .select('files')
-    .eq('id', dispute?.task_id ?? 0)
-    .maybeSingle();
+  const loaded = await resolveDisputeContext(ctx.supabase, url);
+  if (!loaded) return jsonError(req, 'Disputa no encontrada', 404);
 
-  return jsonResponse(req, { success: true, files: task?.files ?? [] });
+  const { files, summary } = buildDisputeFilesPayload(loaded.task);
+  return jsonResponse(req, { success: true, files, summary });
 }
 
 export async function getDisputeTimeline(ctx: ApiContext): Promise<Response> {
   const { req, url } = ctx;
   await requireAdmin(ctx);
   const disputeId = qpInt(url, 'dispute_id');
-  const { data: dispute } = await ctx.supabase
-    .from('arcusx_disputes')
-    .select('*, arcusx_tasks(*)')
-    .eq('id', disputeId ?? 0)
-    .maybeSingle();
+  const taskId = qpInt(url, 'task_id');
+  if (!disputeId && !taskId) return jsonError(req, 'dispute_id o task_id requerido', 400);
 
-  return jsonResponse(req, { success: true, dispute });
+  const loaded = await resolveDisputeContext(ctx.supabase, url);
+  if (!loaded) return jsonError(req, 'Disputa no encontrada', 404);
+
+  const timeline = await buildDisputeTimelinePayload(
+    ctx.supabase,
+    loaded.dispute,
+    loaded.task,
+  );
+  return jsonResponse(req, { success: true, timeline });
 }
 
 export async function adminReleaseDisputeFunds(ctx: ApiContext): Promise<Response> {
   const { req, body } = ctx;
   const auth = await requireAdmin(ctx);
   const disputeId = Number(body.dispute_id);
-  const resolution = String(body.resolution ?? 'resolved');
+  if (!disputeId) return jsonError(req, 'dispute_id requerido', 400);
 
-  const { data: dispute } = await auth.supabase
-    .from('arcusx_disputes')
-    .select('task_id')
-    .eq('id', disputeId)
-    .maybeSingle();
-
-  const { error } = await auth.supabase.from('arcusx_disputes').update({
-    status: 'resolved',
-    resolution,
-    resolved_by: auth.userId,
-    resolved_at: new Date().toISOString(),
-  }).eq('id', disputeId);
-
-  if (error) return jsonError(req, error.message, 500);
-
-  if (dispute?.task_id) {
-    const { data: task } = await auth.supabase
-      .from('arcusx_tasks')
-      .select('title, user_id, accepted_applicant_id')
-      .eq('id', dispute.task_id)
-      .maybeSingle();
-    const title = String(task?.title ?? 'la tarea');
-    await notifyUsers(auth.supabase, [task?.user_id, task?.accepted_applicant_id], {
-      title: 'Disputa resuelta',
-      message:
-        `La disputa de "${title}" fue resuelta por el equipo ArcusX. Revisa tu panel para los próximos pasos con el escrow.`,
-      type: 'info',
-      email: false,
-    });
-    await logDomainEvent(auth.supabase, {
-      entity_type: 'dispute',
-      entity_id: disputeId,
-      event_type: 'dispute.resolved',
-      actor_user_id: auth.userId,
-      payload: { task_id: dispute.task_id, resolution },
-    });
+  const loaded = await loadDisputeContext(auth.supabase, disputeId);
+  if (!loaded || loaded.dispute.status !== 'resolved') {
+    return jsonError(req, 'Disputa no encontrada o no resuelta', 400);
   }
 
-  return jsonSuccess(req, { message: 'Disputa resuelta' });
+  await auth.supabase.from('arcusx_tasks').update({
+    escrow_status: 'completed',
+    updated_at: new Date().toISOString(),
+  }).eq('id', loaded.task.id);
+
+  await logDomainEvent(auth.supabase, {
+    entity_type: 'dispute',
+    entity_id: disputeId,
+    event_type: 'dispute.funds_released',
+    actor_user_id: auth.userId,
+    payload: { task_id: loaded.task.id },
+  });
+
+  return jsonSuccess(req, { message: 'Liberación de fondos registrada' });
 }

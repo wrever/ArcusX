@@ -204,14 +204,23 @@ export async function getDisputeRefundXDR(disputeId: number): Promise<{ success:
 /**
  * Obtener el chat completo de una disputa (solo para admins)
  */
-export async function getDisputeChat(disputeId: number): Promise<DisputeChatResponse> {
+export async function getDisputeChat(
+  disputeId?: number,
+  taskId?: number,
+): Promise<DisputeChatResponse> {
   const token = getAuthToken();
   
   if (!token) {
     throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
   }
 
-  const response = await fetch(arcusxApiUrl('get_dispute_chat', { dispute_id: disputeId }), {
+  const query: Record<string, number> = disputeId
+    ? { dispute_id: disputeId }
+    : taskId
+      ? { task_id: taskId }
+      : (() => { throw new Error('dispute_id o task_id requerido'); })();
+
+  const response = await fetch(arcusxApiUrl('get_dispute_chat', query), {
     method: 'GET',
     headers: arcusxApiHeaders(),
   });
@@ -233,14 +242,23 @@ export async function getDisputeChat(disputeId: number): Promise<DisputeChatResp
 /**
  * Obtener todos los archivos relacionados con una disputa (solo para admins)
  */
-export async function getDisputeFiles(disputeId: number): Promise<DisputeFilesResponse> {
+export async function getDisputeFiles(
+  disputeId?: number,
+  taskId?: number,
+): Promise<DisputeFilesResponse> {
   const token = getAuthToken();
   
   if (!token) {
     throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
   }
 
-  const response = await fetch(arcusxApiUrl('get_dispute_files', { dispute_id: disputeId }), {
+  const query: Record<string, number> = disputeId
+    ? { dispute_id: disputeId }
+    : taskId
+      ? { task_id: taskId }
+      : (() => { throw new Error('dispute_id o task_id requerido'); })();
+
+  const response = await fetch(arcusxApiUrl('get_dispute_files', query), {
     method: 'GET',
     headers: arcusxApiHeaders(),
   });
@@ -262,14 +280,23 @@ export async function getDisputeFiles(disputeId: number): Promise<DisputeFilesRe
 /**
  * Obtener el timeline de eventos de una disputa (solo para admins)
  */
-export async function getDisputeTimeline(disputeId: number): Promise<DisputeTimelineResponse> {
+export async function getDisputeTimeline(
+  disputeId?: number,
+  taskId?: number,
+): Promise<DisputeTimelineResponse> {
   const token = getAuthToken();
   
   if (!token) {
     throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
   }
 
-  const response = await fetch(arcusxApiUrl('get_dispute_timeline', { dispute_id: disputeId }), {
+  const query: Record<string, number> = disputeId
+    ? { dispute_id: disputeId }
+    : taskId
+      ? { task_id: taskId }
+      : (() => { throw new Error('dispute_id o task_id requerido'); })();
+
+  const response = await fetch(arcusxApiUrl('get_dispute_timeline', query), {
     method: 'GET',
     headers: arcusxApiHeaders(),
   });

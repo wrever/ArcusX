@@ -4,6 +4,10 @@ import { usePlatformFee } from '../hooks/usePlatformFee';
 import { useI18n } from '../i18n/I18nProvider';
 import { createRating, CreateRatingPayload } from '../services/ratingService';
 import { devLog, devWarn, devError } from '../utils/logger';
+import { quoteEscrowCommission } from '../utils/escrowFeeQuote';
+import EscrowFeeBreakdown from './EscrowFeeBreakdown';
+import StellarTxHashLink from './StellarTxHashLink';
+import TaskDeletionNotice from './TaskDeletionNotice';
 import '../css/ProposalReview.css';
 import '../css/ReviewForm.css';
 
@@ -18,19 +22,32 @@ interface ProcessStep {
   disabled?: boolean;
 }
 
+export type TaskCompletionPayload = {
+  releaseTxHash?: string;
+  rating?: number;
+  taskId?: number;
+  workerId?: number;
+};
+
 interface CompleteTaskPopupProps {
   isOpen: boolean;
   onClose: () => void;
-  onComplete: () => void;
+  onComplete: (payload?: TaskCompletionPayload) => void;
   taskPrice: string;
   escrowId: string;
   clientAddress: string;
   taskId?: number;
+  agreementId?: string;
   workerId?: number;
   workerName?: string;
+  popupTitle?: string;
   onApproveMilestone: () => Promise<{ success: boolean; txHash?: string; error?: string; alreadyApproved?: boolean }>;
   onReleaseFunds: () => Promise<{ success: boolean; txHash?: string; error?: string; alreadyReleased?: boolean }>;
   onVerifyMilestone: () => Promise<boolean>;
+  onStayOnSupervision?: () => void;
+  onGoToDashboard?: () => void;
+  /** Fee ArcusX bloqueado en el deal (ej. 0.027); si no se pasa, usa el fee live del sistema. */
+  platformFeeOverride?: number;
 }
 
 const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
@@ -41,13 +58,19 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
   escrowId,
   clientAddress,
   taskId,
+  agreementId,
   workerId,
   workerName,
+  popupTitle,
   onApproveMilestone,
   onReleaseFunds,
-  onVerifyMilestone
+  onVerifyMilestone,
+  onStayOnSupervision,
+  onGoToDashboard,
+  platformFeeOverride,
 }) => {
-  const { platformFee } = usePlatformFee();
+  const { platformFee: livePlatformFee } = usePlatformFee();
+  const platformFee = platformFeeOverride ?? livePlatformFee;
   const { t } = useI18n();
   
   // Estados para rating
@@ -56,16 +79,20 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
   const [submittingRating, setSubmittingRating] = useState(false);
   const [ratingError, setRatingError] = useState<string | null>(null);
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
+  const [ratingSentToServer, setRatingSentToServer] = useState(false);
   
-  // Calcular montos
   const workerAmount = parseFloat(taskPrice) || 0;
-  const escrowAmount = workerAmount > 0 ? workerAmount / (1 - platformFee) : 0;
-  const commission = escrowAmount - workerAmount;
-  const platformFeePercent = (platformFee * 100).toFixed(2);
+  const quote = workerAmount > 0 ? quoteEscrowCommission(workerAmount, platformFee) : null;
+  const escrowAmount = quote?.fundAmount ?? 0;
+  const commission = quote?.totalCommission ?? 0;
+  const platformCommission = quote?.platformCommission ?? 0;
+  const protocolCommission = quote?.protocolCommission ?? 0;
   
   // Formatear montos con 7 decimales (USDC)
   const formattedWorkerAmount = workerAmount.toFixed(7);
   const formattedCommission = commission.toFixed(7);
+  const formattedPlatformCommission = platformCommission.toFixed(7);
+  const formattedProtocolCommission = protocolCommission.toFixed(7);
   const formattedTotal = escrowAmount.toFixed(7);
   
   const [currentStep, setCurrentStep] = useState(0);
@@ -102,6 +129,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
   const [milestoneApproved, setMilestoneApproved] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [releaseTxHash, setReleaseTxHash] = useState<string | undefined>();
+  const [stepError, setStepError] = useState<string | null>(null);
 
   const updateStepStatus = (stepIndex: number, status: ProcessStep['status']) => {
     setSteps(prev => prev.map((step, index) => 
@@ -120,7 +148,9 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
     if (isOpen) {
       setRating(0);
       setRatingSubmitted(false);
+      setRatingSentToServer(false);
       setRatingError(null);
+      setStepError(null);
       setCurrentStep(0);
       // Resetear todos los pasos a pending excepto rating
       setSteps(prev => prev.map((step, index) => {
@@ -151,10 +181,9 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
     }
   };
 
-  // Verificar cuando ambos pasos estén completados
+  // Éxito cuando approve + release están confirmados (rating es posterior, no bloquea)
   useEffect(() => {
     const allStepsCompleted = steps.every(step => step.status === 'completed');
-    
     if (allStepsCompleted && isOpen && !showSuccessPopup) {
       setShowSuccessPopup(true);
     }
@@ -187,11 +216,17 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
     setRatingError(null);
   };
 
-  // Función para enviar el rating al servidor (solo después de liberar fondos exitosamente)
-  const submitRatingToServer = async () => {
-    if (!taskId || !workerId || rating === 0) {
-      devWarn('No se puede enviar rating: datos faltantes', { taskId, workerId, rating });
-      return; // No hay rating para enviar
+  const isDuplicateRatingError = (message: string) =>
+    /ya calificaste|ya existe una valoraci[oó]n/i.test(message);
+
+  /** Persiste rating en BD solo después de approve + release confirmados on-chain. */
+  const submitRatingToServer = async (): Promise<boolean> => {
+    if (ratingSentToServer) return true;
+
+    const hasTarget = (taskId && workerId) || (agreementId && workerId);
+    if (!hasTarget || rating === 0) {
+      devWarn('No se puede enviar rating: datos faltantes', { taskId, agreementId, workerId, rating });
+      return false;
     }
 
     setSubmittingRating(true);
@@ -199,20 +234,29 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
     
     try {
       const payload: CreateRatingPayload = {
-        task_id: taskId,
-        rated_user_id: workerId,
+        ...(taskId ? { task_id: taskId } : {}),
+        ...(agreementId ? { agreement_id: agreementId } : {}),
+        rated_user_id: workerId!,
         rating,
-        review: undefined // Solo rating, sin review opcional por ahora
+        review: undefined,
       };
 
-      devLog('Enviando rating al servidor...', payload);
+      devLog('Enviando rating al servidor tras liberar fondos...', payload);
       const result = await createRating(payload);
       devLog('Rating enviado exitosamente:', result);
-      
+      setRatingSentToServer(true);
       setRatingError(null);
+      return true;
     } catch (err: any) {
+      const message = String(err?.message ?? '');
+      if (isDuplicateRatingError(message)) {
+        setRatingSentToServer(true);
+        setRatingError(null);
+        return true;
+      }
       devError('Error al enviar rating:', err);
-      setRatingError(`${t('complete.rating.error')}: ${err.message || ''}`);
+      setRatingError(`${t('complete.rating.error')}: ${message}`);
+      return false;
     } finally {
       setSubmittingRating(false);
     }
@@ -227,22 +271,13 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
     }
     
     if (step.id === 'approve') {
+      setStepError(null);
       updateStepStatus(stepIndex, 'in_progress');
       try {
         const result = await onApproveMilestone();
         if (result.success) {
-          // Milestone aprobado exitosamente
           updateStepStatus(stepIndex, 'completed');
           setMilestoneApproved(true);
-          
-          // IMPORTANTE: Enviar el rating al servidor tan pronto como se apruebe el milestone
-          if (rating > 0 && ratingSubmitted) {
-            devLog('Milestone aprobado. Enviando rating al servidor...');
-            // Enviar rating en background (no bloquear la UI)
-            submitRatingToServer().catch(err => {
-              devError('Error crítico al enviar rating:', err);
-            });
-          }
           
           //  HABILITAR INMEDIATAMENTE: Si la aprobación fue exitosa, habilitar el botón de liberar sin esperar
           updateStepDisabled(2, false); // Habilitar botón de liberar fondos inmediatamente (step 2)
@@ -265,9 +300,11 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
             }
           }, 1000);
         } else {
+          setStepError(result.error || t('complete.step.approve.error'));
           updateStepStatus(stepIndex, 'error');
         }
       } catch (error: any) {
+        setStepError(error?.message || t('complete.step.approve.error'));
         updateStepStatus(stepIndex, 'error');
       }
     }
@@ -278,6 +315,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
         return;
       }
       
+      setStepError(null);
       updateStepStatus(stepIndex, 'in_progress');
       try {
         const result = await onReleaseFunds();
@@ -285,11 +323,20 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
           if (!result.alreadyReleased) {
             setReleaseTxHash(result.txHash);
           }
+
+          // Liberación confirmada on-chain → paso completado siempre
           updateStepStatus(stepIndex, 'completed');
+
+          // Rating guardado en UI al inicio; se persiste automáticamente tras release OK
+          if (rating > 0 && ratingSubmitted) {
+            void submitRatingToServer();
+          }
         } else {
+          setStepError(result.error || t('complete.step.release.error'));
           updateStepStatus(stepIndex, 'error');
         }
       } catch (error: any) {
+        setStepError(error?.message || t('complete.step.release.error'));
         updateStepStatus(stepIndex, 'error');
       }
     }
@@ -308,10 +355,20 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
     return step.icon;
   };
 
-  const handleSuccessPopupClose = () => {
+  const finalizeSuccessPopup = (action: 'stay' | 'dashboard') => {
     setShowSuccessPopup(false);
     onClose();
-    onComplete();
+    onComplete({
+      releaseTxHash,
+      rating: rating > 0 ? rating : undefined,
+      taskId,
+      workerId,
+    });
+    if (action === 'dashboard') {
+      onGoToDashboard?.();
+    } else {
+      onStayOnSupervision?.();
+    }
   };
 
   if (!isOpen) return null;
@@ -322,7 +379,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
         {/* Header */}
         <div className="escrow-process-header">
           <h2 className="escrow-process-title">
-            Completar Tarea
+            {popupTitle ?? 'Completar Tarea'}
           </h2>
           <button
             onClick={onClose}
@@ -542,6 +599,12 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
           ))}
         </div>
 
+        {stepError && (
+          <p className="escrow-step-error" role="alert" style={{ color: '#ef4444', margin: '12px 0', fontSize: '14px' }}>
+            {stepError}
+          </p>
+        )}
+
         {/* Progress Indicator */}
         <div className="escrow-progress">
           <div className="escrow-progress-header">
@@ -612,20 +675,13 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                   {formattedWorkerAmount} USDC
                 </strong>
               </div>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '8px 0',
-                borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
-              }}>
-                <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
-                  {t('complete.popup.platformCommissionLabel').replace('{{percent}}', String(platformFeePercent))}
-                </span>
-                <strong style={{ fontSize: '14px', color: 'var(--text-primary)' }}>
-                  {formattedCommission} USDC
-                </strong>
-              </div>
+              <EscrowFeeBreakdown
+                layout="flex-rows"
+                platformFee={platformFee}
+                totalUsdc={formattedCommission}
+                platformUsdc={formattedPlatformCommission}
+                protocolUsdc={formattedProtocolCommission}
+              />
             </div>
             <div style={{ 
               padding: '12px',
@@ -718,7 +774,7 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
               marginBottom: '20px',
               marginTop: 0
             }}>
-              ¡Tarea Completada Exitosamente!
+              {t('complete.success.title')}
             </h3>
             
             <div style={{
@@ -767,36 +823,34 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                     {t('complete.success.fundsReleased').replace('{{amount}}', formattedWorkerAmount)}
                   </strong>
                 </div>
-                {releaseTxHash && (
-                  <div style={{ 
+                {releaseTxHash ? (
+                  <div style={{
                     marginTop: '16px',
                     paddingTop: '16px',
-                    borderTop: '1px solid rgba(40, 192, 240, 0.2)'
+                    borderTop: '1px solid rgba(40, 192, 240, 0.2)',
                   }}>
-                    <p style={{ 
-                      fontSize: '13px', 
-                      color: 'var(--text-muted)',
-                      margin: 0
-                    }}>
-                      <strong style={{ color: '#10dd88' }}>{t('complete.popup.txHash')}</strong>{' '}
-                      <code style={{ 
-                        color: '#10dd88',
-                        background: 'rgba(40, 192, 240, 0.1)',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        fontSize: '12px'
-                      }}>
-                        {releaseTxHash.slice(0, 8)}...{releaseTxHash.slice(-8)}
-                      </code>
-                    </p>
+                    <StellarTxHashLink
+                      txHash={releaseTxHash}
+                      label={t('complete.popup.txHash')}
+                    />
+                    <TaskDeletionNotice
+                      completedAt={new Date().toISOString()}
+                      escrowStatus="completed"
+                      status="completed"
+                      escrowReleaseTxHash={releaseTxHash}
+                      clientAcceptedCompletion={1}
+                      closureHints={{ taskFundsReleased: true }}
+                      variant="inline"
+                    />
                   </div>
-                )}
+                ) : null}
               </div>
             </div>
             
             <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <button 
-                onClick={handleSuccessPopupClose}
+              <button
+                type="button"
+                onClick={() => finalizeSuccessPopup('stay')}
                 style={{
                   background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
                   color: 'var(--text-primary)',
@@ -810,18 +864,26 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
                   minWidth: '200px',
                   boxShadow: '0 4px 12px rgba(40, 192, 240, 0.3)'
                 }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.background = 'linear-gradient(90deg, #0ab86a, #10dd88)';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(40, 192, 240, 0.4)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.background = 'linear-gradient(90deg, #10dd88, #0ab86a)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(40, 192, 240, 0.3)';
+              >
+                {t('supervise.popup.backToTask')}
+              </button>
+              <button
+                type="button"
+                onClick={() => finalizeSuccessPopup('dashboard')}
+                style={{
+                  background: 'var(--bg-tertiary)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border-color)',
+                  padding: '14px 32px',
+                  borderRadius: '10px',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  minWidth: '200px'
                 }}
               >
-                 {t('common.accept')}
+                {t('supervise.popup.goToDashboard')}
               </button>
             </div>
           </div>

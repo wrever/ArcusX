@@ -271,6 +271,15 @@
   color: var(--text-primary, #ffffff);
 }
 
+.sidebar-nav li.dashboard-admin-entry {
+  border-left: 3px solid #f59e0b;
+  margin-top: 0.35rem;
+}
+
+.sidebar-nav li.dashboard-admin-entry:hover {
+  background: rgba(245, 158, 11, 0.12);
+}
+
 .sidebar-nav li.active {
   background: rgba(16, 221, 136, 0.15);
   color: var(--primary-blue);
@@ -338,6 +347,10 @@
   margin-left: 280px;
   padding: 2rem;
   width: calc(100% - 280px);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: clip;
   background: var(--bg-primary, linear-gradient(135deg, #0a0a0a 0%, rgba(17, 128, 179, 0.1) 100%));
   min-height: calc(100vh - 120px); /* Altura mínima menos el footer */
   padding-bottom: 2rem;
@@ -1185,6 +1198,18 @@ input[type="search"]::placeholder {
   gap: 0.25rem;
   min-width: 0;
   overflow: hidden;
+}
+
+.task-creator-wrap .task-creator-line {
+  width: 100%;
+}
+
+.task-creator-wrap .ax-verified-badge__icon {
+  width: 1rem !important;
+  height: 1rem !important;
+  max-width: 1rem;
+  max-height: 1rem;
+  object-fit: contain;
 }
 
 .task-creator-wrap .rating-display {
@@ -3320,6 +3345,67 @@ input[type="search"]::placeholder {
   line-height: 1.2;
 }
 
+.private-offer-pending-badge {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.1);
+  text-align: left;
+  line-height: 1.35;
+}
+
+.private-offer-pending-badge__label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fbbf24;
+}
+
+.private-offer-pending-badge__message {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary, #ffffff);
+}
+
+.private-offer-refund-pending {
+  margin: 0 0 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.1);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--text-primary, #ffffff);
+}
+
+.private-offer-refund-complete {
+  margin: 0 0 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid rgba(16, 221, 136, 0.45);
+  background: rgba(16, 221, 136, 0.12);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--text-primary, #ffffff);
+}
+
+.user-task-deletion-countdown {
+  margin: 0 0 0.75rem;
+}
+
+.user-task-deletion-countdown .task-deletion-banner--compact {
+  margin: 0;
+}
+
+.user-task-deletion-countdown .task-deletion-banner--compact .task-deletion-banner__datetime {
+  display: none;
+}
+
 /* Estilos para el botón de crear tarea en esta sección */
 .manage-tasks-container .create-task-button {
     position: static;
@@ -3422,7 +3508,7 @@ input[type="search"]::placeholder {
 
 /* Responsive styles usando el mismo diseño que tasks-grid */
 @media (max-width: 1200px) {
-  .user-tasks-list {
+  .user-tasks-list:not(.user-tasks-list--sent-offers) {
     grid-template-columns: repeat(2, 1fr);
     gap: 1.25rem;
   }
@@ -3437,7 +3523,7 @@ input[type="search"]::placeholder {
 }
 
 @media (max-width: 992px) {
-  .user-tasks-list {
+  .user-tasks-list:not(.user-tasks-list--sent-offers) {
     grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
   }
@@ -3452,7 +3538,7 @@ input[type="search"]::placeholder {
 }
 
 @media (max-width: 768px) {
-  .user-tasks-list {
+  .user-tasks-list:not(.user-tasks-list--sent-offers) {
     grid-template-columns: 1fr;
     gap: 1rem;
     padding: 0.25rem;
@@ -3505,7 +3591,7 @@ input[type="search"]::placeholder {
 }
 
 @media (max-width: 480px) {
-  .user-tasks-list {
+  .user-tasks-list:not(.user-tasks-list--sent-offers) {
     grid-template-columns: 1fr;
     gap: 0.75rem;
     padding: 0;
@@ -3571,7 +3657,7 @@ input[type="search"]::placeholder {
 }
 
 @media (min-width: 1440px) {
-  .user-tasks-list {
+  .user-tasks-list:not(.user-tasks-list--sent-offers) {
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   }
 }
@@ -4520,6 +4606,23 @@ input[type="search"]::placeholder {
   max-width: 42rem;
   font-size: 0.85rem !important;
   opacity: 0.75;
+}
+
+.private-offers-section {
+  margin-bottom: 2rem;
+}
+
+.private-offers-section h3 {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+/* Grid de ofertas enviadas: ver SentPrivateOfferCard.css */
+
+.private-offer-arbitration-pending {
+  border-left: 3px solid #f59e0b;
+  padding-left: 0.75rem;
 }
 
 .dashboard-private-muted {

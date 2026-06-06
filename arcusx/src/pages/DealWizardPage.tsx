@@ -5,9 +5,11 @@ import { useI18n } from '../i18n/I18nProvider';
 import { useWallet } from '../hooks/useWallet';
 import { usePlatformFee } from '../hooks/usePlatformFee';
 import { DEAL_TEMPLATES, getDealTemplate, type DealTemplateId } from '../constants/dealTemplates';
-import { createDeal } from '../services/dealsService';
+import { createDeal, getDealByToken } from '../services/dealsService';
 import DealShareLink from '../components/DealShareLink';
 import '../css/DealsPages.css';
+import { quoteEscrowCommission } from '../utils/escrowFeeQuote';
+import EscrowFeeBreakdown from '../components/EscrowFeeBreakdown';
 
 const STEPS = ['template', 'info', 'payment', 'review'] as const;
 
@@ -24,18 +26,26 @@ const DealWizardPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [createdToken, setCreatedToken] = useState('');
+  const [createdDealId, setCreatedDealId] = useState('');
+  const [buyerAccepted, setBuyerAccepted] = useState(false);
+  const [buyerContract, setBuyerContract] = useState(false);
+  const [buyerFunded, setBuyerFunded] = useState(false);
 
   const tpl = useMemo(() => getDealTemplate(templateId), [templateId]);
 
   useEffect(() => {
-    setTitle(t(tpl.titleKey));
-    setDescription(t(tpl.descriptionKey));
+    setTitle('');
+    setDescription('');
+    setAmount('');
     setIReceivePayment(tpl.defaultFunderRole === 'counterparty');
-  }, [templateId, t, tpl.titleKey, tpl.descriptionKey, tpl.defaultFunderRole]);
+  }, [templateId, tpl.defaultFunderRole]);
 
   const netAmount = parseFloat(amount) || 0;
-  const clientTotal = netAmount > 0 ? netAmount / (1 - platformFee) : 0;
-  const feeAmount = clientTotal - netAmount;
+  const dealQuote = netAmount > 0 ? quoteEscrowCommission(netAmount, platformFee) : null;
+  const clientTotal = dealQuote?.fundAmount ?? 0;
+  const feeAmount = dealQuote?.totalCommission ?? 0;
+  const platformFeeAmount = dealQuote?.platformCommission ?? 0;
+  const protocolFeeAmount = dealQuote?.protocolCommission ?? 0;
 
   const handleCreate = async () => {
     setError('');
@@ -50,8 +60,6 @@ const DealWizardPage = () => {
     }
     setLoading(true);
     try {
-      const beneficiary = address;
-      const releaseSigner = address;
       const funderRole = iReceivePayment ? 'counterparty' : 'initiator';
 
       const res = await createDeal({
@@ -60,12 +68,14 @@ const DealWizardPage = () => {
         description: description.trim(),
         amount_usdc: amt,
         initiator_wallet: address,
-        release_signer_wallet: releaseSigner,
-        beneficiary_wallet: beneficiary,
+        release_signer_wallet: address,
+        beneficiary_wallet: address,
         funder_role: funderRole,
       });
       const token = res.deal_token as string;
+      const agreement = res.agreement as { id?: string } | undefined;
       setCreatedToken(token);
+      setCreatedDealId(String(agreement?.id ?? ''));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : t('deals.error.generic'));
     } finally {
@@ -73,18 +83,56 @@ const DealWizardPage = () => {
     }
   };
 
+  useEffect(() => {
+    if (!createdToken || !iReceivePayment) return;
+    const tick = () => {
+      void getDealByToken(createdToken).then((r) => {
+        const st = r.deal.status;
+        setBuyerAccepted(st === 'accepted' || st === 'funded' || st === 'active' || st === 'completed');
+        setBuyerContract(Boolean(r.deal.escrow_contract_id));
+        setBuyerFunded(st === 'funded' || st === 'active' || st === 'completed');
+      });
+    };
+    tick();
+    const id = window.setInterval(tick, 8000);
+    return () => window.clearInterval(id);
+  }, [createdToken, iReceivePayment]);
+
   if (createdToken) {
+    const commerce = iReceivePayment;
     return (
       <div className="deals-page">
         <h1><FaHandshake /> {t('deals.wizard.doneTitle')}</h1>
-        <p className="deals-lead">{t('deals.wizard.doneLead')}</p>
+        <p className="deals-lead">{commerce ? t('deals.wizard.doneLeadCommerce') : t('deals.wizard.doneLead')}</p>
         <div className="deals-form-card">
+          {commerce && (
+            <ol className="deals-commerce-steps">
+              <li className="is-current">{t('deals.commerce.step1')}</li>
+              <li className={buyerAccepted ? 'is-done' : ''}>{t('deals.commerce.step2')}</li>
+              <li className={buyerContract ? 'is-done' : buyerAccepted ? 'is-current' : ''}>{t('deals.commerce.step3')}</li>
+              <li className={buyerFunded ? 'is-done' : buyerContract ? 'is-current' : ''}>{t('deals.commerce.step4')}</li>
+            </ol>
+          )}
+          {commerce && !buyerAccepted && (
+            <p className="deals-disclaimer">{t('deals.wizard.waitBuyerAccept')}</p>
+          )}
+          {commerce && buyerAccepted && !buyerFunded && (
+            <p className="deals-disclaimer">
+              {buyerContract ? t('deals.wizard.waitBuyerPay') : t('deals.wizard.waitBuyerContract')}
+            </p>
+          )}
+          {commerce && buyerFunded && (
+            <p className="deals-commerce-ready">{t('deals.wizard.buyerPaid')}</p>
+          )}
           <DealShareLink dealToken={createdToken} hint={t('deals.wizard.shareHint')} />
           <div className="deals-actions">
             <Link to="/dashboard?tab=deals" className="deals-btn secondary">{t('deals.wizard.goDashboard')}</Link>
-            <Link to={`/deal/${createdToken}`} className="deals-btn secondary">{t('deals.list.openLink')}</Link>
+            {createdDealId ? (
+              <Link to={`/deals/workspace/${createdDealId}`} className="deals-btn secondary">{t('deals.public.openWorkspace')}</Link>
+            ) : null}
           </div>
         </div>
+        {error && <p className="deals-error" role="alert">{error}</p>}
         <p className="deals-disclaimer">{t('deals.disclaimer')}</p>
       </div>
     );
@@ -139,7 +187,7 @@ const DealWizardPage = () => {
               id="deal-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={t(tpl.titlePlaceholderKey)}
+              placeholder={t(tpl.titleKey)}
             />
             <label htmlFor="deal-desc">{t('deals.wizard.descLabel')}</label>
             <textarea
@@ -147,7 +195,7 @@ const DealWizardPage = () => {
               rows={6}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder={t(tpl.descriptionPlaceholderKey)}
+              placeholder={t(tpl.descriptionKey)}
             />
             <div className="deals-actions">
               <button type="button" className="deals-btn secondary" onClick={() => setStep(0)}>{t('deals.wizard.back')}</button>
@@ -193,11 +241,20 @@ const DealWizardPage = () => {
         {step === 3 && (
           <>
             <div className="deals-summary-row"><span>{t('deals.wizard.protected')}</span><strong>{netAmount.toFixed(2)} USDC</strong></div>
-            <div className="deals-summary-row">
+            <div className="deals-summary-row deals-summary-fee">
               <span>{t('deals.wizard.fee')}</span>
-              <strong>
-                {feeLoading ? '…' : `${(platformFee * 100).toFixed(1)}%`} ({feeAmount.toFixed(2)} USDC)
-              </strong>
+              <div>
+                {feeLoading ? (
+                  <strong>…</strong>
+                ) : (
+                  <EscrowFeeBreakdown
+                    platformFee={platformFee}
+                    totalUsdc={feeAmount.toFixed(2)}
+                    platformUsdc={platformFeeAmount.toFixed(2)}
+                    protocolUsdc={protocolFeeAmount.toFixed(2)}
+                  />
+                )}
+              </div>
             </div>
             <div className="deals-summary-row"><span>{t('deals.wizard.totalDeposit')}</span><strong>{clientTotal.toFixed(2)} USDC</strong></div>
             <p className="deals-disclaimer">{t('deals.wizard.payerNote')}</p>

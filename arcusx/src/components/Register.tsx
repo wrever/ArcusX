@@ -7,6 +7,7 @@ import { authService } from '../services/authService';
 import {
   captureRefFromSearch,
   getStoredRefCode,
+  isReferralRefCode,
   normalizeRefCode,
 } from '../utils/referralCapture';
 import { useEnterpriseMode } from '../hooks/useEnterpriseMode';
@@ -23,7 +24,7 @@ const Register = () => {
   const [searchParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
   const refFromUrl = searchParams.get('ref') ?? searchParams.get('r');
-  const refCode = refFromUrl
+  const refCode = refFromUrl && isReferralRefCode(refFromUrl)
     ? normalizeRefCode(refFromUrl)
     : getStoredRefCode();
 

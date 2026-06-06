@@ -22,7 +22,7 @@
   .proposal-review-container .confirmation-actions .action-button,
   .supervise-task-container button,
   .apply-task-container button,
-  .create-task-container button,
+  .create-task-container button:not(.popup-button):not(.popup-close),
   .user-profile-container .hire-banner-cta,
   .user-profile-container .back-button,
   .user-profile-container .edit-profile-button {

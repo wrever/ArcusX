@@ -20,7 +20,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Plugin para copiar .htaccess al build y agregar banners a archivos JS
-// NOTA: El .htaccess consolidado está en backend_externo/ y debe moverse manualmente a public_html/
+// .htaccess SPA: arcusx/public/.htaccess → dist/ (sin PHP en producción)
 const copyHtaccess = () => {
   // Banner simple para archivos JS
   const jsBanner = `/*!
@@ -151,19 +151,18 @@ const copyHtaccess = () => {
     closeBundle() {
       // Procesar .htaccess inmediatamente
       try {
-        const backendHtaccess = join(__dirname, '..', 'backend_externo', '.htaccess')
+        const publicHtaccess = join(__dirname, 'public', '.htaccess')
         const dest = join(__dirname, 'dist', '.htaccess')
-        
-        if (existsSync(backendHtaccess)) {
-          copyFileSync(backendHtaccess, dest)
-          console.log('✅ .htaccess copiado desde backend_externo/ a dist/')
+
+        if (existsSync(publicHtaccess)) {
+          copyFileSync(publicHtaccess, dest)
+          console.log('✅ .htaccess copiado desde arcusx/public/ a dist/')
         } else {
           const htaccessContent = `DirectoryIndex index.html
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
-  RewriteCond %{REQUEST_URI} !^/api/
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule . /index.html [L]

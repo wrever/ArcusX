@@ -99,7 +99,7 @@ const EnterpriseKycPanel: React.FC<Props> = ({ embedded = false, onSubmitted }) 
       return (
         <div className="enterprise-kyc-status is-approved">
           <FaCheckCircle /> {t('kyc.status.approved')}
-          <VerifiedEnterpriseBadge verified size="md" />
+          <VerifiedEnterpriseBadge kind="enterprise" verified size="md" />
         </div>
       );
     }
@@ -107,7 +107,7 @@ const EnterpriseKycPanel: React.FC<Props> = ({ embedded = false, onSubmitted }) 
       return (
         <div className="enterprise-kyc-status is-review">
           <FaClock /> {t('kyc.status.review')}
-          <VerifiedEnterpriseBadge pending size="md" />
+          <VerifiedEnterpriseBadge kind="enterprise" pending size="md" />
         </div>
       );
     }

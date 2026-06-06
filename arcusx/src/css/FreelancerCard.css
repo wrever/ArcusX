@@ -16,6 +16,18 @@
   box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.1));
 }
 
+.freelancers-grid .freelancer-card-horizontal:hover,
+.freelancers-grid .freelancer-card-horizontal:focus-within {
+  overflow: visible;
+  z-index: 25;
+}
+
+.freelancer-card-header,
+.freelancer-name-row {
+  overflow: visible;
+  position: relative;
+}
+
 .freelancer-card-horizontal::before {
   content: '';
   position: absolute;

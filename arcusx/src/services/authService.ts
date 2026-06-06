@@ -2,7 +2,7 @@ import axios from '../config/axios';
 import { arcusxApiUrl, arcusxApiHeaders } from '../config/arcusxApi';
 import { supabase, hasSupabase } from '../config/supabase';
 import { isValidStellarGAddress } from '../utils/stellarAddress';
-import { ensureArcusxSupabaseUserLink } from './arcusxMessagingSupabase';
+import { prepareSupabaseArcusxSession } from './arcusxMessagingSupabase';
 import {
   buildAuthCallbackUrl,
   captureRefFromSearch,
@@ -11,6 +11,7 @@ import {
   persistRefBeforeOAuth,
   resolveRefCodeForSync,
 } from '../utils/referralCapture';
+import { syncAdminSessionFromMarketplaceToken } from '../utils/platformAdmin';
 
 // Función para verificar si un token JWT ha expirado
 const isTokenExpired = (token: string): boolean => {
@@ -220,6 +221,7 @@ export const authService = {
         localStorage.setItem('token', syncResponse.data.token);
         localStorage.setItem('user', JSON.stringify(syncResponse.data.user));
         localStorage.setItem('supabase_access_token', session.access_token);
+        syncAdminSessionFromMarketplaceToken();
         const attributed = referralMeta?.attributed === true;
         const rejected =
           referralMeta?.status === 'rejected' ||
@@ -228,7 +230,16 @@ export const authService = {
           clearStoredRefCode();
         }
         if (hasSupabase && syncResponse.data.user?.id != null) {
-          void ensureArcusxSupabaseUserLink(Number(syncResponse.data.user.id));
+          try {
+            await prepareSupabaseArcusxSession(Number(syncResponse.data.user.id));
+          } catch (linkErr: unknown) {
+            if (import.meta.env.DEV) {
+              console.warn(
+                '[ArcusX] prepareSupabaseArcusxSession:',
+                linkErr instanceof Error ? linkErr.message : linkErr,
+              );
+            }
+          }
         }
         return syncResponse.data;
       }
