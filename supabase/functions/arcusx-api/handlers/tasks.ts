@@ -543,12 +543,34 @@ export async function getUserTasks(ctx: ApiContext): Promise<Response> {
     .select('task_id, status, applicant_id')
     .in('task_id', taskIds);
 
-  const repairedDeletion = new Map<number, string | null>();
+  const repairedDeletion = new Map<
+    number,
+    {
+      scheduled_deletion_at: string | null;
+      escrow_completed_at: string | null;
+      completed_at: string | null;
+    }
+  >();
   await Promise.all(
     rows
-      .filter((t) => Boolean(String(t.escrow_release_tx_hash ?? '').trim()))
+      .filter((t) => {
+        const escrowSt = String(t.escrow_status ?? '').toLowerCase();
+        const status = String(t.status ?? '').toLowerCase();
+        const closedEscrow =
+          escrowSt === 'refunded' ||
+          escrowSt === 'resolved' ||
+          escrowSt === 'completed';
+        const closedStatus =
+          status === 'cancelled' || status === 'completed' || status === 'resolved';
+        return (
+          Boolean(String(t.escrow_release_tx_hash ?? '').trim()) ||
+          closedEscrow ||
+          closedStatus ||
+          Boolean(t.scheduled_deletion_at)
+        );
+      })
       .map(async (t) => {
-        const { scheduled_deletion_at } = await ensureTaskScheduledDeletion(auth.supabase, {
+        const ensured = await ensureTaskScheduledDeletion(auth.supabase, {
           id: Number(t.id),
           status: t.status,
           escrow_status: t.escrow_status,
@@ -558,7 +580,12 @@ export async function getUserTasks(ctx: ApiContext): Promise<Response> {
           escrow_release_tx_hash: t.escrow_release_tx_hash,
           cancellation_requested_at: t.cancellation_requested_at,
         });
-        repairedDeletion.set(Number(t.id), scheduled_deletion_at);
+        repairedDeletion.set(Number(t.id), {
+          scheduled_deletion_at: ensured.scheduled_deletion_at,
+          escrow_completed_at:
+            ensured.escrow_completed_at ?? t.escrow_completed_at ?? null,
+          completed_at: ensured.completed_at ?? t.completed_at ?? null,
+        });
       }),
   );
 
@@ -587,8 +614,12 @@ export async function getUserTasks(ctx: ApiContext): Promise<Response> {
       taskStatus !== 'in_progress' &&
       (taskStatus === 'private_offer_pending' || taskStatus === 'open');
     const taskId = Number(t.id);
+    const repaired = repairedDeletion.get(taskId);
     const deletionAt =
-      repairedDeletion.get(taskId) ?? t.scheduled_deletion_at ?? null;
+      repaired?.scheduled_deletion_at ?? t.scheduled_deletion_at ?? null;
+    const escrowCompletedAt =
+      repaired?.escrow_completed_at ?? t.escrow_completed_at ?? null;
+    const completedAt = repaired?.completed_at ?? t.completed_at ?? null;
     return {
       id: t.id,
       title: normalizeDisplayText(t.title as string),
@@ -616,8 +647,8 @@ export async function getUserTasks(ctx: ApiContext): Promise<Response> {
       scheduled_deletion_at: deletionAt,
       cancellation_tx_hash: t.cancellation_tx_hash ?? null,
       cancellation_requested_at: t.cancellation_requested_at ?? null,
-      escrow_completed_at: t.escrow_completed_at ?? null,
-      completed_at: t.completed_at ?? null,
+      escrow_completed_at: escrowCompletedAt,
+      completed_at: completedAt,
     };
   });
 

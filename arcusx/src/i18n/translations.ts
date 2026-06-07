@@ -1015,8 +1015,10 @@ export const translations: Record<Lang, Record<string, string>> = {
     'dashboard.privateOffers.sent.workComplete':
       'El trabajo fue pagado y los fondos liberados. Esta oferta se eliminará automáticamente.',
     'dashboard.privateOffers.sent.viewDelivery': 'Ver entrega y archivos',
-    'dashboard.privateOffers.sent.archiveHint':
-      'Descarga el trabajo y los archivos del freelancer antes de que se elimine la oferta.',
+    'dashboard.privateOffers.sent.activeInProgress':
+      'Contrato fondeado y oferta aceptada. Supervisa el avance del trabajo y los hitos desde aquí.',
+    'dashboard.privateOffers.sent.activeInProgressNamed':
+      '{{name}} está trabajando en tu encargo. Supervisa el avance y los hitos desde aquí.',
     'dashboard.privateOffers.sent.badgePending': 'En arbitraje',
     'dashboard.privateOffers.sent.badgeReleased': 'Cerrada',
     'dashboard.privateOffers.sent.badgeAwaiting': 'Pendiente',
@@ -3176,8 +3178,10 @@ export const translations: Record<Lang, Record<string, string>> = {
     'dashboard.privateOffers.sent.workComplete':
       'The work was paid and funds were released. This offer will be removed automatically.',
     'dashboard.privateOffers.sent.viewDelivery': 'View delivery & files',
-    'dashboard.privateOffers.sent.archiveHint':
-      'Download the work and files from the freelancer before this offer is removed.',
+    'dashboard.privateOffers.sent.activeInProgress':
+      'Escrow funded and offer accepted. Supervise work progress and milestones from here.',
+    'dashboard.privateOffers.sent.activeInProgressNamed':
+      '{{name}} is working on your task. Supervise progress and milestones from here.',
     'dashboard.privateOffers.sent.badgePending': 'In arbitration',
     'dashboard.privateOffers.sent.badgeReleased': 'Closed',
     'dashboard.privateOffers.sent.badgeAwaiting': 'Pending',
@@ -5316,8 +5320,10 @@ export const translations: Record<Lang, Record<string, string>> = {
     'dashboard.privateOffers.sent.workComplete':
       'O trabalho foi pago e os fundos liberados. Esta oferta será removida automaticamente.',
     'dashboard.privateOffers.sent.viewDelivery': 'Ver entrega e arquivos',
-    'dashboard.privateOffers.sent.archiveHint':
-      'Baixe o trabalho e os arquivos do freelancer antes da oferta ser removida.',
+    'dashboard.privateOffers.sent.activeInProgress':
+      'Contrato financiado e oferta aceita. Supervisione o andamento do trabalho e os marcos daqui.',
+    'dashboard.privateOffers.sent.activeInProgressNamed':
+      '{{name}} está trabalhando no seu pedido. Supervisione o andamento e os marcos daqui.',
     'dashboard.privateOffers.sent.badgePending': 'Em arbitragem',
     'dashboard.privateOffers.sent.badgeReleased': 'Encerrada',
     'dashboard.privateOffers.sent.badgeAwaiting': 'Pendente',

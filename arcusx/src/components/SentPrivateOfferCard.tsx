@@ -83,7 +83,7 @@ const SentPrivateOfferCard = ({
     const escrowSt = String(task.escrow_status ?? '').toLowerCase();
     const windowHours: 12 | 24 =
       task.status === 'completed' || escrowSt === 'completed' ? 12 : 24;
-    return sentOfferDeletionScheduleAt(task, windowHours, true);
+    return sentOfferDeletionScheduleAt(task, windowHours);
   }, [phase, task]);
 
   const superviseEscrowStatus =
@@ -203,12 +203,23 @@ const SentPrivateOfferCard = ({
                 />
               </div>
             ) : null}
-            {hadFundedWork(task) ? (
-              <p className="sent-offer-card__archive-hint">
-                {t('dashboard.privateOffers.sent.archiveHint')}
-              </p>
-            ) : null}
           </>
+        ) : null}
+
+        {displayPhase === 'active' ? (
+          <div className="sent-offer-card__notice" role="status">
+            <span className="sent-offer-card__notice-icon" aria-hidden>
+              <FaHandshake />
+            </span>
+            <p className="sent-offer-card__notice-text">
+              {task.invited_worker_username
+                ? t('dashboard.privateOffers.sent.activeInProgressNamed').replace(
+                    '{{name}}',
+                    task.invited_worker_username,
+                  )
+                : t('dashboard.privateOffers.sent.activeInProgress')}
+            </p>
+          </div>
         ) : null}
 
         {displayPhase === 'awaiting' ? (

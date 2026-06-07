@@ -146,38 +146,20 @@ export function isDeletionScheduleStalePreRelease(
 export function computeDeletionTargetIso(
   task: TaskDeletionFields,
   windowHours: 12 | 24,
-  hints: TaskClosureHints = {},
+  _hints: TaskClosureHints = {},
 ): string | null {
-  const hasRelease =
-    Boolean(String(task.escrow_release_tx_hash ?? '').trim()) ||
-    hints.onChainFundsReleased === true;
-
-  if (hasRelease && isDeletionScheduleStalePreRelease(task, windowHours)) {
-    return new Date(Date.now() + windowHours * HOUR_MS).toISOString();
+  const schedMs = parseTs(task.scheduled_deletion_at);
+  if (schedMs != null) {
+    return task.scheduled_deletion_at!;
   }
 
   const closedMs =
     parseTs(task.escrow_completed_at) ??
     parseTs(task.completed_at) ??
-    parseTs(task.dispute_resolved_at);
+    parseTs(task.dispute_resolved_at) ??
+    parseTs(task.cancellation_requested_at);
 
-  if (hasRelease && closedMs != null) {
-    const expectedMs = closedMs + windowHours * HOUR_MS;
-    const schedMs = parseTs(task.scheduled_deletion_at);
-    if (schedMs == null || schedMs < expectedMs - STALE_TOLERANCE_MS) {
-      return new Date(expectedMs).toISOString();
-    }
-    return task.scheduled_deletion_at!;
-  }
-
-  if (task.scheduled_deletion_at) return task.scheduled_deletion_at;
-  if (closedMs == null) {
-    if (hints.onChainFundsReleased === true) {
-      return new Date(Date.now() + windowHours * HOUR_MS).toISOString();
-    }
-    return null;
-  }
-
+  if (closedMs == null) return null;
   return new Date(closedMs + windowHours * HOUR_MS).toISOString();
 }
 

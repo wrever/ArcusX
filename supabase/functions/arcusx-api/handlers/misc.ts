@@ -315,8 +315,10 @@ export async function getPrivateOffers(ctx: ApiContext): Promise<Response> {
     `)
     .eq('is_private_invite', true)
     .eq('invited_user_id', auth.userId)
+    .not('escrow_id', 'is', null)
+    .not('escrow_fund_tx_hash', 'is', null)
     .or(
-      `and(status.in.(open,private_offer_pending),accepted_applicant_id.is.null),and(status.in.(assigned,in_progress),accepted_applicant_id.eq.${auth.userId})`,
+      `and(status.in.(private_offer_pending),accepted_applicant_id.is.null),and(status.in.(assigned,in_progress),accepted_applicant_id.eq.${auth.userId})`,
     )
     .order('created_at', { ascending: false });
 
