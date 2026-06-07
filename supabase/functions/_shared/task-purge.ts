@@ -168,11 +168,26 @@ function isDeletionScheduleStalePreRelease(
   return false;
 }
 
+type EnsureDeletionResult = {
+  scheduled_deletion_at: string | null;
+  dispute_resolved_at: string | null;
+  escrow_completed_at?: string | null;
+  completed_at?: string | null;
+};
+
+function scheduleMatchesClosure(
+  schedMs: number,
+  closedMs: number,
+  windowHours: number,
+): boolean {
+  return Math.abs(schedMs - (closedMs + windowHours * DELETION_HOUR_MS)) < 5 * 60 * 1000;
+}
+
 /** Fija scheduled_deletion_at en BD a partir de fechas reales (no "ahora"). */
 export async function ensureTaskScheduledDeletion(
   supabase: SupabaseClient,
   task: TaskDeletionRow,
-): Promise<{ scheduled_deletion_at: string | null; dispute_resolved_at: string | null }> {
+): Promise<EnsureDeletionResult> {
   let disputeResolvedAt: string | null = null;
 
   const { data: resolvedDispute } = await supabase
@@ -200,6 +215,19 @@ export async function ensureTaskScheduledDeletion(
     const windowForStale =
       escrowSt === 'refunded' ? 24 : escrowSt === 'resolved' || status === 'resolved' ? 12 : 24;
 
+    const closedMs = parseTs(task.escrow_completed_at) ?? parseTs(task.completed_at);
+    if (
+      closedMs != null &&
+      scheduleMatchesClosure(existingMs, closedMs, refundWindowHours)
+    ) {
+      return {
+        scheduled_deletion_at: existing,
+        dispute_resolved_at: disputeResolvedAt,
+        escrow_completed_at: task.escrow_completed_at ?? null,
+        completed_at: task.completed_at ?? null,
+      };
+    }
+
     if (isDeletionScheduleStalePreRelease(task, windowForStale, disputeResolvedAt)) {
       const releasedAt = new Date().toISOString();
       const scheduled = scheduledDeletionAtFromNow(refundWindowHours);
@@ -212,28 +240,40 @@ export async function ensureTaskScheduledDeletion(
           updated_at: releasedAt,
         })
         .eq('id', task.id);
-      return { scheduled_deletion_at: scheduled, dispute_resolved_at: disputeResolvedAt };
+      return {
+        scheduled_deletion_at: scheduled,
+        dispute_resolved_at: disputeResolvedAt,
+        escrow_completed_at: releasedAt,
+        completed_at: task.completed_at ?? releasedAt,
+      };
     }
 
-    if (hasReleaseTx) {
-      const closedMs = parseTs(task.escrow_completed_at) ?? parseTs(task.completed_at);
-      if (closedMs != null) {
-        const expectedMs = closedMs + refundWindowHours * DELETION_HOUR_MS;
-        if (existingMs < expectedMs - 5 * 60 * 1000) {
-          const scheduled = new Date(expectedMs).toISOString();
-          await supabase
-            .from('arcusx_tasks')
-            .update({
-              scheduled_deletion_at: scheduled,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', task.id);
-          return { scheduled_deletion_at: scheduled, dispute_resolved_at: disputeResolvedAt };
-        }
+    if (hasReleaseTx && closedMs != null) {
+      const expectedMs = closedMs + refundWindowHours * DELETION_HOUR_MS;
+      if (existingMs < expectedMs - 5 * 60 * 1000) {
+        const scheduled = new Date(expectedMs).toISOString();
+        await supabase
+          .from('arcusx_tasks')
+          .update({
+            scheduled_deletion_at: scheduled,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', task.id);
+        return {
+          scheduled_deletion_at: scheduled,
+          dispute_resolved_at: disputeResolvedAt,
+          escrow_completed_at: task.escrow_completed_at ?? null,
+          completed_at: task.completed_at ?? null,
+        };
       }
     }
 
-    return { scheduled_deletion_at: existing, dispute_resolved_at: disputeResolvedAt };
+    return {
+      scheduled_deletion_at: existing,
+      dispute_resolved_at: disputeResolvedAt,
+      escrow_completed_at: task.escrow_completed_at ?? null,
+      completed_at: task.completed_at ?? null,
+    };
   }
 
   if (escrowSt === 'disputed' || escrowSt === 'pending_dispute_resolution') {

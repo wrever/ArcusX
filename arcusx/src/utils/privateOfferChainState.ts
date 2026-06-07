@@ -49,6 +49,30 @@ export type SentOfferTaskFields = {
   awaiting_private_worker?: boolean;
 };
 
+/** Oferta realmente enviada al freelancer: contrato creado y fondeado (finalize_private_offer). */
+export function isPrivateOfferSentToWorker(task: {
+  is_private_invite?: boolean;
+  escrow_id?: string | null;
+  escrow_fund_tx_hash?: string | null;
+  escrow_status?: string | null;
+}): boolean {
+  if (!task.is_private_invite) return false;
+  const hasEscrow = Boolean(String(task.escrow_id ?? '').trim());
+  const hasFundTx = Boolean(String(task.escrow_fund_tx_hash ?? '').trim());
+  if (!hasEscrow || !hasFundTx) return false;
+
+  const escrowSt = String(task.escrow_status ?? '').toLowerCase();
+  const postFunding = [
+    'active',
+    'disputed',
+    'completed',
+    'resolved',
+    'refunded',
+    'pending_dispute_resolution',
+  ];
+  return postFunding.includes(escrowSt);
+}
+
 export function isTrustlessWorkContractId(escrowId?: string | null): boolean {
   return Boolean(escrowId && String(escrowId).trim().startsWith('C'));
 }

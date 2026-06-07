@@ -49,6 +49,7 @@ import { fetchPrivateOffers, type PrivateOfferTask } from './services/privateOff
 import TaskDeletionNotice from './components/TaskDeletionNotice';
 import SentPrivateOfferCard from './components/SentPrivateOfferCard';
 import { useSentPrivateOffersChainMap } from './hooks/useSentPrivateOffersChainMap';
+import { isPrivateOfferSentToWorker } from './utils/privateOfferChainState';
 import { authService } from './services/authService';
 import {
   isAdminFromJwt,
@@ -564,7 +565,12 @@ const Dashboard = () => {
     [userTasks],
   );
   const sentPrivateOffers = useMemo(
-    () => userTasks.filter((task) => task.is_private_invite),
+    () =>
+      userTasks.filter(
+        (task) =>
+          task.is_private_invite &&
+          isPrivateOfferSentToWorker(task),
+      ),
     [userTasks],
   );
 
