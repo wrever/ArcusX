@@ -6,12 +6,17 @@ const DEFAULT_ORIGINS = [
   'http://127.0.0.1:5173',
 ];
 
-export function corsHeaders(req: Request): HeadersInit {
-  const origin = req.headers.get('Origin') ?? '';
+function buildAllowedOrigins(): string[] {
   const envOrigins = Deno.env.get('ARCUSX_CORS_ORIGINS') ??
     Deno.env.get('REFERRAL_CORS_ORIGINS');
-  const allowed = envOrigins?.split(',').map((s) => s.trim()).filter(Boolean) ??
-    DEFAULT_ORIGINS;
+  const fromEnv = envOrigins?.split(',').map((s) => s.trim()).filter(Boolean) ?? [];
+  // Siempre incluir DEFAULT_ORIGINS (empresas.*, localhost) aunque el secret solo liste arcusx.pro
+  return [...new Set([...DEFAULT_ORIGINS, ...fromEnv])];
+}
+
+export function corsHeaders(req: Request): HeadersInit {
+  const origin = req.headers.get('Origin') ?? '';
+  const allowed = buildAllowedOrigins();
   const ok = allowed.includes(origin) || allowed.includes('*');
   return {
     'Access-Control-Allow-Origin': ok ? (origin || allowed[0]) : allowed[0],

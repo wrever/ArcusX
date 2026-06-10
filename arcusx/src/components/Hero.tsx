@@ -173,33 +173,56 @@ const Hero = () => {
       let total_users = 0;
       let total_volume_usdc = 0;
 
+      const parseLandingStats = (d: {
+        success?: boolean;
+        open_tasks?: number;
+        total_users?: number;
+        total_volume_usdc?: number;
+      } | null | undefined) => {
+        if (!d || d.success === false) return;
+        open_tasks = Number(d.open_tasks) || 0;
+        total_users = Number(d.total_users) || 0;
+        total_volume_usdc = Number(d.total_volume_usdc) || 0;
+      };
+
       if (hasSupabase) {
         try {
-          const [uRes, oRes, vRes] = await Promise.all([
-            supabase.rpc('get_landing_oauth_user_count'),
-            supabase.rpc('get_landing_open_tasks_count'),
-            supabase.rpc('get_landing_completed_volume_usdc'),
-          ]);
+          const res = await axios.get<{
+            success?: boolean;
+            open_tasks?: number;
+            total_users?: number;
+            total_volume_usdc?: number;
+          }>(arcusxApiUrl('get_landing_market_stats'));
           if (cancelled) return;
-          const parseRpcInt = (data: unknown): number | null => {
-            if (data == null) return null;
-            const n = typeof data === 'string' ? parseInt(data, 10) : Number(data);
-            return !Number.isNaN(n) && n >= 0 ? n : null;
-          };
-          if (!uRes.error) {
-            const n = parseRpcInt(uRes.data);
-            if (n != null) total_users = n;
-          }
-          if (!oRes.error) {
-            const n = parseRpcInt(oRes.data);
-            if (n != null) open_tasks = n;
-          }
-          if (!vRes.error) {
-            const n = parseRpcInt(vRes.data);
-            if (n != null) total_volume_usdc = n;
-          }
+          parseLandingStats(res.data);
         } catch {
-          /* 0 */
+          try {
+            const [uRes, oRes, vRes] = await Promise.all([
+              supabase.rpc('get_landing_oauth_user_count'),
+              supabase.rpc('get_landing_open_tasks_count'),
+              supabase.rpc('get_landing_completed_volume_usdc'),
+            ]);
+            if (cancelled) return;
+            const parseRpcInt = (data: unknown): number | null => {
+              if (data == null) return null;
+              const n = typeof data === 'string' ? parseInt(data, 10) : Number(data);
+              return !Number.isNaN(n) && n >= 0 ? n : null;
+            };
+            if (!uRes.error) {
+              const n = parseRpcInt(uRes.data);
+              if (n != null) total_users = n;
+            }
+            if (!oRes.error) {
+              const n = parseRpcInt(oRes.data);
+              if (n != null) open_tasks = n;
+            }
+            if (!vRes.error) {
+              const n = parseRpcInt(vRes.data);
+              if (n != null) total_volume_usdc = n;
+            }
+          } catch {
+            /* 0 */
+          }
         }
       } else {
         try {
@@ -208,14 +231,9 @@ const Hero = () => {
             open_tasks?: number;
             total_users?: number;
             total_volume_usdc?: number;
-          }>(`${arcusxApiUrl('get_landing_market_stats')}`);
+          }>(arcusxApiUrl('get_landing_market_stats'));
           if (cancelled) return;
-          const d = res.data;
-          if (d && d.success !== false) {
-            open_tasks = Number(d.open_tasks) || 0;
-            total_users = Number(d.total_users) || 0;
-            total_volume_usdc = Number(d.total_volume_usdc) || 0;
-          }
+          parseLandingStats(res.data);
         } catch {
           /* valores en 0 */
         }

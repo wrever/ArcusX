@@ -5,29 +5,121 @@ import type { ApiContext } from './types.ts';
 import { qpInt } from './types.ts';
 import { requireUser, requireAdmin } from './require.ts';
 import {
+  buildDealDisputeChatPayload,
+  buildDealDisputeFilesPayload,
+  buildDealDisputeTimelinePayload,
   buildDisputeChatPayload,
   buildDisputeFilesPayload,
   buildDisputeTimelinePayload,
   loadDisputeContext,
   loadDisputeContextByTaskId,
+  loadDisputeContextByAgreementId,
 } from '../../_shared/arcusx-dispute-helpers.ts';
 
 async function resolveDisputeContext(supabase: ApiContext['supabase'], url: URL) {
   const disputeId = qpInt(url, 'dispute_id');
   const taskId = qpInt(url, 'task_id');
+  const agreementId = String(url.searchParams.get('agreement_id') ?? '').trim();
   if (disputeId) return loadDisputeContext(supabase, disputeId);
   if (taskId) return loadDisputeContextByTaskId(supabase, taskId);
+  if (agreementId) return loadDisputeContextByAgreementId(supabase, agreementId);
   return null;
 }
 
 export async function createDispute(ctx: ApiContext): Promise<Response> {
   const { req, body } = ctx;
   const auth = await requireUser(ctx);
+  const agreementId = body.agreement_id ? String(body.agreement_id).trim() : '';
   const taskId = Number(body.task_id);
   const reason = String(body.reason ?? '').trim();
   const txHash = body.tx_hash ? String(body.tx_hash) : null;
 
-  if (!taskId || !reason) return jsonError(req, 'Datos incompletos', 400);
+  if (!reason || reason.length < 10) {
+    return jsonError(req, 'Describe el motivo de la disputa (mínimo 10 caracteres)', 400);
+  }
+
+  if (agreementId) {
+    const { data: deal } = await auth.supabase
+      .from('arcusx_agreements')
+      .select(
+        'id, title, initiator_user_id, counterparty_user_id, status, escrow_status, escrow_contract_id',
+      )
+      .eq('id', agreementId)
+      .maybeSingle();
+
+    if (!deal) return jsonError(req, 'Deal no encontrado', 404);
+
+    const initiator = Number(deal.initiator_user_id);
+    const counterparty = deal.counterparty_user_id != null
+      ? Number(deal.counterparty_user_id)
+      : null;
+    const allowed = auth.userId === initiator || auth.userId === counterparty;
+    if (!allowed) return jsonError(req, 'No autorizado', 403);
+
+    if (!deal.escrow_contract_id) {
+      return jsonError(req, 'No se puede abrir disputa sin escrow fondeado.', 400);
+    }
+
+    const dealStatus = String(deal.status ?? '');
+    if (!['funded', 'active', 'disputed'].includes(dealStatus)) {
+      return jsonError(req, 'No se puede abrir disputa en el estado actual del deal', 400);
+    }
+
+    const escrowSt = String(deal.escrow_status ?? '');
+    if (escrowSt === 'resolved' || escrowSt === 'refunded') {
+      return jsonError(req, 'El escrow de este deal ya fue resuelto', 400);
+    }
+
+    const { data: existing } = await auth.supabase
+      .from('arcusx_disputes')
+      .select('id')
+      .eq('agreement_id', agreementId)
+      .eq('status', 'pending')
+      .maybeSingle();
+    if (existing?.id) {
+      return jsonError(req, 'Ya existe una disputa abierta para este deal', 400);
+    }
+
+    const { data, error } = await auth.supabase.from('arcusx_disputes').insert({
+      agreement_id: agreementId,
+      created_by: auth.userId,
+      reason,
+      tx_hash: txHash,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+    }).select('id').single();
+
+    if (error) return jsonError(req, error.message, 500);
+
+    await auth.supabase.from('arcusx_agreements').update({
+      status: 'disputed',
+      escrow_status: 'disputed',
+      updated_at: new Date().toISOString(),
+    }).eq('id', agreementId);
+
+    const otherId = auth.userId === initiator ? counterparty : initiator;
+    if (otherId && otherId > 0) {
+      await insertArcusxNotification(auth.supabase, {
+        user_id_mysql: otherId,
+        title: 'Disputa abierta en deal',
+        message: `Se abrió una disputa en "${deal.title ?? 'el acuerdo'}". ArcusX revisará el caso.`,
+        type: 'warning',
+        email: false,
+      });
+    }
+
+    await logDomainEvent(auth.supabase, {
+      entity_type: 'dispute',
+      entity_id: data?.id ?? agreementId,
+      event_type: 'dispute.opened',
+      actor_user_id: auth.userId,
+      payload: { agreement_id: agreementId },
+    });
+
+    return jsonSuccess(req, { dispute_id: data?.id });
+  }
+
+  if (!taskId) return jsonError(req, 'task_id o agreement_id requerido', 400);
 
   const { data: task } = await auth.supabase
     .from('arcusx_tasks')
@@ -194,12 +286,17 @@ export async function getDisputeChat(ctx: ApiContext): Promise<Response> {
   await requireAdmin(ctx);
   const disputeId = qpInt(url, 'dispute_id');
   const taskId = qpInt(url, 'task_id');
-  if (!disputeId && !taskId) return jsonError(req, 'dispute_id o task_id requerido', 400);
+  const agreementId = String(url.searchParams.get('agreement_id') ?? '').trim();
+  if (!disputeId && !taskId && !agreementId) {
+    return jsonError(req, 'dispute_id, task_id o agreement_id requerido', 400);
+  }
 
   const loaded = await resolveDisputeContext(ctx.supabase, url);
   if (!loaded) return jsonError(req, 'Disputa no encontrada', 404);
 
-  const payload = await buildDisputeChatPayload(ctx.supabase, loaded.task);
+  const payload = loaded.kind === 'deal'
+    ? await buildDealDisputeChatPayload(ctx.supabase, loaded.deal)
+    : await buildDisputeChatPayload(ctx.supabase, loaded.task);
   return jsonResponse(req, { success: true, ...payload });
 }
 
@@ -208,12 +305,17 @@ export async function getDisputeFiles(ctx: ApiContext): Promise<Response> {
   await requireAdmin(ctx);
   const disputeId = qpInt(url, 'dispute_id');
   const taskId = qpInt(url, 'task_id');
-  if (!disputeId && !taskId) return jsonError(req, 'dispute_id o task_id requerido', 400);
+  const agreementId = String(url.searchParams.get('agreement_id') ?? '').trim();
+  if (!disputeId && !taskId && !agreementId) {
+    return jsonError(req, 'dispute_id, task_id o agreement_id requerido', 400);
+  }
 
   const loaded = await resolveDisputeContext(ctx.supabase, url);
   if (!loaded) return jsonError(req, 'Disputa no encontrada', 404);
 
-  const { files, summary } = buildDisputeFilesPayload(loaded.task);
+  const { files, summary } = loaded.kind === 'deal'
+    ? await buildDealDisputeFilesPayload(ctx.supabase, loaded.deal)
+    : buildDisputeFilesPayload(loaded.task);
   return jsonResponse(req, { success: true, files, summary });
 }
 
@@ -222,16 +324,17 @@ export async function getDisputeTimeline(ctx: ApiContext): Promise<Response> {
   await requireAdmin(ctx);
   const disputeId = qpInt(url, 'dispute_id');
   const taskId = qpInt(url, 'task_id');
-  if (!disputeId && !taskId) return jsonError(req, 'dispute_id o task_id requerido', 400);
+  const agreementId = String(url.searchParams.get('agreement_id') ?? '').trim();
+  if (!disputeId && !taskId && !agreementId) {
+    return jsonError(req, 'dispute_id, task_id o agreement_id requerido', 400);
+  }
 
   const loaded = await resolveDisputeContext(ctx.supabase, url);
   if (!loaded) return jsonError(req, 'Disputa no encontrada', 404);
 
-  const timeline = await buildDisputeTimelinePayload(
-    ctx.supabase,
-    loaded.dispute,
-    loaded.task,
-  );
+  const timeline = loaded.kind === 'deal'
+    ? await buildDealDisputeTimelinePayload(ctx.supabase, loaded.dispute, loaded.deal)
+    : await buildDisputeTimelinePayload(ctx.supabase, loaded.dispute, loaded.task);
   return jsonResponse(req, { success: true, timeline });
 }
 
@@ -246,17 +349,26 @@ export async function adminReleaseDisputeFunds(ctx: ApiContext): Promise<Respons
     return jsonError(req, 'Disputa no encontrada o no resuelta', 400);
   }
 
-  await auth.supabase.from('arcusx_tasks').update({
-    escrow_status: 'completed',
-    updated_at: new Date().toISOString(),
-  }).eq('id', loaded.task.id);
+  if (loaded.kind === 'deal') {
+    await auth.supabase.from('arcusx_agreements').update({
+      escrow_status: 'resolved',
+      updated_at: new Date().toISOString(),
+    }).eq('id', loaded.deal.id);
+  } else {
+    await auth.supabase.from('arcusx_tasks').update({
+      escrow_status: 'completed',
+      updated_at: new Date().toISOString(),
+    }).eq('id', loaded.task.id);
+  }
 
   await logDomainEvent(auth.supabase, {
     entity_type: 'dispute',
     entity_id: disputeId,
     event_type: 'dispute.funds_released',
     actor_user_id: auth.userId,
-    payload: { task_id: loaded.task.id },
+    payload: loaded.kind === 'deal'
+      ? { agreement_id: loaded.deal.id }
+      : { task_id: loaded.task.id },
   });
 
   return jsonSuccess(req, { message: 'Liberación de fondos registrada' });

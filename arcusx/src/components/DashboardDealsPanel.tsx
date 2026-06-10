@@ -1,21 +1,39 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FaHandshake, FaPlus, FaSearch } from 'react-icons/fa';
+import { FaArrowLeft, FaHandshake, FaPlus, FaSearch } from 'react-icons/fa';
 import { useI18n } from '../i18n/I18nProvider';
 import { useAuth } from '../hooks/useAuth';
 import { useWallet } from '../hooks/useWallet';
+import { useEnterpriseMode } from '../hooks/useEnterpriseMode';
 import { dealsEnabled } from '../config/deals';
+import { buildDashboardSearchParams } from '../config/dashboardTabs';
 import { getMyDeals, type AgreementDeal } from '../services/dealsService';
 import { partitionDeals } from '../utils/dealHelpers';
 import DealListCard from './DealListCard';
+import DealPublicPage from '../pages/DealPublicPage';
+import PayoutWalletBanner from './PayoutWalletBanner';
 import '../css/DashboardDealsPanel.css';
 
-const DashboardDealsPanel = () => {
+type DashboardDealsPanelProps = {
+  payoutWalletRegistered: boolean;
+  payoutWalletLoading: boolean;
+  payoutWalletAddress?: string | null;
+  onRequireWallet: () => void;
+};
+
+const DashboardDealsPanel = ({
+  payoutWalletRegistered,
+  payoutWalletLoading,
+  payoutWalletAddress = null,
+  onRequireWallet,
+}: DashboardDealsPanelProps) => {
   const { t } = useI18n();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { address } = useWallet();
+  const enterprise = useEnterpriseMode();
+  const joinDealToken = searchParams.get('join_deal')?.trim() ?? '';
 
   const [deals, setDeals] = useState<AgreementDeal[]>([]);
   const [loading, setLoading] = useState(false);
@@ -25,14 +43,14 @@ const DashboardDealsPanel = () => {
   const userId = user?.id != null ? Number(user.id) : null;
 
   const loadDeals = useCallback(() => {
-    if (!dealsEnabled) return;
+    if (!dealsEnabled || !payoutWalletRegistered) return;
     setLoading(true);
     setError('');
     getMyDeals()
       .then((r) => setDeals(r.deals ?? []))
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [payoutWalletRegistered]);
 
   useEffect(() => {
     loadDeals();
@@ -52,7 +70,16 @@ const DashboardDealsPanel = () => {
     navigate(`/deals/workspace/${deal.id}${q}`);
   };
 
+  const guardWallet = () => {
+    if (!payoutWalletRegistered) {
+      onRequireWallet();
+      return false;
+    }
+    return true;
+  };
+
   const openPastedLink = () => {
+    if (!guardWallet()) return;
     const raw = linkInput.trim();
     if (!raw) return;
     let token = raw;
@@ -66,8 +93,34 @@ const DashboardDealsPanel = () => {
     navigate(`/deal/${token}`);
   };
 
+  const exitJoinDeal = () => {
+    const params = buildDashboardSearchParams('deals', enterprise, searchParams);
+    params.delete('join_deal');
+    const qs = params.toString();
+    navigate(qs ? `/dashboard?${qs}` : '/dashboard', { replace: true });
+  };
+
+  if (joinDealToken) {
+    return (
+      <div className="dashboard-deals-panel dashboard-deals-panel--join">
+        <button type="button" className="dashboard-deals-btn secondary" onClick={exitJoinDeal}>
+          <FaArrowLeft /> {t('deals.join.back')}
+        </button>
+        <DealPublicPage mode="internal" embedded dealToken={joinDealToken} />
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard-deals-panel">
+      <PayoutWalletBanner
+        loading={payoutWalletLoading}
+        registered={payoutWalletRegistered}
+        address={payoutWalletAddress}
+        onRegisterClick={onRequireWallet}
+        className="dashboard-deals-wallet-banner"
+      />
+
       <header className="dashboard-deals-panel__header">
         <div className="dashboard-deals-panel__icon" aria-hidden>
           <FaHandshake />
@@ -78,12 +131,21 @@ const DashboardDealsPanel = () => {
         </div>
       </header>
 
+      {!payoutWalletRegistered && !payoutWalletLoading && (
+        <p className="dashboard-deals-hint" role="status">
+          {t('dashboard.privateOffers.walletRequired')}
+        </p>
+      )}
+
       <div className="dashboard-deals-panel__actions">
         <button
           type="button"
           className="dashboard-deals-btn primary"
-          disabled={!dealsEnabled}
-          onClick={() => navigate('/deals/new')}
+          disabled={!dealsEnabled || !payoutWalletRegistered}
+          onClick={() => {
+            if (!guardWallet()) return;
+            navigate('/deals/new');
+          }}
         >
           <FaPlus /> {t('dashboard.deals.card.create.cta')}
         </button>

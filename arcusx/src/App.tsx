@@ -35,6 +35,7 @@ const TutorialsPage = lazy(() => import('./pages/TutorialsPage'));
 const EmpresasPage = lazy(() => import('./pages/EmpresasPage'));
 const DealWizardPage = lazy(() => import('./pages/DealWizardPage'));
 const DealPublicPage = lazy(() => import('./pages/DealPublicPage'));
+const DealJoinRedirect = lazy(() => import('./pages/DealJoinRedirect'));
 const DealWorkspacePage = lazy(() => import('./pages/DealWorkspacePage'));
 import ReferralLanding from './pages/ReferralLanding';
 const SupportChatButton = lazy(() => import('./components/SupportChatButton'));
@@ -135,7 +136,15 @@ function AppContent({ isLoading }: { isLoading: boolean }) {
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/deals/new" element={<ProtectedRoute><DealWizardPage /></ProtectedRoute>} />
               <Route path="/deals/workspace/:id" element={<ProtectedRoute><DealWorkspacePage /></ProtectedRoute>} />
-              <Route path="/deal/:token" element={<DealPublicPage />} />
+              <Route path="/deal/:token" element={<DealPublicPage mode="preview" />} />
+              <Route
+                path="/deals/join/:token"
+                element={
+                  <ProtectedRoute>
+                    <DealJoinRedirect />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/create-task" element={<ProtectedRoute><CreateTask /></ProtectedRoute>} />
               <Route path="/apply-task/:taskId" element={<ProtectedRoute><ApplyTask /></ProtectedRoute>} />
               <Route path="/proposals/:taskId" element={<ProtectedRoute><ProposalReview /></ProtectedRoute>} />

@@ -45,15 +45,39 @@ function dedupeAdminDisputes(disputes: any[]): any[] {
   });
 }
 
-function getDisputePanelIds(dispute: { id?: number | string; task_id?: number | null }) {
+function getDisputePanelIds(dispute: {
+  id?: number | string;
+  task_id?: number | null;
+  agreement_id?: string | null;
+}) {
   if (typeof dispute?.id === 'number') {
-    return { disputeId: dispute.id, taskId: undefined as number | undefined };
+    return {
+      disputeId: dispute.id,
+      taskId: undefined as number | undefined,
+      agreementId: undefined as string | undefined,
+    };
+  }
+  const agreementId = dispute?.agreement_id ? String(dispute.agreement_id).trim() : '';
+  if (agreementId) {
+    return {
+      disputeId: undefined as number | undefined,
+      taskId: undefined as number | undefined,
+      agreementId,
+    };
   }
   const taskId = Number(dispute?.task_id);
   if (Number.isFinite(taskId) && taskId > 0) {
-    return { disputeId: undefined as number | undefined, taskId };
+    return {
+      disputeId: undefined as number | undefined,
+      taskId,
+      agreementId: undefined as string | undefined,
+    };
   }
-  return { disputeId: undefined as number | undefined, taskId: undefined as number | undefined };
+  return {
+    disputeId: undefined as number | undefined,
+    taskId: undefined as number | undefined,
+    agreementId: undefined as string | undefined,
+  };
 }
 
 interface DisputeManagementProps {
@@ -76,6 +100,7 @@ function getDisputeEscrowId(dispute: {
 function normalizeDisputeRecord(dispute: any): any {
   if (!dispute) return dispute;
   const task = dispute.arcusx_tasks;
+  const deal = dispute.arcusx_agreements;
   const escrowId = getDisputeEscrowId(dispute);
   let resolutionParsed: Record<string, unknown> | null = null;
   const rawResolution = dispute.resolution;
@@ -95,7 +120,8 @@ function normalizeDisputeRecord(dispute: any): any {
     ...dispute,
     escrow_id: escrowId,
     escrow_status: dispute.escrow_status ?? task?.escrow_status ?? null,
-    task_title: dispute.task_title ?? task?.title ?? null,
+    task_title: dispute.task_title ?? task?.title ?? deal?.title ?? null,
+    entity_type: dispute.entity_type ?? (dispute.agreement_id ? 'deal' : 'task'),
     resolution_decision:
       dispute.resolution_decision ?? resolutionParsed?.decision ?? null,
     resolution_reason: dispute.resolution_reason ?? resolutionParsed?.reason ?? null,
@@ -1622,7 +1648,23 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                     </td>
                     <td>
                       <div>
-                        <strong>#{dispute.task_id}</strong>
+                        <strong>
+                          {dispute.agreement_id
+                            ? `Deal ${String(dispute.agreement_id).slice(0, 8)}…`
+                            : `#${dispute.task_id}`}
+                        </strong>
+                        {dispute.entity_type === 'deal' && (
+                          <span style={{
+                            marginLeft: '8px',
+                            fontSize: '0.75em',
+                            padding: '2px 6px',
+                            background: 'rgba(16, 221, 136, 0.15)',
+                            borderRadius: '4px',
+                            color: '#10dd88',
+                          }}>
+                            Deal
+                          </span>
+                        )}
                         {dispute.isVirtualDispute && (
                           <span style={{ 
                             marginLeft: '8px',

@@ -57,15 +57,17 @@ import {
   syncAdminSessionFromMarketplaceToken,
 } from './utils/platformAdmin';
 import PrivateOfferWalletModal from './components/PrivateOfferWalletModal';
+import PayoutWalletBanner from './components/PayoutWalletBanner';
+import { usePayoutWallet } from './hooks/usePayoutWallet';
 import DashboardDealsPanel from './components/DashboardDealsPanel';
 import SettingsVerificationSection from './components/SettingsVerificationSection';
 import SettingsBadgesCatalog from './components/SettingsBadgesCatalog';
 import './css/SettingsVerificationSection.css';
 import './css/SettingsBadgesCatalog.css';
 import TaskCreatorLine from './components/TaskCreatorLine';
-import { isValidStellarGAddress } from './utils/stellarAddress';
 import {
   buildDashboardSearchParams,
+  dashboardTabHref,
   isDashboardTabQuery,
   isDashboardTabVisible,
   resolveDashboardTab,
@@ -180,10 +182,13 @@ const Dashboard = () => {
   const [privateOffers, setPrivateOffers] = useState<PrivateOfferTask[]>([]);
   const [loadingPrivateOffers, setLoadingPrivateOffers] = useState(false);
   const [privateOffersError, setPrivateOffersError] = useState<string>('');
-  const [showPrivateWalletGate, setShowPrivateWalletGate] = useState(false);
-  const [payoutWalletLoading, setPayoutWalletLoading] = useState(false);
-  const [payoutWalletRegistered, setPayoutWalletRegistered] = useState<boolean | null>(null);
-  const [payoutWalletAddress, setPayoutWalletAddress] = useState<string | null>(null);
+  const [showPayoutWalletGate, setShowPayoutWalletGate] = useState(false);
+  const {
+    loading: payoutWalletLoading,
+    registered: payoutWalletRegistered,
+    address: payoutWalletAddress,
+    refresh: refreshPayoutWallet,
+  } = usePayoutWallet();
 
   // Estado para notificaciones
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -235,34 +240,13 @@ const Dashboard = () => {
     isPlatformAdmin(authService.getUser()) ||
     isAdminFromJwt(authService.getToken());
 
-  const refreshPayoutWallet = async (): Promise<{ registered: boolean; address: string | null }> => {
-    setPayoutWalletLoading(true);
-    try {
-      const w = await authService.verifyWallet();
-      const payout = w.private_payout_wallet ?? w.wallet_address;
-      const registered = Boolean(
-        w.success && w.has_wallet && isValidStellarGAddress(payout),
-      );
-      const address = registered ? String(payout).trim() : null;
-      setPayoutWalletRegistered(registered);
-      setPayoutWalletAddress(address);
-      return { registered, address };
-    } catch {
-      setPayoutWalletRegistered(false);
-      setPayoutWalletAddress(null);
-      return { registered: false, address: null };
-    } finally {
-      setPayoutWalletLoading(false);
-    }
-  };
-
   useEffect(() => {
     if (activeTab !== 'private-offers' || !user?.id) return;
     let cancelled = false;
     void refreshPayoutWallet().then(({ registered }) => {
       if (cancelled) return;
       if (!registered) {
-        setShowPrivateWalletGate(true);
+        setShowPayoutWalletGate(true);
         setPrivateOffers([]);
         return;
       }
@@ -285,18 +269,25 @@ const Dashboard = () => {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, user?.id]);
+  }, [activeTab, user?.id, refreshPayoutWallet]);
+
+  useEffect(() => {
+    if (activeTab !== 'deals' || !user?.id) return;
+    void refreshPayoutWallet().then(({ registered }) => {
+      if (!registered) setShowPayoutWalletGate(true);
+    });
+  }, [activeTab, user?.id, refreshPayoutWallet]);
 
   useEffect(() => {
     if (activeTab !== 'private-offers') return;
     const onFocus = () => {
       void refreshPayoutWallet().then(({ registered }) => {
         if (!registered) {
-          setShowPrivateWalletGate(true);
+          setShowPayoutWalletGate(true);
           setPrivateOffers([]);
           return;
         }
-        setShowPrivateWalletGate(false);
+        setShowPayoutWalletGate(false);
         setLoadingPrivateOffers(true);
         fetchPrivateOffers()
           .then(setPrivateOffers)
@@ -340,16 +331,21 @@ const Dashboard = () => {
   const openPrivateOffersTab = async () => {
     navigateToDashboardTab('private-offers');
     const { registered } = await refreshPayoutWallet();
-    if (!registered) setShowPrivateWalletGate(true);
+    if (!registered) setShowPayoutWalletGate(true);
   };
 
   /** Sincroniza pestaña desde `?tab=` (atrás/adelante, links externos) */
   useEffect(() => {
+    const joinDeal = searchParams.get('join_deal')?.trim();
     const raw = searchParams.get('tab');
-    const tab = resolveDashboardTab(raw, enterprise);
+    let tab = resolveDashboardTab(raw, enterprise);
+    if (joinDeal && tab !== 'deals' && isDashboardTabVisible('deals', enterprise)) {
+      tab = 'deals';
+      setSearchParams(buildDashboardSearchParams('deals', enterprise, searchParams), { replace: true });
+    }
     setActiveTab((prev) => (prev === tab ? prev : tab));
 
-    if (shouldNormalizeDashboardTabUrl(raw, enterprise)) {
+    if (!joinDeal && shouldNormalizeDashboardTabUrl(raw, enterprise)) {
       setSearchParams(buildDashboardSearchParams(tab, enterprise, searchParams), { replace: true });
     }
   }, [searchParams, enterprise, setSearchParams]);
@@ -1814,45 +1810,23 @@ const Dashboard = () => {
             <FreelancersList />
           )}
 
-          {activeTab === 'deals' && <DashboardDealsPanel />}
+          {activeTab === 'deals' && (
+            <DashboardDealsPanel
+              payoutWalletRegistered={Boolean(payoutWalletRegistered)}
+              payoutWalletLoading={payoutWalletLoading}
+              payoutWalletAddress={payoutWalletAddress}
+              onRequireWallet={() => setShowPayoutWalletGate(true)}
+            />
+          )}
 
           {activeTab === 'private-offers' && (
             <div className="tasks-container">
-              <div
-                className={`private-offers-wallet-banner ${
-                  payoutWalletRegistered ? 'is-registered' : 'is-missing'
-                }`}
-                role="status"
-              >
-                {payoutWalletLoading ? (
-                  <span>{t('dashboard.privateOffers.walletStatus.loading')}</span>
-                ) : payoutWalletRegistered && payoutWalletAddress ? (
-                  <>
-                    <FaCheckCircle aria-hidden />
-                    <span>
-                      {t('dashboard.privateOffers.walletStatus.registered')}{' '}
-                      <code className="private-offers-wallet-code">
-                        {payoutWalletAddress.slice(0, 7)}…{payoutWalletAddress.slice(-5)}
-                      </code>
-                    </span>
-                    <Link to="/dashboard/settings/profile#private-payout-wallet" className="private-offers-wallet-link">
-                      {t('dashboard.privateOffers.walletStatus.change')}
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <FaExclamationTriangle aria-hidden />
-                    <span>{t('dashboard.privateOffers.walletStatus.missing')}</span>
-                    <button
-                      type="button"
-                      className="private-offers-wallet-link-btn"
-                      onClick={() => setShowPrivateWalletGate(true)}
-                    >
-                      {t('privateOffers.walletGate.cta')}
-                    </button>
-                  </>
-                )}
-              </div>
+              <PayoutWalletBanner
+                loading={payoutWalletLoading}
+                registered={payoutWalletRegistered}
+                address={payoutWalletAddress}
+                onRegisterClick={() => setShowPayoutWalletGate(true)}
+              />
               <section className="private-offers-section">
                 <h3>{t('dashboard.privateOffers.sent.title')}</h3>
                 {loadingUserTasks && (
@@ -2399,10 +2373,11 @@ const Dashboard = () => {
       <DashboardFooter />
 
       <PrivateOfferWalletModal
-        open={showPrivateWalletGate}
+        open={showPayoutWalletGate}
+        returnPath={dashboardTabHref(activeTab, enterprise)}
         onClose={() => {
-          setShowPrivateWalletGate(false);
-          if (activeTab === 'private-offers') void refreshPayoutWallet();
+          setShowPayoutWalletGate(false);
+          if (activeTab === 'private-offers' || activeTab === 'deals') void refreshPayoutWallet();
         }}
       />
     </div>

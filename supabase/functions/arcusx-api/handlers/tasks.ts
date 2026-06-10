@@ -10,6 +10,8 @@ import { creatorDisplayFields } from '../../_shared/creator-display.ts';
 import { logDomainEvent } from '../../_shared/domain-events.ts';
 import { loadCreatorEnrichment } from './kyc.ts';
 import { ensureTaskScheduledDeletion } from '../../_shared/task-purge.ts';
+import { loadReleasedVolumeRows, sumVolumeRows } from '../../_shared/admin-stats.ts';
+import { getOauthUserCount } from '../../_shared/oauth-user-stats.ts';
 
 const ALLOWED_CURRENCIES = ['USDC'];
 const ALLOWED_DIFFICULTIES = ['Fácil', 'Intermedio', 'Difícil', 'FÃ¡cil', 'Fácil '];
@@ -875,19 +877,27 @@ export async function getCompletedTasksCount(ctx: ApiContext): Promise<Response>
 
 export async function getLandingMarketStats(ctx: ApiContext): Promise<Response> {
   const { req, supabase } = ctx;
-  const [{ count: openTasks }, { count: totalUsers }, { data: volRows }] = await Promise.all([
+  const { data: feeRow } = await supabase
+    .from('arcusx_system_config')
+    .select('config_value')
+    .eq('config_key', 'platform_fee')
+    .maybeSingle();
+  const platformFee = normalizePlatformFeeRate(feeRow?.config_value);
+
+  const [{ count: openTasks }, volumeRows, oauthUserCount] = await Promise.all([
     supabase.from('arcusx_tasks').select('*', { count: 'exact', head: true })
       .eq('status', 'open').is('accepted_applicant_id', null),
-    supabase.from('arcusx_users').select('*', { count: 'exact', head: true }),
-    supabase.from('arcusx_tasks').select('price')
-      .eq('status', 'completed').eq('escrow_status', 'completed'),
+    loadReleasedVolumeRows(supabase, platformFee),
+    getOauthUserCount(supabase),
   ]);
 
-  const totalVolume = (volRows ?? []).reduce((s, r) => s + Number(r.price ?? 0), 0);
+  const { volume, count: releasedCount } = sumVolumeRows(volumeRows);
   return jsonSuccess(req, {
     open_tasks: openTasks ?? 0,
-    total_users: totalUsers ?? 0,
-    total_volume_usdc: Math.round(totalVolume),
+    total_users: oauthUserCount,
+    total_volume_usdc: Math.round(volume),
+    released_transactions: releasedCount,
+    data_source: 'supabase_oauth',
   });
 }
 

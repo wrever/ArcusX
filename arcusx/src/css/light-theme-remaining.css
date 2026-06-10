@@ -300,3 +300,91 @@
   border-color: var(--input-border);
   color: var(--text-primary);
 }
+
+/* --- Disputas (chat / archivos / timeline) --- */
+:root[data-theme="light"] .dispute-chat-header,
+:root[data-theme="light"] .dispute-chat-filters,
+:root[data-theme="light"] .dispute-chat-stats,
+:root[data-theme="light"] .dispute-panel-header,
+:root[data-theme="light"] .dispute-panel-toolbar {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+}
+
+:root[data-theme="light"] .dispute-chat-bubble--client,
+:root[data-theme="light"] .dispute-chat-bubble--worker,
+:root[data-theme="light"] .dispute-card,
+:root[data-theme="light"] .dispute-timeline-item,
+:root[data-theme="light"] .dispute-file-card {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+:root[data-theme="light"] .dispute-chat-attachment,
+:root[data-theme="light"] .dispute-file-download {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+  color: var(--primary-blue);
+}
+
+:root[data-theme="light"] .dispute-tab.active {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.35);
+  color: var(--primary-blue);
+}
+
+/* --- Deals dashboard --- */
+:root[data-theme="light"] .dashboard-deals-panel .dashboard-deals-panel__icon {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--primary-blue);
+  border-color: rgba(59, 130, 246, 0.25);
+}
+
+:root[data-theme="light"] .dashboard-deals-open-link {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+:root[data-theme="light"] .deals-status-badge.sent,
+:root[data-theme="light"] .deals-status-badge.draft {
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  border-color: rgba(59, 130, 246, 0.25);
+}
+
+:root[data-theme="light"] .deals-status-badge.accepted,
+:root[data-theme="light"] .deals-status-badge.funding {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+:root[data-theme="light"] .deals-status-badge.funded,
+:root[data-theme="light"] .deals-status-badge.active {
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  border-color: rgba(59, 130, 246, 0.28);
+}
+
+:root[data-theme="light"] .deals-status-badge.completed {
+  background: rgba(22, 163, 74, 0.12);
+  color: #15803d;
+  border-color: rgba(22, 163, 74, 0.3);
+}
+
+/* --- Escrow popups éxito --- */
+:root[data-theme="light"] .complete-popup-success-overlay {
+  background: var(--modal-overlay);
+}
+
+:root[data-theme="light"] .complete-popup-success-card {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+:root[data-theme="light"] .complete-popup-success-title,
+:root[data-theme="light"] .complete-popup-fee-total-label,
+:root[data-theme="light"] .complete-popup-fee-total-value,
+:root[data-theme="light"] .dispute-accent-text {
+  color: var(--primary-blue);
+}

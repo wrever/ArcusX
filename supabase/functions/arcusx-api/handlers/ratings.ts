@@ -1,37 +1,9 @@
 import { jsonError, jsonResponse, jsonSuccess } from '../../_shared/arcusx-cors.ts';
 import { logDomainEvent } from '../../_shared/domain-events.ts';
+import { persistRating, recalcUserRatingStats } from '../../_shared/rating-persist.ts';
 import type { ApiContext } from './types.ts';
 import { qpInt } from './types.ts';
 import { requireUser } from './require.ts';
-
-async function recalcUserRatingStats(
-  supabase: ApiContext['supabase'],
-  ratedId: number,
-): Promise<void> {
-  const { data: rows } = await supabase
-    .from('arcusx_ratings')
-    .select('rating')
-    .eq('rated_id', ratedId);
-
-  let sum = 0;
-  let count = 0;
-  for (const r of rows ?? []) {
-    const n = Number(r.rating);
-    if (n >= 1 && n <= 5) {
-      sum += n;
-      count += 1;
-    }
-  }
-  const avg = count > 0 ? Math.round((sum / count) * 100) / 100 : 0;
-  await supabase
-    .from('arcusx_users')
-    .update({
-      average_rating: avg,
-      total_ratings: count,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', ratedId);
-}
 
 export async function createRating(ctx: ApiContext): Promise<Response> {
   const { req, body } = ctx;
@@ -109,29 +81,29 @@ export async function createRating(ctx: ApiContext): Promise<Response> {
     }
   }
 
-  const row: Record<string, unknown> = {
-    rater_id: auth.userId,
-    rated_id: ratedId,
-    rating,
-    review,
-    created_at: new Date().toISOString(),
-  };
-  if (taskId) row.task_id = taskId;
-  if (agreementId) row.agreement_id = agreementId;
-
-  const { error } = await auth.supabase.from('arcusx_ratings').insert(row);
-
-  if (error) {
-    if (error.message?.includes('duplicate') || error.code === '23505') {
-      const duplicateMsg = taskId
-        ? 'Ya calificaste a este usuario en esta tarea'
-        : 'Ya existe una valoración para este acuerdo';
-      return jsonSuccess(req, { message: duplicateMsg, already_exists: true });
-    }
-    return jsonError(req, error.message, 500);
+  let persisted: { inserted: boolean; alreadyExists: boolean };
+  try {
+    persisted = await persistRating(auth.supabase, {
+      raterId: auth.userId,
+      ratedId,
+      rating,
+      review,
+      taskId,
+      agreementId,
+    });
+  } catch (err) {
+    return jsonError(req, err instanceof Error ? err.message : 'Error al guardar valoración', 500);
   }
 
-  await recalcUserRatingStats(auth.supabase, ratedId);
+  if (persisted.alreadyExists) {
+    const duplicateMsg = taskId
+      ? 'Ya calificaste a este usuario en esta tarea'
+      : 'Ya existe una valoración para este acuerdo';
+    return jsonSuccess(req, { message: duplicateMsg, already_exists: true });
+  }
+  if (!persisted.inserted) {
+    return jsonError(req, 'No se pudo guardar la valoración', 400);
+  }
 
   await logDomainEvent(auth.supabase, {
     entity_type: agreementId ? 'agreement' : 'task',

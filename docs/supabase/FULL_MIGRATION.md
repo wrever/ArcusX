@@ -29,7 +29,7 @@ node scripts/deploy-edge-from-bundle.mjs arcusx-admin
 | Secret | Uso |
 |--------|-----|
 | `ARCUSX_JWT_SECRET` | Mismo valor que `ARCUSX_JWT_SECRET` del PHP (JWT HS256) |
-| `ARCUSX_CORS_ORIGINS` | `https://arcusx.pro,https://www.arcusx.pro,http://localhost:5173` |
+| `ARCUSX_CORS_ORIGINS` | `https://arcusx.pro,https://www.arcusx.pro,https://empresas.arcusx.pro,http://localhost:5173` |
 | `SUPABASE_ANON_KEY` o `ARCUSX_SUPABASE_ANON_KEY` | Verificación OAuth en `sync_supabase_user` |
 
 Los `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` ya los inyecta Supabase en runtime.

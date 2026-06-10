@@ -3,20 +3,21 @@ import { FaUser, FaUserTie, FaSearch, FaFile, FaDownload } from 'react-icons/fa'
 import { getDisputeChat, ChatMessage, ChatParticipants, ChatStats } from '../services/disputeService';
 import { publicAssetUrl } from '../config/arcusxApi';
 import '../css/AdminPanel.css';
+import '../css/dispute-views.css';
 
 interface DisputeChatViewProps {
   disputeId?: number;
   taskId?: number;
+  agreementId?: string;
 }
 
-const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId, taskId }) => {
+const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId, taskId, agreementId }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [participants, setParticipants] = useState<ChatParticipants>({});
   const [stats, setStats] = useState<ChatStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // Filtros
+
   const [searchQuery, setSearchQuery] = useState('');
   const [filterByUser, setFilterByUser] = useState<'all' | 'client' | 'worker'>('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
@@ -26,7 +27,7 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId, taskId }) 
       setLoading(true);
       setError(null);
       try {
-        const data = await getDisputeChat(disputeId, taskId);
+        const data = await getDisputeChat(disputeId, taskId, agreementId);
         setMessages(data.messages);
         setParticipants(data.participants);
         setStats(data.stats);
@@ -37,46 +38,43 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId, taskId }) 
       }
     };
 
-    if (disputeId || taskId) {
+    if (disputeId || taskId || agreementId) {
       fetchChat();
     }
-  }, [disputeId, taskId]);
+  }, [disputeId, taskId, agreementId]);
 
-  // Filtrar mensajes
   const filteredMessages = useMemo(() => {
     let filtered = [...messages];
 
-    // Filtro por búsqueda
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(msg => 
-        msg.message.toLowerCase().includes(query) ||
-        msg.sender_username.toLowerCase().includes(query)
+      filtered = filtered.filter(
+        (msg) =>
+          msg.message.toLowerCase().includes(query) ||
+          msg.sender_username.toLowerCase().includes(query),
       );
     }
 
-    // Filtro por usuario
     if (filterByUser !== 'all' && participants.client && participants.worker) {
-      const targetId = filterByUser === 'client' 
-        ? participants.client.id 
-        : participants.worker.id;
-      filtered = filtered.filter(msg => msg.sender_id === targetId);
+      const targetId = filterByUser === 'client' ? participants.client.id : participants.worker.id;
+      filtered = filtered.filter((msg) => msg.sender_id === targetId);
     }
 
-    // Filtro por fecha
     if (dateFilter !== 'all') {
       const now = new Date();
-      filtered = filtered.filter(msg => {
+      filtered = filtered.filter((msg) => {
         const msgDate = new Date(msg.created_at);
         switch (dateFilter) {
           case 'today':
             return msgDate.toDateString() === now.toDateString();
-          case 'week':
+          case 'week': {
             const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
             return msgDate >= weekAgo;
-          case 'month':
+          }
+          case 'month': {
             const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
             return msgDate >= monthAgo;
+          }
           default:
             return true;
         }
@@ -88,18 +86,16 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId, taskId }) 
 
   if (loading) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center' }}>
-        <div className="loading-spinner" style={{ margin: '0 auto' }}></div>
-        <p style={{ marginTop: '20px', color: 'var(--text-muted)' }}>
-          Cargando chat...
-        </p>
+      <div className="dispute-view-center">
+        <div className="loading-spinner" />
+        <p>Cargando chat...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center' }}>
+      <div className="dispute-view-center">
         <div className="admin-alert error">
           <span>{error}</span>
         </div>
@@ -109,114 +105,58 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId, taskId }) 
 
   if (messages.length === 0) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+      <div className="dispute-view-center">
         <p>No hay mensajes en este chat.</p>
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {/* Header con participantes */}
-      <div style={{
-        padding: '20px',
-        borderBottom: '1px solid rgba(40, 192, 240, 0.2)',
-        background: 'linear-gradient(135deg, rgba(40, 192, 240, 0.1) 0%, rgba(17, 128, 179, 0.1) 100%)'
-      }}>
-        <div style={{ display: 'flex', gap: '30px', justifyContent: 'center', flexWrap: 'wrap' }}>
+    <div className="dispute-view-root">
+      <div className="dispute-chat-header">
+        <div className="dispute-chat-participants">
           {participants.client && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--text-primary)',
-                fontSize: '18px'
-              }}>
+            <div className="dispute-chat-participant">
+              <div className="dispute-chat-avatar">
                 <FaUser />
               </div>
               <div>
-                <div style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>Cliente</div>
-                <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-                  {participants.client.username}
-                </div>
+                <div className="dispute-chat-participant-name">Cliente</div>
+                <div className="dispute-chat-participant-role">{participants.client.username}</div>
               </div>
             </div>
           )}
           {participants.worker && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                background: 'linear-gradient(90deg, #0ab86a, #10dd88)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--text-primary)',
-                fontSize: '18px'
-              }}>
+            <div className="dispute-chat-participant">
+              <div className="dispute-chat-avatar dispute-chat-avatar--worker">
                 <FaUserTie />
               </div>
               <div>
-                <div style={{ fontWeight: 'bold', color: 'var(--text-primary)' }}>Trabajador</div>
-                <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
-                  {participants.worker.username}
-                </div>
+                <div className="dispute-chat-participant-name">Trabajador</div>
+                <div className="dispute-chat-participant-role">{participants.worker.username}</div>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Filtros y búsqueda */}
-      <div style={{
-        padding: '15px 20px',
-        borderBottom: '1px solid rgba(40, 192, 240, 0.2)',
-        background: 'rgba(20, 30, 48, 0.5)'
-      }}>
-        <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
-            <FaSearch style={{
-              position: 'absolute',
-              left: '12px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: 'var(--text-muted)'
-            }} />
+      <div className="dispute-chat-filters">
+        <div className="dispute-chat-filters-row">
+          <div className="dispute-chat-search-wrap">
+            <FaSearch className="dispute-chat-search-icon" />
             <input
               type="text"
+              className="dispute-chat-input"
               placeholder="Buscar mensajes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px 10px 10px 40px',
-                background: 'var(--bg-tertiary)',
-                border: '1px solid rgba(40, 192, 240, 0.3)',
-                borderRadius: '8px',
-                color: 'var(--text-primary)',
-                fontSize: '14px'
-              }}
             />
           </div>
-          
+
           <select
+            className="dispute-chat-select"
             value={filterByUser}
             onChange={(e) => setFilterByUser(e.target.value as 'all' | 'client' | 'worker')}
-            style={{
-              padding: '10px 15px',
-              background: 'var(--bg-tertiary)',
-              border: '1px solid rgba(40, 192, 240, 0.3)',
-              borderRadius: '8px',
-              color: 'var(--text-primary)',
-              fontSize: '14px',
-              cursor: 'pointer'
-            }}
           >
             <option value="all">Todos los usuarios</option>
             <option value="client">Solo cliente</option>
@@ -224,17 +164,9 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId, taskId }) 
           </select>
 
           <select
+            className="dispute-chat-select"
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value as 'all' | 'today' | 'week' | 'month')}
-            style={{
-              padding: '10px 15px',
-              background: 'var(--bg-tertiary)',
-              border: '1px solid rgba(40, 192, 240, 0.3)',
-              borderRadius: '8px',
-              color: 'var(--text-primary)',
-              fontSize: '14px',
-              cursor: 'pointer'
-            }}
           >
             <option value="all">Todas las fechas</option>
             <option value="today">Hoy</option>
@@ -244,100 +176,44 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId, taskId }) 
         </div>
       </div>
 
-      {/* Lista de mensajes */}
-      <div style={{
-        flex: 1,
-        overflowY: 'auto',
-        padding: '20px',
-        maxHeight: '500px'
-      }}>
+      <div className="dispute-chat-messages">
         {filteredMessages.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+          <div className="dispute-view-center">
             <p>No se encontraron mensajes con los filtros aplicados.</p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+          <div className="dispute-chat-messages-list">
             {filteredMessages.map((message) => {
-              const isClient = participants.client && message.sender_id === participants.client.id;
-              
+              const isClient = Boolean(participants.client && message.sender_id === participants.client.id);
+
               return (
                 <div
                   key={message.id}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '5px',
-                    padding: '15px',
-                    background: isClient 
-                      ? 'linear-gradient(135deg, rgba(40, 192, 240, 0.15) 0%, rgba(17, 128, 179, 0.15) 100%)'
-                      : 'linear-gradient(135deg, rgba(17, 128, 179, 0.15) 0%, rgba(40, 192, 240, 0.15) 100%)',
-                    borderRadius: '12px',
-                    border: `1px solid ${isClient ? 'rgba(40, 192, 240, 0.3)' : 'rgba(17, 128, 179, 0.3)'}`,
-                    marginLeft: isClient ? '0' : 'auto',
-                    marginRight: isClient ? 'auto' : '0',
-                    maxWidth: '70%'
-                  }}
+                  className={`dispute-chat-bubble ${isClient ? 'dispute-chat-bubble--client' : 'dispute-chat-bubble--worker'}`}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                    <div style={{
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '50%',
-                      background: isClient 
-                        ? 'linear-gradient(90deg, #10dd88, #0ab86a)'
-                        : 'linear-gradient(90deg, #0ab86a, #10dd88)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'var(--text-primary)',
-                      fontSize: '14px'
-                    }}>
+                  <div className="dispute-chat-bubble-header">
+                    <div className="dispute-chat-bubble-avatar">
                       {isClient ? <FaUser /> : <FaUserTie />}
                     </div>
                     <div>
-                      <div style={{ fontWeight: 'bold', color: 'var(--text-primary)', fontSize: '14px' }}>
-                        {message.sender_username}
-                      </div>
-                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                      <div className="dispute-chat-bubble-author">{message.sender_username}</div>
+                      <div className="dispute-chat-bubble-time">
                         {new Date(message.created_at).toLocaleString('es-ES')}
                       </div>
                     </div>
                   </div>
-                  
-                  <div style={{ color: 'var(--text-secondary)', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
-                    {message.message}
-                  </div>
 
-                  {/* Archivos adjuntos */}
+                  <div className="dispute-chat-bubble-body">{message.message}</div>
+
                   {message.files && message.files.length > 0 && (
-                    <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div className="dispute-chat-attachments">
                       {message.files.map((file, idx) => (
                         <a
                           key={idx}
                           href={publicAssetUrl(file.url)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            padding: '8px 12px',
-                            background: 'rgba(40, 192, 240, 0.1)',
-                            borderRadius: '6px',
-                            border: '1px solid rgba(40, 192, 240, 0.2)',
-                            color: '#10dd88',
-                            textDecoration: 'none',
-                            fontSize: '13px',
-                            transition: 'all 0.3s ease'
-                          }}
-                          onMouseOver={(e) => {
-                            e.currentTarget.style.background = 'rgba(40, 192, 240, 0.2)';
-                            e.currentTarget.style.transform = 'translateX(4px)';
-                          }}
-                          onMouseOut={(e) => {
-                            e.currentTarget.style.background = 'rgba(40, 192, 240, 0.1)';
-                            e.currentTarget.style.transform = 'translateX(0)';
-                          }}
+                          className="dispute-chat-attachment"
                         >
                           <FaFile />
                           <span>{file.filename}</span>
@@ -353,48 +229,23 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId, taskId }) 
         )}
       </div>
 
-      {/* Estadísticas */}
       {stats && (
-        <div style={{
-          padding: '15px 20px',
-          borderTop: '1px solid rgba(40, 192, 240, 0.2)',
-          background: 'rgba(20, 30, 48, 0.5)',
-          display: 'flex',
-          gap: '30px',
-          justifyContent: 'center',
-          flexWrap: 'wrap'
-        }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10dd88' }}>
-              {stats.total_messages}
-            </div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              Total mensajes
-            </div>
+        <div className="dispute-chat-stats">
+          <div className="dispute-chat-stat">
+            <div className="dispute-chat-stat-value">{stats.total_messages}</div>
+            <div className="dispute-chat-stat-label">Total mensajes</div>
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10dd88' }}>
-              {stats.client_messages}
-            </div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              Cliente
-            </div>
+          <div className="dispute-chat-stat">
+            <div className="dispute-chat-stat-value">{stats.client_messages}</div>
+            <div className="dispute-chat-stat-label">Cliente</div>
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10dd88' }}>
-              {stats.worker_messages}
-            </div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              Trabajador
-            </div>
+          <div className="dispute-chat-stat">
+            <div className="dispute-chat-stat-value">{stats.worker_messages}</div>
+            <div className="dispute-chat-stat-label">Trabajador</div>
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10dd88' }}>
-              {stats.files_shared}
-            </div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              Archivos
-            </div>
+          <div className="dispute-chat-stat">
+            <div className="dispute-chat-stat-value">{stats.files_shared}</div>
+            <div className="dispute-chat-stat-label">Archivos</div>
           </div>
         </div>
       )}
@@ -403,4 +254,3 @@ const DisputeChatView: React.FC<DisputeChatViewProps> = ({ disputeId, taskId }) 
 };
 
 export default DisputeChatView;
-

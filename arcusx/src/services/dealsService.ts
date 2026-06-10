@@ -116,16 +116,43 @@ export async function prepareDealEscrow(payload: {
   });
 }
 
-export async function markDealReleased(agreementId: string, transactionHash?: string) {
+export async function markDealReleased(
+  agreementId: string,
+  transactionHash?: string,
+  opts?: { rating?: number; rated_user_id?: number },
+) {
   return apiPost('mark_deal_released', {
     agreement_id: agreementId,
     transaction_hash: transactionHash,
+    ...(opts?.rating != null ? { rating: opts.rating } : {}),
+    ...(opts?.rated_user_id != null ? { rated_user_id: opts.rated_user_id } : {}),
   });
 }
 
 /** Tras fondear: pasa el deal de `funded` → `active` (ejecución del acuerdo). */
 export async function completeDeal(agreementId: string) {
   return apiPost('complete_deal', { agreement_id: agreementId });
+}
+
+export type DealEvidenceItem = {
+  id: number;
+  agreement_id: string;
+  user_id: number;
+  note?: string | null;
+  files?: Array<{ id?: string; name?: string; url?: string; type?: string }>;
+  created_at?: string;
+};
+
+export async function getDealEvidence(agreementId: string): Promise<{ evidence: DealEvidenceItem[] }> {
+  return apiGet('get_deal_evidence', { agreement_id: agreementId });
+}
+
+export async function createDealDispute(payload: {
+  agreement_id: string;
+  reason: string;
+  tx_hash?: string;
+}) {
+  return apiPost('create_dispute', payload);
 }
 
 export function dealPublicUrl(dealToken: string): string {

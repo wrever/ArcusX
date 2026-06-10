@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { FaCopy, FaExternalLinkAlt, FaFileContract, FaHandshake, FaWallet, FaUnlock } from 'react-icons/fa';
 import { useI18n } from '../i18n/I18nProvider';
+import { dealJoinDashboardHref } from '../config/dashboardTabs';
+import { useEnterpriseMode } from '../hooks/useEnterpriseMode';
 import type { AgreementDeal } from '../services/dealsService';
 import { dealPublicUrl } from '../services/dealsService';
 import { getDealActions } from '../utils/dealHelpers';
@@ -30,6 +32,7 @@ const DealListCard = ({
   releaseLoading,
 }: DealListCardProps) => {
   const { t } = useI18n();
+  const enterprise = useEnterpriseMode();
   const actions = getDealActions(deal, userId, walletAddress);
   const feePct = dealPlatformFeePercent(deal);
 
@@ -42,7 +45,7 @@ const DealListCard = ({
       <div className="deal-list-card__body">
         <div className="deal-list-card__head">
           <h4 className="deal-list-card__title">{deal.title}</h4>
-          <span className={`deals-status-badge deals-status-badge--${deal.status}`}>{statusLabel}</span>
+          <span className={`deals-status-badge ${deal.status}`}>{statusLabel}</span>
         </div>
         <p className="deal-list-card__meta">
           {Number(deal.amount_usdc).toFixed(2)} USDC · {t('deals.list.deposit')}{' '}
@@ -67,7 +70,10 @@ const DealListCard = ({
           </Link>
         )}
         {actions.includes('accept') && (
-          <Link to={`/deal/${deal.deal_token}`} className="dashboard-deals-btn primary">
+          <Link
+            to={dealJoinDashboardHref(deal.deal_token, enterprise)}
+            className="dashboard-deals-btn primary"
+          >
             {t('deals.public.accept')}
           </Link>
         )}

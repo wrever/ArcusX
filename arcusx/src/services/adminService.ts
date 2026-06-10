@@ -29,11 +29,25 @@ export interface AdminStats {
   total_tasks: number;
   active_tasks: number;
   completed_tasks: number;
+  open_tasks?: number;
   total_escrows: number;
+  task_escrows?: number;
+  deal_escrows?: number;
+  total_deals?: number;
+  completed_deals?: number;
   total_volume_usdc: number;
   total_commission_usdc: number;
+  volume_tasks_usdc?: number;
+  volume_deals_usdc?: number;
+  fees_tasks_usdc?: number;
+  fees_deals_usdc?: number;
+  released_transactions?: number;
+  active_disputes?: number;
   pending_transactions: number;
   users_today: number;
+  users_this_week?: number;
+  users_this_month?: number;
+  users_with_wallet?: number;
   tasks_today: number;
   volume_today?: number;
   fees_today?: number;
@@ -41,6 +55,7 @@ export interface AdminStats {
   fees_this_week?: number;
   volume_this_month?: number;
   fees_this_month?: number;
+  data_source?: string;
 }
 
 /**

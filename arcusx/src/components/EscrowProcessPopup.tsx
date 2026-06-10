@@ -5,6 +5,7 @@ import { usePlatformFee } from '../hooks/usePlatformFee';
 import { useI18n } from '../i18n/I18nProvider';
 import { quoteEscrowCommission } from '../utils/escrowFeeQuote';
 import EscrowFeeBreakdown from './EscrowFeeBreakdown';
+import '../css/ProposalReview.css';
 
 interface ProcessStep {
   id: string;
@@ -285,10 +286,10 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
       return <FaSpinner className="animate-spin" />;
     }
     if (step.status === 'completed') {
-      return <FaCheckCircle className="text-green-500" />;
+      return <FaCheckCircle className="icon-success" />;
     }
     if (step.status === 'error') {
-      return <FaTimes className="text-red-500" />;
+      return <FaTimes className="icon-error" />;
     }
     return step.icon;
   };
@@ -452,139 +453,28 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
 
       {/* Popup de Éxito */}
       {showSuccessPopup && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'linear-gradient(135deg, rgba(7, 35, 60, 0.95) 0%, rgba(10, 45, 74, 0.95) 100%)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 10001
-        }}>
-          <div style={{
-            background: 'linear-gradient(135deg, #07233c 0%, #0a2d4a 100%)',
-            borderRadius: '20px',
-            padding: '40px',
-            maxWidth: '550px',
-            width: '90%',
-            textAlign: 'center',
-            border: '1px solid rgba(40, 192, 240, 0.3)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
-            position: 'relative',
-            overflow: 'hidden'
-          }}>
-            {/* Borde superior con gradiente Arcus X */}
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '4px',
-              background: 'linear-gradient(90deg, #10dd88, #0ab86a)'
-            }} />
-            
-            <div style={{
-              fontSize: '72px',
-              marginBottom: '24px',
-              filter: 'drop-shadow(0 4px 8px rgba(40, 192, 240, 0.3))'
-            }}>
-              
-            </div>
-            
-            <h3 style={{
-              fontSize: '28px',
-              fontWeight: 'bold',
-              background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              marginBottom: '20px',
-              marginTop: 0
-            }}>
-              {t('escrow.success.full.title')}
-            </h3>
-            
-            <div style={{
-              marginBottom: '30px',
-              color: 'var(--text-secondary)',
-              lineHeight: '1.6'
-            }}>
-              <p style={{ 
-                fontSize: '16px', 
-                marginBottom: '20px', 
-                fontWeight: '500',
-                color: 'var(--text-secondary)'
-              }}>
-                {t('escrow.success.subtitle')}
-              </p>
-              
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(40, 192, 240, 0.1) 0%, rgba(17, 128, 179, 0.1) 100%)',
-                padding: '20px',
-                borderRadius: '12px',
-                marginTop: '15px',
-                textAlign: 'left',
-                border: '1px solid rgba(40, 192, 240, 0.2)'
-              }}>
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '10px',
-                  marginBottom: '12px',
-                  paddingBottom: '12px',
-                  borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
-                }}>
-                  <span style={{ fontSize: '18px' }}></span>
-                  <strong style={{ fontSize: '15px', color: 'var(--text-primary)' }}>
-                    {t('escrow.success.contract.created')}
-                  </strong>
+        <div className="complete-popup-success-overlay">
+          <div className="complete-popup-success-card">
+            <h3 className="complete-popup-success-title">{t('escrow.success.full.title')}</h3>
+
+            <div className="complete-popup-success-body">
+              <p className="complete-popup-success-lead">{t('escrow.success.subtitle')}</p>
+
+              <div className="complete-popup-success-summary">
+                <div className="complete-popup-success-summary-row">
+                  <strong>{t('escrow.success.contract.created')}</strong>
                 </div>
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '10px',
-                  marginBottom: '12px',
-                  paddingBottom: '12px',
-                  borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
-                }}>
-                  <span style={{ fontSize: '18px' }}></span>
-                  <strong style={{ fontSize: '15px', color: 'var(--text-primary)' }}>
-                    {t('escrow.success.funds.sent')}
-                  </strong>
+                <div className="complete-popup-success-summary-row">
+                  <strong>{t('escrow.success.funds.sent')}</strong>
                 </div>
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '10px',
-                  marginBottom: '12px'
-                }}>
-                  <span style={{ fontSize: '18px' }}></span>
-                  <strong style={{ fontSize: '15px', color: 'var(--text-primary)' }}>
-                    {t('escrow.success.worker.selected')}
-                  </strong>
+                <div className="complete-popup-success-summary-row">
+                  <strong>{t('escrow.success.worker.selected')}</strong>
                 </div>
                 {escrowId && (
-                  <div style={{ 
-                    marginTop: '16px',
-                    paddingTop: '16px',
-                    borderTop: '1px solid rgba(40, 192, 240, 0.2)'
-                  }}>
-                    <p style={{ 
-                      fontSize: '13px', 
-                      color: 'var(--text-muted)',
-                      margin: 0
-                    }}>
-                      <strong style={{ color: '#10dd88' }}>{t('escrow.success.contract')}:</strong>{' '}
-                      <code style={{ 
-                        color: '#10dd88',
-                        background: 'rgba(40, 192, 240, 0.1)',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        fontSize: '12px'
-                      }}>
+                  <div className="complete-popup-success-tx">
+                    <p className="dispute-muted-text" style={{ margin: 0, fontSize: '0.8125rem' }}>
+                      <strong className="dispute-accent-text">{t('escrow.success.contract')}:</strong>{' '}
+                      <code className="arcusx-code-chip">
                         {escrowId.slice(0, 8)}...{escrowId.slice(-8)}
                       </code>
                     </p>
@@ -592,59 +482,12 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
                 )}
               </div>
             </div>
-            
-            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <button 
-                onClick={handleGoToSupervise}
-                style={{
-                  background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
-                  color: 'var(--text-primary)',
-                  border: 'none',
-                  padding: '14px 32px',
-                  borderRadius: '10px',
-                  fontSize: '16px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  minWidth: '200px',
-                  boxShadow: '0 4px 12px rgba(40, 192, 240, 0.3)'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.background = 'linear-gradient(90deg, #0ab86a, #10dd88)';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(40, 192, 240, 0.4)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.background = 'linear-gradient(90deg, #10dd88, #0ab86a)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(40, 192, 240, 0.3)';
-                }}
-              >
+
+            <div className="complete-popup-success-actions">
+              <button type="button" onClick={handleGoToSupervise} className="complete-popup-btn-primary">
                 {t('escrow.supervise.task')}
               </button>
-              <button 
-                onClick={handleSuccessPopupClose}
-                style={{
-                  background: 'var(--bg-tertiary)',
-                  color: 'var(--text-primary)',
-                  border: '1px solid var(--border-color)',
-                  padding: '14px 32px',
-                  borderRadius: '10px',
-                  fontSize: '16px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  minWidth: '200px'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
+              <button type="button" onClick={handleSuccessPopupClose} className="complete-popup-btn-secondary">
                 <FaHome style={{ marginRight: '8px' }} /> {t('proposals.dashboard.button')}
               </button>
             </div>

@@ -18,6 +18,7 @@ import * as limits from './limits.ts';
 import * as escrowExtra from './escrow-extra.ts';
 import * as deals from './deals.ts';
 import * as evidence from './evidence.ts';
+import * as dealEvidence from './deal-evidence.ts';
 import * as kyc from './kyc.ts';
 import * as badges from './badges.ts';
 
@@ -79,6 +80,7 @@ const ROUTES: Record<string, ApiHandler> = {
   delete_scheduled_tasks: misc.deleteScheduledTasks,
   upload_avatar: misc.uploadAvatar,
   upload_milestone_evidence: evidence.uploadMilestoneEvidence,
+  upload_deal_evidence: dealEvidence.uploadDealEvidence,
   get_milestone_evidence: evidence.getMilestoneEvidence,
   get_verification_status: kyc.getVerificationStatus,
   get_my_badges: badges.getMyBadges,
@@ -103,6 +105,7 @@ const ROUTES: Record<string, ApiHandler> = {
   finalize_deal_escrow: deals.finalizeDealEscrow,
   complete_deal: deals.completeDeal,
   mark_deal_released: deals.markDealReleased,
+  get_deal_evidence: dealEvidence.getDealEvidence,
 };
 
 const METHOD_OVERRIDES: Record<string, (ctx: Parameters<ApiHandler>[0]) => Promise<Response>> = {
@@ -114,6 +117,7 @@ const METHOD_OVERRIDES: Record<string, (ctx: Parameters<ApiHandler>[0]) => Promi
   manage_portfolio: misc.managePortfolio,
   upload_avatar: misc.uploadAvatar,
   upload_milestone_evidence: evidence.uploadMilestoneEvidence,
+  upload_deal_evidence: dealEvidence.uploadDealEvidence,
   submit_enterprise_kyc: kyc.submitEnterpriseKyc,
   submit_individual_kyc: kyc.submitIndividualKyc,
 };
@@ -165,6 +169,7 @@ export async function dispatch(req: Request): Promise<Response> {
   const needsJson = req.method !== 'GET' && req.method !== 'HEAD' &&
     !(action === 'upload_avatar' && req.method === 'POST') &&
     !(action === 'upload_milestone_evidence' && req.method === 'POST') &&
+    !(action === 'upload_deal_evidence' && req.method === 'POST') &&
     !(action === 'submit_enterprise_kyc' && req.method === 'POST') &&
     !(action === 'submit_individual_kyc' && req.method === 'POST') &&
     !(action === 'get_task_details' && req.method === 'POST');

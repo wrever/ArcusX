@@ -3,19 +3,27 @@ import { FaFile, FaFilePdf, FaFileImage, FaFileArchive, FaDownload, FaEye, FaUse
 import { getDisputeFiles, DisputeFile, DisputeFiles } from '../services/disputeService';
 import { publicAssetUrl } from '../config/arcusxApi';
 import '../css/AdminPanel.css';
+import '../css/dispute-views.css';
 
 interface DisputeFilesViewProps {
   disputeId?: number;
   taskId?: number;
+  agreementId?: string;
 }
 
 type FileTabType = 'task_files' | 'chat_files' | 'delivery_files';
 
-const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId, taskId }) => {
+const TAB_LABELS: Record<FileTabType, string> = {
+  task_files: 'Archivos de la Tarea',
+  chat_files: 'Archivos del Chat',
+  delivery_files: 'Entregas',
+};
+
+const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId, taskId, agreementId }) => {
   const [files, setFiles] = useState<DisputeFiles>({
     task_files: [],
     chat_files: [],
-    delivery_files: []
+    delivery_files: [],
   });
   const [summary, setSummary] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -28,7 +36,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId, taskId }
       setLoading(true);
       setError(null);
       try {
-        const data = await getDisputeFiles(disputeId, taskId);
+        const data = await getDisputeFiles(disputeId, taskId, agreementId);
         setFiles(data.files);
         setSummary(data.summary);
       } catch (err: any) {
@@ -38,47 +46,42 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId, taskId }
       }
     };
 
-    if (disputeId || taskId) {
+    if (disputeId || taskId || agreementId) {
       fetchFiles();
     }
-  }, [disputeId, taskId]);
+  }, [disputeId, taskId, agreementId]);
 
   const getFileIcon = (type: string) => {
-    if (type.includes('pdf')) return <FaFilePdf style={{ color: '#ef4444' }} />;
-    if (type.includes('image')) return <FaFileImage style={{ color: '#10b981' }} />;
+    if (type.includes('pdf')) return <FaFilePdf className="dispute-icon-tone-danger" />;
+    if (type.includes('image')) return <FaFileImage className="dispute-icon-tone-success" />;
     if (type.includes('zip') || type.includes('rar') || type.includes('archive')) {
-      return <FaFileArchive style={{ color: '#f59e0b' }} />;
+      return <FaFileArchive className="dispute-icon-tone-warning" />;
     }
-    return <FaFile style={{ color: '#10dd88' }} />;
+    return <FaFile className="dispute-icon-tone-accent" />;
   };
 
-  const canPreview = (file: DisputeFile): boolean => {
-    return file.type.includes('image') || file.type.includes('pdf');
-  };
+  const canPreview = (file: DisputeFile): boolean => file.type.includes('image') || file.type.includes('pdf');
 
   const getPreviewUrl = (file: DisputeFile): string => {
-    if (file.url.startsWith('http')) {
-      return file.url;
-    }
+    if (file.url.startsWith('http')) return file.url;
     return publicAssetUrl(file.url);
   };
 
   const currentFiles = files[activeTab] || [];
+  const tabKeys: FileTabType[] = ['task_files', 'chat_files', 'delivery_files'];
 
   if (loading) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center' }}>
-        <div className="loading-spinner" style={{ margin: '0 auto' }}></div>
-        <p style={{ marginTop: '20px', color: 'var(--text-muted)' }}>
-          Cargando archivos...
-        </p>
+      <div className="dispute-view-center">
+        <div className="loading-spinner" />
+        <p>Cargando archivos...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center' }}>
+      <div className="dispute-view-center">
         <div className="admin-alert error">
           <span>{error}</span>
         </div>
@@ -87,199 +90,53 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId, taskId }
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {/* Tabs */}
-      <div style={{
-        display: 'flex',
-        gap: '10px',
-        padding: '20px',
-        borderBottom: '1px solid rgba(40, 192, 240, 0.2)',
-        background: 'rgba(20, 30, 48, 0.5)'
-      }}>
-        <button
-          onClick={() => setActiveTab('task_files')}
-          style={{
-            padding: '12px 24px',
-            background: activeTab === 'task_files' 
-              ? 'linear-gradient(90deg, #10dd88, #0ab86a)'
-              : 'rgba(255, 255, 255, 0.1)',
-            border: `1px solid ${activeTab === 'task_files' ? 'transparent' : 'rgba(40, 192, 240, 0.3)'}`,
-            borderRadius: '8px',
-            color: 'var(--text-primary)',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            transition: 'all 0.3s ease',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}
-          onMouseOver={(e) => {
-            if (activeTab !== 'task_files') {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
-            }
-          }}
-          onMouseOut={(e) => {
-            if (activeTab !== 'task_files') {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-            }
-          }}
-        >
-          Archivos de la Tarea
-          <span style={{
-            marginLeft: '8px',
-            padding: '2px 8px',
-            background: 'rgba(255, 255, 255, 0.2)',
-            borderRadius: '12px',
-            fontSize: '12px'
-          }}>
-            {files.task_files.length}
-          </span>
-        </button>
-        
-        <button
-          onClick={() => setActiveTab('chat_files')}
-          style={{
-            padding: '12px 24px',
-            background: activeTab === 'chat_files' 
-              ? 'linear-gradient(90deg, #10dd88, #0ab86a)'
-              : 'rgba(255, 255, 255, 0.1)',
-            border: `1px solid ${activeTab === 'chat_files' ? 'transparent' : 'rgba(40, 192, 240, 0.3)'}`,
-            borderRadius: '8px',
-            color: 'var(--text-primary)',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            transition: 'all 0.3s ease',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}
-          onMouseOver={(e) => {
-            if (activeTab !== 'chat_files') {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
-            }
-          }}
-          onMouseOut={(e) => {
-            if (activeTab !== 'chat_files') {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-            }
-          }}
-        >
-          Archivos del Chat
-          <span style={{
-            marginLeft: '8px',
-            padding: '2px 8px',
-            background: 'rgba(255, 255, 255, 0.2)',
-            borderRadius: '12px',
-            fontSize: '12px'
-          }}>
-            {files.chat_files.length}
-          </span>
-        </button>
-        
-        <button
-          onClick={() => setActiveTab('delivery_files')}
-          style={{
-            padding: '12px 24px',
-            background: activeTab === 'delivery_files' 
-              ? 'linear-gradient(90deg, #10dd88, #0ab86a)'
-              : 'rgba(255, 255, 255, 0.1)',
-            border: `1px solid ${activeTab === 'delivery_files' ? 'transparent' : 'rgba(40, 192, 240, 0.3)'}`,
-            borderRadius: '8px',
-            color: 'var(--text-primary)',
-            fontWeight: 'bold',
-            cursor: 'pointer',
-            transition: 'all 0.3s ease',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}
-          onMouseOver={(e) => {
-            if (activeTab !== 'delivery_files') {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
-            }
-          }}
-          onMouseOut={(e) => {
-            if (activeTab !== 'delivery_files') {
-              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-            }
-          }}
-        >
-          Entregas
-          <span style={{
-            marginLeft: '8px',
-            padding: '2px 8px',
-            background: 'rgba(255, 255, 255, 0.2)',
-            borderRadius: '12px',
-            fontSize: '12px'
-          }}>
-            {files.delivery_files.length}
-          </span>
-        </button>
+    <div className="dispute-view-root">
+      <div className="dispute-panel-toolbar">
+        <div className="dispute-tab-list">
+          {tabKeys.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              className={`dispute-tab ${activeTab === tab ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab)}
+            >
+              {TAB_LABELS[tab]}
+              <span className="dispute-tab-count">{files[tab].length}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Grid de archivos */}
-      <div style={{
-        flex: 1,
-        overflowY: 'auto',
-        padding: '20px',
-        maxHeight: '500px'
-      }}>
+      <div className="dispute-panel-body">
         {currentFiles.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+          <div className="dispute-view-center">
             <FaFile style={{ fontSize: '48px', marginBottom: '15px', opacity: 0.5 }} />
             <p>No hay archivos en esta categoría.</p>
           </div>
         ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-            gap: '15px'
-          }}>
+          <div className="dispute-file-grid">
             {currentFiles.map((file) => (
-              <div
-                key={file.id}
-                style={{
-                  padding: '15px',
-                  background: 'linear-gradient(135deg, rgba(40, 192, 240, 0.1) 0%, rgba(17, 128, 179, 0.1) 100%)',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(40, 192, 240, 0.2)',
-                  transition: 'all 0.3s ease',
-                  cursor: 'pointer'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.background = 'linear-gradient(135deg, rgba(40, 192, 240, 0.2) 0%, rgba(17, 128, 179, 0.2) 100%)';
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.boxShadow = '0 8px 16px rgba(40, 192, 240, 0.2)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.background = 'linear-gradient(135deg, rgba(40, 192, 240, 0.1) 0%, rgba(17, 128, 179, 0.1) 100%)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
-              >
+              <div key={file.id} className="dispute-file-card">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
-                  <div style={{ fontSize: '24px' }}>
-                    {getFileIcon(file.type)}
-                  </div>
+                  <div style={{ fontSize: '24px' }}>{getFileIcon(file.type)}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{
-                      fontWeight: 'bold',
-                      color: 'var(--text-primary)',
-                      fontSize: '14px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      {file.filename}
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    <div className="dispute-file-card-name">{file.filename}</div>
+                    <div className="dispute-file-card-meta">
                       {file.size_formatted || `${(file.size / 1024).toFixed(2)} KB`}
                     </div>
                   </div>
                 </div>
 
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px' }}>
-                  {file.uploaded_by === 'client' ? <><FaUser style={{ marginRight: '4px' }} /> Cliente</> : <><FaUserTie style={{ marginRight: '4px' }} /> Trabajador</>}
+                <div className="dispute-file-card-meta">
+                  {file.uploaded_by === 'client' ? (
+                    <>
+                      <FaUser style={{ marginRight: '4px' }} /> Cliente
+                    </>
+                  ) : (
+                    <>
+                      <FaUserTie style={{ marginRight: '4px' }} /> Trabajador
+                    </>
+                  )}
                   {file.uploaded_at && (
                     <span style={{ marginLeft: '8px' }}>
                       • {new Date(file.uploaded_at).toLocaleDateString('es-ES')}
@@ -287,34 +144,12 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId, taskId }
                   )}
                 </div>
 
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div className="dispute-file-card-actions">
                   {canPreview(file) && (
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPreviewFile(file);
-                      }}
-                      style={{
-                        flex: 1,
-                        padding: '8px',
-                        background: 'rgba(40, 192, 240, 0.2)',
-                        border: '1px solid rgba(40, 192, 240, 0.3)',
-                        borderRadius: '6px',
-                        color: '#10dd88',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        fontSize: '12px',
-                        transition: 'all 0.3s ease'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.background = 'rgba(40, 192, 240, 0.3)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.background = 'rgba(40, 192, 240, 0.2)';
-                      }}
+                      type="button"
+                      className="dispute-file-btn dispute-file-btn--preview"
+                      onClick={() => setPreviewFile(file)}
                     >
                       <FaEye />
                       Ver
@@ -325,31 +160,7 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId, taskId }
                     target="_blank"
                     rel="noopener noreferrer"
                     download
-                    style={{
-                      flex: 1,
-                      padding: '8px',
-                      background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
-                      border: 'none',
-                      borderRadius: '6px',
-                      color: 'var(--text-primary)',
-                      cursor: 'pointer',
-                      textDecoration: 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      transition: 'all 0.3s ease'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.background = 'linear-gradient(90deg, #0ab86a, #10dd88)';
-                      e.currentTarget.style.transform = 'scale(1.05)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.background = 'linear-gradient(90deg, #10dd88, #0ab86a)';
-                      e.currentTarget.style.transform = 'scale(1)';
-                    }}
+                    className="dispute-file-btn dispute-file-btn--download"
                   >
                     <FaDownload />
                     Descargar
@@ -361,95 +172,33 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId, taskId }
         )}
       </div>
 
-      {/* Resumen */}
       {summary && (
-        <div style={{
-          padding: '15px 20px',
-          borderTop: '1px solid rgba(40, 192, 240, 0.2)',
-          background: 'rgba(20, 30, 48, 0.5)',
-          display: 'flex',
-          gap: '30px',
-          justifyContent: 'center',
-          flexWrap: 'wrap'
-        }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10dd88' }}>
-              {summary.total_files}
-            </div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              Total archivos
-            </div>
+        <div className="dispute-chat-stats">
+          <div className="dispute-chat-stat">
+            <div className="dispute-chat-stat-value">{summary.total_files}</div>
+            <div className="dispute-chat-stat-label">Total archivos</div>
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10dd88' }}>
-              {summary.task_files_count}
-            </div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              De la tarea
-            </div>
+          <div className="dispute-chat-stat">
+            <div className="dispute-chat-stat-value">{summary.task_files_count}</div>
+            <div className="dispute-chat-stat-label">De la tarea</div>
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10dd88' }}>
-              {summary.chat_files_count}
-            </div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              Del chat
-            </div>
+          <div className="dispute-chat-stat">
+            <div className="dispute-chat-stat-value">{summary.chat_files_count}</div>
+            <div className="dispute-chat-stat-label">Del chat</div>
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#10dd88' }}>
-              {summary.delivery_files_count}
-            </div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              Entregas
-            </div>
+          <div className="dispute-chat-stat">
+            <div className="dispute-chat-stat-value">{summary.delivery_files_count}</div>
+            <div className="dispute-chat-stat-label">Entregas</div>
           </div>
         </div>
       )}
 
-      {/* Modal de preview */}
       {previewFile && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.9)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 10001,
-            padding: '20px'
-          }}
-          onClick={() => setPreviewFile(null)}
-        >
-          <div
-            style={{
-              maxWidth: '90%',
-              maxHeight: '90%',
-              background: 'rgba(20, 30, 48, 0.95)',
-              borderRadius: '12px',
-              padding: '20px',
-              border: '1px solid rgba(40, 192, 240, 0.3)'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-              <h3 style={{ color: 'var(--text-primary)', margin: 0 }}>{previewFile.filename}</h3>
-              <button
-                onClick={() => setPreviewFile(null)}
-                style={{
-                  background: 'var(--bg-tertiary)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '6px',
-                  color: 'var(--text-primary)',
-                  padding: '8px 16px',
-                  cursor: 'pointer',
-                  fontSize: '14px'
-                }}
-              >
+        <div className="dispute-preview-overlay" onClick={() => setPreviewFile(null)} role="presentation">
+          <div className="dispute-preview-panel" onClick={(e) => e.stopPropagation()} role="dialog">
+            <div className="dispute-preview-header">
+              <h3 className="dispute-preview-title">{previewFile.filename}</h3>
+              <button type="button" className="dispute-preview-close" onClick={() => setPreviewFile(null)}>
                 Cerrar
               </button>
             </div>
@@ -459,21 +208,12 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId, taskId }
                 alt={previewFile.filename}
                 loading="lazy"
                 decoding="async"
-                style={{
-                  maxWidth: '100%',
-                  maxHeight: '70vh',
-                  borderRadius: '8px'
-                }}
+                className="dispute-preview-media"
               />
             ) : previewFile.type.includes('pdf') ? (
               <iframe
                 src={getPreviewUrl(previewFile)}
-                style={{
-                  width: '800px',
-                  height: '600px',
-                  border: 'none',
-                  borderRadius: '8px'
-                }}
+                className="dispute-preview-iframe"
                 title={previewFile.filename}
               />
             ) : null}
@@ -485,4 +225,3 @@ const DisputeFilesView: React.FC<DisputeFilesViewProps> = ({ disputeId, taskId }
 };
 
 export default DisputeFilesView;
-

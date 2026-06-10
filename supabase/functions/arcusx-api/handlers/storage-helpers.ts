@@ -137,6 +137,64 @@ export async function uploadMilestoneEvidenceFiles(
   return out;
 }
 
+export async function uploadDealEvidenceFiles(
+  supabase: SupabaseClient,
+  agreementId: string,
+  userId: number,
+  fileList: File[],
+): Promise<
+  Array<{
+    id: string;
+    name: string;
+    size: number;
+    type: string;
+    path: string;
+    uploadedAt: string;
+  }>
+> {
+  const out: Array<{
+    id: string;
+    name: string;
+    size: number;
+    type: string;
+    path: string;
+    uploadedAt: string;
+  }> = [];
+
+  for (const file of fileList) {
+    if (file.size > MAX_EVIDENCE_FILE) {
+      throw new Error(`"${file.name}" supera el máximo de 10MB`);
+    }
+    const mime = file.type || 'application/octet-stream';
+    if (!ALLOWED_EVIDENCE.has(mime)) {
+      throw new Error(`Tipo no permitido: ${file.name}`);
+    }
+
+    const ext = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80);
+    const unique = `${safeName}_${Date.now()}_${crypto.randomUUID().slice(0, 8)}.${ext}`;
+    const path = `deals/${agreementId}/${userId}/${unique}`;
+
+    const buf = new Uint8Array(await file.arrayBuffer());
+    const { error } = await supabase.storage.from('milestone-evidence').upload(path, buf, {
+      contentType: mime,
+      upsert: false,
+    });
+    if (error) throw new Error(error.message);
+
+    out.push({
+      id: crypto.randomUUID().replace(/-/g, '').slice(0, 13),
+      name: file.name,
+      size: file.size,
+      type: mime,
+      path,
+      uploadedAt: new Date().toISOString(),
+    });
+  }
+
+  return out;
+}
+
 export function isValidHttpUrl(value: string): boolean {
   try {
     const u = new URL(value);
