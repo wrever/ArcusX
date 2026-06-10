@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams, useNavigate } from 'react-router-dom';
-import { FaHandshake } from 'react-icons/fa';
+import { FaFlag, FaHandshake, FaTimes } from 'react-icons/fa';
 import {
   useApproveMilestone,
   useReleaseFunds,
@@ -8,6 +8,7 @@ import {
   useInitializeEscrow,
   useFundEscrow,
   useGetEscrowFromIndexerByContractIds,
+  useStartDispute,
 } from '@trustless-work/escrow';
 import { useI18n } from '../i18n/I18nProvider';
 import { useAuth } from '../hooks/useAuth';
@@ -16,9 +17,11 @@ import { useDealEscrowChainState } from '../hooks/useDealEscrowChainState';
 import {
   approveMilestoneTrustlessEscrow,
   releaseFundsTrustlessEscrow,
+  startDisputeTrustlessEscrow,
 } from '../services/trustlessWorkEscrowService';
 import {
   completeDeal,
+  createDealDispute,
   finalizeDealEscrow,
   getDealDetails,
   markDealReleased,
@@ -47,6 +50,9 @@ import {
 } from '../utils/dealEscrowVerification';
 import DealEscrowProcessPopup, { type DealEscrowFlowMode } from '../components/DealEscrowProcessPopup';
 import CompleteTaskPopup from '../components/CompleteTaskPopup';
+import DealEvidencePanel from '../components/DealEvidencePanel';
+import PrivateOfferWalletModal from '../components/PrivateOfferWalletModal';
+import { usePayoutWallet } from '../hooks/usePayoutWallet';
 import '../css/DealsPages.css';
 
 const DealWorkspacePage = () => {
@@ -62,13 +68,34 @@ const DealWorkspacePage = () => {
   const { deployEscrow } = useInitializeEscrow();
   const { fundEscrow } = useFundEscrow();
   const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds();
+  const { startDispute } = useStartDispute();
   const [deal, setDeal] = useState<AgreementDeal | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [escrowPopupOpen, setEscrowPopupOpen] = useState(false);
   const [completePopupOpen, setCompletePopupOpen] = useState(false);
+  const [showWalletGate, setShowWalletGate] = useState(false);
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
+  const [disputeReason, setDisputeReason] = useState('');
+  const [creatingDispute, setCreatingDispute] = useState(false);
+  const { registered: payoutRegistered, refresh: refreshPayoutWallet } = usePayoutWallet();
 
   const userId = user?.id != null ? Number(user.id) : null;
+
+  useEffect(() => {
+    if (!userId) return;
+    void refreshPayoutWallet().then(({ registered }) => {
+      if (!registered) setShowWalletGate(true);
+    });
+  }, [userId, refreshPayoutWallet]);
+
+  const requirePayoutWallet = () => {
+    if (!payoutRegistered) {
+      setShowWalletGate(true);
+      return false;
+    }
+    return true;
+  };
 
   const load = () => {
     if (!id) return;
@@ -140,6 +167,18 @@ const DealWorkspacePage = () => {
   const commerce = deal ? isCommerceFunderDeal(deal) : false;
 
   const isCreator = userId != null && deal?.initiator_user_id === userId;
+  const isParticipant =
+    userId != null &&
+    deal != null &&
+    (deal.initiator_user_id === userId || deal.counterparty_user_id === userId);
+  const canDispute =
+    Boolean(deal?.escrow_contract_id) &&
+    chain.funded &&
+    !chain.released &&
+    isParticipant &&
+    ['funded', 'active', 'disputed'].includes(String(deal?.status ?? ''));
+  const canUploadEvidence =
+    isParticipant && deal != null && !['cancelled', 'completed'].includes(deal.status);
 
   const needsCommerceEscrow =
     deal &&
@@ -298,6 +337,47 @@ const DealWorkspacePage = () => {
     return isDealMilestoneApproved(row);
   };
 
+  const handleCreateDispute = async () => {
+    if (!deal?.id || !deal.escrow_contract_id) return;
+    const reason = disputeReason.trim();
+    if (reason.length < 10) {
+      setError(t('deals.dispute.reasonMin'));
+      return;
+    }
+    if (!isConnected || !address || !kit) {
+      setError(t('deals.dispute.connectWallet'));
+      return;
+    }
+    if (deal.status === 'disputed') {
+      setError(t('deals.dispute.alreadyOpen'));
+      return;
+    }
+    setCreatingDispute(true);
+    setError('');
+    try {
+      const tw = await startDisputeTrustlessEscrow(
+        deal.escrow_contract_id,
+        address,
+        kit,
+        startDispute,
+        sendTransaction,
+      );
+      if (!tw.success) throw new Error(tw.error || t('deals.dispute.failed'));
+      await createDealDispute({
+        agreement_id: deal.id,
+        reason,
+        tx_hash: tw.txHash,
+      });
+      setShowDisputeModal(false);
+      setDisputeReason('');
+      load();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : t('deals.dispute.failed'));
+    } finally {
+      setCreatingDispute(false);
+    }
+  };
+
   const commerceStepClass = (step: 1 | 2 | 3 | 4) => {
     if (!deal) return '';
     if (step === 1) {
@@ -336,8 +416,8 @@ const DealWorkspacePage = () => {
       {deal && !loading && (
         <div className="deals-form-card">
           <span className={`deals-status-badge ${deal.status}`}>{deal.status}</span>
-          <h2>{deal.title}</h2>
-          <p>{deal.description}</p>
+          <h2 className="deals-form-card__title">{deal.title}</h2>
+          <p className="deals-public-desc">{deal.description}</p>
           <div className="deals-summary-row"><span>{t('deals.wizard.protected')}</span><strong>{Number(deal.amount_usdc).toFixed(2)} USDC</strong></div>
           {(() => {
             const feeRate = dealPlatformFeeRate(deal);
@@ -377,7 +457,10 @@ const DealWorkspacePage = () => {
             <button
               type="button"
               className="deals-btn primary"
-              onClick={() => setEscrowPopupOpen(true)}
+              onClick={() => {
+                if (!requirePayoutWallet()) return;
+                setEscrowPopupOpen(true);
+              }}
             >
               {t('deals.workspace.payEscrow')}
             </button>
@@ -388,7 +471,10 @@ const DealWorkspacePage = () => {
               type="button"
               className="deals-btn primary"
               style={{ marginTop: escrowFlowMode ? '0.75rem' : 0 }}
-              onClick={() => setCompletePopupOpen(true)}
+              onClick={() => {
+                if (!requirePayoutWallet()) return;
+                setCompletePopupOpen(true);
+              }}
             >
               {t('deals.workspace.completeDeal')}
             </button>
@@ -406,9 +492,65 @@ const DealWorkspacePage = () => {
             <p className="deals-workspace-done">{t('deals.workspace.completed')}</p>
           )}
 
+          {deal.status === 'disputed' && (
+            <p className="deals-disclaimer" style={{ marginTop: '1rem' }}>
+              {t('deals.dispute.openMessage')}
+            </p>
+          )}
+
+          {canDispute && deal.status !== 'disputed' && (
+            <button
+              type="button"
+              className="deals-btn secondary"
+              style={{ marginTop: '1rem' }}
+              onClick={() => setShowDisputeModal(true)}
+            >
+              <FaFlag /> {t('deals.dispute.open')}
+            </button>
+          )}
+
+          <DealEvidencePanel agreementId={deal.id} canUpload={canUploadEvidence} />
+
           <Link to={`/deal/${deal.deal_token}`} className="deals-btn secondary" style={{ display: 'inline-block', marginTop: '1rem' }}>
             {t('deals.workspace.viewLink')}
           </Link>
+        </div>
+      )}
+
+      {showDisputeModal && (
+        <div className="private-wallet-modal-overlay" role="presentation" onClick={() => setShowDisputeModal(false)}>
+          <div
+            className="private-wallet-modal"
+            role="dialog"
+            aria-labelledby="deal-dispute-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button type="button" className="private-wallet-modal-close" onClick={() => setShowDisputeModal(false)} aria-label={t('common.cancel')}>
+              <FaTimes />
+            </button>
+            <h2 id="deal-dispute-title">{t('deals.dispute.modalTitle')}</h2>
+            <p>{t('deals.dispute.modalHint')}</p>
+            <textarea
+              value={disputeReason}
+              onChange={(e) => setDisputeReason(e.target.value)}
+              placeholder={t('deals.dispute.reasonPlaceholder')}
+              rows={5}
+              style={{ width: '100%', marginBottom: '1rem' }}
+            />
+            <div className="private-wallet-modal-actions">
+              <button type="button" className="btn-secondary" onClick={() => setShowDisputeModal(false)}>
+                {t('common.cancel')}
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={creatingDispute || disputeReason.trim().length < 10}
+                onClick={() => void handleCreateDispute()}
+              >
+                {creatingDispute ? '…' : t('deals.dispute.confirm')}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -460,17 +602,37 @@ const DealWorkspacePage = () => {
           workerName={commerce ? t('deals.complete.rateSeller') : t('deals.complete.rateCounterparty')}
           popupTitle={t('deals.complete.popup.title')}
           onApproveMilestone={handleApproveMilestone}
-          onReleaseFunds={async () => {
-            const result = await handleReleaseFunds();
-            if (result.success) {
-              await markDealReleased(deal.id, result.txHash);
+          onReleaseFunds={handleReleaseFunds}
+          onPersistRelease={async (payload) => {
+            try {
+              const data = await markDealReleased(deal.id, payload.releaseTxHash, {
+                rating: payload.rating,
+                rated_user_id: payload.workerId,
+              });
+              if (data?.success === false) {
+                return { success: false, error: data.message || t('deals.error.generic') };
+              }
+              return { success: true };
+            } catch (e: unknown) {
+              return {
+                success: false,
+                error: e instanceof Error ? e.message : t('deals.error.generic'),
+              };
             }
-            return result;
           }}
           onVerifyMilestone={handleVerifyMilestone}
           platformFeeOverride={dealPlatformFeeRate(deal)}
         />
       )}
+
+      <PrivateOfferWalletModal
+        open={showWalletGate}
+        returnPath={id ? `/deals/workspace/${id}` : undefined}
+        onClose={() => {
+          setShowWalletGate(false);
+          void refreshPayoutWallet();
+        }}
+      />
     </div>
   );
 };

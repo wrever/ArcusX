@@ -5,6 +5,7 @@ import {
   userIdForStellarWallet,
 } from '../../_shared/arcusx-notifications.ts';
 import { logDomainEvent } from '../../_shared/domain-events.ts';
+import { persistRating } from '../../_shared/rating-persist.ts';
 import { normalizePlatformFeeRate } from '../../_shared/platform-fee.ts';
 import { quoteEscrowCommission } from '../../_shared/escrow-fee-quote.ts';
 import type { ApiContext } from './types.ts';
@@ -121,6 +122,29 @@ export async function createDeal(ctx: ApiContext): Promise<Response> {
   if (!isStellarG(initiatorWallet)) return jsonError(req, 'Wallet del iniciador inválida', 400);
   if (!isStellarG(releaseSignerWallet)) return jsonError(req, 'Wallet release signer inválida', 400);
   if (!isStellarG(beneficiaryWallet)) return jsonError(req, 'Wallet beneficiario inválida', 400);
+
+  const { data: creatorRow } = await auth.supabase
+    .from('arcusx_users')
+    .select('private_payout_wallet, wallet_address')
+    .eq('id', auth.userId)
+    .maybeSingle();
+  const registeredPayout = String(creatorRow?.private_payout_wallet ?? '').trim();
+  if (!isStellarG(registeredPayout)) {
+    return jsonError(
+      req,
+      'Registra tu wallet de cobro en Configuración antes de crear un deal.',
+      400,
+    );
+  }
+  if (funderRole === 'counterparty') {
+    if (beneficiaryWallet !== registeredPayout || releaseSignerWallet !== registeredPayout) {
+      return jsonError(
+        req,
+        'La wallet de cobro del deal debe coincidir con tu wallet registrada en el perfil.',
+        400,
+      );
+    }
+  }
   if (counterpartyWallet && !isStellarG(counterpartyWallet)) {
     return jsonError(req, 'Wallet contraparte inválida', 400);
   }
@@ -524,6 +548,8 @@ export async function markDealReleased(ctx: ApiContext): Promise<Response> {
   const auth = await requireUser(ctx);
   const dealId = String(body.agreement_id ?? '');
   const txHash = body.transaction_hash ? String(body.transaction_hash) : null;
+  const ratingValue = body.rating != null ? Number(body.rating) : null;
+  const ratedUserId = body.rated_user_id != null ? Number(body.rated_user_id) : null;
   if (!dealId) return jsonError(req, 'agreement_id requerido', 400);
 
   const { data: deal } = await auth.supabase
@@ -574,6 +600,25 @@ export async function markDealReleased(ctx: ApiContext): Promise<Response> {
   if (error) return jsonError(req, error.message, 500);
 
   await logDealEvent(auth.supabase, dealId, 'released', auth.userId, { tx_hash: txHash });
+
+  if (ratingValue != null && ratingValue >= 1 && ratingValue <= 5 && ratedUserId) {
+    const expectedRated =
+      uid === Number(deal.initiator_user_id)
+        ? Number(deal.counterparty_user_id)
+        : Number(deal.initiator_user_id);
+    if (ratedUserId === expectedRated) {
+      try {
+        await persistRating(auth.supabase, {
+          raterId: auth.userId,
+          ratedId: ratedUserId,
+          rating: ratingValue,
+          agreementId: dealId,
+        });
+      } catch {
+        // El deal ya quedó completado; el rating es best-effort adicional.
+      }
+    }
+  }
 
   const dealLabel = `"${deal.title}"`;
   const beneficiaryWallet = String(deal.beneficiary_wallet ?? '').trim();

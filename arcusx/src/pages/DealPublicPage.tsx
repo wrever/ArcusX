@@ -36,10 +36,26 @@ import { devError } from '../utils/logger';
 import Navbar from '../components/Navbar';
 import DealShareLink from '../components/DealShareLink';
 import DealEscrowProcessPopup, { type DealEscrowFlowMode } from '../components/DealEscrowProcessPopup';
+import PrivateOfferWalletModal from '../components/PrivateOfferWalletModal';
+import { usePayoutWallet } from '../hooks/usePayoutWallet';
+import { useEnterpriseMode } from '../hooks/useEnterpriseMode';
+import { dashboardTabHref, dealJoinDashboardHref } from '../config/dashboardTabs';
 import '../css/DealsPages.css';
 
-const DealPublicPage = () => {
-  const { token } = useParams<{ token: string }>();
+type DealPageMode = 'preview' | 'internal';
+
+type DealPublicPageProps = {
+  mode?: DealPageMode;
+  /** Render dentro del dashboard (sin Navbar de landing). */
+  embedded?: boolean;
+  /** Token cuando no viene de la ruta (dashboard ?join_deal=). */
+  dealToken?: string;
+};
+
+const DealPublicPage = ({ mode = 'preview', embedded = false, dealToken }: DealPublicPageProps) => {
+  const { token: routeToken } = useParams<{ token: string }>();
+  const token = (dealToken ?? routeToken)?.trim();
+  const enterprise = useEnterpriseMode();
   const { t } = useI18n();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -55,6 +71,14 @@ const DealPublicPage = () => {
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [escrowPopupOpen, setEscrowPopupOpen] = useState(false);
+  const [showWalletGate, setShowWalletGate] = useState(false);
+  const { registered: payoutRegistered, refresh: refreshPayoutWallet } = usePayoutWallet();
+
+  const isPreview = mode === 'preview';
+  const internalDealPath = token
+    ? dealJoinDashboardHref(token, enterprise)
+    : dashboardTabHref('deals', enterprise);
+  const previewDealPath = token ? `/deal/${token}` : dashboardTabHref('deals', enterprise);
 
   const loadDeal = () => {
     if (!token) return;
@@ -76,6 +100,32 @@ const DealPublicPage = () => {
   useEffect(() => {
     loadDeal();
   }, [token]);
+
+  useEffect(() => {
+    if (isPreview || !token || loading || !deal) return;
+    if (viewerRole === 'initiator' && deal.status === 'sent') {
+      navigate(
+        embedded ? dashboardTabHref('deals', enterprise) : previewDealPath,
+        { replace: true },
+      );
+    }
+  }, [isPreview, embedded, enterprise, viewerRole, deal, token, loading, previewDealPath, navigate]);
+
+  useEffect(() => {
+    if (isPreview || !isAuthenticated) return;
+    void refreshPayoutWallet().then(({ registered }) => {
+      if (!registered) setShowWalletGate(true);
+    });
+  }, [isPreview, isAuthenticated, refreshPayoutWallet]);
+
+  const requirePayoutWallet = () => {
+    if (!isAuthenticated) return true;
+    if (!payoutRegistered) {
+      setShowWalletGate(true);
+      return false;
+    }
+    return true;
+  };
 
   const escrowHooks: DealEscrowHooks = useMemo(
     () => ({
@@ -121,8 +171,9 @@ const DealPublicPage = () => {
 
   const handleAccept = async () => {
     if (!token || !address) return;
+    if (!requirePayoutWallet()) return;
     if (!isAuthenticated) {
-      navigate(`/login?redirect=${encodeURIComponent(`/deal/${token}`)}`);
+      navigate(`/login?redirect=${encodeURIComponent(internalDealPath)}`);
       return;
     }
     setActionLoading(true);
@@ -145,8 +196,10 @@ const DealPublicPage = () => {
   const payerAddr = deal ? funderWallet(deal) : '';
   const deployerAddr = deal ? deploySignerWallet(deal) : '';
   const commerce = deal ? isCommerceFunderDeal(deal) : false;
-  const showShareAsOwner =
-    deal?.status === 'sent' && viewerRole === 'initiator' && token;
+  const isOwnerPreview =
+    isPreview && deal?.status === 'sent' && viewerRole === 'initiator' && Boolean(token);
+  const isGuestPreview = isPreview && deal?.status === 'sent' && !isOwnerPreview;
+  const showShareAsOwner = isOwnerPreview;
   const showAccept = deal?.status === 'sent' && canAccept;
 
   const needsCommerceEscrow =
@@ -222,10 +275,18 @@ const DealPublicPage = () => {
 
   return (
     <>
-      <Navbar />
-      <div className="deals-page deals-page--below-nav">
-        <h1><FaHandshake /> {t('deals.public.title')}</h1>
-        <p className="deals-lead">{t('deals.public.lead')}</p>
+      {!embedded && <Navbar />}
+      <div
+        className={
+          embedded
+            ? 'deals-page deals-page--embedded'
+            : 'deals-page deals-page--below-nav'
+        }
+      >
+        <h1>
+          <FaHandshake /> {t(isPreview ? 'deals.public.title' : 'deals.join.title')}
+        </h1>
+        <p className="deals-lead">{t(isPreview ? 'deals.public.previewLead' : 'deals.join.lead')}</p>
 
         {loading && <p>{t('deals.loading')}</p>}
         {error && <p className="deals-error" role="alert">{error}</p>}
@@ -233,7 +294,7 @@ const DealPublicPage = () => {
         {deal && !loading && (
           <div className="deals-form-card">
             <span className={`deals-status-badge ${deal.status}`}>{deal.status}</span>
-            <h2 style={{ marginTop: '1rem' }}>{deal.title}</h2>
+            <h2 className="deals-form-card__title">{deal.title}</h2>
             <p className="deals-public-desc">{deal.description}</p>
             <div className="deals-summary-row"><span>{t('deals.wizard.protected')}</span><strong>{Number(deal.amount_usdc).toFixed(2)} USDC</strong></div>
             {(() => {
@@ -251,16 +312,19 @@ const DealPublicPage = () => {
               );
             })()}
             <div className="deals-summary-row"><span>{t('deals.wizard.totalDeposit')}</span><strong>{Number(deal.client_total).toFixed(2)} USDC</strong></div>
-            <p className="deals-disclaimer">
-              {t('deals.public.releaseNote')}:{' '}
-              <code>
-                {(commerce && deal.status === 'sent'
-                  ? t('deals.public.releaseNoteBuyerPending')
-                  : releaseSignerWallet(deal).slice(0, 8) + '…')}
-              </code>
-            </p>
 
-            {commerce && (
+            {!isPreview && (
+              <p className="deals-disclaimer">
+                {t('deals.public.releaseNote')}:{' '}
+                <code>
+                  {(commerce && deal.status === 'sent'
+                    ? t('deals.public.releaseNoteBuyerPending')
+                    : releaseSignerWallet(deal).slice(0, 8) + '…')}
+                </code>
+              </p>
+            )}
+
+            {!isPreview && commerce && (
               <ol className="deals-commerce-steps deals-commerce-steps--compact">
                 <li className={deal.status !== 'sent' ? 'is-done' : 'is-current'}>{t('deals.commerce.step1')}</li>
                 <li className={deal.status === 'accepted' || deal.status === 'funded' || deal.status === 'active' || deal.status === 'completed' ? 'is-done' : deal.status === 'sent' ? 'is-current' : ''}>{t('deals.commerce.step2')}</li>
@@ -269,23 +333,46 @@ const DealPublicPage = () => {
               </ol>
             )}
 
-            {escrowFlowMode && isConnected && (
+            {isGuestPreview && (
+              <div className="deals-public-preview-cta">
+                <p className="deals-public-preview-cta__note">{t('deals.public.previewInstructions')}</p>
+                {!isAuthenticated ? (
+                  <Link
+                    to={`/login?redirect=${encodeURIComponent(internalDealPath)}`}
+                    className="deals-btn primary"
+                  >
+                    {t('deals.public.confirmCta')}
+                  </Link>
+                ) : canAccept ? (
+                  <Link to={internalDealPath} className="deals-btn primary">
+                    {t('deals.public.confirmCta')}
+                  </Link>
+                ) : (
+                  <p className="deals-disclaimer">{t('deals.public.previewUnavailable')}</p>
+                )}
+              </div>
+            )}
+
+            {!isPreview && escrowFlowMode && isConnected && (
               <button
                 type="button"
                 className="deals-btn primary"
-                onClick={() => setEscrowPopupOpen(true)}
+                onClick={() => {
+                  if (!requirePayoutWallet()) return;
+                  setEscrowPopupOpen(true);
+                }}
               >
                 {t('deals.public.payEscrow')}
               </button>
             )}
 
-            {escrowFlowMode && !isConnected && (
+            {!isPreview && escrowFlowMode && !isConnected && (
               <button type="button" className="deals-btn primary" onClick={() => void connectWallet()}>
                 <FaWallet /> {t('deals.wizard.connectWallet')}
               </button>
             )}
 
-            {showAccept && (
+            {!isPreview && showAccept && (
               <>
                 {!isConnected ? (
                   <button type="button" className="deals-btn primary" onClick={() => void connectWallet()}>
@@ -299,27 +386,27 @@ const DealPublicPage = () => {
               </>
             )}
 
-            {chain.funded && (
+            {chain.funded && isAuthenticated && (
               <Link to={`/deals/workspace/${deal.id}`} className="deals-btn primary" style={{ display: 'inline-block', marginTop: '1rem' }}>
                 {t('deals.public.openWorkspace')}
               </Link>
             )}
 
-            {deal.escrow_contract_id && !chain.funded && viewerRole === 'initiator' && commerce && (
+            {!isPreview && deal.escrow_contract_id && !chain.funded && viewerRole === 'initiator' && commerce && (
               <p className="deals-disclaimer" style={{ marginTop: '1rem' }}>{t('deals.workspace.waitingFund')}</p>
             )}
 
-            {showWaitingContract && (
+            {!isPreview && showWaitingContract && (
               <p className="deals-disclaimer" style={{ marginTop: '1rem' }}>{t('deals.workspace.waitingBuyerContract')}</p>
             )}
 
-            {deal.status === 'sent' && !isAuthenticated && (
-              <p style={{ marginTop: '1rem' }}>
-                <Link to={`/login?redirect=${encodeURIComponent(`/deal/${token}`)}`}>{t('deals.public.loginToAccept')}</Link>
+            {isGuestPreview && (
+              <p className="deals-disclaimer" style={{ marginTop: '0.75rem' }}>
+                {t('deals.public.previewFooter')}
               </p>
             )}
 
-            {showShareAsOwner && (
+            {showShareAsOwner && token && (
               <DealShareLink dealToken={token} hint={t('deals.public.ownDeal')} />
             )}
           </div>
@@ -327,7 +414,7 @@ const DealPublicPage = () => {
         <p className="deals-disclaimer">{t('deals.disclaimer')}</p>
       </div>
 
-      {deal && escrowFlowMode && (
+      {deal && !isPreview && escrowFlowMode && (
         <DealEscrowProcessPopup
           isOpen={escrowPopupOpen}
           onClose={() => setEscrowPopupOpen(false)}
@@ -356,6 +443,15 @@ const DealPublicPage = () => {
           chainAlreadyFunded={chain.funded}
         />
       )}
+
+      <PrivateOfferWalletModal
+        open={showWalletGate}
+        returnPath={!isPreview ? internalDealPath : undefined}
+        onClose={() => {
+          setShowWalletGate(false);
+          void refreshPayoutWallet();
+        }}
+      />
     </>
   );
 };

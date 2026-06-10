@@ -1,7 +1,36 @@
 /**
  * Week 4 — critical flows: mobile touch targets, overflow containment.
- * Scope: dashboard, proposals, supervise, apply, create-task, profile, wallet popup.
+ * Scope: dashboard, proposals, supervise, apply, create-task, profile, wallet popup, deals.
  */
+
+/* Cadenas largas sin espacios (URLs, spam, hashes) dentro de tarjetas */
+.apply-task-container .task-details-card,
+.apply-task-container .task-header h2,
+.proposal-review-container .task-description,
+.supervise-task-container .task-details-section,
+.create-task-container .form-section,
+.private-offers-intro-note,
+.user-tasks-list .user-task-item,
+.deals-page,
+.deals-form-card {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.task-subtitle,
+.task-description-full,
+.apply-task-container .task-header h2,
+.proposal-review-container .task-description,
+.supervise-task-container .task-details-section p,
+.create-task-container textarea,
+.private-offers-intro-note,
+.deals-public-desc,
+.deals-form-card__title {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+}
 
 @media (max-width: 768px) {
   .dashboard-container,

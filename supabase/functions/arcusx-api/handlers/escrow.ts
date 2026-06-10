@@ -5,6 +5,7 @@ import {
   insertArcusxNotification,
 } from '../../_shared/arcusx-notifications.ts';
 import { logDomainEvent } from '../../_shared/domain-events.ts';
+import { persistRating } from '../../_shared/rating-persist.ts';
 import type { ApiContext } from './types.ts';
 import { requireUser } from './require.ts';
 import { computeTaskRefundAmount } from './cancellation-helpers.ts';
@@ -740,6 +741,8 @@ export async function completeTask(ctx: ApiContext): Promise<Response> {
   const taskId = Number(body.task_id);
   const action = String(body.action ?? 'accept');
   const txHash = body.tx_hash ? String(body.tx_hash) : null;
+  const ratingValue = body.rating != null ? Number(body.rating) : null;
+  const ratedUserId = body.rated_user_id != null ? Number(body.rated_user_id) : null;
 
   const { data: task } = await auth.supabase
     .from('arcusx_tasks')
@@ -749,8 +752,8 @@ export async function completeTask(ctx: ApiContext): Promise<Response> {
 
   if (!task) return jsonError(req, 'Tarea no encontrada.', 404);
 
-  const isClient = task.user_id === auth.userId;
-  const isWorker = task.accepted_applicant_id === auth.userId;
+  const isClient = Number(task.user_id) === auth.userId;
+  const isWorker = Number(task.accepted_applicant_id) === auth.userId;
   if (!isClient && !isWorker) return jsonError(req, 'No autorizado', 403);
 
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
@@ -825,6 +828,24 @@ export async function completeTask(ctx: ApiContext): Promise<Response> {
 
   if (isClient && action === 'accept' && escrowCompleted) {
     const workerId = Number(task.accepted_applicant_id);
+    if (
+      ratingValue != null &&
+      ratingValue >= 1 &&
+      ratingValue <= 5 &&
+      ratedUserId &&
+      ratedUserId === workerId
+    ) {
+      try {
+        await persistRating(auth.supabase, {
+          raterId: auth.userId,
+          ratedId: ratedUserId,
+          rating: ratingValue,
+          taskId,
+        });
+      } catch {
+        // La tarea ya quedó completada; el rating es best-effort adicional.
+      }
+    }
     if (workerId > 0) {
       const { data: workerRow } = await auth.supabase
         .from('arcusx_users')

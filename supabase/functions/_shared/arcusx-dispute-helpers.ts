@@ -20,24 +20,65 @@ export type DisputeTaskRow = {
 
 export type DisputeRow = {
   id: number;
-  task_id: number;
+  task_id?: number | null;
+  agreement_id?: string | null;
   created_by: number;
   reason?: string;
   created_at?: string;
   status?: string;
 };
 
+export type DisputeDealRow = {
+  id: string;
+  title?: string;
+  amount_usdc?: number;
+  initiator_user_id: number;
+  counterparty_user_id: number | null;
+  escrow_contract_id?: string | null;
+  escrow_status?: string | null;
+  status?: string;
+  created_at?: string;
+  accepted_at?: string | null;
+  funded_at?: string | null;
+  funder_role?: string;
+  beneficiary_wallet?: string;
+};
+
+export type DisputeLoadedContext =
+  | { kind: 'task'; dispute: DisputeRow; task: DisputeTaskRow }
+  | { kind: 'deal'; dispute: DisputeRow; deal: DisputeDealRow };
+
 export async function loadDisputeContext(
   supabase: SupabaseClient,
   disputeId: number,
-): Promise<{ dispute: DisputeRow; task: DisputeTaskRow } | null> {
+): Promise<DisputeLoadedContext | null> {
   const { data: dispute } = await supabase
     .from('arcusx_disputes')
-    .select('id, task_id, created_by, reason, created_at, status')
+    .select('id, task_id, agreement_id, created_by, reason, created_at, status')
     .eq('id', disputeId)
     .maybeSingle();
 
-  if (!dispute?.task_id) return null;
+  if (!dispute) return null;
+
+  if (dispute.agreement_id) {
+    const { data: deal } = await supabase
+      .from('arcusx_agreements')
+      .select(`
+        id, title, amount_usdc, initiator_user_id, counterparty_user_id,
+        escrow_contract_id, escrow_status, status, created_at, accepted_at, funded_at,
+        funder_role, beneficiary_wallet
+      `)
+      .eq('id', dispute.agreement_id)
+      .maybeSingle();
+    if (!deal) return null;
+    return {
+      kind: 'deal',
+      dispute: dispute as DisputeRow,
+      deal: deal as DisputeDealRow,
+    };
+  }
+
+  if (!dispute.task_id) return null;
 
   const { data: task } = await supabase
     .from('arcusx_tasks')
@@ -50,7 +91,56 @@ export async function loadDisputeContext(
     .maybeSingle();
 
   if (!task) return null;
-  return { dispute: dispute as DisputeRow, task: task as DisputeTaskRow };
+  return { kind: 'task', dispute: dispute as DisputeRow, task: task as DisputeTaskRow };
+}
+
+export async function loadDisputeContextByAgreementId(
+  supabase: SupabaseClient,
+  agreementId: string,
+): Promise<DisputeLoadedContext | null> {
+  const { data: deal } = await supabase
+    .from('arcusx_agreements')
+    .select(`
+      id, title, amount_usdc, initiator_user_id, counterparty_user_id,
+      escrow_contract_id, escrow_status, status, created_at, accepted_at, funded_at,
+      funder_role, beneficiary_wallet
+    `)
+    .eq('id', agreementId)
+    .maybeSingle();
+
+  if (!deal) return null;
+
+  const { data: dispute } = await supabase
+    .from('arcusx_disputes')
+    .select('id, task_id, agreement_id, created_by, reason, created_at, status')
+    .eq('agreement_id', agreementId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (dispute) {
+    return {
+      kind: 'deal',
+      dispute: dispute as DisputeRow,
+      deal: deal as DisputeDealRow,
+    };
+  }
+
+  const escrowSt = String(deal.escrow_status ?? '').toLowerCase();
+  if (String(deal.status) !== 'disputed' && escrowSt !== 'disputed') return null;
+
+  return {
+    kind: 'deal',
+    dispute: {
+      id: 0,
+      agreement_id: agreementId,
+      created_by: Number(deal.initiator_user_id),
+      reason: 'Disputa detectada sin registro en BD',
+      created_at: new Date().toISOString(),
+      status: 'pending',
+    },
+    deal: deal as DisputeDealRow,
+  };
 }
 
 const DISPUTE_TASK_SELECT = `
@@ -64,7 +154,7 @@ const DISPUTE_TASK_SELECT = `
 export async function loadDisputeContextByTaskId(
   supabase: SupabaseClient,
   taskId: number,
-): Promise<{ dispute: DisputeRow; task: DisputeTaskRow } | null> {
+): Promise<DisputeLoadedContext | null> {
   const { data: task } = await supabase
     .from('arcusx_tasks')
     .select(DISPUTE_TASK_SELECT)
@@ -82,7 +172,7 @@ export async function loadDisputeContextByTaskId(
     .maybeSingle();
 
   if (dispute) {
-    return { dispute: dispute as DisputeRow, task: task as DisputeTaskRow };
+    return { kind: 'task', dispute: dispute as DisputeRow, task: task as DisputeTaskRow };
   }
 
   const escrowSt = String(task.escrow_status ?? '').toLowerCase();
@@ -92,6 +182,7 @@ export async function loadDisputeContextByTaskId(
   }
 
   return {
+    kind: 'task',
     dispute: {
       id: 0,
       task_id: taskId,
@@ -102,6 +193,142 @@ export async function loadDisputeContextByTaskId(
     },
     task: task as DisputeTaskRow,
   };
+}
+
+export async function buildDealDisputeChatPayload(
+  supabase: SupabaseClient,
+  deal: DisputeDealRow,
+): Promise<{
+  messages: Array<Record<string, unknown>>;
+  participants: Record<string, unknown>;
+  stats: Record<string, number>;
+}> {
+  const clientId = Number(deal.initiator_user_id);
+  const workerId = deal.counterparty_user_id ? Number(deal.counterparty_user_id) : null;
+  const { client, worker } = await loadParticipantUsers(supabase, clientId, workerId);
+  return {
+    messages: [],
+    participants: {
+      ...(client ? { client: { ...client, role: 'initiator' } } : {}),
+      ...(worker ? { worker: { ...worker, role: 'counterparty' } } : {}),
+    },
+    stats: { total_messages: 0, client_messages: 0, worker_messages: 0, files_shared: 0 },
+  };
+}
+
+export async function buildDealDisputeFilesPayload(
+  supabase: SupabaseClient,
+  deal: DisputeDealRow,
+): Promise<{ files: Record<string, unknown[]>; summary: Record<string, number> }> {
+  const files = {
+    task_files: [] as Array<Record<string, unknown>>,
+    chat_files: [] as Array<Record<string, unknown>>,
+    delivery_files: [] as Array<Record<string, unknown>>,
+  };
+
+  const { data: rows } = await supabase
+    .from('arcusx_deal_evidence')
+    .select('id, user_id, note, files, created_at')
+    .eq('agreement_id', deal.id)
+    .order('created_at', { ascending: true });
+
+  let idx = 0;
+  for (const row of rows ?? []) {
+    const uploadedBy = Number(row.user_id) === Number(deal.initiator_user_id) ? 'client' : 'worker';
+    if (row.note) {
+      idx += 1;
+      files.delivery_files.push({
+        id: `note-${row.id}`,
+        filename: `nota-evidencia-${row.id}.txt`,
+        url: '',
+        type: 'text/plain',
+        size: String(row.note).length,
+        size_formatted: formatFileSize(String(row.note).length),
+        uploaded_at: row.created_at,
+        uploaded_by: uploadedBy,
+        note: String(row.note),
+      });
+    }
+    const fileList = Array.isArray(row.files) ? row.files : [];
+    for (const raw of fileList) {
+      idx += 1;
+      const f = raw as Record<string, unknown>;
+      const filename = String(f.name ?? `archivo_${idx}`);
+      const path = typeof f.path === 'string' ? f.path : null;
+      let url = typeof f.url === 'string' ? f.url : '';
+      if (path) {
+        const { data: signed } = await supabase.storage
+          .from('milestone-evidence')
+          .createSignedUrl(path, 60 * 60 * 24);
+        if (signed?.signedUrl) url = signed.signedUrl;
+      }
+      files.delivery_files.push({
+        id: idx,
+        filename,
+        url,
+        type: String(f.type ?? mimeFromFilename(filename)),
+        size: Number(f.size ?? 0),
+        size_formatted: Number(f.size ?? 0) > 0 ? formatFileSize(Number(f.size)) : 'N/A',
+        uploaded_at: f.uploadedAt ?? row.created_at,
+        uploaded_by: uploadedBy,
+      });
+    }
+  }
+
+  const summary = {
+    total_files: files.delivery_files.length,
+    task_files_count: 0,
+    chat_files_count: 0,
+    delivery_files_count: files.delivery_files.length,
+  };
+  return { files, summary };
+}
+
+export async function buildDealDisputeTimelinePayload(
+  supabase: SupabaseClient,
+  dispute: DisputeRow,
+  deal: DisputeDealRow,
+): Promise<Array<Record<string, unknown>>> {
+  const clientId = Number(deal.initiator_user_id);
+  const workerId = deal.counterparty_user_id ? Number(deal.counterparty_user_id) : null;
+  const { client, worker } = await loadParticipantUsers(supabase, clientId, workerId);
+  const timeline: Array<Record<string, unknown>> = [];
+
+  timeline.push({
+    type: 'deal_created',
+    title: 'Deal creado',
+    description: deal.title ?? 'Acuerdo',
+    timestamp: deal.created_at,
+    actor: client?.username ?? 'Creador',
+  });
+  if (deal.accepted_at) {
+    timeline.push({
+      type: 'deal_accepted',
+      title: 'Deal aceptado',
+      description: 'La contraparte aceptó el acuerdo',
+      timestamp: deal.accepted_at,
+      actor: worker?.username ?? 'Contraparte',
+    });
+  }
+  if (deal.funded_at) {
+    timeline.push({
+      type: 'escrow_funded',
+      title: 'Escrow fondeado',
+      description: 'USDC depositados en el contrato escrow',
+      timestamp: deal.funded_at,
+      actor: 'Pagador',
+    });
+  }
+  if (dispute.created_at) {
+    timeline.push({
+      type: 'dispute_created',
+      title: 'Disputa abierta',
+      description: dispute.reason ?? 'Sin motivo',
+      timestamp: dispute.created_at,
+      actor: 'Participante',
+    });
+  }
+  return timeline;
 }
 
 export async function loadParticipantUsers(

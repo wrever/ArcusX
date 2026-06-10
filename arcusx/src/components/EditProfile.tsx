@@ -6,7 +6,11 @@ import { authService } from '../services/authService';
 import { useWallet } from '../hooks/useWallet';
 import type { UserProfile, Skill } from '../types/profile';
 import { getAvatarUrl } from '../utils/avatarUtils';
-import { dashboardTabHref, getDefaultDashboardTab } from '../config/dashboardTabs';
+import {
+  consumePostWalletRedirect,
+  dashboardTabHref,
+  getDefaultDashboardTab,
+} from '../config/dashboardTabs';
 import { useEnterpriseMode } from '../hooks/useEnterpriseMode';
 import { useI18n } from '../i18n/I18nProvider';
 import '../css/EditProfile.css';
@@ -277,9 +281,15 @@ const EditProfile: React.FC = () => {
       setNewPassword('');
       setConfirmPassword('');
       
-      const returnToOffers = window.location.hash === '#private-payout-wallet';
+      const walletReturn = consumePostWalletRedirect();
+      const returnToOffers =
+        !walletReturn && window.location.hash === '#private-payout-wallet';
       setTimeout(() => {
         setSuccess(null);
+        if (walletReturn) {
+          navigate(walletReturn);
+          return;
+        }
         navigate(
           returnToOffers
             ? dashboardTabHref('private-offers', enterprise)

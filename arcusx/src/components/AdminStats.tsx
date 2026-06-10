@@ -23,6 +23,22 @@ interface AdminStatsProps {
     feesToday?: number;
     totalUsers?: number;
     totalReferralUsers?: number;
+    volumeTasksUsdc?: number;
+    volumeDealsUsdc?: number;
+    feesTasksUsdc?: number;
+    feesDealsUsdc?: number;
+    releasedTransactions?: number;
+    taskEscrows?: number;
+    dealEscrows?: number;
+    totalDeals?: number;
+    completedDeals?: number;
+    openTasks?: number;
+    usersToday?: number;
+    usersThisWeek?: number;
+    usersThisMonth?: number;
+    usersWithWallet?: number;
+    tasksToday?: number;
+    dataSource?: string;
   } | null;
   onRefresh: () => void;
   loading: boolean;
@@ -52,6 +68,12 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
   useEffect(() => {
     fetchEscrowsStats();
   }, []);
+
+  useEffect(() => {
+    if (!loading) {
+      fetchEscrowsStats();
+    }
+  }, [loading]);
 
   const fetchEscrowsStats = async () => {
     setEscrowsStats(prev => ({ ...prev, loading: true }));
@@ -160,14 +182,16 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
       value: stats?.totalUsers ?? 0,
       icon: <FaUsers />,
       color: '#3b82f6',
-      description: 'Total exacto en base de datos (MySQL)',
-      trend: null,
+      description: `Solo OAuth Supabase Auth (sin import MySQL) · ${stats?.usersWithWallet ?? 0} con wallet`,
+      trend: stats?.usersToday || stats?.usersThisWeek
+        ? `Hoy: +${stats?.usersToday ?? 0} | Semana: +${stats?.usersThisWeek ?? 0} | Mes: +${stats?.usersThisMonth ?? 0}`
+        : null,
     },
     {
       title: 'Registros por referido',
       value: stats?.totalReferralUsers ?? 0,
       icon: <FaUserPlus />,
-      color: '#10dd88',
+      color: 'var(--accent-text)',
       description: 'Invitados válidos (status valid, todos los tiempos)',
       trend: 'Ver detalle por afiliado en pestaña Referidos',
     },
@@ -175,18 +199,18 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
       title: 'Total Escrows',
       value: stats?.totalEscrows || 0,
       icon: <FaChartLine />,
-      color: '#10dd88',
-      description: 'Escrows creados',
-      trend: null
+      color: 'var(--accent-text)',
+      description: `Marketplace: ${stats?.taskEscrows ?? 0} · Deals: ${stats?.dealEscrows ?? 0}`,
+      trend: stats?.openTasks != null ? `${stats.openTasks} tareas abiertas sin asignar` : null,
     },
     {
       title: 'Volumen Total',
       value: formatCurrency(stats?.totalVolume || 0),
       icon: <FaCoins />,
       color: '#10b981',
-      description: 'Volumen procesado (todos los tiempos)',
+      description: `USDC liberados on-chain (${stats?.releasedTransactions ?? 0} tx) · Tareas: ${formatCurrency(stats?.volumeTasksUsdc || 0)} · Deals: ${formatCurrency(stats?.volumeDealsUsdc || 0)}`,
       trend: stats?.volumeThisWeek || stats?.volumeThisMonth 
-        ? `Esta semana: ${formatCurrency(stats.volumeThisWeek || 0)} | Este mes: ${formatCurrency(stats.volumeThisMonth || 0)}` 
+        ? `Hoy: ${formatCurrency(stats.volumeToday || 0)} | Semana: ${formatCurrency(stats.volumeThisWeek || 0)} | Mes: ${formatCurrency(stats.volumeThisMonth || 0)}` 
         : null
     },
     {
@@ -194,9 +218,9 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
       value: formatCurrency(stats?.totalFees || 0),
       icon: <FaWallet />,
       color: '#f59e0b',
-      description: `Comisiones acumuladas (${stats?.platformFee || 2.7}% del volumen)`,
+      description: `Fee ArcusX acumulado · Tareas: ${formatCurrency(stats?.feesTasksUsdc || 0)} · Deals: ${formatCurrency(stats?.feesDealsUsdc || 0)}`,
       trend: stats?.feesThisWeek || stats?.feesThisMonth 
-        ? `Esta semana: ${formatCurrency(stats.feesThisWeek || 0)} | Este mes: ${formatCurrency(stats.feesThisMonth || 0)}` 
+        ? `Hoy: ${formatCurrency(stats.feesToday || 0)} | Semana: ${formatCurrency(stats.feesThisWeek || 0)} | Mes: ${formatCurrency(stats.feesThisMonth || 0)}` 
         : null
     },
     {
@@ -204,8 +228,12 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
       value: stats?.activeDisputes || 0,
       icon: <FaExclamationTriangle />,
       color: '#ef4444',
-      description: 'Disputas pendientes',
-      trend: null
+      description: 'Disputas pendientes en Supabase (arcusx_disputes)',
+      trend: onNavigate ? (
+        <button type="button" className="admin-stats-link-btn" onClick={() => onNavigate('disputes')}>
+          Ver en Arbitraje
+        </button>
+      ) : null,
     },
     {
       title: 'Escrows Activos',
@@ -291,6 +319,61 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Detalle Supabase */}
+      <div className="admin-supabase-detail">
+        <h3>Detalle Supabase (tiempo real)</h3>
+        <div className="admin-supabase-detail-grid">
+          <div className="admin-supabase-detail-item">
+            <span className="label">Fuente de datos</span>
+            <strong>{stats?.dataSource === 'supabase_oauth' ? 'OAuth + arcusx_* (Supabase)' : (stats?.dataSource ?? '—')}</strong>
+          </div>
+          <div className="admin-supabase-detail-item">
+            <span className="label">Usuarios totales</span>
+            <strong>{stats?.totalUsers ?? 0}</strong>
+          </div>
+          <div className="admin-supabase-detail-item">
+            <span className="label">Con wallet Stellar</span>
+            <strong>{stats?.usersWithWallet ?? 0}</strong>
+          </div>
+          <div className="admin-supabase-detail-item">
+            <span className="label">Tareas publicadas</span>
+            <strong>{stats?.openTasks != null ? `${stats.openTasks} abiertas` : '—'}</strong>
+          </div>
+          <div className="admin-supabase-detail-item">
+            <span className="label">Deals</span>
+            <strong>{stats?.totalDeals ?? 0} total · {stats?.completedDeals ?? 0} completados</strong>
+          </div>
+          <div className="admin-supabase-detail-item">
+            <span className="label">Liberaciones registradas</span>
+            <strong>{stats?.releasedTransactions ?? 0}</strong>
+          </div>
+          <div className="admin-supabase-detail-item">
+            <span className="label">Volumen tareas</span>
+            <strong>{formatCurrency(stats?.volumeTasksUsdc || 0)}</strong>
+          </div>
+          <div className="admin-supabase-detail-item">
+            <span className="label">Volumen deals</span>
+            <strong>{formatCurrency(stats?.volumeDealsUsdc || 0)}</strong>
+          </div>
+          <div className="admin-supabase-detail-item">
+            <span className="label">Fees tareas</span>
+            <strong>{formatCurrency(stats?.feesTasksUsdc || 0)}</strong>
+          </div>
+          <div className="admin-supabase-detail-item">
+            <span className="label">Fees deals</span>
+            <strong>{formatCurrency(stats?.feesDealsUsdc || 0)}</strong>
+          </div>
+          <div className="admin-supabase-detail-item">
+            <span className="label">Tareas creadas hoy</span>
+            <strong>{stats?.tasksToday ?? 0}</strong>
+          </div>
+          <div className="admin-supabase-detail-item">
+            <span className="label">Referidos válidos</span>
+            <strong>{stats?.totalReferralUsers ?? 0}</strong>
+          </div>
+        </div>
       </div>
 
       {/* Configuration Overview */}
@@ -410,18 +493,11 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
             )}
           </div>
           <button
+            type="button"
+            className="refresh-button"
             onClick={fetchEscrowsStats}
             disabled={escrowsStats.loading}
-            style={{
-              marginTop: '15px',
-              padding: '8px 16px',
-              backgroundColor: 'rgba(40, 192, 240, 0.2)',
-              border: '1px solid rgba(40, 192, 240, 0.4)',
-              borderRadius: '6px',
-              color: '#10dd88',
-              cursor: escrowsStats.loading ? 'not-allowed' : 'pointer',
-              fontSize: '14px'
-            }}
+            style={{ marginTop: '15px' }}
           >
             {escrowsStats.loading ? 'Verificando...' : 'Actualizar Estado'}
           </button>

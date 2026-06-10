@@ -11,6 +11,19 @@ import {
   taskStatusAfterDisputeDecision,
 } from '../_shared/arcusx-dispute-helpers.ts';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  loadReleasedVolumeRows,
+  periodStarts,
+  sumVolumeRows,
+} from '../_shared/admin-stats.ts';
+import {
+  dealReleaseMetricsPatch,
+  taskReleaseMetricsPatch,
+} from '../_shared/released-metrics.ts';
+import {
+  getOauthUserCount,
+  oauthLinkedUsersTable,
+} from '../_shared/oauth-user-stats.ts';
 
 type AdminCtx = {
   req: Request;
@@ -62,61 +75,96 @@ async function platformFee(supabase: SupabaseClient): Promise<number> {
 
 export async function adminGetStats(ctx: AdminCtx): Promise<Response> {
   const { req, supabase } = ctx;
+  const fee = await platformFee(supabase);
+  const { today, week, month } = periodStarts();
+
+  const oauthUsersFilter = () =>
+    oauthLinkedUsersTable(supabase).select('*', { count: 'exact', head: true });
+
   const [
-    users, tasks, active, completed, escrows,
+    tasks,
+    active,
+    taskEscrows,
+    dealEscrows,
+    openTasks,
+    pendingDisputes,
+    dealsTotal,
+    dealsCompleted,
+    usersToday,
+    usersWeek,
+    usersMonth,
+    tasksToday,
+    walletsLinked,
+    volumeRows,
+    oauthUserCount,
   ] = await Promise.all([
-    supabase.from('arcusx_users').select('*', { count: 'exact', head: true }),
     supabase.from('arcusx_tasks').select('*', { count: 'exact', head: true }),
     supabase.from('arcusx_tasks').select('*', { count: 'exact', head: true })
       .in('status', ['assigned', 'in_progress']),
-    supabase.from('arcusx_tasks').select('*', { count: 'exact', head: true }).eq('status', 'completed'),
     supabase.from('arcusx_tasks').select('*', { count: 'exact', head: true }).not('escrow_id', 'is', null),
+    supabase.from('arcusx_agreements').select('*', { count: 'exact', head: true })
+      .not('escrow_contract_id', 'is', null),
+    supabase.from('arcusx_tasks').select('*', { count: 'exact', head: true })
+      .eq('status', 'open').is('accepted_applicant_id', null),
+    supabase.from('arcusx_disputes').select('*', { count: 'exact', head: true })
+      .in('status', ['pending', 'open', 'in_review']),
+    supabase.from('arcusx_agreements').select('*', { count: 'exact', head: true }),
+    supabase.from('arcusx_agreements').select('*', { count: 'exact', head: true })
+      .eq('status', 'completed'),
+    oauthUsersFilter().gte('created_at', today.toISOString()),
+    oauthUsersFilter().gte('created_at', week.toISOString()),
+    oauthUsersFilter().gte('created_at', month.toISOString()),
+    supabase.from('arcusx_tasks').select('*', { count: 'exact', head: true })
+      .gte('created_at', today.toISOString()),
+    oauthUsersFilter().not('wallet_address', 'is', null).neq('wallet_address', ''),
+    loadReleasedVolumeRows(supabase, fee),
+    getOauthUserCount(supabase),
   ]);
 
-  const { data: volRows } = await supabase
-    .from('arcusx_tasks')
-    .select('price, escrow_amount, escrow_platform_fee')
-    .eq('status', 'completed')
-    .eq('escrow_status', 'completed');
-
-  const fee = await platformFee(supabase);
-  let totalVolume = 0;
-  let totalCommission = 0;
-  for (const r of volRows ?? []) {
-    const worker = Number(r.price ?? 0);
-    const paid = Number(r.escrow_amount ?? worker / (1 - Number(r.escrow_platform_fee ?? fee)));
-    totalVolume += paid;
-    totalCommission += paid - worker;
-  }
-
-  const today = new Date().toISOString().slice(0, 10);
-  const { count: usersToday } = await supabase
-    .from('arcusx_users')
-    .select('*', { count: 'exact', head: true })
-    .gte('created_at', `${today}T00:00:00Z`);
-
-  const { count: tasksToday } = await supabase
-    .from('arcusx_tasks')
-    .select('*', { count: 'exact', head: true })
-    .gte('created_at', `${today}T00:00:00Z`);
+  const allTime = sumVolumeRows(volumeRows);
+  const volToday = sumVolumeRows(volumeRows, today);
+  const volWeek = sumVolumeRows(volumeRows, week);
+  const volMonth = sumVolumeRows(volumeRows, month);
+  const volTasks = sumVolumeRows(volumeRows.filter((r) => r.source === 'task'));
+  const volDeals = sumVolumeRows(volumeRows.filter((r) => r.source === 'deal'));
 
   await logAdmin(supabase, ctx.userId, 'get_stats', null, null, null, req);
 
   return jsonResponse(req, {
     success: true,
     stats: {
-      total_users: users.count ?? 0,
+      total_users: oauthUserCount,
+      oauth_users: oauthUserCount,
       total_tasks: tasks.count ?? 0,
       active_tasks: active.count ?? 0,
-      completed_tasks: completed.count ?? 0,
-      total_escrows: escrows.count ?? 0,
-      total_volume_usdc: Math.round(totalVolume * 100) / 100,
-      total_commission_usdc: Math.round(totalCommission * 1000000) / 1000000,
-      pending_transactions: 0,
-      users_today: usersToday ?? 0,
-      tasks_today: tasksToday ?? 0,
-      volume_today: 0,
-      fees_today: 0,
+      completed_tasks: volTasks.count + volDeals.count,
+      open_tasks: openTasks.count ?? 0,
+      total_escrows: (taskEscrows.count ?? 0) + (dealEscrows.count ?? 0),
+      task_escrows: taskEscrows.count ?? 0,
+      deal_escrows: dealEscrows.count ?? 0,
+      total_deals: dealsTotal.count ?? 0,
+      completed_deals: dealsCompleted.count ?? 0,
+      total_volume_usdc: allTime.volume,
+      total_commission_usdc: allTime.fees,
+      volume_tasks_usdc: volTasks.volume,
+      volume_deals_usdc: volDeals.volume,
+      fees_tasks_usdc: volTasks.fees,
+      fees_deals_usdc: volDeals.fees,
+      released_transactions: allTime.count,
+      active_disputes: pendingDisputes.count ?? 0,
+      pending_transactions: pendingDisputes.count ?? 0,
+      users_today: usersToday.count ?? 0,
+      users_this_week: usersWeek.count ?? 0,
+      users_this_month: usersMonth.count ?? 0,
+      users_with_wallet: walletsLinked.count ?? 0,
+      tasks_today: tasksToday.count ?? 0,
+      volume_today: volToday.volume,
+      fees_today: volToday.fees,
+      volume_this_week: volWeek.volume,
+      fees_this_week: volWeek.fees,
+      volume_this_month: volMonth.volume,
+      fees_this_month: volMonth.fees,
+      data_source: 'supabase_oauth',
     },
   });
 }
@@ -125,7 +173,7 @@ export async function adminGetUsers(ctx: AdminCtx): Promise<Response> {
   const page = Math.max(1, parseInt(ctx.url.searchParams.get('page') ?? '1', 10));
   const limit = Math.min(100, parseInt(ctx.url.searchParams.get('limit') ?? '20', 10));
   const from = (page - 1) * limit;
-  let q = ctx.supabase.from('arcusx_users').select('*', { count: 'exact' });
+  let q = oauthLinkedUsersTable(ctx.supabase).select('*', { count: 'exact' });
   const search = ctx.url.searchParams.get('search')?.trim();
   if (search) {
     const s = search.replace(/[%_]/g, '');
@@ -351,19 +399,24 @@ export async function adminGetDisputes(ctx: AdminCtx): Promise<Response> {
   const status = ctx.url.searchParams.get('status');
   let q = ctx.supabase
     .from('arcusx_disputes')
-    .select('*, arcusx_tasks(title, price, user_id, accepted_applicant_id, escrow_id, escrow_status)', {
-      count: 'exact',
-    });
+    .select(
+      '*, arcusx_tasks(title, price, user_id, accepted_applicant_id, escrow_id, escrow_status), arcusx_agreements(title, amount_usdc, escrow_contract_id, escrow_status, initiator_user_id, counterparty_user_id)',
+      { count: 'exact' },
+    );
   if (status) q = q.eq('status', status);
   const { data, count } = await q.order('created_at', { ascending: false }).range(from, from + limit - 1);
   const total = count ?? 0;
   const disputes = (data ?? []).map((row) => {
     const task = row.arcusx_tasks as Record<string, unknown> | null;
+    const deal = row.arcusx_agreements as Record<string, unknown> | null;
+    const isDeal = Boolean(row.agreement_id);
     return {
       ...row,
-      task_title: task?.title ?? null,
-      escrow_id: task?.escrow_id ?? null,
-      escrow_status: task?.escrow_status ?? null,
+      entity_type: isDeal ? 'deal' : 'task',
+      task_title: isDeal ? (deal?.title ?? null) : (task?.title ?? null),
+      escrow_id: isDeal ? (deal?.escrow_contract_id ?? null) : (task?.escrow_id ?? null),
+      escrow_status: isDeal ? (deal?.escrow_status ?? null) : (task?.escrow_status ?? null),
+      deal_amount_usdc: isDeal ? deal?.amount_usdc ?? null : null,
     };
   });
   return jsonResponse(ctx.req, {
@@ -502,7 +555,7 @@ export async function adminResolveDispute(ctx: AdminCtx): Promise<Response> {
 
   const { data: dispute } = await ctx.supabase
     .from('arcusx_disputes')
-    .select('task_id, status')
+    .select('task_id, agreement_id, status')
     .eq('id', disputeId)
     .single();
 
@@ -511,6 +564,84 @@ export async function adminResolveDispute(ctx: AdminCtx): Promise<Response> {
   }
   if (dispute.status === 'cancelled') {
     return jsonError(ctx.req, 'Disputa cancelada', 400);
+  }
+
+  if (dispute.agreement_id) {
+    const { data: deal } = await ctx.supabase
+      .from('arcusx_agreements')
+      .select('id, title, amount_usdc, initiator_user_id, counterparty_user_id, funder_role')
+      .eq('id', dispute.agreement_id)
+      .maybeSingle();
+    if (!deal) return jsonError(ctx.req, 'Deal de la disputa no encontrado', 404);
+
+    const { data: adminUser } = await ctx.supabase
+      .from('arcusx_users')
+      .select('username')
+      .eq('id', ctx.userId)
+      .maybeSingle();
+
+    const dealAmount = Number(deal.amount_usdc ?? 0);
+    const resolutionObj = buildResolutionJson({
+      decision,
+      reason,
+      resolvedBy: ctx.userId,
+      resolvedByUsername: String(adminUser?.username ?? 'Admin'),
+      refundPercentage,
+      taskPrice: dealAmount,
+    });
+    const resolution = JSON.stringify(resolutionObj);
+
+    const { error } = await ctx.supabase.from('arcusx_disputes').update({
+      status: 'resolved',
+      resolution,
+      resolved_by: ctx.userId,
+      resolved_at: new Date().toISOString(),
+    }).eq('id', disputeId);
+    if (error) return jsonError(ctx.req, error.message, 500);
+
+    const fundsReleasedOnChain =
+      ctx.body.funds_released_on_chain === true ||
+      ctx.body.funds_released_on_chain === 'true' ||
+      Boolean(String(ctx.body.tx_hash ?? '').trim());
+
+    let dealPatch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    const releaseTx = String(ctx.body.tx_hash ?? '').trim();
+    if (fundsReleasedOnChain) {
+      if (releaseTx) {
+        dealPatch = {
+          ...dealPatch,
+          ...dealReleaseMetricsPatch(releaseTx, {
+            isRefund: decision === 'client',
+            status: decision === 'client' ? 'cancelled' : 'completed',
+          }),
+        };
+      } else {
+        dealPatch.escrow_status = decision === 'client' ? 'refunded' : 'resolved';
+        dealPatch.status = decision === 'client' ? 'cancelled' : 'completed';
+        if (decision !== 'client') dealPatch.completed_at = new Date().toISOString();
+      }
+    } else {
+      dealPatch.escrow_status = 'pending_dispute_resolution';
+      dealPatch.status = 'disputed';
+    }
+    await ctx.supabase.from('arcusx_agreements').update(dealPatch).eq('id', deal.id);
+
+    await notifyUsers(ctx.supabase, [deal.initiator_user_id, deal.counterparty_user_id], {
+      title: 'Disputa de deal resuelta',
+      message: `La disputa de "${deal.title ?? 'el acuerdo'}" fue resuelta (${decision}).`,
+      type: 'info',
+      email: false,
+    });
+
+    await logAdmin(ctx.supabase, ctx.userId, 'resolve_dispute', 'dispute', disputeId, {
+      decision,
+      agreement_id: deal.id,
+    }, ctx.req);
+
+    return jsonSuccess(ctx.req, {
+      message: 'Disputa de deal resuelta',
+      funds_release_required: !fundsReleasedOnChain,
+    });
   }
 
   const { data: adminUser } = await ctx.supabase
@@ -590,18 +721,32 @@ export async function adminResolveDispute(ctx: AdminCtx): Promise<Response> {
       (String(taskRow.status ?? '') === 'private_offer_rejected' ||
         String(taskRow.cancellation_reason ?? '').toLowerCase().includes('oferta privada'));
     const deletionHours = isPrivateOfferRefund ? 24 : 12;
+    const releaseTx = String(ctx.body.tx_hash ?? '').trim();
+    const isRefund = decision === 'client' || (isPrivateOfferRefund && decision === 'client');
 
-    taskPatch.escrow_status = isPrivateOfferRefund && decision === 'client' ? 'refunded' : 'resolved';
-    taskPatch.escrow_completed_at = releasedAt;
     taskPatch.scheduled_deletion_at = new Date(
       Date.now() + deletionHours * 60 * 60 * 1000,
     ).toISOString();
-    if (isPrivateOfferRefund && decision === 'client') {
-      taskPatch.status = 'cancelled';
-      taskPatch.completed_at = releasedAt;
+
+    if (releaseTx) {
+      Object.assign(
+        taskPatch,
+        taskReleaseMetricsPatch(releaseTx, {
+          isRefund,
+          status: taskStatus,
+        }),
+      );
+    } else {
+      taskPatch.escrow_status = isRefund ? 'refunded' : 'resolved';
+      taskPatch.escrow_completed_at = releasedAt;
+      if (!isRefund) {
+        taskPatch.completed_at = releasedAt;
+      }
+      if (isPrivateOfferRefund && decision === 'client') {
+        taskPatch.status = 'cancelled';
+        taskPatch.completed_at = releasedAt;
+      }
     }
-    const releaseTx = String(ctx.body.tx_hash ?? '').trim();
-    if (releaseTx) taskPatch.escrow_release_tx_hash = releaseTx;
   } else if (fundsInfo) {
     taskPatch.escrow_status = 'pending_dispute_resolution';
   }

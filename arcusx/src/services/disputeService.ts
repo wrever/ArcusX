@@ -207,6 +207,7 @@ export async function getDisputeRefundXDR(disputeId: number): Promise<{ success:
 export async function getDisputeChat(
   disputeId?: number,
   taskId?: number,
+  agreementId?: string,
 ): Promise<DisputeChatResponse> {
   const token = getAuthToken();
   
@@ -214,11 +215,13 @@ export async function getDisputeChat(
     throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
   }
 
-  const query: Record<string, number> = disputeId
+  const query: Record<string, string | number> = disputeId
     ? { dispute_id: disputeId }
     : taskId
       ? { task_id: taskId }
-      : (() => { throw new Error('dispute_id o task_id requerido'); })();
+      : agreementId
+        ? { agreement_id: agreementId }
+        : (() => { throw new Error('dispute_id, task_id o agreement_id requerido'); })();
 
   const response = await fetch(arcusxApiUrl('get_dispute_chat', query), {
     method: 'GET',
@@ -245,6 +248,7 @@ export async function getDisputeChat(
 export async function getDisputeFiles(
   disputeId?: number,
   taskId?: number,
+  agreementId?: string,
 ): Promise<DisputeFilesResponse> {
   const token = getAuthToken();
   
@@ -252,11 +256,13 @@ export async function getDisputeFiles(
     throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
   }
 
-  const query: Record<string, number> = disputeId
+  const query: Record<string, string | number> = disputeId
     ? { dispute_id: disputeId }
     : taskId
       ? { task_id: taskId }
-      : (() => { throw new Error('dispute_id o task_id requerido'); })();
+      : agreementId
+        ? { agreement_id: agreementId }
+        : (() => { throw new Error('dispute_id, task_id o agreement_id requerido'); })();
 
   const response = await fetch(arcusxApiUrl('get_dispute_files', query), {
     method: 'GET',
@@ -283,6 +289,7 @@ export async function getDisputeFiles(
 export async function getDisputeTimeline(
   disputeId?: number,
   taskId?: number,
+  agreementId?: string,
 ): Promise<DisputeTimelineResponse> {
   const token = getAuthToken();
   
@@ -290,11 +297,13 @@ export async function getDisputeTimeline(
     throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
   }
 
-  const query: Record<string, number> = disputeId
+  const query: Record<string, string | number> = disputeId
     ? { dispute_id: disputeId }
     : taskId
       ? { task_id: taskId }
-      : (() => { throw new Error('dispute_id o task_id requerido'); })();
+      : agreementId
+        ? { agreement_id: agreementId }
+        : (() => { throw new Error('dispute_id, task_id o agreement_id requerido'); })();
 
   const response = await fetch(arcusxApiUrl('get_dispute_timeline', query), {
     method: 'GET',

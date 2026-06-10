@@ -1,0 +1,140 @@
+/**
+ * Puente de migración: sustituye patrones navy/teal legacy por variables de tema.
+ * Aplica en oscuro y claro; los valores cambian según themes.css.
+ */
+
+/* --- Admin panel: superficies y bordes teal → tema --- */
+.admin-panel-container .admin-tab.active,
+.admin-panel-container .admin-tab:hover {
+  border-color: var(--border-accent);
+}
+
+.admin-panel-container .admin-search-input:focus,
+.admin-panel-container .admin-filter-select:focus,
+.admin-panel-container input:focus,
+.admin-panel-container select:focus,
+.admin-panel-container textarea:focus {
+  border-color: var(--border-color-active) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-green) 12%, transparent) !important;
+}
+
+.admin-panel-container .admin-table th {
+  border-bottom-color: var(--border-accent) !important;
+}
+
+.admin-panel-container .admin-table tbody tr:hover {
+  background: var(--bg-hover) !important;
+}
+
+.admin-panel-container .admin-badge,
+.admin-panel-container .status-pill {
+  border-color: var(--border-accent);
+}
+
+.admin-panel-container .admin-primary-btn,
+.admin-panel-container .resolve-button,
+.admin-panel-container .admin-action-btn.primary {
+  background: var(--gradient-primary) !important;
+  color: var(--on-accent) !important;
+  box-shadow: var(--shadow-blue) !important;
+}
+
+.admin-panel-container .loading-spinner {
+  border-color: var(--border-accent) !important;
+  border-top-color: var(--primary-green) !important;
+}
+
+/* --- Escrow breakdown (ProposalReview) --- */
+.escrow-breakdown-box {
+  background: var(--bg-tertiary) !important;
+  border: 1px solid var(--border-accent) !important;
+}
+
+.escrow-breakdown-title {
+  color: var(--accent-text) !important;
+}
+
+.escrow-breakdown-row {
+  border-bottom-color: var(--border-subtle) !important;
+}
+
+.escrow-breakdown-row span {
+  color: var(--text-secondary) !important;
+}
+
+.escrow-breakdown-row strong {
+  color: var(--text-primary) !important;
+}
+
+.escrow-breakdown-total {
+  background: var(--bg-active) !important;
+  border: 1px solid var(--border-accent) !important;
+}
+
+.escrow-breakdown-total-label {
+  color: var(--accent-text) !important;
+}
+
+.escrow-breakdown-total-amount {
+  color: var(--accent-text) !important;
+  background: none !important;
+  -webkit-text-fill-color: unset !important;
+}
+
+.escrow-breakdown-fee-note {
+  color: var(--text-muted) !important;
+}
+
+.escrow-step-error-banner {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-error) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-error) 30%, transparent);
+  color: var(--color-error);
+  font-size: 0.875rem;
+}
+
+/* --- Deals dashboard --- */
+.dashboard-deals-panel .dashboard-deals-btn.primary {
+  background: var(--gradient-primary);
+  color: var(--on-accent);
+}
+
+.dashboard-deals-panel .dashboard-deals-panel__icon {
+  background: var(--bg-active);
+  color: var(--accent-text);
+  border: 1px solid var(--border-accent);
+}
+
+.dashboard-deals-open-link {
+  background: var(--bg-tertiary) !important;
+  border-color: var(--border-color) !important;
+}
+
+.deal-list-card__actions {
+  border-top-color: var(--border-subtle) !important;
+}
+
+.dashboard-deals-section + .dashboard-deals-section {
+  border-top-color: var(--border-subtle) !important;
+}
+
+/* --- Deals pages --- */
+.deals-page-shell,
+.deals-wizard-shell,
+.deals-workspace-shell {
+  color: var(--text-primary);
+}
+
+.deals-card,
+.deals-wizard-step,
+.deals-workspace-card {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.deals-error {
+  color: var(--color-error) !important;
+}

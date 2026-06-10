@@ -1,0 +1,60 @@
+/* Alertas y banners semánticos — reemplazan estilos inline Bootstrap/legacy */
+
+.arcusx-alert {
+  padding: 0.875rem 1rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.arcusx-alert strong {
+  font-weight: 700;
+}
+
+.arcusx-alert--warning {
+  background: color-mix(in srgb, var(--color-warning) 14%, transparent);
+  border-color: color-mix(in srgb, var(--color-warning) 35%, transparent);
+  color: var(--text-primary);
+}
+
+.arcusx-alert--danger,
+.arcusx-alert--error {
+  background: color-mix(in srgb, var(--color-error) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-error) 32%, transparent);
+  color: var(--text-primary);
+}
+
+.arcusx-alert--success {
+  background: color-mix(in srgb, var(--color-success) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-success) 32%, transparent);
+  color: var(--text-primary);
+}
+
+.arcusx-alert--info {
+  background: color-mix(in srgb, var(--color-info) 12%, transparent);
+  border-color: color-mix(in srgb, var(--color-info) 28%, transparent);
+  color: var(--text-primary);
+}
+
+.arcusx-alert--muted {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+}
+
+.arcusx-inline-hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0.5rem 0 0;
+}
+
+.arcusx-code-chip {
+  color: var(--accent-text);
+  background: var(--bg-active);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  border: 1px solid var(--border-subtle);
+}

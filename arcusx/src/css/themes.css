@@ -58,6 +58,15 @@
   --input-border: rgba(16, 221, 136, 0.3);
 
   --on-accent: #ffffff;
+
+  --modal-overlay: rgba(0, 0, 0, 0.78);
+  --color-warning: #fbbf24;
+  --color-success: #22c55e;
+  --color-error: #ef4444;
+  --color-info: #60a5fa;
+  --star-active: #fbbf24;
+  --star-inactive: rgba(255, 255, 255, 0.28);
+  --accent-text: #10dd88;
 }
 
 /* Modo Claro (Paleta Pastel con Buen Contraste) */
@@ -122,6 +131,15 @@
 
   /* Texto sobre fondos de acento (botones primarios, gradientes) */
   --on-accent: #ffffff;
+
+  --modal-overlay: rgba(15, 23, 42, 0.45);
+  --color-warning: #b45309;
+  --color-success: #15803d;
+  --color-error: #b91c1c;
+  --color-info: #2563eb;
+  --star-active: #f59e0b;
+  --star-inactive: rgba(15, 23, 42, 0.22);
+  --accent-text: #2563eb;
 }
 
 /* Transición suave entre temas */
@@ -172,5 +190,13 @@ canvas {
   --gradient-card: linear-gradient(135deg, rgba(20, 20, 20, 0.9), rgba(20, 20, 20, 0.6));
   --overlay: rgba(0, 0, 0, 0.8);
   --overlay-light: rgba(0, 0, 0, 0.6);
+  --modal-overlay: rgba(0, 0, 0, 0.78);
+  --color-warning: #fbbf24;
+  --color-success: #22c55e;
+  --color-error: #ef4444;
+  --color-info: #60a5fa;
+  --star-active: #fbbf24;
+  --star-inactive: rgba(255, 255, 255, 0.28);
+  --accent-text: #10dd88;
 }
 

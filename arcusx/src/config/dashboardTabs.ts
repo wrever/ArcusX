@@ -80,8 +80,18 @@ export function resolveDashboardTab(
 
 /** Parámetros de query que solo aplican a ciertas pestañas */
 const TAB_SCOPED_PARAMS: Record<string, readonly string[]> = {
-  deals: ['open_deal'],
+  deals: ['open_deal', 'join_deal'],
 };
+
+/** Ruta dashboard para aceptar/pagar un deal (contraparte logueada). */
+export function dealJoinDashboardHref(
+  dealToken: string,
+  enterprise: boolean,
+): string {
+  const params = buildDashboardSearchParams('deals', enterprise);
+  params.set('join_deal', dealToken.trim());
+  return `/dashboard?${params.toString()}`;
+}
 
 export function buildDashboardSearchParams(
   tab: DashboardTabId,
@@ -178,5 +188,39 @@ export function consumePostLoginRedirect(fallback = '/dashboard'): string {
     return safeAppRedirect(stored, fallback);
   } catch {
     return fallback;
+  }
+}
+
+const POST_WALLET_REDIRECT_KEY = 'arcusx_post_wallet_redirect';
+
+/** Destino tras registrar wallet de cobro (deals, ofertas, join deal, etc.). */
+export function persistPostWalletRedirect(path: string): void {
+  const safe = safeAppRedirect(path, '');
+  if (!safe) return;
+  try {
+    sessionStorage.setItem(POST_WALLET_REDIRECT_KEY, safe);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function peekPostWalletRedirect(): string | null {
+  try {
+    const stored = sessionStorage.getItem(POST_WALLET_REDIRECT_KEY);
+    const safe = safeAppRedirect(stored, '');
+    return safe || null;
+  } catch {
+    return null;
+  }
+}
+
+export function consumePostWalletRedirect(): string | null {
+  try {
+    const stored = sessionStorage.getItem(POST_WALLET_REDIRECT_KEY);
+    sessionStorage.removeItem(POST_WALLET_REDIRECT_KEY);
+    const safe = safeAppRedirect(stored, '');
+    return safe || null;
+  } catch {
+    return null;
   }
 }

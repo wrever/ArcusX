@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from '../config/axios';
-import { arcusxApiUrl } from '../config/arcusxApi';
+import { arcusxApiUrl, arcusxApiHeaders } from '../config/arcusxApi';
 import { hasSupabase } from '../config/supabase';
 import {
   fetchTaskMessagesSupabase,
@@ -65,7 +65,6 @@ import {
 } from '../utils/escrowStatus';
 import { taskHasExchangeFiles } from '../utils/taskExchangeFiles';
 import { isStellarTxHash } from '../utils/stellarNetwork';
-import { devWarn } from '../utils/logger';
 import { quoteEscrowFundAmount } from '../utils/escrowFeeQuote';
 import '../css/ConfirmDialog.css';
 
@@ -208,14 +207,7 @@ const DisputeStatusNotificationComponent = ({
 
     if (loadingEscrowInfo) {
         return (
-            <div style={{
-                padding: '15px',
-                marginBottom: '15px',
-                backgroundColor: '#fff3cd',
-                border: '1px solid #ffc107',
-                borderRadius: '5px',
-                color: '#856404'
-            }}>
+            <div className="arcusx-alert arcusx-alert--warning" style={{ marginBottom: '15px' }}>
                 <strong> {t('supervise.escrow.dispute')}</strong>
                 <p style={{ margin: '5px 0 0 0' }}>
                     {t('supervise.dispute.verifying')}
@@ -233,14 +225,10 @@ const DisputeStatusNotificationComponent = ({
     }
 
     return (
-        <div style={{
-            padding: '15px',
-            marginBottom: '15px',
-            backgroundColor: isRefunded ? '#d4edda' : '#fff3cd',
-            border: `1px solid ${isRefunded ? '#28a745' : '#ffc107'}`,
-            borderRadius: '5px',
-            color: isRefunded ? '#155724' : '#856404'
-        }}>
+        <div
+            className={`arcusx-alert ${isRefunded ? 'arcusx-alert--success' : 'arcusx-alert--warning'}`}
+            style={{ marginBottom: '15px' }}
+        >
             <strong>{isRefunded ? '' : ''} {t('supervise.escrow.dispute')}</strong>
             <p style={{ margin: '5px 0 0 0' }}>
                 {isRefunded 
@@ -1205,82 +1193,52 @@ const SuperviseTask = () => {
         }
     };
 
+    const handlePersistTaskRelease = async (payload: {
+        releaseTxHash?: string;
+        rating?: number;
+        taskId?: number;
+        workerId?: number;
+    }): Promise<{ success: boolean; error?: string }> => {
+        try {
+            const response = await fetch(arcusxApiUrl('complete_task'), {
+                method: 'POST',
+                headers: arcusxApiHeaders(),
+                body: JSON.stringify({
+                    task_id: payload.taskId ?? parseInt(taskId!, 10),
+                    action: 'accept',
+                    escrow_completed: true,
+                    tx_hash: payload.releaseTxHash ?? null,
+                    rating: payload.rating,
+                    rated_user_id: payload.workerId,
+                }),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || data?.success === false) {
+                return {
+                    success: false,
+                    error: data?.message || 'Error al actualizar estado en BD',
+                };
+            }
+            return { success: true };
+        } catch (err: unknown) {
+            return {
+                success: false,
+                error: err instanceof Error ? err.message : 'Error al actualizar estado en BD',
+            };
+        }
+    };
+
     const handleCompleteTaskPopupComplete = async (payload?: TaskCompletionPayload) => {
         const releaseTxHash = payload?.releaseTxHash;
 
-        // Actualizar BD después de approve + release confirmados on-chain
         try {
-            const token = localStorage.getItem('token');
-
-            // Verificar que el escrow esté completado
-            let escrowCompleted = false;
-            let attempts = 0;
-            const maxAttempts = 12;
-            
-            while (!escrowCompleted && attempts < maxAttempts) {
-                try {
-                    await new Promise(resolve => setTimeout(resolve, 2000)); // Aumentar a 2 segundos para reducir peticiones
-                    // Usar función optimizada con cache
-                    const escrow = await getEscrowDataOptimized(true); // Force refresh para verificar estado actual
-                    
-                    if (escrow) {
-                        const balance = parseFloat(escrow.balance || '0');
-                        
-                        if (balance === 0 || escrow.status === 'released' || escrow.status === 'completed') {
-                            escrowCompleted = true;
-                        }
-                    }
-                } catch (err) {
-                    // Error al verificar escrow, continuar
-                }
-                attempts++;
-            }
-
-            const response = await axios.post(`${arcusxApiUrl('complete_task')}`, {
-                task_id: parseInt(taskId!, 10),
-                action: 'accept',
-                escrow_completed: true,
-                tx_hash: releaseTxHash ?? null,
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (!response.data.success) {
-                throw new Error(response.data.message || 'Error al actualizar estado en BD');
-            }
-
-            // Tras approve + release + complete_task: persistir rating automáticamente
-            if (
-                payload?.rating &&
-                payload.rating > 0 &&
-                payload.taskId &&
-                payload.workerId
-            ) {
-                try {
-                    const { createRating } = await import('../services/ratingService');
-                    await createRating({
-                        task_id: payload.taskId,
-                        rated_user_id: payload.workerId,
-                        rating: payload.rating,
-                    });
-                } catch (err: unknown) {
-                    const message = String(err instanceof Error ? err.message : err);
-                    if (!/ya calificaste|ya existe una valoraci[oó]n/i.test(message)) {
-                        devWarn('create_rating post-release falló:', message);
-                    }
-                }
-            }
-
-            // Actualizar estado local
             const completedAt = new Date().toISOString();
             const scheduledDeletionAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
             setTask(prev => prev ? {
                 ...prev,
                 client_accepted_completion: 1,
                 worker_accepted_completion: prev.worker_accepted_completion || 1,
-                status: response.data.status || 'completed',
+                status: 'completed',
                 escrow_status: 'completed',
                 escrow_completed_at: completedAt,
                 completed_at: completedAt,
@@ -3586,6 +3544,7 @@ const SuperviseTask = () => {
                     workerName={task.worker_username}
                     onApproveMilestone={handleApproveMilestone}
                     onReleaseFunds={handleReleaseFunds}
+                    onPersistRelease={handlePersistTaskRelease}
                     onVerifyMilestone={handleVerifyMilestone}
                 />
             )}

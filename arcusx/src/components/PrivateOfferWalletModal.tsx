@@ -1,20 +1,24 @@
 import { useNavigate } from 'react-router-dom';
 import { FaWallet, FaTimes } from 'react-icons/fa';
 import { useI18n } from '../i18n/I18nProvider';
+import { persistPostWalletRedirect } from '../config/dashboardTabs';
 import '../css/PrivateOfferWalletModal.css';
 
 type Props = {
   open: boolean;
   onClose: () => void;
+  /** Ruta interna a la que volver tras guardar la wallet (ej. /deals/join/…). */
+  returnPath?: string;
 };
 
-const PrivateOfferWalletModal = ({ open, onClose }: Props) => {
+const PrivateOfferWalletModal = ({ open, onClose, returnPath }: Props) => {
   const { t } = useI18n();
   const navigate = useNavigate();
 
   if (!open) return null;
 
   const goRegister = () => {
+    if (returnPath) persistPostWalletRedirect(returnPath);
     onClose();
     navigate('/dashboard/settings/profile#private-payout-wallet');
   };

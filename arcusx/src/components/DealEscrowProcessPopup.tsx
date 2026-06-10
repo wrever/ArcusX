@@ -274,8 +274,8 @@ const DealEscrowProcessPopup: React.FC<DealEscrowProcessPopupProps> = ({
 
   const getStepIcon = (step: ProcessStep) => {
     if (step.status === 'in_progress') return <FaSpinner className="animate-spin" />;
-    if (step.status === 'completed') return <FaCheckCircle className="text-green-500" />;
-    if (step.status === 'error') return <FaTimes className="text-red-500" />;
+    if (step.status === 'completed') return <FaCheckCircle className="icon-success" />;
+    if (step.status === 'error') return <FaTimes className="icon-error" />;
     return step.icon;
   };
 
@@ -378,14 +378,14 @@ const DealEscrowProcessPopup: React.FC<DealEscrowProcessPopupProps> = ({
       </div>
 
       {showSuccess && (
-        <div className="escrow-process-popup" style={{ zIndex: 10001 }}>
-          <div className="escrow-process-content" style={{ maxWidth: 480, margin: 'auto', textAlign: 'center' }}>
-            <FaCheckCircle style={{ fontSize: 48, color: '#10dd88', marginBottom: 16 }} />
-            <h3>{t('deals.escrow.success.title')}</h3>
-            <p>{t('deals.escrow.success.description')}</p>
+        <div className="complete-popup-success-overlay">
+          <div className="complete-popup-success-card">
+            <FaCheckCircle className="icon-success" style={{ fontSize: 48, marginBottom: 16 }} />
+            <h3 className="complete-popup-success-title">{t('deals.escrow.success.title')}</h3>
+            <p className="complete-popup-success-lead">{t('deals.escrow.success.description')}</p>
             <button
               type="button"
-              className="escrow-step-button"
+              className="complete-popup-btn-primary"
               style={{ marginTop: 24 }}
               onClick={() => {
                 setShowSuccess(false);

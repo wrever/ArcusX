@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { FaArrowLeft, FaHandshake } from 'react-icons/fa';
 import { useI18n } from '../i18n/I18nProvider';
 import { useWallet } from '../hooks/useWallet';
+import { usePayoutWallet } from '../hooks/usePayoutWallet';
+import PrivateOfferWalletModal from '../components/PrivateOfferWalletModal';
 import { usePlatformFee } from '../hooks/usePlatformFee';
 import { DEAL_TEMPLATES, getDealTemplate, type DealTemplateId } from '../constants/dealTemplates';
 import { createDeal, getDealByToken } from '../services/dealsService';
@@ -16,6 +18,9 @@ const STEPS = ['template', 'info', 'payment', 'review'] as const;
 const DealWizardPage = () => {
   const { t } = useI18n();
   const { address, isConnected, connectWallet } = useWallet();
+  const { registered: payoutRegistered, address: payoutAddress, refresh: refreshPayoutWallet } =
+    usePayoutWallet();
+  const [showWalletGate, setShowWalletGate] = useState(false);
   const { platformFee, loading: feeLoading } = usePlatformFee();
   const [step, setStep] = useState(0);
   const [templateId, setTemplateId] = useState<DealTemplateId>('peer_car_sale');
@@ -40,6 +45,12 @@ const DealWizardPage = () => {
     setIReceivePayment(tpl.defaultFunderRole === 'counterparty');
   }, [templateId, tpl.defaultFunderRole]);
 
+  useEffect(() => {
+    void refreshPayoutWallet().then(({ registered }) => {
+      if (!registered) setShowWalletGate(true);
+    });
+  }, [refreshPayoutWallet]);
+
   const netAmount = parseFloat(amount) || 0;
   const dealQuote = netAmount > 0 ? quoteEscrowCommission(netAmount, platformFee) : null;
   const clientTotal = dealQuote?.fundAmount ?? 0;
@@ -49,7 +60,11 @@ const DealWizardPage = () => {
 
   const handleCreate = async () => {
     setError('');
-    if (!isConnected || !address) {
+    if (!payoutRegistered || !payoutAddress) {
+      setShowWalletGate(true);
+      return;
+    }
+    if (!iReceivePayment && (!isConnected || !address)) {
       setError(t('deals.error.wallet'));
       return;
     }
@@ -61,15 +76,17 @@ const DealWizardPage = () => {
     setLoading(true);
     try {
       const funderRole = iReceivePayment ? 'counterparty' : 'initiator';
+      const receiveWallet = payoutAddress;
+      const payerWallet = address ?? receiveWallet;
 
       const res = await createDeal({
         template_id: templateId,
         title: title.trim(),
         description: description.trim(),
         amount_usdc: amt,
-        initiator_wallet: address,
-        release_signer_wallet: address,
-        beneficiary_wallet: address,
+        initiator_wallet: iReceivePayment ? receiveWallet : payerWallet,
+        release_signer_wallet: iReceivePayment ? receiveWallet : payerWallet,
+        beneficiary_wallet: iReceivePayment ? receiveWallet : payerWallet,
         funder_role: funderRole,
       });
       const token = res.deal_token as string;
@@ -98,9 +115,21 @@ const DealWizardPage = () => {
     return () => window.clearInterval(id);
   }, [createdToken, iReceivePayment]);
 
+  const walletGateModal = (
+    <PrivateOfferWalletModal
+      open={showWalletGate}
+      returnPath="/deals/new"
+      onClose={() => {
+        setShowWalletGate(false);
+        void refreshPayoutWallet();
+      }}
+    />
+  );
+
   if (createdToken) {
     const commerce = iReceivePayment;
     return (
+      <>
       <div className="deals-page">
         <h1><FaHandshake /> {t('deals.wizard.doneTitle')}</h1>
         <p className="deals-lead">{commerce ? t('deals.wizard.doneLeadCommerce') : t('deals.wizard.doneLead')}</p>
@@ -135,10 +164,13 @@ const DealWizardPage = () => {
         {error && <p className="deals-error" role="alert">{error}</p>}
         <p className="deals-disclaimer">{t('deals.disclaimer')}</p>
       </div>
+      {walletGateModal}
+      </>
     );
   }
 
   return (
+    <>
     <div className="deals-page">
       <Link to="/dashboard?tab=deals" className="deals-btn secondary" style={{ marginBottom: '1rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
         <FaArrowLeft /> {t('deals.back')}
@@ -270,6 +302,8 @@ const DealWizardPage = () => {
       </div>
       <p className="deals-disclaimer">{t('deals.disclaimer')}</p>
     </div>
+    {walletGateModal}
+    </>
   );
 };
 
