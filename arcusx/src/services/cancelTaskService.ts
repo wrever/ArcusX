@@ -3,8 +3,8 @@
  * Servicio para cancelación de tareas y reembolsos
  */
 
-import axios from 'axios';
-import { API_URL } from '../config/database';
+import axios from '../config/axios';
+import { arcusxApiUrl } from '../config/arcusxApi';
 
 export interface CancellationCheckResult {
   allowed: boolean;
@@ -44,18 +44,8 @@ export async function checkCancellationAllowed(
   taskId: number
 ): Promise<CancellationCheckResult> {
   try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('No hay token de autenticación');
-    }
-
     const response = await axios.get(
-      `${API_URL}/auth/check_cancellation_allowed.php?task_id=${taskId}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      }
+      arcusxApiUrl('check_cancellation_allowed', { task_id: taskId })
     );
 
     if (response.data.success) {
@@ -78,38 +68,27 @@ export async function cancelTask(
   reason?: string
 ): Promise<CancelTaskResult> {
   try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('No hay token de autenticación');
-    }
-
     const response = await axios.post(
-      `${API_URL}/auth/cancel_task.php`,
+      `${arcusxApiUrl('cancel_task')}`,
       {
         task_id: taskId,
         reason: reason || null
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
       }
     );
 
-    if (response.data.success) {
-      // Normalizar campos: convertir snake_case a camelCase si es necesario
+    const data = response.data;
+    if (data.success && data.allowed !== false) {
       return {
-        ...response.data,
-        requiresSignature: response.data.requiresSignature ?? response.data.requires_signature ?? false,
-        refundAmount: response.data.refundAmount ?? response.data.refund_amount ?? 0,
-        escrowId: response.data.escrowId ?? response.data.escrow_id,
-        escrowStatus: response.data.escrowStatus ?? response.data.escrow_status,
-        requiresDispute: response.data.requiresDispute ?? response.data.requires_dispute ?? false
+        ...data,
+        allowed: data.allowed ?? true,
+        requiresSignature: data.requiresSignature ?? data.requires_signature ?? false,
+        refundAmount: data.refundAmount ?? data.refund_amount ?? 0,
+        escrowId: data.escrowId ?? data.escrow_id,
+        escrowStatus: data.escrowStatus ?? data.escrow_status,
+        requiresDispute: data.requiresDispute ?? data.requires_dispute ?? false,
       };
-    } else {
-      throw new Error(response.data.message || 'Error al cancelar tarea');
     }
+    throw new Error(data.message || 'Error al cancelar tarea');
   } catch (error: any) {
     const errorMessage = error.response?.data?.message || error.message || 'Error desconocido';
     throw new Error(errorMessage);
@@ -125,23 +104,12 @@ export async function confirmCancellation(
   reason?: string
 ): Promise<CancelTaskResult> {
   try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('No hay token de autenticación');
-    }
-
     const response = await axios.post(
-      `${API_URL}/auth/cancel_task.php`,
+      `${arcusxApiUrl('cancel_task')}`,
       {
         task_id: taskId,
         tx_hash: txHash,
         reason: reason || null
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
       }
     );
 

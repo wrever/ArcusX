@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/escrow-reconcile",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/email-worker",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}

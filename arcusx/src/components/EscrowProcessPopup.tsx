@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { FaWallet, FaFileContract, FaCoins, FaCheckCircle, FaSpinner, FaTimes, FaHome, FaDollarSign } from 'react-icons/fa';
 import { usePlatformFee } from '../hooks/usePlatformFee';
 import { useI18n } from '../i18n/I18nProvider';
+import { quoteEscrowCommission } from '../utils/escrowFeeQuote';
+import EscrowFeeBreakdown from './EscrowFeeBreakdown';
+import '../css/ProposalReview.css';
 
 interface ProcessStep {
   id: string;
@@ -27,6 +30,9 @@ interface EscrowProcessPopupProps {
   onFundEscrow: (escrowId: string) => Promise<{ success: boolean; txHash?: string; error?: string }>;
   onSelectWorker: (escrowId: string, txHash: string) => Promise<{ success: boolean; error?: string }>;
   onConnectWallet: () => Promise<{ success: boolean; error?: string }>;
+  /** Reanudar flujo con contrato ya desplegado (pasos connect/create completados) */
+  initialEscrowId?: string | null;
+  resumeFromFundStep?: boolean;
 }
 
 const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
@@ -41,26 +47,27 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
   onCreateEscrow,
   onFundEscrow,
   onSelectWorker,
-  onConnectWallet
+  onConnectWallet,
+  initialEscrowId = null,
+  resumeFromFundStep = false,
 }) => {
   const navigate = useNavigate();
   const { t } = useI18n();
   // Obtener platform fee para calcular el total con comisión
   const { platformFee } = usePlatformFee();
   
-  // Calcular montos usando la fórmula correcta
-  // Trustless Work calcula la comisión sobre el amount del escrow al liberar
-  // Para que el trabajador reciba exactamente workerAmount:
-  // escrowAmount = workerAmount / (1 - platformFee)
-  // commission = escrowAmount - workerAmount
   const workerAmount = parseFloat(taskPrice) || 0;
-  const escrowAmount = workerAmount > 0 ? workerAmount / (1 - platformFee) : 0;
-  const commission = escrowAmount - workerAmount;
-  const platformFeePercent = (platformFee * 100).toFixed(2);
+  const quote = workerAmount > 0 ? quoteEscrowCommission(workerAmount, platformFee) : null;
+  const escrowAmount = quote?.fundAmount ?? 0;
+  const commission = quote?.totalCommission ?? 0;
+  const platformCommission = quote?.platformCommission ?? 0;
+  const protocolCommission = quote?.protocolCommission ?? 0;
   
   // Formatear montos con 7 decimales (USDC)
   const formattedWorkerAmount = workerAmount.toFixed(7);
   const formattedCommission = commission.toFixed(7);
+  const formattedPlatformCommission = platformCommission.toFixed(7);
+  const formattedProtocolCommission = protocolCommission.toFixed(7);
   const formattedTotal = escrowAmount.toFixed(7);
   
   const [currentStep, setCurrentStep] = useState(0);
@@ -100,6 +107,7 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
   ]);
 
   const [escrowId, setEscrowId] = useState<string | null>(null);
+  const [stepError, setStepError] = useState<string | null>(null);
   const [hasRedirected, setHasRedirected] = useState(false);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
@@ -118,7 +126,12 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
         // Si el paso ya está completado o en progreso, NO cambiar el status
         return {
           ...step,
-          description: t('escrow.step.fund.description').replace('{{total}}', formattedTotal).replace('{{commission}}', formattedCommission)
+          description:
+            t('escrow.step.fund.description')
+              .replace('{{total}}', formattedTotal)
+              .replace('{{commission}}', formattedCommission) +
+            ' ' +
+            t('escrow.fund.freighter.hint').replace('{{total}}', formattedTotal),
           // NO tocar step.status - preservar el progreso
         };
       }
@@ -126,13 +139,31 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
     }));
   }, [formattedTotal, formattedCommission, t]);
 
-  // Verificar cuando todos los 4 pasos estén completados y mostrar popup de éxito
+  // Reanudar en paso de fondeo si ya existe contrato sin fondos
   useEffect(() => {
-    const allStepsCompleted = steps.every(step => step.status === 'completed');
-    
-    if (allStepsCompleted && !hasRedirected && isOpen) {
+    if (!isOpen || !resumeFromFundStep || !initialEscrowId) return;
+    setEscrowId(initialEscrowId);
+    setCurrentStep(2);
+    setSteps((prev) =>
+      prev.map((step, index) => {
+        if (index < 2) return { ...step, status: 'completed' as const };
+        if (step.id === 'fund') return { ...step, status: 'pending' as const };
+        return { ...step, status: 'pending' as const };
+      }),
+    );
+    setStepError(null);
+    setShowSuccessPopup(false);
+    setHasRedirected(false);
+  }, [isOpen, resumeFromFundStep, initialEscrowId]);
+
+  // Éxito solo si el paso de fondeo quedó completado (fondos bloqueados + trabajador asignado)
+  useEffect(() => {
+    const fundStep = steps.find((s) => s.id === 'fund');
+    const allStepsCompleted = steps.every((step) => step.status === 'completed');
+    const fundCompleted = fundStep?.status === 'completed';
+
+    if (allStepsCompleted && fundCompleted && !hasRedirected && isOpen) {
       setHasRedirected(true);
-      // Mostrar popup de éxito en lugar de redirigir automáticamente
       setShowSuccessPopup(true);
     }
   }, [steps, hasRedirected, isOpen]);
@@ -145,18 +176,24 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
   };
 
   const handleGoToSupervise = () => {
+    const fundStep = steps.find((s) => s.id === 'fund');
+    if (fundStep?.status !== 'completed') {
+      setStepError(t('proposals.error.superviseRequiresFunding'));
+      setShowSuccessPopup(false);
+      return;
+    }
     setShowSuccessPopup(false);
     onClose();
     if (taskId && acceptedApplicantId) {
       navigate(`/supervise-task/${taskId}/${acceptedApplicantId}`);
     } else {
-      // Si no hay taskId o acceptedApplicantId, ir al dashboard
       onComplete();
     }
   };
 
   const handleStepAction = async (stepIndex: number) => {
     const step = steps[stepIndex];
+    setStepError(null);
     
     if (step.id === 'connect') {
       updateStepStatus(stepIndex, 'in_progress');
@@ -182,50 +219,65 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
           updateStepStatus(stepIndex, 'completed');
           setCurrentStep(2);
         } else {
+          setStepError(result.error || t('proposals.error.createEscrow'));
           updateStepStatus(stepIndex, 'error');
         }
       } catch (error) {
+        setStepError(error instanceof Error ? error.message : t('proposals.error.createEscrow'));
         updateStepStatus(stepIndex, 'error');
       }
     }
     
     else if (step.id === 'fund') {
-      if (!escrowId) return;
+      if (!escrowId) {
+        setStepError(t('escrow.error.noContractBeforeFund'));
+        updateStepStatus(stepIndex, 'error');
+        return;
+      }
       
       updateStepStatus(stepIndex, 'in_progress');
       try {
         const result = await onFundEscrow(escrowId);
-        if (result.success && result.txHash) {
+        const fundTx = result.txHash?.trim();
+        if (result.success && fundTx) {
           updateStepStatus(stepIndex, 'completed');
-          
-          // Inmediatamente ejecutar la selección del trabajador en la base de datos
-          updateStepStatus(3, 'in_progress'); // Marcar como en progreso
-          
+
+          updateStepStatus(3, 'in_progress');
+
           try {
-            const selectResult = await onSelectWorker(escrowId, result.txHash);
+            const selectResult = await onSelectWorker(escrowId, fundTx);
             if (selectResult.success) {
               updateStepStatus(3, 'completed');
-              setCurrentStep(3); // Avanzar al último paso (índice 3, que es el paso 4)
-              // El useEffect se encargará de redirigir cuando todos los pasos estén completados
+              setCurrentStep(3);
             } else {
+              updateStepStatus(stepIndex, 'error');
               updateStepStatus(3, 'error');
+              setStepError(selectResult.error || t('proposals.error.selectWorker'));
             }
           } catch (selectError) {
+            updateStepStatus(stepIndex, 'error');
             updateStepStatus(3, 'error');
+            setStepError(
+              selectError instanceof Error ? selectError.message : t('proposals.error.selectWorker'),
+            );
           }
         } else {
+          setStepError(result.error || t('proposals.error.fundEscrow'));
           updateStepStatus(stepIndex, 'error');
         }
       } catch (error) {
+        setStepError(error instanceof Error ? error.message : t('proposals.error.fundEscrowGeneric'));
         updateStepStatus(stepIndex, 'error');
       }
     }
     
     else if (step.id === 'complete') {
-      // El trabajador ya fue seleccionado automáticamente en el paso anterior
-      // Solo ejecutar la función de completar el proceso
+      const fundStep = steps.find((s) => s.id === 'fund');
+      if (fundStep?.status !== 'completed') {
+        setStepError(t('proposals.error.superviseRequiresFunding'));
+        return;
+      }
       updateStepStatus(stepIndex, 'completed');
-      // El useEffect se encargará de redirigir cuando todos los pasos estén completados
     }
   };
 
@@ -234,10 +286,10 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
       return <FaSpinner className="animate-spin" />;
     }
     if (step.status === 'completed') {
-      return <FaCheckCircle className="text-green-500" />;
+      return <FaCheckCircle className="icon-success" />;
     }
     if (step.status === 'error') {
-      return <FaTimes className="text-red-500" />;
+      return <FaTimes className="icon-error" />;
     }
     return step.icon;
   };
@@ -273,6 +325,12 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
             </p>
           </div>
         </div>
+
+        {stepError && (
+          <div className="escrow-step-error-banner" role="alert">
+            {stepError}
+          </div>
+        )}
 
         {/* Steps */}
         <div className="escrow-steps">
@@ -372,12 +430,13 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
                 <span>{t('escrow.popup.workerPayment')}</span>
                 <strong>{formattedWorkerAmount} USDC</strong>
               </div>
-              <div className="escrow-breakdown-row">
-                <span>
-                  {t('escrow.popup.commission')} ({platformFeePercent}%):
-                </span>
-                <strong>{formattedCommission} USDC</strong>
-              </div>
+              <EscrowFeeBreakdown
+                layout="escrow-rows"
+                platformFee={platformFee}
+                totalUsdc={formattedCommission}
+                platformUsdc={formattedPlatformCommission}
+                protocolUsdc={formattedProtocolCommission}
+              />
             </div>
             <div className="escrow-breakdown-total">
               <div className="escrow-breakdown-total-row">
@@ -394,139 +453,28 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
 
       {/* Popup de Éxito */}
       {showSuccessPopup && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'linear-gradient(135deg, rgba(7, 35, 60, 0.95) 0%, rgba(10, 45, 74, 0.95) 100%)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 10001
-        }}>
-          <div style={{
-            background: 'linear-gradient(135deg, #07233c 0%, #0a2d4a 100%)',
-            borderRadius: '20px',
-            padding: '40px',
-            maxWidth: '550px',
-            width: '90%',
-            textAlign: 'center',
-            border: '1px solid rgba(40, 192, 240, 0.3)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
-            position: 'relative',
-            overflow: 'hidden'
-          }}>
-            {/* Borde superior con gradiente Arcus X */}
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '4px',
-              background: 'linear-gradient(90deg, #10dd88, #0ab86a)'
-            }} />
-            
-            <div style={{
-              fontSize: '72px',
-              marginBottom: '24px',
-              filter: 'drop-shadow(0 4px 8px rgba(40, 192, 240, 0.3))'
-            }}>
-              
-            </div>
-            
-            <h3 style={{
-              fontSize: '28px',
-              fontWeight: 'bold',
-              background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              marginBottom: '20px',
-              marginTop: 0
-            }}>
-              {t('escrow.success.full.title')}
-            </h3>
-            
-            <div style={{
-              marginBottom: '30px',
-              color: 'rgba(255, 255, 255, 0.9)',
-              lineHeight: '1.6'
-            }}>
-              <p style={{ 
-                fontSize: '16px', 
-                marginBottom: '20px', 
-                fontWeight: '500',
-                color: 'rgba(255, 255, 255, 0.8)'
-              }}>
-                {t('escrow.success.subtitle')}
-              </p>
-              
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(40, 192, 240, 0.1) 0%, rgba(17, 128, 179, 0.1) 100%)',
-                padding: '20px',
-                borderRadius: '12px',
-                marginTop: '15px',
-                textAlign: 'left',
-                border: '1px solid rgba(40, 192, 240, 0.2)'
-              }}>
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '10px',
-                  marginBottom: '12px',
-                  paddingBottom: '12px',
-                  borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
-                }}>
-                  <span style={{ fontSize: '18px' }}></span>
-                  <strong style={{ fontSize: '15px', color: '#fff' }}>
-                    {t('escrow.success.contract.created')}
-                  </strong>
+        <div className="complete-popup-success-overlay">
+          <div className="complete-popup-success-card">
+            <h3 className="complete-popup-success-title">{t('escrow.success.full.title')}</h3>
+
+            <div className="complete-popup-success-body">
+              <p className="complete-popup-success-lead">{t('escrow.success.subtitle')}</p>
+
+              <div className="complete-popup-success-summary">
+                <div className="complete-popup-success-summary-row">
+                  <strong>{t('escrow.success.contract.created')}</strong>
                 </div>
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '10px',
-                  marginBottom: '12px',
-                  paddingBottom: '12px',
-                  borderBottom: '1px solid rgba(40, 192, 240, 0.2)'
-                }}>
-                  <span style={{ fontSize: '18px' }}></span>
-                  <strong style={{ fontSize: '15px', color: '#fff' }}>
-                    {t('escrow.success.funds.sent')}
-                  </strong>
+                <div className="complete-popup-success-summary-row">
+                  <strong>{t('escrow.success.funds.sent')}</strong>
                 </div>
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '10px',
-                  marginBottom: '12px'
-                }}>
-                  <span style={{ fontSize: '18px' }}></span>
-                  <strong style={{ fontSize: '15px', color: '#fff' }}>
-                    {t('escrow.success.worker.selected')}
-                  </strong>
+                <div className="complete-popup-success-summary-row">
+                  <strong>{t('escrow.success.worker.selected')}</strong>
                 </div>
                 {escrowId && (
-                  <div style={{ 
-                    marginTop: '16px',
-                    paddingTop: '16px',
-                    borderTop: '1px solid rgba(40, 192, 240, 0.2)'
-                  }}>
-                    <p style={{ 
-                      fontSize: '13px', 
-                      color: 'rgba(255, 255, 255, 0.6)',
-                      margin: 0
-                    }}>
-                      <strong style={{ color: '#10dd88' }}>{t('escrow.success.contract')}:</strong>{' '}
-                      <code style={{ 
-                        color: '#10dd88',
-                        background: 'rgba(40, 192, 240, 0.1)',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        fontSize: '12px'
-                      }}>
+                  <div className="complete-popup-success-tx">
+                    <p className="dispute-muted-text" style={{ margin: 0, fontSize: '0.8125rem' }}>
+                      <strong className="dispute-accent-text">{t('escrow.success.contract')}:</strong>{' '}
+                      <code className="arcusx-code-chip">
                         {escrowId.slice(0, 8)}...{escrowId.slice(-8)}
                       </code>
                     </p>
@@ -534,59 +482,12 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
                 )}
               </div>
             </div>
-            
-            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <button 
-                onClick={handleGoToSupervise}
-                style={{
-                  background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
-                  color: '#fff',
-                  border: 'none',
-                  padding: '14px 32px',
-                  borderRadius: '10px',
-                  fontSize: '16px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  minWidth: '200px',
-                  boxShadow: '0 4px 12px rgba(40, 192, 240, 0.3)'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.background = 'linear-gradient(90deg, #0ab86a, #10dd88)';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(40, 192, 240, 0.4)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.background = 'linear-gradient(90deg, #10dd88, #0ab86a)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(40, 192, 240, 0.3)';
-                }}
-              >
+
+            <div className="complete-popup-success-actions">
+              <button type="button" onClick={handleGoToSupervise} className="complete-popup-btn-primary">
                 {t('escrow.supervise.task')}
               </button>
-              <button 
-                onClick={handleSuccessPopupClose}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  color: '#fff',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  padding: '14px 32px',
-                  borderRadius: '10px',
-                  fontSize: '16px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  minWidth: '200px'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
+              <button type="button" onClick={handleSuccessPopupClose} className="complete-popup-btn-secondary">
                 <FaHome style={{ marginRight: '8px' }} /> {t('proposals.dashboard.button')}
               </button>
             </div>

@@ -1,0 +1,103 @@
+/**
+ * Week 4 — critical flows: mobile touch targets, overflow containment.
+ * Scope: dashboard, proposals, supervise, apply, create-task, profile, wallet popup, deals.
+ */
+
+/* Cadenas largas sin espacios (URLs, spam, hashes) dentro de tarjetas */
+.apply-task-container .task-details-card,
+.apply-task-container .task-header h2,
+.proposal-review-container .task-description,
+.supervise-task-container .task-details-section,
+.create-task-container .form-section,
+.private-offers-intro-note,
+.user-tasks-list .user-task-item,
+.deals-page,
+.deals-form-card {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.task-subtitle,
+.task-description-full,
+.apply-task-container .task-header h2,
+.proposal-review-container .task-description,
+.supervise-task-container .task-details-section p,
+.create-task-container textarea,
+.private-offers-intro-note,
+.deals-public-desc,
+.deals-form-card__title {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+@media (max-width: 768px) {
+  .dashboard-container,
+  .proposal-review-container,
+  .supervise-task-container,
+  .apply-task-container,
+  .create-task-container,
+  .user-profile-container {
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+  }
+
+  .dashboard-container .task-button,
+  .dashboard-container .btn-primary,
+  .dashboard-container .btn-secondary,
+  .proposal-review-container .action-button,
+  .proposal-review-container .confirmation-actions .action-button,
+  .supervise-task-container button,
+  .apply-task-container button,
+  .create-task-container button:not(.popup-button):not(.popup-close),
+  .user-profile-container .hire-banner-cta,
+  .user-profile-container .back-button,
+  .user-profile-container .edit-profile-button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .proposal-review-container .task-meta,
+  .proposal-review-container .applicant-info,
+  .supervise-task-container .task-meta-grid {
+    flex-wrap: wrap;
+    word-break: break-word;
+  }
+
+  .wallet-connect-popup,
+  .escrow-process-content {
+    max-width: calc(100vw - 2rem);
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-container {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .stats-chart {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .placeholder-chart {
+    min-width: 280px;
+  }
+
+  .proposal-review-container .popup,
+  .escrow-process-popup .escrow-process-content {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .supervise-task-container .chat-messages,
+  .supervise-task-container .message-input-row {
+    max-width: 100%;
+  }
+}

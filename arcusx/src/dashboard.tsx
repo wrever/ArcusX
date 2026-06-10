@@ -1,26 +1,36 @@
-import { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { FaUser, FaTasks, FaWallet, FaChartLine, FaBell, FaCog, FaSignOutAlt, FaPlus, FaTimes, FaExclamationTriangle, FaUsers, FaCheckCircle, FaGlobe, FaLock, FaStar, FaGraduationCap, FaExchangeAlt, FaQuestionCircle } from 'react-icons/fa';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { FaUser, FaTasks, FaWallet, FaChartLine, FaBell, FaCog, FaSignOutAlt, FaPlus, FaTimes, FaExclamationTriangle, FaUsers, FaCheckCircle, FaGlobe, FaLock, FaStar, FaGraduationCap, FaExchangeAlt, FaQuestionCircle, FaEnvelope, FaHandshake, FaUserShield } from 'react-icons/fa';
 import ThemeToggle from './components/ThemeToggle';
 import LanguageFab from './components/LanguageFab';
 import { FiMenu } from 'react-icons/fi';
 import './css/dashboard.css';
+import './css/dashboard-light.css';
 import './css/dashboard.enterprise.css';
 import arcusLogoDark from './images/arcus-logo.png';
 import arcusLogoLight from './images/arcusxlogoclaro.png';
-import axios from 'axios';
-import { API_URL } from './config/database';
+import axios from './config/axios';
+import { arcusxApiUrl } from './config/arcusxApi';
 import { useAuth } from './hooks/useAuth';
 import WalletButton from './components/WalletButton';
 import { useScheduledTaskDeletion } from './hooks/useScheduledTaskDeletion';
+import { useNotificationsRealtime } from './hooks/useNotificationsRealtime';
 import DashboardFooter from './components/DashboardFooter';
 import CreateTask from './components/CreateTask';
-// import PendingNotificationsPopup from './components/PendingNotificationsPopup'; // Popup eliminado
-import { getUserNotifications, Notification, markNotificationAsRead as markNotificationAsReadService } from './services/notificationService';
-import { getUserDisputes, UserDispute } from './services/disputeService';
+import {
+  getUserNotifications,
+  Notification,
+  markNotificationAsRead as markNotificationAsReadService,
+  dismissNotification,
+  isNotificationSessionError,
+} from './services/notificationService';
 import { getUserTransactions, getUserEarningsSummary, Transaction } from './services/transactionService';
 import { getUserProfile, getUserPublicStats } from './services/profileService';
 import type { UserProfile as UserProfileType, UserStatistics } from './types/profile';
+import {
+  canAccessTaskSupervision,
+  clientCanSuperviseAcceptedTask,
+} from './utils/escrowStatus';
 import RatingDisplay from './components/RatingDisplay';
 import { getUserRatingSummary } from './services/ratingService';
 import { useI18n } from './i18n/I18nProvider';
@@ -30,8 +40,40 @@ import TutorialsTab from './components/TutorialsTab';
 import SwapPage from './pages/SwapPage';
 import SupportPage from './pages/SupportPage';
 import { getAvatarUrl } from './utils/avatarUtils';
+import { normalizeDisplayText } from './utils/utf8Mojibake';
 import { useTheme } from './contexts/ThemeContext';
 import { useEnterpriseMode } from './hooks/useEnterpriseMode';
+import { hasSupabase } from './config/supabase';
+import { prepareSupabaseArcusxSession } from './services/arcusxMessagingSupabase';
+import { fetchPrivateOffers, type PrivateOfferTask } from './services/privateOffersService';
+import TaskDeletionNotice from './components/TaskDeletionNotice';
+import SentPrivateOfferCard from './components/SentPrivateOfferCard';
+import { useSentPrivateOffersChainMap } from './hooks/useSentPrivateOffersChainMap';
+import { isPrivateOfferSentToWorker } from './utils/privateOfferChainState';
+import { authService } from './services/authService';
+import {
+  isAdminFromJwt,
+  isPlatformAdmin,
+  syncAdminSessionFromMarketplaceToken,
+} from './utils/platformAdmin';
+import PrivateOfferWalletModal from './components/PrivateOfferWalletModal';
+import PayoutWalletBanner from './components/PayoutWalletBanner';
+import { usePayoutWallet } from './hooks/usePayoutWallet';
+import DashboardDealsPanel from './components/DashboardDealsPanel';
+import SettingsVerificationSection from './components/SettingsVerificationSection';
+import SettingsBadgesCatalog from './components/SettingsBadgesCatalog';
+import './css/SettingsVerificationSection.css';
+import './css/SettingsBadgesCatalog.css';
+import TaskCreatorLine from './components/TaskCreatorLine';
+import {
+  buildDashboardSearchParams,
+  dashboardTabHref,
+  isDashboardTabQuery,
+  isDashboardTabVisible,
+  resolveDashboardTab,
+  shouldNormalizeDashboardTabUrl,
+  type DashboardTabId,
+} from './config/dashboardTabs';
 
 interface UserData {
   id: number;
@@ -50,6 +92,10 @@ interface TaskData {
   difficulty: string;
   category: string;
   creator_username: string; // Nombre del usuario que creó la tarea
+  creator_display_name?: string;
+  creator_verified?: boolean;
+  creator_verified_enterprise?: boolean;
+  creator_verified_individual?: boolean;
   creator_id?: number; // ID del creador
   creator_rating?: number; // Rating promedio del creador
   creator_total_ratings?: number; // Total de ratings del creador
@@ -59,6 +105,44 @@ interface TaskData {
   proposal_count?: number; // Añadir campo para el conteo de propuestas (opcional inicialmente)
   has_accepted_proposal?: boolean; // **Añadido de nuevo**
   accepted_applicant_id?: number | null; // **Añadido de nuevo**
+  escrow_id?: string | null;
+  escrow_status?: string | null;
+  escrow_fund_tx_hash?: string | null;
+  is_private_invite?: boolean;
+  invited_user_id?: number | null;
+  invited_worker_username?: string | null;
+  awaiting_private_worker?: boolean;
+  scheduled_deletion_at?: string | null;
+  cancellation_tx_hash?: string | null;
+  cancellation_requested_at?: string | null;
+  escrow_completed_at?: string | null;
+  escrow_release_tx_hash?: string | null;
+  completed_at?: string | null;
+}
+
+function normalizeTaskForDisplay(task: TaskData): TaskData {
+  return {
+    ...task,
+    title: normalizeDisplayText(task.title),
+    subtitle: normalizeDisplayText(task.subtitle),
+    description: task.description ? normalizeDisplayText(task.description) : task.description,
+    category: task.category ? normalizeDisplayText(task.category) : task.category,
+    difficulty: task.difficulty ? normalizeDisplayText(task.difficulty) : task.difficulty,
+    creator_username: task.creator_username
+      ? normalizeDisplayText(task.creator_username)
+      : task.creator_username,
+    creator_display_name: task.creator_display_name
+      ? normalizeDisplayText(task.creator_display_name)
+      : task.creator_display_name,
+  };
+}
+
+function taskCreatorLabel(task: TaskData): string {
+  return (
+    task.creator_display_name?.trim() ||
+    task.creator_username?.trim() ||
+    ''
+  );
 }
 
 const Dashboard = () => {
@@ -66,7 +150,10 @@ const Dashboard = () => {
   const enterprise = useEnterpriseMode();
   const { theme } = useTheme();
   const arcusLogo = theme === 'light' ? arcusLogoLight : arcusLogoDark;
-  const [activeTab, setActiveTab] = useState(enterprise ? 'manage-tasks' : 'tasks');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<DashboardTabId>(() =>
+    resolveDashboardTab(searchParams.get('tab'), enterprise),
+  );
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [difficultyFilter, setDifficultyFilter] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
@@ -91,19 +178,28 @@ const Dashboard = () => {
   
   // Nuevo estado para tareas completadas
   const [completedTasksCount, setCompletedTasksCount] = useState<number>(0);
-  
-  
-  
+
+  const [privateOffers, setPrivateOffers] = useState<PrivateOfferTask[]>([]);
+  const [loadingPrivateOffers, setLoadingPrivateOffers] = useState(false);
+  const [privateOffersError, setPrivateOffersError] = useState<string>('');
+  const [showPayoutWalletGate, setShowPayoutWalletGate] = useState(false);
+  const {
+    loading: payoutWalletLoading,
+    registered: payoutWalletRegistered,
+    address: payoutWalletAddress,
+    refresh: refreshPayoutWallet,
+  } = usePayoutWallet();
+
   // Estado para notificaciones
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationFilter, setNotificationFilter] = useState('all');
+  const [notificationsActionError, setNotificationsActionError] = useState('');
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const notificationDropdownRef = useRef<HTMLDivElement>(null);
   
   // Estado para disputas
-  const [pendingDisputes, setPendingDisputes] = useState<UserDispute[]>([]);
   
   // Verificar y eliminar tareas programadas automáticamente
   useScheduledTaskDeletion();
@@ -121,6 +217,87 @@ const Dashboard = () => {
   
   const navigate = useNavigate();
   const { logout, user } = useAuth();
+
+  const navigateToDashboardTab = (tab: DashboardTabId, options?: { replace?: boolean }) => {
+    const resolved = resolveDashboardTab(tab, enterprise);
+    if (!isDashboardTabQuery(searchParams, resolved, enterprise)) {
+      setSearchParams(buildDashboardSearchParams(resolved, enterprise, searchParams), {
+        replace: options?.replace ?? false,
+      });
+    }
+    setActiveTab(resolved);
+  };
+
+  useEffect(() => {
+    if (!user?.id || !hasSupabase) return;
+    syncAdminSessionFromMarketplaceToken();
+    void prepareSupabaseArcusxSession(Number(user.id)).catch(() => {
+      /* reintento al abrir notificaciones o chat */
+    });
+  }, [user?.id]);
+
+  const showAdminPanel =
+    isPlatformAdmin(authService.getUser()) ||
+    isAdminFromJwt(authService.getToken());
+
+  useEffect(() => {
+    if (activeTab !== 'private-offers' || !user?.id) return;
+    let cancelled = false;
+    void refreshPayoutWallet().then(({ registered }) => {
+      if (cancelled) return;
+      if (!registered) {
+        setShowPayoutWalletGate(true);
+        setPrivateOffers([]);
+        return;
+      }
+      setLoadingPrivateOffers(true);
+      setPrivateOffersError('');
+      fetchPrivateOffers()
+        .then((rows) => {
+          if (!cancelled) setPrivateOffers(rows);
+        })
+        .catch((err: unknown) => {
+          if (!cancelled) {
+            setPrivateOffersError(err instanceof Error ? err.message : String(err));
+            setPrivateOffers([]);
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setLoadingPrivateOffers(false);
+        });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, user?.id, refreshPayoutWallet]);
+
+  useEffect(() => {
+    if (activeTab !== 'deals' || !user?.id) return;
+    void refreshPayoutWallet().then(({ registered }) => {
+      if (!registered) setShowPayoutWalletGate(true);
+    });
+  }, [activeTab, user?.id, refreshPayoutWallet]);
+
+  useEffect(() => {
+    if (activeTab !== 'private-offers') return;
+    const onFocus = () => {
+      void refreshPayoutWallet().then(({ registered }) => {
+        if (!registered) {
+          setShowPayoutWalletGate(true);
+          setPrivateOffers([]);
+          return;
+        }
+        setShowPayoutWalletGate(false);
+        setLoadingPrivateOffers(true);
+        fetchPrivateOffers()
+          .then(setPrivateOffers)
+          .catch(() => setPrivateOffers([]))
+          .finally(() => setLoadingPrivateOffers(false));
+      });
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [activeTab]);
   
   // Estado para transacciones reales
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -149,25 +326,29 @@ const Dashboard = () => {
   const [userRating, setUserRating] = useState<{ average_rating: number; total_ratings: number } | null>(null);
   const [loadingRating, setLoadingRating] = useState(false);
 
-  // Tabs permitidas por modo (empresas = crear/supervisar + operación)
-  const allowedEnterpriseTabs = [
-    'create-task',
-    'manage-tasks',
-    'freelancers',
-    'swap',
-    'tutorials',
-    'notifications',
-    'settings',
-    'support'
-  ];
-  const showEnterpriseTab = (tab: string) => !enterprise || allowedEnterpriseTabs.includes(tab);
+  const showEnterpriseTab = (tab: DashboardTabId) => isDashboardTabVisible(tab, enterprise);
 
-  // Si cambian condiciones de modo, mantener al usuario en un tab permitido
+  const openPrivateOffersTab = async () => {
+    navigateToDashboardTab('private-offers');
+    const { registered } = await refreshPayoutWallet();
+    if (!registered) setShowPayoutWalletGate(true);
+  };
+
+  /** Sincroniza pestaña desde `?tab=` (atrás/adelante, links externos) */
   useEffect(() => {
-    if (enterprise && !allowedEnterpriseTabs.includes(activeTab)) {
-      setActiveTab('manage-tasks');
+    const joinDeal = searchParams.get('join_deal')?.trim();
+    const raw = searchParams.get('tab');
+    let tab = resolveDashboardTab(raw, enterprise);
+    if (joinDeal && tab !== 'deals' && isDashboardTabVisible('deals', enterprise)) {
+      tab = 'deals';
+      setSearchParams(buildDashboardSearchParams('deals', enterprise, searchParams), { replace: true });
     }
-  }, [enterprise, activeTab]);
+    setActiveTab((prev) => (prev === tab ? prev : tab));
+
+    if (!joinDeal && shouldNormalizeDashboardTabUrl(raw, enterprise)) {
+      setSearchParams(buildDashboardSearchParams(tab, enterprise, searchParams), { replace: true });
+    }
+  }, [searchParams, enterprise, setSearchParams]);
   
   // Las tareas ya vienen filtradas del backend, solo excluir asignadas
   const filteredTasks = fetchedTasks.filter(task => task.status !== 'assigned');
@@ -251,11 +432,12 @@ const Dashboard = () => {
             params.append('sort_by', sortBy);
           }
 
-          const url = `${API_URL}/auth/get_tasks.php${params.toString() ? '?' + params.toString() : ''}`;
-          const response = await axios.get(url);
+          const response = await axios.get(arcusxApiUrl('get_tasks', params));
           
           if (Array.isArray(response.data)) {
-            setFetchedTasks(response.data); // Guardar las tareas en el estado
+            setFetchedTasks(
+              response.data.map((row: TaskData) => normalizeTaskForDisplay(row)),
+            );
           } else {
             setTasksError(t('dashboard.tasks.error.format'));
             setFetchedTasks([]); // Limpiar tareas si el formato es incorrecto
@@ -310,14 +492,15 @@ const Dashboard = () => {
             return;
           }
 
-          const response = await axios.get(`${API_URL}/auth/get_completed_tasks_count.php`, {
+          const response = await axios.get(`${arcusxApiUrl('get_completed_tasks_count')}`, {
             headers: {
               'Authorization': `Bearer ${token}`
             }
           });
           
-          if (response.data && response.data.success) {
-            setCompletedTasksCount(response.data.completed_tasks_count);
+          if (response.data?.success) {
+            const n = response.data.completed_tasks_count ?? response.data.count ?? 0;
+            setCompletedTasksCount(Number(n) || 0);
           }
         } catch (error: any) {
         }
@@ -328,32 +511,72 @@ const Dashboard = () => {
   }, [user?.id]); // Ejecutar este efecto cuando el user.id cambie (es decir, al logearse)
   // -------------------------------------------- //
 
-  // --- Lógica para obtener tareas del usuario desde la API --- //
-  useEffect(() => {
-    if (activeTab === 'manage-tasks' && user?.id) { // Cargar tareas del usuario solo cuando la pestaña 'manage-tasks' está activa y el usuario está logeado
-      const fetchUserTasks = async () => {
-        setLoadingUserTasks(true);
-        setUserTasksError('');
-        try {
-          const response = await axios.get(`${API_URL}/auth/get_user_tasks.php?user_id=${user.id}`);
-          if (Array.isArray(response.data)) {
-            setUserTasks(response.data); // Guardar las tareas del usuario en el estado
-          } else {
-            setUserTasksError(t('dashboard.manage.tasks.error.format'));
-            setUserTasks([]); // Limpiar tareas si el formato es incorrecto
-          }
-        } catch (error: any) {
-          setUserTasksError(t('dashboard.manage.tasks.error.load') + ': ' + (error.response?.data?.message || error.message));
-          setUserTasks([]);
-        } finally {
-          setLoadingUserTasks(false);
-        }
-      };
-
-      fetchUserTasks();
+  const reloadUserTasks = useCallback(async () => {
+    if (!user?.id) return;
+    setLoadingUserTasks(true);
+    setUserTasksError('');
+    try {
+      const response = await axios.get(arcusxApiUrl('get_user_tasks', { user_id: user.id }));
+      if (Array.isArray(response.data)) {
+        const base = response.data.map((row: TaskData) => normalizeTaskForDisplay(row));
+        const enriched = await Promise.all(
+          base.map(async (task) => {
+            if (task.proposal_count !== undefined) return task;
+            try {
+              const pr = await axios.get(arcusxApiUrl('get_task_proposals', { task_id: task.id }));
+              const count = Array.isArray(pr.data) ? pr.data.length : 0;
+              return { ...task, proposal_count: count };
+            } catch {
+              return { ...task, proposal_count: 0 };
+            }
+          }),
+        );
+        setUserTasks(enriched);
+      } else {
+        setUserTasksError(t('dashboard.manage.tasks.error.format'));
+        setUserTasks([]);
+      }
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } }; message?: string };
+      setUserTasksError(
+        t('dashboard.manage.tasks.error.load') +
+          ': ' +
+          (err.response?.data?.message || err.message || ''),
+      );
+      setUserTasks([]);
+    } finally {
+      setLoadingUserTasks(false);
     }
-  }, [activeTab, user?.id]);
+  }, [user?.id, t]);
 
+  // --- Tareas creadas por el usuario (públicas + ofertas privadas enviadas) --- //
+  useEffect(() => {
+    if ((activeTab === 'manage-tasks' || activeTab === 'private-offers') && user?.id) {
+      void reloadUserTasks();
+    }
+  }, [activeTab, user?.id, reloadUserTasks]);
+
+  const publicManageTasks = useMemo(
+    () => userTasks.filter((task) => !task.is_private_invite),
+    [userTasks],
+  );
+  const sentPrivateOffers = useMemo(
+    () =>
+      userTasks.filter(
+        (task) =>
+          task.is_private_invite &&
+          isPrivateOfferSentToWorker(task),
+      ),
+    [userTasks],
+  );
+
+  const sentOffersChainSource =
+    activeTab === 'private-offers' ? sentPrivateOffers : [];
+  const {
+    chainLoaded: sentOfferChainLoaded,
+    refreshChainMap: refreshSentOfferChainMap,
+    lookupTwRow: lookupSentOfferTwRow,
+  } = useSentPrivateOffersChainMap(sentOffersChainSource);
 
   // --- Lógica para obtener tareas aceptadas por el usuario desde la API --- //
   useEffect(() => {
@@ -363,12 +586,46 @@ const Dashboard = () => {
         setAcceptedTasksError('');
         try {
           // Llamada al nuevo script de backend
-          const response = await axios.get(`${API_URL}/auth/get_accepted_tasks.php?user_id=${user.id}`);
-          if (Array.isArray(response.data)) {
-            setAcceptedTasks(response.data); // Guardar las tareas aceptadas en el estado
+          const response = await axios.get(arcusxApiUrl('get_accepted_tasks', { user_id: user.id }));
+          const payload = response.data;
+          const list = Array.isArray(payload)
+            ? payload
+            : Array.isArray(payload?.tasks)
+              ? payload.tasks
+              : null;
+          if (list !== null) {
+            const base = (list as TaskData[]).map((row) => normalizeTaskForDisplay(row));
+            const enriched = await Promise.all(
+              base.map(async (task: TaskData) => {
+                if (task.creator_username) return task;
+                try {
+                  const detail = await axios.get(
+                    arcusxApiUrl('get_task_details', { task_id: task.id }),
+                  );
+                  const d = detail.data;
+                  return {
+                    ...task,
+                    creator_id: d?.user_id ?? task.creator_id,
+                    creator_username: d?.creator_username ?? d?.username ?? task.creator_username,
+                  };
+                } catch {
+                  return task;
+                }
+              }),
+            );
+            const fundedOnly = enriched.filter((task) =>
+              canAccessTaskSupervision(
+                task.escrow_id,
+                task.escrow_status,
+                task.escrow_fund_tx_hash,
+              ),
+            );
+            setAcceptedTasks(fundedOnly);
+          } else if (payload && typeof payload === 'object' && payload.success === false) {
+            setAcceptedTasksError(payload.message || t('dashboard.in.progress.error.format'));
+            setAcceptedTasks([]);
           } else {
-            setAcceptedTasksError(t('dashboard.in.progress.error.format'));
-            setAcceptedTasks([]); // Limpiar tareas si el formato es incorrecto
+            setAcceptedTasks([]);
           }
         } catch (error: any) {
           setAcceptedTasksError(t('dashboard.in.progress.error.load') + ': ' + (error.response?.data?.message || error.message));
@@ -451,7 +708,7 @@ const Dashboard = () => {
   // Función para navegar a la página de creación de tarea
   const handleCreateTaskClick = () => {
     if (enterprise) {
-      setActiveTab('create-task');
+      navigateToDashboardTab('create-task');
       return;
     }
     navigate('/create-task');
@@ -463,18 +720,29 @@ const Dashboard = () => {
   };
   
   // Función para navegar a la página de supervisión (nueva)
-  const handleSuperviseTaskClick = (taskId: number, acceptedApplicantId: number | null | undefined) => {
-      // TODO: Define la ruta correcta a tu página de supervisión/comunicación
-      // Asegúrate de pasar ambos IDs: el de la tarea y el del aplicante aceptado
-      if (acceptedApplicantId) {
-           navigate(`/supervise-task/${taskId}/${acceptedApplicantId}`);
-      } else {
-           // Manejar el caso (poco probable si has_accepted_proposal es true) donde no hay ID de aplicante aceptado
-           // Opcional: Mostrar un mensaje al usuario
-           // alert('No se pudo encontrar al trabajador asignado para esta tarea.');
-      }
+  const handleSuperviseTaskClick = (
+    taskId: number,
+    acceptedApplicantId: number | null | undefined,
+    escrowStatus?: string | null,
+    escrowId?: string | null,
+    fundTxHash?: string | null,
+    /** API ya validó escrow fondeado (get_user_tasks.has_accepted_proposal) */
+    readyForSupervision?: boolean,
+  ) => {
+    const funded =
+      readyForSupervision === true ||
+      canAccessTaskSupervision(escrowId, escrowStatus, fundTxHash);
+    if (!funded) {
+      navigate(`/proposals/${taskId}`);
+      return;
+    }
+    if (acceptedApplicantId) {
+      navigate(`/supervise-task/${taskId}/${acceptedApplicantId}`);
+    } else {
+      navigate(`/proposals/${taskId}`);
+    }
   };
-  
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -486,51 +754,50 @@ const Dashboard = () => {
     }
   };
   
-  // Cargar disputas pendientes
-  const fetchPendingDisputes = async () => {
-    if (!user?.id) return;
-    
-    try {
-      const data = await getUserDisputes();
-      setPendingDisputes(data.disputes);
-    } catch (error: any) {
-    }
-  };
-  
-  // Nota: La funcionalidad de firmar transacciones de disputa ha sido eliminada.
-  // Las disputas ahora se resuelven automáticamente a través de Trustless Work
-  // en el panel de administración (DisputeManagement.tsx).
-  
   // Cargar notificaciones del usuario
   const fetchNotifications = async () => {
     if (!user?.id) return;
     
     setLoadingNotifications(true);
+    setNotificationsActionError('');
     try {
-      const data = await getUserNotifications({ page: 1, limit: 50 });
+      const data = await getUserNotifications({
+        page: 1,
+        limit: 50,
+        mysqlUserId: Number(user.id),
+      });
       setNotifications(data.notifications);
       setUnreadCount(data.unread_count);
-    } catch (error: any) {
-      // Si falla, mantener notificaciones vacías
+    } catch (error: unknown) {
       setNotifications([]);
       setUnreadCount(0);
+      const msg = error instanceof Error ? error.message : String(error);
+      if (isNotificationSessionError(msg)) {
+        setNotificationsActionError(t('dashboard.notifications.error.session'));
+      } else {
+        setNotificationsActionError(t('dashboard.notifications.error.load'));
+      }
     } finally {
       setLoadingNotifications(false);
     }
   };
 
-  // Cargar notificaciones y disputas al montar el componente y cuando cambie el usuario
+  useNotificationsRealtime({
+    enabled: Boolean(user?.id),
+    onInsert: () => {
+      void fetchNotifications();
+    },
+  });
+
+  // Cargar notificaciones; fallback polling si Realtime falla
   useEffect(() => {
     if (user?.id) {
       fetchNotifications();
-      fetchPendingDisputes();
-      
-      // Actualizar notificaciones y disputas cada 30 segundos
+
       const interval = setInterval(() => {
         fetchNotifications();
-        fetchPendingDisputes();
-      }, 30000);
-      
+      }, 5 * 60 * 1000);
+
       return () => clearInterval(interval);
     }
   }, [user?.id]);
@@ -539,7 +806,7 @@ const Dashboard = () => {
   const markNotificationAsRead = async (notificationId: number) => {
     try {
       // Llamar al servicio para persistir en el backend
-      await markNotificationAsReadService(notificationId);
+      await markNotificationAsReadService(notificationId, user?.id ? Number(user.id) : undefined);
       
       // Actualizar estado local
       setNotifications(prev => 
@@ -551,16 +818,8 @@ const Dashboard = () => {
       );
       // Actualizar contador
       setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (error: any) {
-      // Aún así actualizar el estado local para mejor UX
-      setNotifications(prev => 
-        prev.map(notification => 
-          notification.id === notificationId 
-            ? { ...notification, is_read: true }
-            : notification
-        )
-      );
-      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch {
+      setNotificationsActionError(t('dashboard.notifications.error.read'));
     }
   };
   
@@ -569,9 +828,11 @@ const Dashboard = () => {
       // Marcar todas las notificaciones no leídas como leídas
       const unreadNotifications = notifications.filter(n => !n.is_read);
       await Promise.all(
-        unreadNotifications.map(notification => 
-          markNotificationAsReadService(notification.id).catch(() => {
-          })
+        unreadNotifications.map((notification) =>
+          markNotificationAsReadService(
+            notification.id,
+            user?.id ? Number(user.id) : undefined,
+          ).catch(() => undefined),
         )
       );
       
@@ -589,14 +850,46 @@ const Dashboard = () => {
     }
   };
   
-  const deleteNotification = (notificationId: number) => {
-    const notification = notifications.find(n => n.id === notificationId);
-    setNotifications(prev => 
-      prev.filter(notification => notification.id !== notificationId)
-    );
-    // Si era no leída, reducir contador
+  const dismissNotificationErrorMessage = (raw: string): string => {
+    const msg = raw.toLowerCase();
+    if (/permission_denied|permission denied for table|42501|row-level security/.test(msg)) {
+      return t('supervise.error.messaging.permission');
+    }
+    if (/link_required|arcusx_user_link|link\s*required/.test(msg)) {
+      return t('dashboard.notifications.delete.failed.link');
+    }
+    if (/not_authenticated|not authenticated|no hay sesión|no session/.test(msg)) {
+      return t('dashboard.notifications.delete.failed.session');
+    }
+    if (
+      /arcusx_dismiss_notification|could not find the function|schema cache|function public\.arcusx_dismiss/.test(
+        msg
+      )
+    ) {
+      return t('dashboard.notifications.delete.failed.rpc');
+    }
+    return t('dashboard.notifications.delete.failed');
+  };
+
+  const deleteNotification = async (notificationId: number) => {
+    const notification = notifications.find((n) => n.id === notificationId);
+    setNotificationsActionError('');
+    try {
+      await dismissNotification(
+        notificationId,
+        user?.id ? Number(user.id) : undefined,
+      );
+    } catch (err: unknown) {
+      const raw = err instanceof Error ? err.message : String(err);
+      if (import.meta.env.DEV) {
+        console.warn('[ArcusX] dismissNotification', raw);
+      }
+      setNotificationsActionError(dismissNotificationErrorMessage(raw));
+      return;
+    }
+    setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
     if (notification && !notification.is_read) {
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     }
   };
   
@@ -777,49 +1070,70 @@ const Dashboard = () => {
               </li>
             )}
             {showEnterpriseTab('tasks') && (
-              <li className={activeTab === 'tasks' ? 'active' : ''} onClick={() => setActiveTab('tasks')}>
+              <li className={activeTab === 'tasks' ? 'active' : ''} onClick={() => navigateToDashboardTab('tasks')}>
                 <FaTasks /> <span>{t('dashboard.tabs.tasks')}</span>
               </li>
             )}
             {showEnterpriseTab('in-progress') && (
-              <li className={activeTab === 'in-progress' ? 'active' : ''} onClick={() => setActiveTab('in-progress')}>
+              <li className={activeTab === 'in-progress' ? 'active' : ''} onClick={() => navigateToDashboardTab('in-progress')}>
                 <FaTasks /> <span>{t('dashboard.tabs.in.progress')}</span>
               </li>
             )}
-             <li className={activeTab === 'manage-tasks' ? 'active' : ''} onClick={() => setActiveTab('manage-tasks')}>
+             <li className={activeTab === 'manage-tasks' ? 'active' : ''} onClick={() => navigateToDashboardTab('manage-tasks')}>
               <FaTasks />
               <span>{t('dashboard.tabs.manage.tasks')}</span>
             </li>
             {showEnterpriseTab('freelancers') && (
-              <li className={activeTab === 'freelancers' ? 'active' : ''} onClick={() => setActiveTab('freelancers')}>
+              <li className={activeTab === 'freelancers' ? 'active' : ''} onClick={() => navigateToDashboardTab('freelancers')}>
                 <FaUsers /> <span>{t('dashboard.tabs.freelancers')}</span>
               </li>
             )}
+            {showEnterpriseTab('private-offers') && (
+              <li
+                className={activeTab === 'private-offers' ? 'active' : ''}
+                onClick={() => void openPrivateOffersTab()}
+              >
+                <FaEnvelope /> <span>{t('dashboard.tabs.privateOffers')}</span>
+              </li>
+            )}
+            {showEnterpriseTab('deals') && (
+              <li className={activeTab === 'deals' ? 'active' : ''} onClick={() => navigateToDashboardTab('deals')}>
+                <FaHandshake /> <span>{t('dashboard.tabs.deals')}</span>
+              </li>
+            )}
             {showEnterpriseTab('wallet') && (
-              <li className={activeTab === 'wallet' ? 'active' : ''} onClick={() => setActiveTab('wallet')}>
+              <li className={activeTab === 'wallet' ? 'active' : ''} onClick={() => navigateToDashboardTab('wallet')}>
                 <FaWallet /> <span>{t('dashboard.tabs.wallet')}</span>
               </li>
             )}
             {showEnterpriseTab('swap') && (
-              <li className={activeTab === 'swap' ? 'active' : ''} onClick={() => setActiveTab('swap')}>
+              <li className={activeTab === 'swap' ? 'active' : ''} onClick={() => navigateToDashboardTab('swap')}>
                 <FaExchangeAlt /> <span>{t('dashboard.tabs.swap')}</span>
               </li>
             )}
             {showEnterpriseTab('tutorials') && (
-              <li className={activeTab === 'tutorials' ? 'active' : ''} onClick={() => setActiveTab('tutorials')}>
+              <li className={activeTab === 'tutorials' ? 'active' : ''} onClick={() => navigateToDashboardTab('tutorials')}>
                 <FaGraduationCap /> <span>{t('dashboard.tabs.tutorials')}</span>
               </li>
             )}
-            <li className={activeTab === 'notifications' ? 'active' : ''} onClick={() => setActiveTab('notifications')}>
+            <li className={activeTab === 'notifications' ? 'active' : ''} onClick={() => navigateToDashboardTab('notifications')}>
               <FaBell /> <span>{t('dashboard.tabs.notifications')}</span>
               {unreadCount > 0 && (
                 <span className="notification-badge">{unreadCount}</span>
               )}
             </li>
-            <li className={activeTab === 'support' ? 'active' : ''} onClick={() => setActiveTab('support')}>
+            <li className={activeTab === 'support' ? 'active' : ''} onClick={() => navigateToDashboardTab('support')}>
               <FaQuestionCircle /> <span>{t('dashboard.tabs.support')}</span>
             </li>
-            <li className={activeTab === 'settings' ? 'active' : ''} onClick={() => setActiveTab('settings')}>
+            {showAdminPanel && (
+              <li
+                className="dashboard-admin-entry"
+                onClick={() => navigate('/admin/dashboard')}
+              >
+                <FaUserShield /> <span>{t('dashboard.admin.panel')}</span>
+              </li>
+            )}
+            <li className={activeTab === 'settings' ? 'active' : ''} onClick={() => navigateToDashboardTab('settings')}>
               <FaCog /> <span>{t('dashboard.tabs.settings')}</span>
             </li>
            
@@ -844,6 +1158,8 @@ const Dashboard = () => {
             {activeTab === 'in-progress' && t('dashboard.title.in.progress')}
             {activeTab === 'manage-tasks' && t('dashboard.title.manage.tasks')}
             {activeTab === 'freelancers' && t('dashboard.title.freelancers')}
+            {activeTab === 'private-offers' && t('dashboard.title.privateOffers')}
+            {activeTab === 'deals' && t('dashboard.title.deals')}
             {activeTab === 'tutorials' && t('dashboard.title.tutorials')}
             {activeTab === 'swap' && t('dashboard.title.swap')}
             {activeTab === 'support' && t('dashboard.title.support')}
@@ -893,7 +1209,7 @@ const Dashboard = () => {
                               markNotificationAsRead(notification.id);
                             }
                             setShowNotificationDropdown(false);
-                            setActiveTab('notifications');
+                            navigateToDashboardTab('notifications');
                           }}
                         >
                           <div className="notification-dropdown-icon" style={{ color: getNotificationColor(notification.type) }}>
@@ -935,7 +1251,7 @@ const Dashboard = () => {
                         className="view-all-notifications-btn"
                         onClick={() => {
                           setShowNotificationDropdown(false);
-                          setActiveTab('notifications');
+                          navigateToDashboardTab('notifications');
                         }}
                       >
                         {t('dashboard.notifications.view.all')}
@@ -947,7 +1263,7 @@ const Dashboard = () => {
             </div>
             <button 
               className="user-menu"
-              onClick={() => setActiveTab('settings')}
+              onClick={() => navigateToDashboardTab('settings')}
             >
               <div className="user-avatar">
                 {userData.name.charAt(0)}
@@ -977,54 +1293,6 @@ const Dashboard = () => {
           )}
           
           {/* Tasks Tab */}
-          {/* Sección de Disputas Pendientes de Firma */}
-          {pendingDisputes.length > 0 && (
-            <div className="pending-disputes-section" style={{
-              marginBottom: '2rem',
-              padding: '1.5rem',
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              borderRadius: '12px',
-              border: '2px solid rgba(239, 68, 68, 0.3)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1rem' }}>
-                <FaExclamationTriangle style={{ color: '#ef4444', fontSize: '24px' }} />
-                <h2 style={{ margin: 0, color: '#ef4444' }}>{t('dashboard.disputes.pending')} ({pendingDisputes.length})</h2>
-              </div>
-              <p style={{ color: 'rgba(255, 255, 255, 0.8)', marginBottom: '1rem' }}>
-                Tienes disputas resueltas que requieren tu firma para liberar los fondos. Por favor, firma las transacciones desde tu wallet Freighter.
-              </p>
-              {pendingDisputes.map((dispute) => (
-                <div key={dispute.dispute_id} style={{
-                  padding: '1rem',
-                  marginBottom: '1rem',
-                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                  borderRadius: '8px',
-                  border: '1px solid rgba(239, 68, 68, 0.2)'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                    <div>
-                      <h3 style={{ margin: 0, color: '#fff', fontSize: '16px' }}>{t('dashboard.disputes.task')} {dispute.task_title}</h3>
-                      <p style={{ margin: '0.5rem 0', color: 'rgba(255, 255, 255, 0.7)', fontSize: '14px' }}>
-                        {dispute.user_role === 'client' 
-                          ? `${t('dashboard.disputes.refund')} ${dispute.refund_amount.toFixed(2)} USDC`
-                          : `${t('dashboard.disputes.payment')} ${dispute.payment_amount.toFixed(2)} USDC`
-                        }
-                      </p>
-                      {dispute.resolution_reason && (
-                        <p style={{ margin: '0.5rem 0', color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px', fontStyle: 'italic' }}>
-                          {t('dashboard.disputes.reason')} {dispute.resolution_reason}
-                        </p>
-                      )}
-                    </div>
-                    {/* Nota: La funcionalidad de firmar transacciones de disputa ha sido eliminada.
-                         Las disputas ahora se resuelven automáticamente a través de Trustless Work
-                         en el panel de administración. */}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
           {!enterprise && activeTab === 'tasks' && (
             <div className="tasks-container">
               <div className="tasks-header">
@@ -1125,75 +1393,36 @@ const Dashboard = () => {
                 
                 {/* Badges de filtros activos */}
                 {(searchQuery || minPrice || maxPrice || categoryFilter !== 'all' || difficultyFilter !== 'all') && (
-                  <div style={{
-                    marginTop: '1rem',
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '0.5rem',
-                    alignItems: 'center'
-                  }}>
-                    <span style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.9rem' }}>{t('dashboard.tasks.filter.active')}</span>
+                  <div className="dashboard-filter-active">
+                    <span className="dashboard-muted-text">{t('dashboard.tasks.filter.active')}</span>
                     {searchQuery && (
-                      <span style={{
-                        padding: '0.25rem 0.75rem',
-                        backgroundColor: 'rgba(16, 221, 136, 0.2)',
-                        border: '1px solid rgba(16, 221, 136, 0.4)',
-                        borderRadius: '50px',
-                        fontSize: '0.85rem',
-                        color: 'var(--primary-green, #10dd88)'
-                      }}>
+                      <span className="dashboard-filter-chip">
                         Búsqueda: {searchQuery}
                       </span>
                     )}
                     {minPrice && (
-                      <span style={{
-                        padding: '0.25rem 0.75rem',
-                        backgroundColor: 'rgba(16, 221, 136, 0.2)',
-                        border: '1px solid rgba(16, 221, 136, 0.4)',
-                        borderRadius: '50px',
-                        fontSize: '0.85rem',
-                        color: 'var(--primary-green, #10dd88)'
-                      }}>
+                      <span className="dashboard-filter-chip">
                         Min: {minPrice} USDC
                       </span>
                     )}
                     {maxPrice && (
-                      <span style={{
-                        padding: '0.25rem 0.75rem',
-                        backgroundColor: 'rgba(16, 221, 136, 0.2)',
-                        border: '1px solid rgba(16, 221, 136, 0.4)',
-                        borderRadius: '50px',
-                        fontSize: '0.85rem',
-                        color: 'var(--primary-green, #10dd88)'
-                      }}>
+                      <span className="dashboard-filter-chip">
                         Max: {maxPrice} USDC
                       </span>
                     )}
                     {categoryFilter !== 'all' && (
-                      <span style={{
-                        padding: '0.25rem 0.75rem',
-                        backgroundColor: 'rgba(16, 221, 136, 0.2)',
-                        border: '1px solid rgba(16, 221, 136, 0.4)',
-                        borderRadius: '50px',
-                        fontSize: '0.85rem',
-                        color: 'var(--primary-green, #10dd88)'
-                      }}>
+                      <span className="dashboard-filter-chip">
                         {categoryFilter}
                       </span>
                     )}
                     {difficultyFilter !== 'all' && (
-                      <span style={{
-                        padding: '0.25rem 0.75rem',
-                        backgroundColor: 'rgba(16, 221, 136, 0.2)',
-                        border: '1px solid rgba(16, 221, 136, 0.4)',
-                        borderRadius: '50px',
-                        fontSize: '0.85rem',
-                        color: 'var(--primary-green, #10dd88)'
-                      }}>
+                      <span className="dashboard-filter-chip">
                         {difficultyFilter}
                       </span>
                     )}
                     <button
+                      type="button"
+                      className="dashboard-filter-clear"
                       onClick={() => {
                         setSearchQuery('');
                         setMinPrice('');
@@ -1202,15 +1431,6 @@ const Dashboard = () => {
                         setDifficultyFilter('all');
                         setSortBy('date_desc');
                       }}
-                      style={{
-                        padding: '0.25rem 0.75rem',
-                        backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                        border: '1px solid rgba(239, 68, 68, 0.4)',
-                        borderRadius: '50px',
-                        fontSize: '0.85rem',
-                        color: '#ef4444',
-                        cursor: 'pointer'
-                      }}
                       >
                         {t('dashboard.tasks.filter.clear.all')}
                       </button>
@@ -1218,11 +1438,7 @@ const Dashboard = () => {
                 )}
                 
                 {/* Contador de resultados */}
-                <div style={{
-                  marginTop: '1rem',
-                  color: 'rgba(255, 255, 255, 0.7)',
-                  fontSize: '0.9rem'
-                }}>
+                <div className="dashboard-results-count">
                   {filteredTasks.length} {filteredTasks.length === 1 ? t('dashboard.tasks.results.single') : t('dashboard.tasks.results.multiple')}
                 </div>
               </div>
@@ -1252,13 +1468,13 @@ const Dashboard = () => {
                       <div className="task-detail">
                         <span className="task-detail-label">{t('dashboard.tasks.creator')}</span>
                         <div className="task-creator-wrap">
-                          <Link 
-                            to={`/profile/${task.creator_id || task.id}`}
-                            className="task-creator-link"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {task.creator_username}
-                          </Link>
+                          <TaskCreatorLine
+                            displayName={taskCreatorLabel(task)}
+                            username={task.creator_username}
+                            creatorId={task.creator_id}
+                            verifiedEnterprise={Boolean(task.creator_verified_enterprise)}
+                            verifiedIndividual={Boolean(task.creator_verified_individual)}
+                          />
                           {task.creator_rating !== undefined && task.creator_rating > 0 && (
                             <RatingDisplay
                               averageRating={task.creator_rating}
@@ -1285,7 +1501,7 @@ const Dashboard = () => {
                 <h2>{t('dashboard.wallet.total.earnings')}</h2>
                 <div className="balance-amount">${totalEarnings.toFixed(2)}</div>
                 {totalPaid > 0 && (
-                  <div style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: 'rgba(255, 255, 255, 0.7)' }}>
+                  <div className="dashboard-muted-text" style={{ marginTop: '0.5rem' }}>
                     {t('dashboard.wallet.total.paid')} ${totalPaid.toFixed(2)}
                   </div>
                 )}
@@ -1297,17 +1513,17 @@ const Dashboard = () => {
               <div className="transactions-container">
                 <h2>{t('dashboard.wallet.transactions')}</h2>
                 {loadingTransactions && (
-                  <div style={{ textAlign: 'center', padding: '2rem', color: 'rgba(255, 255, 255, 0.7)' }}>
+                  <div className="dashboard-empty-state">
                     {t('dashboard.wallet.transactions.loading')}
                   </div>
                 )}
                 {transactionsError && (
-                  <div style={{ padding: '1rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', color: '#ef4444', marginBottom: '1rem' }}>
+                  <div className="dashboard-error-banner">
                     {transactionsError}
                   </div>
                 )}
                 {!loadingTransactions && !transactionsError && transactions.length === 0 && (
-                  <div style={{ textAlign: 'center', padding: '2rem', color: 'rgba(255, 255, 255, 0.7)' }}>
+                  <div className="dashboard-empty-state">
                     {t('dashboard.wallet.transactions.empty')}
                   </div>
                 )}
@@ -1363,35 +1579,23 @@ const Dashboard = () => {
                   ))}
                 </div>
                     {transactionsTotalPages > 1 && (
-                      <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '1.5rem' }}>
+                      <div className="dashboard-pagination">
                         <button
+                          type="button"
+                          className="dashboard-pagination-btn"
                           onClick={() => setTransactionsPage(p => Math.max(1, p - 1))}
                           disabled={transactionsPage === 1}
-                          style={{
-                            padding: '0.5rem 1rem',
-                            backgroundColor: transactionsPage === 1 ? 'rgba(255, 255, 255, 0.05)' : 'rgba(16, 221, 136, 0.2)',
-                            border: '1px solid rgba(16, 221, 136, 0.4)',
-                            borderRadius: '6px',
-                            color: '#fff',
-                            cursor: transactionsPage === 1 ? 'not-allowed' : 'pointer'
-                          }}
                         >
                           {t('dashboard.wallet.transactions.previous')}
                         </button>
-                        <span style={{ padding: '0.5rem 1rem', color: 'rgba(255, 255, 255, 0.7)' }}>
+                        <span className="dashboard-pagination-label">
                           {t('dashboard.wallet.transactions.page')} {transactionsPage} {t('dashboard.wallet.transactions.of')} {transactionsTotalPages}
                         </span>
                         <button
+                          type="button"
+                          className="dashboard-pagination-btn"
                           onClick={() => setTransactionsPage(p => Math.min(transactionsTotalPages, p + 1))}
                           disabled={transactionsPage >= transactionsTotalPages}
-                          style={{
-                            padding: '0.5rem 1rem',
-                            backgroundColor: transactionsPage >= transactionsTotalPages ? 'rgba(255, 255, 255, 0.05)' : 'rgba(16, 221, 136, 0.2)',
-                            border: '1px solid rgba(16, 221, 136, 0.4)',
-                            borderRadius: '6px',
-                            color: '#fff',
-                            cursor: transactionsPage >= transactionsTotalPages ? 'not-allowed' : 'pointer'
-                          }}
                         >
                           {t('dashboard.wallet.transactions.next')}
                         </button>
@@ -1416,7 +1620,8 @@ const Dashboard = () => {
                 </h2>
                 <div className="notifications-actions">
                   {unreadCount > 0 && (
-                    <button 
+                    <button
+                      type="button"
                       className="mark-all-read"
                       onClick={markAllNotificationsAsRead}
                     >
@@ -1425,36 +1630,81 @@ const Dashboard = () => {
                   )}
                 </div>
               </div>
-              
+
+              {notificationsActionError && (
+                <div
+                  className="notification-action-error"
+                  role="alert"
+                  style={{
+                    marginBottom: '1rem',
+                    padding: '12px 14px',
+                    borderRadius: '8px',
+                    background: 'rgba(239, 68, 68, 0.12)',
+                    border: '1px solid rgba(239, 68, 68, 0.35)',
+                    color: '#fecaca',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                  }}
+                >
+                  <span style={{ flex: 1, lineHeight: 1.45 }}>{notificationsActionError}</span>
+                  <button
+                    type="button"
+                    className="delete-button"
+                    aria-label={t('dashboard.notifications.delete.error.close')}
+                    onClick={() => setNotificationsActionError('')}
+                  >
+                    <FaTimes />
+                  </button>
+                </div>
+              )}
+
               {/* Filter Tabs */}
               <div className="notifications-filters">
-                <button 
+                <button
+                  type="button"
                   className={`filter-tab ${notificationFilter === 'all' ? 'active' : ''}`}
-                  onClick={() => setNotificationFilter('all')}
+                  onClick={() => {
+                    setNotificationFilter('all');
+                    setNotificationsActionError('');
+                  }}
                 >
                   {t('dashboard.notifications.filter.all')} ({notifications.length})
                 </button>
                 <button 
                   className={`filter-tab ${notificationFilter === 'unread' ? 'active' : ''}`}
-                  onClick={() => setNotificationFilter('unread')}
+                  onClick={() => {
+                    setNotificationFilter('unread');
+                    setNotificationsActionError('');
+                  }}
                 >
                   {t('dashboard.notifications.filter.unread')} ({unreadCount})
                 </button>
                 <button 
                   className={`filter-tab ${notificationFilter === 'success' ? 'active' : ''}`}
-                  onClick={() => setNotificationFilter('success')}
+                  onClick={() => {
+                    setNotificationFilter('success');
+                    setNotificationsActionError('');
+                  }}
                 >
                   {t('dashboard.notifications.filter.success')}
                 </button>
                 <button 
                   className={`filter-tab ${notificationFilter === 'warning' ? 'active' : ''}`}
-                  onClick={() => setNotificationFilter('warning')}
+                  onClick={() => {
+                    setNotificationFilter('warning');
+                    setNotificationsActionError('');
+                  }}
                 >
                   {t('dashboard.notifications.filter.warning')}
                 </button>
                 <button 
                   className={`filter-tab ${notificationFilter === 'error' ? 'active' : ''}`}
-                  onClick={() => setNotificationFilter('error')}
+                  onClick={() => {
+                    setNotificationFilter('error');
+                    setNotificationsActionError('');
+                  }}
                 >
                   {t('dashboard.notifications.filter.error')}
                 </button>
@@ -1527,7 +1777,8 @@ const Dashboard = () => {
                       
                       <div className="notification-actions">
                         {!notification.is_read && (
-                          <button 
+                          <button
+                            type="button"
                             onClick={() => markNotificationAsRead(notification.id)}
                             className="mark-read-button"
                           >
@@ -1535,8 +1786,12 @@ const Dashboard = () => {
                           </button>
                         )}
                         
-                        <button 
-                          onClick={() => deleteNotification(notification.id)}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void deleteNotification(notification.id);
+                          }}
                           className="delete-button"
                           aria-label={t('dashboard.notifications.delete')}
                         >
@@ -1554,6 +1809,158 @@ const Dashboard = () => {
           {activeTab === 'freelancers' && (
             <FreelancersList />
           )}
+
+          {activeTab === 'deals' && (
+            <DashboardDealsPanel
+              payoutWalletRegistered={Boolean(payoutWalletRegistered)}
+              payoutWalletLoading={payoutWalletLoading}
+              payoutWalletAddress={payoutWalletAddress}
+              onRequireWallet={() => setShowPayoutWalletGate(true)}
+            />
+          )}
+
+          {activeTab === 'private-offers' && (
+            <div className="tasks-container">
+              <PayoutWalletBanner
+                loading={payoutWalletLoading}
+                registered={payoutWalletRegistered}
+                address={payoutWalletAddress}
+                onRegisterClick={() => setShowPayoutWalletGate(true)}
+              />
+              <section className="private-offers-section">
+                <h3>{t('dashboard.privateOffers.sent.title')}</h3>
+                {loadingUserTasks && (
+                  <p className="dashboard-private-muted">{t('dashboard.manage.tasks.loading')}</p>
+                )}
+                {userTasksError && (
+                  <p className="error-message" role="alert">
+                    {userTasksError}
+                  </p>
+                )}
+                {!loadingUserTasks && sentPrivateOffers.length === 0 && !userTasksError && (
+                  <p className="dashboard-private-muted">{t('dashboard.privateOffers.sent.empty')}</p>
+                )}
+                {!loadingUserTasks && sentPrivateOffers.length > 0 && (
+                  <div className="user-tasks-list user-tasks-list--sent-offers">
+                    {sentPrivateOffers.map((task) => (
+                      <SentPrivateOfferCard
+                        key={task.id}
+                        task={task}
+                        twRow={lookupSentOfferTwRow(task.escrow_id)}
+                        chainLoaded={sentOfferChainLoaded}
+                        onRefresh={() => void reloadUserTasks()}
+                        onRefreshChain={() => void refreshSentOfferChainMap()}
+                        onSupervise={handleSuperviseTaskClick}
+                      />
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              <section className="private-offers-section">
+                <h3>{t('dashboard.privateOffers.received.title')}</h3>
+                <p className="task-description private-offers-intro-note">
+                  {t('dashboard.privateOffers.intro')}
+                </p>
+                <p className="task-description private-offers-freighter-note">
+                  {t('dashboard.privateOffers.freighterNote')}
+                </p>
+                {!payoutWalletRegistered && !payoutWalletLoading && (
+                  <p className="dashboard-private-muted">{t('dashboard.privateOffers.walletRequired')}</p>
+                )}
+              {loadingPrivateOffers && (
+                <p className="dashboard-private-muted">{t('dashboard.privateOffers.loading')}</p>
+              )}
+              {privateOffersError && (
+                <p className="error-message" role="alert">
+                  {privateOffersError}
+                </p>
+              )}
+              {payoutWalletRegistered &&
+                !loadingPrivateOffers &&
+                !privateOffersError &&
+                privateOffers.length === 0 && (
+                <p className="dashboard-private-muted">{t('dashboard.privateOffers.empty')}</p>
+              )}
+              {!loadingPrivateOffers && privateOffers.length > 0 && (
+                <div className="tasks-grid">
+                  {privateOffers.map((task) => (
+                    <div key={task.id} className="task-card">
+                      <div className="task-header">
+                        <h3>{task.title}</h3>
+                        <span className={`task-difficulty ${String(task.difficulty).toLowerCase()}`}>
+                          {task.difficulty}
+                        </span>
+                      </div>
+                      <p className="task-description">{task.subtitle || task.description?.slice(0, 160)}</p>
+                      <div className="task-details">
+                        <div className="task-detail">
+                          <span className="task-detail-label">{t('dashboard.tasks.reward')}</span>
+                          <span className="task-detail-value">
+                            {parseFloat(String(task.price)).toFixed(2)} {task.currency}
+                          </span>
+                        </div>
+                        <div className="task-detail">
+                          <span className="task-detail-label">{t('dashboard.tasks.creator')}</span>
+                          <div className="task-creator-wrap">
+                            <TaskCreatorLine
+                              creatorId={task.creator_id}
+                              displayName={task.creator_username}
+                              username={task.creator_username}
+                              verifiedEnterprise={Boolean(task.creator_verified_enterprise)}
+                              verifiedIndividual={Boolean(task.creator_verified_individual)}
+                              linkToProfile
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      {task.is_funded && (
+                        <p
+                          style={{
+                            margin: '0 0 0.75rem',
+                            fontSize: '0.85rem',
+                            color: 'var(--primary-green, #10dd88)',
+                          }}
+                        >
+                          {t('dashboard.privateOffers.funded')}
+                        </p>
+                      )}
+                      {task.awaiting_response || (task.is_funded && !task.accepted_applicant_id) ? (
+                        <button
+                          type="button"
+                          className="task-button btn-primary"
+                          onClick={() =>
+                            navigate(`/apply-task/${task.id}?from=private-offer`)
+                          }
+                        >
+                          {t('dashboard.privateOffers.viewDetails')}
+                        </button>
+                      ) : task.accepted_applicant_id === user?.id ? (
+                        <button
+                          type="button"
+                          className="task-button btn-primary"
+                          onClick={() =>
+                            navigate(`/supervise-task/${task.id}/${task.accepted_applicant_id}`)
+                          }
+                        >
+                          {t('dashboard.privateOffers.work')}
+                        </button>
+                      ) : !task.is_funded ? (
+                        <button
+                          type="button"
+                          className="task-button"
+                          onClick={() => navigate(`/apply-task/${task.id}?from=hire`)}
+                        >
+                          {t('dashboard.privateOffers.review')}
+                        </button>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              )}
+              </section>
+            </div>
+          )}
           
           {/* Swap Tab */}
           {activeTab === 'swap' && (
@@ -1569,20 +1976,13 @@ const Dashboard = () => {
           {activeTab === 'support' && (
             <SupportPage />
           )}
-          
+
           {/* Settings Tab */}
           {activeTab === 'settings' && (
             <div className="settings-container">
               <div className="settings-header">
-              <h2>{t('dashboard.settings.title')}</h2>
-                <Link 
-                  to="/dashboard/settings/profile" 
-                  className="edit-profile-button"
-                >
-                  <FaUser />
-                  <span>{t('dashboard.settings.edit.profile')}</span>
-                </Link>
-                  </div>
+                <h2>{t('dashboard.settings.title')}</h2>
+              </div>
 
               {loadingProfile ? (
                 <div className="settings-loading">
@@ -1748,8 +2148,7 @@ const Dashboard = () => {
                       </Link>
                       <Link 
                         to={`/profile/${user?.id || storedUserData?.id || ''}`} 
-                        className="edit-full-profile-button"
-                        style={{ background: 'var(--primary-blue)', color: '#fff' }}
+                        className="edit-full-profile-button edit-full-profile-button--public"
                       >
                         <FaGlobe />
                         <span>{t('dashboard.settings.view.public.profile')}</span>
@@ -1757,6 +2156,10 @@ const Dashboard = () => {
                     </div>
                     <p className="edit-hint">{t('dashboard.settings.edit.hint')}</p>
                   </div>
+
+                  <SettingsVerificationSection />
+
+                  <SettingsBadgesCatalog userStats={userStats} />
 
                   {/* Botón para cerrar sesión */}
                   <div className="settings-logout-section">
@@ -1829,29 +2232,17 @@ const Dashboard = () => {
                             </span>
                         </div>
                         )}
-                        {task.creator_username && (
+                        {(taskCreatorLabel(task) || task.creator_id) && (
                           <div className="task-detail">
                             <span className="task-detail-label">{t('dashboard.tasks.creator')}</span>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                              <Link 
-                                to={`/profile/${task.creator_id || task.id}`}
-                                className="task-creator-link"
-                                style={{
-                                  color: 'var(--primary-blue)',
-                                  textDecoration: 'none',
-                                  fontWeight: 500,
-                                  transition: 'all 0.3s ease'
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.textDecoration = 'underline';
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.textDecoration = 'none';
-                                }}
-                              >
-                                {task.creator_username}
-                              </Link>
+                              <TaskCreatorLine
+                                displayName={taskCreatorLabel(task) || t('dashboard.tasks.creator.unknown')}
+                                username={task.creator_username}
+                                creatorId={task.creator_id}
+                                verifiedEnterprise={Boolean(task.creator_verified_enterprise)}
+                            verifiedIndividual={Boolean(task.creator_verified_individual)}
+                              />
                               {task.creator_rating !== undefined && task.creator_rating > 0 && (
                                 <RatingDisplay
                                   averageRating={task.creator_rating}
@@ -1868,7 +2259,13 @@ const Dashboard = () => {
                        <button
                            className="task-button btn-primary" // Puedes usar una clase de botón existente o definir una nueva
                            onClick={() => {
-                               handleSuperviseTaskClick(task.id, task.accepted_applicant_id);
+                               handleSuperviseTaskClick(
+                                 task.id,
+                                 task.accepted_applicant_id,
+                                 task.escrow_status,
+                                 task.escrow_id,
+                                 task.escrow_fund_tx_hash,
+                               );
                            }}
                        >
                            Trabajar
@@ -1889,46 +2286,73 @@ const Dashboard = () => {
               {/* Aquí se listarán las tareas creadas por el usuario */}
               {loadingUserTasks && <p>{t('dashboard.manage.tasks.loading')}</p>}
               {userTasksError && <p className="error-message">{userTasksError}</p>}
-              {!loadingUserTasks && userTasks.length === 0 && !userTasksError && <p>{t('dashboard.manage.tasks.empty')}</p>}
+              {!loadingUserTasks && publicManageTasks.length === 0 && !userTasksError && (
+                <p>{t('dashboard.manage.tasks.empty')}</p>
+              )}
 
-              {!loadingUserTasks && userTasks.length > 0 && (
+              {!loadingUserTasks && publicManageTasks.length > 0 && (
                 <div className="user-tasks-list">
-                  {userTasks.map(task => (
+                  {publicManageTasks.map((task) => (
                     <div key={task.id} className="user-task-item">
                       <h3>{task.title}</h3>
                       <p>{task.subtitle}</p>
-                      {/* Mostrar el número de propuestas */}
-                      <div className="proposal-count">
-                        {t('dashboard.manage.tasks.proposals')} {task.proposal_count !== undefined ? task.proposal_count : t('common.loading')}
-                      </div>
-                      {/* Botones de acción (Editar, Ver Propuestas, etc.) - **Corregido** */}
+                      {task.scheduled_deletion_at ? (
+                        <div className="user-task-deletion-countdown">
+                          <TaskDeletionNotice
+                            variant="compact"
+                            scheduledDeletionAt={task.scheduled_deletion_at}
+                            completedAt={task.completed_at ?? task.escrow_completed_at}
+                            escrowStatus={task.escrow_status}
+                            status={task.status}
+                            closureHints={{
+                              isRefunded:
+                                task.escrow_status === 'refunded' ||
+                                task.escrow_status === 'resolved',
+                            }}
+                          />
+                        </div>
+                      ) : null}
                       <div className="task-actions">
-                         {/* Lógica condicional para mostrar el botón "Supervisar" o "Ver Propuestas" */}
-                         {task.has_accepted_proposal ? (
-                             // Mostrar botón Supervisar si hay una propuesta aceptada
-                             <button
-                                 className="btn-primary" // O la clase que prefieras para este botón
-                                 onClick={() => handleSuperviseTaskClick(task.id, task.accepted_applicant_id)}
-                             >
-                                 {t('dashboard.manage.tasks.supervise')}
-                             </button>
-                         ) : (
-                             // Mostrar botón Ver Propuestas si no hay propuestas aceptadas
-                             <button
-                                 className="btn-secondary"
-                                 onClick={() => navigate(`/proposals/${task.id}`)}
-                             >
-                                 {enterprise
-                                   ? t('dashboard.manage.tasks.view.proposals')
-                                   : `${t('dashboard.manage.tasks.view.proposals')} (${task.proposal_count !== undefined ? task.proposal_count : 0})`}
-                             </button>
-                         )}
-                         {/* Botón de Editar Tarea (opcional, para más tarde) */}
-                         {/* <button className="btn-secondary">Editar</button> */}
+                        {task.has_accepted_proposal ||
+                        clientCanSuperviseAcceptedTask(
+                          task.accepted_applicant_id,
+                          task.escrow_id,
+                          task.escrow_status,
+                          task.escrow_fund_tx_hash,
+                        ) ? (
+                          <button
+                            className="btn-primary"
+                            onClick={() =>
+                              handleSuperviseTaskClick(
+                                task.id,
+                                task.accepted_applicant_id,
+                                task.escrow_status,
+                                task.escrow_id,
+                                task.escrow_fund_tx_hash,
+                                true,
+                              )
+                            }
+                          >
+                            {task.escrow_status?.toLowerCase() === 'disputed'
+                              ? t('dashboard.manage.tasks.supervise.dispute')
+                              : t('dashboard.manage.tasks.supervise')}
+                          </button>
+                        ) : (
+                          <button
+                            className="btn-secondary"
+                            onClick={() => navigate(`/proposals/${task.id}`)}
+                          >
+                            {enterprise
+                              ? t('dashboard.manage.tasks.view.proposals')
+                              : task.proposal_count !== undefined
+                                ? `${t('dashboard.manage.tasks.view.proposals')} (${task.proposal_count})`
+                                : t('common.loading.proposals')}
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
-              </div>
+                </div>
               )}
 
             </div>
@@ -1948,16 +2372,14 @@ const Dashboard = () => {
       {/* Footer */}
       <DashboardFooter />
 
-      {/* Popup de Notificaciones Pendientes - ELIMINADO */}
-      {/* <PendingNotificationsPopup
-        isOpen={showPendingNotificationsPopup}
-        onClose={() => setShowPendingNotificationsPopup(false)}
-        pendingTasks={pendingActionsTasks}
-        onSendNotifications={async () => {
-          alert(`Se enviarán notificaciones a ${pendingActionsTasks.length} trabajador(es). Esta funcionalidad estará disponible próximamente.`);
-          setShowPendingNotificationsPopup(false);
+      <PrivateOfferWalletModal
+        open={showPayoutWalletGate}
+        returnPath={dashboardTabHref(activeTab, enterprise)}
+        onClose={() => {
+          setShowPayoutWalletGate(false);
+          if (activeTab === 'private-offers' || activeTab === 'deals') void refreshPayoutWallet();
         }}
-      /> */}
+      />
     </div>
   );
 };

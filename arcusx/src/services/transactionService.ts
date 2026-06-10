@@ -2,7 +2,7 @@
  * Servicio para obtener historial de transacciones del usuario
  */
 
-import { API_URL } from '../config/database';
+import { arcusxApiUrl, arcusxApiHeaders } from '../config/arcusxApi';
 
 export interface Transaction {
   id: number;
@@ -56,12 +56,9 @@ export async function getUserTransactions(
     params.append('page', page.toString());
     params.append('limit', limit.toString());
 
-    const response = await fetch(`${API_URL}/auth/get_user_transactions.php?${params.toString()}`, {
+    const response = await fetch(arcusxApiUrl('get_user_transactions', params), {
       method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+      headers: arcusxApiHeaders(),
     });
 
     if (!response.ok) {
@@ -91,12 +88,9 @@ export async function getUserEarningsSummary(userId?: number): Promise<EarningsS
       params.append('user_id', userId.toString());
     }
 
-    const response = await fetch(`${API_URL}/auth/get_user_earnings_summary.php?${params.toString()}`, {
+    const response = await fetch(arcusxApiUrl('get_user_earnings_summary', params), {
       method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+      headers: arcusxApiHeaders(),
     });
 
     if (!response.ok) {

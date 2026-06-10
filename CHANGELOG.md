@@ -13,6 +13,129 @@ Las entradas siguen espíritu **[Keep a Changelog](https://keepachangelog.com/es
 
 ---
 
+## 2026-05-28 — Tranche 2 Q2: cierre Supabase, evidencias, trazabilidad
+
+**Cierre:** [`docs/sprints/TRANCHE2_CLOSURE.md`](./docs/sprints/TRANCHE2_CLOSURE.md) · **Próximos pasos:** [`docs/sprints/POST_TRANCHE2_TODO.md`](./docs/sprints/POST_TRANCHE2_TODO.md)
+
+### Backend / Supabase
+
+- Edge `arcusx-api` v28: `upload_milestone_evidence`, `get_milestone_evidence`, ampliación `domain_events`.
+- Edge `arcusx-admin` v15: `get_domain_events`.
+- Migración `milestone-evidence` (bucket + tabla).
+- Cutover prod documentado; smoke Edge 7/7.
+
+### Frontend
+
+- `EvidenceUpload` activo en `SuperviseTask` (freelancer + vista cliente).
+- Admin: pestaña **Actividad** (`AdminActivity.tsx`).
+- E2E: [`docs/demo/E2E_CHECKLIST.md`](./docs/demo/E2E_CHECKLIST.md).
+
+### Diferido post–Tranche 2
+
+- B2B org/KYB, growth pack completo, multi-hito, escrow nativo Soroban en prod.
+
+---
+
+## 2026-05-28 — Semana 4 (cierre técnico): i18n, consola, responsive, QA docs
+
+**Detalle:** [`docs/sprints/week-04-changelog-and-architecture.md`](./docs/sprints/week-04-changelog-and-architecture.md) · [`docs/sprints/week-04-technical-close.md`](./docs/sprints/week-04-technical-close.md)
+
+### Frontend
+
+- **i18n:** `ProposalReview` (errores/éxito escrow), `UserProfile` (SEO/alt); `ProtectedRoute` / `SuperviseTask` / `CompleteTaskPopup` ya en `t()`.
+- **Logger:** `devError` en `utils/logger.ts`; `trustlessWorkEscrowService`, `ProposalReview`, `CompleteTaskPopup` sin `console.*` en producción.
+- **Responsive:** `responsive-critical.css` (touch ≥44px, overflow); chart dashboard `min-width` 280px en 480px.
+
+### Backend / limpieza
+
+- `check_disputes.php` sin referencia a scripts de test (utilities ya ausentes del repo).
+- Excepciones documentadas: `week-04-cleanup-exceptions.md`, gaps light: `week-04-light-theme-gaps.md`.
+
+---
+
+## 2026-05-28 — Semana 3 (seguimiento): contraste modo claro en flujos críticos
+
+**Detalle:** [`docs/sprints/week-03-changelog-and-architecture.md`](./docs/sprints/week-03-changelog-and-architecture.md) §3.1 · InstaAwards cierre: [`docs/sprints/instaawards-week4.md`](./docs/sprints/instaawards-week4.md)
+
+### Tema claro — segunda pasada
+
+- Nuevos: **`light-theme-remaining.css`**, **`light-theme-contrast.css`** (import en `main.tsx` tras global/auth/dashboard).
+- **`themes.css`:** token `--on-accent` para texto en botones con gradiente.
+- Overrides por pantalla: **`ProposalReview.css`** (confirmación, escrow fund/release), **`ApplyTask.css`**, **`FreelancerCard.css`**, **`SuperviseTask.css`** (estado blockchain), **`Hero.css`**, **`Preloader.css`**, **`WalletConnectPopup.css`**, **`SwapCard.css`**, **`UserProfile.css`**, ampliación **`dashboard-light.css`** / **`dashboard.css`**.
+- Correcciones: quitar reglas globales `color: #000` que rompían CTAs; `.download-button` ya no fuerza texto blanco en fondo claro; menos inline `#fff` en TSX de escrow/disputas/supervisión.
+
+### Documentación
+
+- Changelog sprint Week 3 actualizado con matriz de smoke en modo claro.
+- **InstaAwards Week 4:** plan de cierre y checklist en `docs/sprints/instaawards-week4.md`.
+
+---
+
+## 2026-05-18 — Semana 3: API crítica, Bearer, tema claro, docs reviewer
+
+**Entregable detallado:** [`docs/sprints/week-03-changelog-and-architecture.md`](./docs/sprints/week-03-changelog-and-architecture.md) · Checklist: [`docs/sprints/week-03-plan-and-checklist.md`](./docs/sprints/week-03-plan-and-checklist.md)
+
+### API — contrato JSON en rutas críticas
+
+- **`auth_bearer.php`:** `arcusx_json_success`, `arcusx_json_error`, `arcusx_require_user_id()`.
+- **Escritura con JWT:** `apply_task.php` (rewrite + `applicantId` = JWT), `create_task.php` (`user_id` = JWT), `select_proposal.php`, `complete_task.php`, `cancel_task.php`, `create_dispute.php`, `create_escrow.php`, `verify_wallet.php`, `register_wallet.php`.
+- **Público:** `get_landing_market_stats.php` — JSON uniforme para Hero.
+
+### Frontend — Bearer automático
+
+- **`config/axios`:** `ApplyTask`, `CreateTask`, `ProposalReview`, `SuperviseTask`, `dashboard`, `privateOffersService`, `cancelTaskService`.
+
+### Tema claro (núcleo 2026-05-18)
+
+- Nuevos: **`auth-surfaces-light.css`**, **`dashboard-light.css`**, **`light-theme-global.css`**, **`ProtectedRoute.css`**.
+- Contraste: wallet, filtros, idioma, volver, popups; `Register`/`Login` ya no filtran `.back-button` blanco global.
+- *Seguimiento 2026-05-28:* ver entrada anterior (remaining + contrast + flujos escrow/proposals).
+
+### Documentación
+
+- **`docs/api/ENDPOINTS.md`**, **`docs/demo/E2E_TESTNET.md`**, **`docs/sprints/instaawards-week3.md`**.
+- **README:** setup local, fuente de stats del Hero, enlaces reviewer.
+
+### Deploy (operaciones)
+
+- Producción: mantener **`.htaccess` del servidor** con `SetEnv` (JWT, DB, Supabase, referidos) — no sustituir por plantilla vacía del repo.
+- No commitear `arcusx/.env` ni secretos reales.
+
+---
+
+## 2026-05-15 — Semana 2: API dura (CORS, JWT, wallet)
+
+**Entregable detallado:** [`docs/sprints/week-02-changelog-and-architecture.md`](./docs/sprints/week-02-changelog-and-architecture.md) · Checklist: [`docs/sprints/week-02-plan-and-checklist.md`](./docs/sprints/week-02-plan-and-checklist.md)
+
+### Single CORS allowlist
+
+- **`backend_externo/cors.php`:** allowlist única (localhost, arcusx.pro, empresas.*); **`ARCUSX_CORS_EXTRA_ORIGINS`** opcional; sin `*`.
+- Todos los endpoints PHP del API público migrados a `arcusx_cors_handle_preflight` / `arcusx_cors_apply`.
+- **`admin_common.php`:** CORS admin delega en `arcusx_cors_origin_for_request()`.
+
+### Consistent API responses
+
+- **`auth_bearer.php`:** `arcusx_jwt_user_id`, `arcusx_json_exit`, Bearer unificado en ~30 rutas de usuario.
+- **`update_user.php`:** 401 / 403 + prepared statements (identidad JWT = `id` del body).
+- **`get_platform_fee.php`:** público, sin JWT. **`confirm_escrow_signature.php`:** **410 Gone**.
+
+### Secrets & JWT at the edge
+
+- **`config.php`:** `ARCUSX_DB_PASSWORD` y `ARCUSX_JWT_SECRET` vía `getenv()`; plantilla **`SetEnv`** en `.htaccess` / **`.env.example`**.
+- **Supabase Edge:** `php-admin-jwt.ts` + **`referral-admin`** validan el JWT de `admin_login.php` con el mismo secreto en Edge Secrets (no en `VITE_*`).
+
+### Extend the wallet surface
+
+- **`register_wallet.php` / `verify_wallet.php`:** CORS + JWT alineados.
+- **`EditProfile`:** verificar / registrar wallet; i18n **`edit.wallet.*`**.
+- **`useWallet`:** Freighter + xBull; auto-`registerWallet` al conectar; **`ApplyTask`** sigue usando `verifyWallet` al postular.
+
+### Añadido (producto, misma ventana)
+
+- **Flujo contratar freelancer:** query `hire_*` en `/create-task`, popup con enlace a postular — ver **`docs/plans/freelancer-hire-flow-improvement.md`**.
+
+---
+
 ## 2026-05-07 — Estabilidad backend, OAuth, enterprise, wallet e i18n
 
 **Commit de referencia:** `109916f` (*week 1 & progress of week 2*).

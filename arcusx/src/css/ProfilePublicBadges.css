@@ -1,0 +1,55 @@
+/* Fila de iconos en header de perfil público (~30 % más pequeños que antes) */
+.profile-public-badges--inline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.55rem;
+}
+
+.profile-public-badges--inline li {
+  display: flex;
+  line-height: 0;
+}
+
+.profile-public-badges--inline .badge-icon-tooltip__img,
+.profile-public-badges--inline .badge-icon-tooltip__fallback {
+  width: 31px !important;
+  height: 31px !important;
+}
+
+@media (min-width: 640px) {
+  .profile-public-badges--inline .badge-icon-tooltip__img,
+  .profile-public-badges--inline .badge-icon-tooltip__fallback {
+    width: 34px !important;
+    height: 34px !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .profile-public-badges--inline .badge-icon-tooltip__img,
+  .profile-public-badges--inline .badge-icon-tooltip__fallback {
+    width: 36px !important;
+    height: 36px !important;
+  }
+}
+
+.profile-public-badges--inline .badge-icon-tooltip__img {
+  filter: drop-shadow(0 2px 8px rgba(16, 221, 136, 0.3));
+}
+
+.profile-public-badges--inline,
+.profile-identity,
+.profile-header {
+  overflow: visible;
+}
+
+/* Listados (FreelancerCard, Hero carousel) */
+.profile-public-badges--compact .badge-icon-tooltip__img,
+.profile-public-badges--compact .badge-icon-tooltip__fallback {
+  width: 24px !important;
+  height: 24px !important;
+}
+

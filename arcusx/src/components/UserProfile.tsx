@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
-import { FaArrowLeft, FaUser, FaCheckCircle, FaBriefcase, FaStar, FaDollarSign, FaTasks, FaLock } from 'react-icons/fa';
+import { useParams, Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { FaArrowLeft, FaUser, FaBriefcase, FaStar, FaDollarSign, FaTasks, FaLock, FaPlus } from 'react-icons/fa';
+import ProfilePublicBadges from './ProfilePublicBadges';
 import { getUserProfile, getUserPublicStats } from '../services/profileService';
 import type { UserProfile as UserProfileType, UserStatistics } from '../types/profile';
 import RatingDisplay from './RatingDisplay';
 import SEO from './SEO';
 import { getAvatarUrl, getDefaultAvatarUrl } from '../utils/avatarUtils';
+import { normalizeDisplayText } from '../utils/utf8Mojibake';
 import '../css/UserProfile.css';
 import '../css/Preloader.css';
 import logoDark from '../images/arcus-logo.png';
@@ -17,6 +19,8 @@ const UserProfile = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const isHireMode = searchParams.get('hire') === '1';
   const returnTo = (location.state as { from?: string } | null)?.from;
   const { theme } = useTheme();
   const { t, lang } = useI18n();
@@ -124,7 +128,7 @@ const UserProfile = () => {
     name: profile.username,
     url: `https://arcusx.pro/profile/${userId}`,
     image: profile.avatar_url ? getAvatarUrl(profile.avatar_url) : getDefaultAvatarUrl(),
-    description: profile.bio || `Perfil de ${profile.username} en ArcusX`,
+    description: profile.bio || t('profile.schema.description').replace('{{username}}', profile.username),
     ...(profile.portfolio_url && {
       sameAs: [profile.portfolio_url]
     })
@@ -135,7 +139,17 @@ const UserProfile = () => {
       {profile && (
         <SEO
           title={t('profile.title').replace('{{username}}', profile.username)}
-          description={profile.bio || `Perfil público de ${profile.username} en ArcusX. ${stats ? `Rating: ${stats.average_rating}/5, ${stats.tasks_completed} tareas completadas.` : ''}`}
+          description={
+            profile.bio ||
+            t('profile.meta.description')
+              .replace('{{username}}', profile.username)
+              .replace(
+                '{{stats}}',
+                stats
+                  ? `Rating: ${stats.average_rating}/5, ${stats.tasks_completed} ${t('profile.stats.completed').toLowerCase()}.`
+                  : ''
+              )
+          }
               image={profile.avatar_url ? getAvatarUrl(profile.avatar_url) : getDefaultAvatarUrl()}
           url={`/profile/${userId}`}
           type="profile"
@@ -144,7 +158,43 @@ const UserProfile = () => {
         />
       )}
       <div className="user-profile-container">
-        {/* Header con botón de volver */}
+        {/* Banner de contratación rápida */}
+      {isHireMode && !isOwner && profile && (
+        <div className="hire-banner">
+          <div className="hire-banner-content">
+            <div className="hire-banner-text">
+              <p className="hire-banner-title">
+                {t('hire.banner.title').replace('{{username}}', profile.username)}
+              </p>
+              <p className="hire-banner-body">
+                {t('hire.banner.body').replace(/\{\{username\}\}/g, profile.username)}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="hire-banner-cta"
+              onClick={() => {
+                const params = new URLSearchParams();
+                params.set('for_user', String(userId));
+                params.set('hire_username', encodeURIComponent(profile.username));
+                navigate(
+                  { pathname: '/create-task', search: params.toString() },
+                  {
+                    state: {
+                      hireContext: { userId: parseInt(userId!, 10), username: profile.username },
+                    },
+                  }
+                );
+              }}
+            >
+              <FaPlus style={{ marginRight: '8px' }} />
+              {t('hire.banner.cta')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Header con botón de volver */}
         <div className="profile-header-nav">
         <button type="button" onClick={handleBack} className="back-button">
           <FaArrowLeft />
@@ -163,7 +213,7 @@ const UserProfile = () => {
           {profile.avatar_url ? (
             <img 
               src={getAvatarUrl(profile.avatar_url)} 
-              alt={`Avatar de ${profile.username} - Perfil público en ArcusX`}
+              alt={t('profile.avatar.alt').replace('{{username}}', profile.username)}
               className="profile-avatar"
               loading="lazy"
               decoding="async"
@@ -184,16 +234,22 @@ const UserProfile = () => {
               {profile.username?.charAt(0).toUpperCase() || <FaUser />}
             </div>
           )}
-          {profile.verified && (
-            <div className="verified-badge" title={t('profile.verified.title')}>
-              <FaCheckCircle />
-            </div>
-          )}
         </div>
         
         <div className="profile-info">
           <div className="profile-name-row">
-            <h1>{profile.username}</h1>
+            <div className="profile-identity">
+              <h1 className="profile-name-heading">
+                <span className="profile-username-text">
+                  {profile.display_name || profile.username}
+                </span>
+              </h1>
+              <ProfilePublicBadges
+                badgeIds={profile.public_badges}
+                variant="inline"
+                className="profile-identity__badges"
+              />
+            </div>
             {!profile.public_profile && (
               <span className="private-badge" title={t('profile.private.title')}>
                 <FaLock />
@@ -227,7 +283,7 @@ const UserProfile = () => {
         <div className="profile-stats-grid">
           <div className="stat-card">
             <div className="stat-icon tasks-completed">
-              <FaTasks style={{ color: '#ffffff', fill: '#ffffff' }} />
+              <FaTasks />
             </div>
             <div className="stat-content">
               <div className="stat-value">{stats.tasks_completed}</div>
@@ -237,7 +293,7 @@ const UserProfile = () => {
           
           <div className="stat-card">
             <div className="stat-icon tasks-created">
-              <FaBriefcase style={{ color: '#ffffff', fill: '#ffffff' }} />
+              <FaBriefcase />
             </div>
             <div className="stat-content">
               <div className="stat-value">{stats.tasks_created}</div>
@@ -247,7 +303,7 @@ const UserProfile = () => {
           
           <div className="stat-card">
             <div className="stat-icon earnings">
-              <FaDollarSign style={{ color: '#ffffff', fill: '#ffffff' }} />
+              <FaDollarSign />
             </div>
             <div className="stat-content">
               <div className="stat-value">${stats.total_earned.toFixed(2)}</div>
@@ -257,7 +313,7 @@ const UserProfile = () => {
           
           <div className="stat-card">
             <div className="stat-icon rating">
-              <FaStar style={{ color: '#ffffff', fill: '#ffffff' }} />
+              <FaStar />
             </div>
             <div className="stat-content">
               <div className="stat-value">
@@ -288,7 +344,7 @@ const UserProfile = () => {
         <h2 className="section-title">{t('profile.section.bio')}</h2>
         {profile.bio ? (
           <div className="bio-content">
-            <p className="profile-bio-full">{profile.bio}</p>
+            <p className="profile-bio-full">{normalizeDisplayText(profile.bio)}</p>
           </div>
         ) : (
           <div className="empty-state">

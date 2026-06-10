@@ -58,8 +58,13 @@ const NotificationManagement: React.FC<NotificationManagementProps> = ({ onUpdat
     try {
       const data = await getAdminNotifications({ page, limit: 20 });
       setNotifications(data.notifications);
-      setTotalPages(data.pagination.total_pages);
-      setTotal(data.pagination.total);
+      const total = Number(data.pagination?.total ?? 0);
+      const limit = Number(data.pagination?.limit ?? 20);
+      setTotalPages(
+        Number(data.pagination?.total_pages) ||
+          (total > 0 ? Math.ceil(total / limit) : 1),
+      );
+      setTotal(total);
     } catch (err: any) {
       setError(err.message || 'Error al cargar notificaciones');
     } finally {
@@ -410,7 +415,7 @@ const NotificationManagement: React.FC<NotificationManagementProps> = ({ onUpdat
       {/* Contenido: Lista */}
       {activeTab === 'list' && (
         <>
-          <div className="filter-info" style={{ marginBottom: '20px', padding: '16px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '12px', border: '1px solid rgba(40, 192, 240, 0.3)' }}>
+          <div className="filter-info" style={{ marginBottom: '20px', padding: '16px', background: 'var(--bg-tertiary)', borderRadius: '12px', border: '1px solid rgba(40, 192, 240, 0.3)' }}>
             <span>Total: {total} notificaciones</span>
           </div>
           
@@ -454,10 +459,10 @@ const NotificationManagement: React.FC<NotificationManagementProps> = ({ onUpdat
                     
                     <div className="notification-card-footer">
                       <div className="notification-card-meta">
-                        {notif.user_id ? (
+                        {(notif.user_id_mysql ?? notif.user_id) ? (
                           <div className="notification-user">
                             <FaUsers />
-                            <span>{notif.user_username || 'Usuario #' + notif.user_id}</span>
+                            <span>{notif.user_username || `Usuario #${notif.user_id_mysql ?? notif.user_id}`}</span>
                           </div>
                         ) : (
                           <div className="notification-user global">
@@ -552,9 +557,9 @@ const NotificationManagement: React.FC<NotificationManagementProps> = ({ onUpdat
                   <div className="detail-item">
                     <label>Destinatario:</label>
                     <span>
-                      {selectedNotification.user_id ? (
+                      {(selectedNotification.user_id_mysql ?? selectedNotification.user_id) ? (
                         <div>
-                          <div>{selectedNotification.user_username || 'Usuario #' + selectedNotification.user_id}</div>
+                          <div>{selectedNotification.user_username || 'Usuario #' + (selectedNotification.user_id_mysql ?? selectedNotification.user_id)}</div>
                           {selectedNotification.user_email && (
                             <small className="text-muted">{selectedNotification.user_email}</small>
                           )}
@@ -572,7 +577,7 @@ const NotificationManagement: React.FC<NotificationManagementProps> = ({ onUpdat
               
               <div className="dispute-details-section">
                 <h4>Título</h4>
-                <p style={{ fontSize: '18px', fontWeight: '600', color: '#fff', margin: '8px 0' }}>
+                <p style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)', margin: '8px 0' }}>
                   {selectedNotification.title}
                 </p>
               </div>
@@ -580,13 +585,13 @@ const NotificationManagement: React.FC<NotificationManagementProps> = ({ onUpdat
               <div className="dispute-details-section">
                 <h4>Mensaje</h4>
                 <div style={{ 
-                  background: 'rgba(255, 255, 255, 0.05)', 
+                  background: 'var(--bg-tertiary)', 
                   padding: '20px', 
                   borderRadius: '12px',
                   border: '1px solid rgba(40, 192, 240, 0.3)',
                   whiteSpace: 'pre-wrap',
                   lineHeight: '1.6',
-                  color: 'rgba(255, 255, 255, 0.9)'
+                  color: 'var(--text-secondary)'
                 }}>
                   {selectedNotification.message}
                 </div>

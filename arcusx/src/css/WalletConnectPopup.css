@@ -386,8 +386,17 @@ body:has(.wallet-popup-overlay) .lang-select--fab {
 }
 
 /* Texto del botón visible en modo claro */
+:root[data-theme="light"] .download-button {
+  color: #0f172a !important;
+}
+
 :root[data-theme="light"] .download-button span {
-  color: #000000 !important;
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+}
+
+:root[data-theme="light"] .download-button .download-icon {
+  color: #2563eb !important;
 }
 
 /* Network info */

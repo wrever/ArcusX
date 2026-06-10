@@ -4,7 +4,7 @@
  */
 
 import { useEffect } from 'react';
-import { API_URL } from '../config/database';
+import { arcusxApiUrl } from '../config/arcusxApi';
 
 /**
  * Hook para verificar y eliminar tareas programadas
@@ -16,7 +16,7 @@ export function useScheduledTaskDeletion() {
       try {
         // Llamar al endpoint para eliminar tareas programadas
         // Este endpoint puede ser llamado sin autenticación si es necesario
-        const response = await fetch(`${API_URL}/auth/delete_scheduled_tasks.php?cron_token=arcusx_scheduled_deletion_2025`, {
+        const response = await fetch(arcusxApiUrl('delete_scheduled_tasks', { cron_token: 'arcusx_scheduled_deletion_2025' }), {
           method: 'GET',
           mode: 'cors',
         });

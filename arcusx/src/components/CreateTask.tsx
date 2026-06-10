@@ -1,12 +1,32 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { FaArrowLeft, FaClock, FaExclamationTriangle, FaCheckCircle, FaFileAlt, FaCreditCard, FaHeading, FaAlignLeft, FaDollarSign, FaTag, FaLayerGroup, FaInfoCircle } from 'react-icons/fa';
 import '../css/CreateTask.css';
-import axios from 'axios';
+import axios from '../config/axios';
 import Popup from './Popup';
-import { API_URL } from '../config/database';
+import { arcusxApiUrl } from '../config/arcusxApi';
 import { getPlatformFee } from '../services/platformFeeService';
 import { useI18n } from '../i18n/I18nProvider';
+import { useWallet } from '../hooks/useWallet';
+import {
+  useInitializeEscrow,
+  useFundEscrow,
+  useSendTransaction,
+  useGetEscrowFromIndexerByContractIds,
+} from '@trustless-work/escrow/hooks';
+import {
+  createPrivateOfferEscrow,
+  fundPrivateOfferEscrow,
+  sendPrivateOffer,
+} from '../services/privateOfferEscrow';
+import { finalizePrivateOffer } from '../services/privateOfferService';
+import PrivateOfferEscrowPopup from './PrivateOfferEscrowPopup';
+import { USDC_ISSUER } from '../config/usdc';
+import { quoteEscrowFundAmount } from '../utils/escrowFeeQuote';
+import { isValidStellarGAddress } from '../utils/stellarAddress';
+import { quoteEscrowCommission } from '../utils/escrowFeeQuote';
+import { clientFeePercents } from '../utils/escrowFeeDisplay';
+import EscrowFeeBreakdown from './EscrowFeeBreakdown';
 
 interface UserLimits {
   can_create: boolean;
@@ -20,16 +40,63 @@ interface CreateTaskProps {
   embedded?: boolean;
 }
 
+interface HireContext {
+  userId: number;
+  username: string;
+  skill?: string;
+}
+
+/** Sugiere categoría de tarea en base a la primera skill del freelancer (valores backend: Desarrollo, …). */
+function suggestCategoryFromSkill(skill: string | undefined): string {
+  if (!skill?.trim()) return 'Desarrollo';
+  const s = skill.toLowerCase();
+  if (/figma|diseño|design|ui|ux|photoshop|illustrator|marca|vector|grafic|sketch|canva/i.test(s)) return 'Diseño';
+  if (/seo|social|ads|marketing|growth|campaign|email|community/i.test(s)) return 'Marketing';
+  if (/stellar|blockchain|web3|solidity|smart|bitcoin|ethereum|defi|nft|rust|soroban/i.test(s)) return 'Blockchain';
+  if (/writing|copy|blog|video|content|editorial|redacción|redacao/i.test(s)) return 'Contenido';
+  if (/react|node|php|python|java|dev|api|sql|mongo|web|typescript|javascript|laravel|docker|aws|linux|git/i.test(s)) {
+    return 'Desarrollo';
+  }
+  return 'Desarrollo';
+}
+
 const CreateTask = ({ embedded = false }: CreateTaskProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { t } = useI18n();
+
+  const hireContextFromQuery = useMemo((): HireContext | null => {
+    const uid = searchParams.get('for_user');
+    const uname = searchParams.get('hire_username');
+    const skillRaw = searchParams.get('hire_skill');
+    if (!uid || !uname) return null;
+    const id = parseInt(uid, 10);
+    if (Number.isNaN(id) || id <= 0) return null;
+    try {
+      const username = decodeURIComponent(uname);
+      const skill = skillRaw ? decodeURIComponent(skillRaw) : undefined;
+      return { userId: id, username, skill };
+    } catch {
+      return null;
+    }
+  }, [searchParams]);
+
+  const stateHire = (location.state as { hireContext?: HireContext } | null)?.hireContext ?? null;
+  const hireContext = stateHire ?? hireContextFromQuery;
+
+  const initialCategory = suggestCategoryFromSkill(hireContext?.skill);
+  const initialDescription = hireContext
+    ? t('hire.context.desc.prefix').replace('{{username}}', hireContext.username)
+    : '';
+
   const [formData, setFormData] = useState({
     title: '',
-    description: '',
+    description: initialDescription,
     price: '',
-    currency: 'USDC', // Moneda por defecto (USD Coin)
+    currency: 'USDC',
     difficulty: 'Fácil',
-    category: 'Desarrollo',
+    category: initialCategory,
     subtitle: ''
   });
   
@@ -39,15 +106,37 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
   // Estados para monto del trabajador, comisión y total a pagar
   const [workerAmount, setWorkerAmount] = useState<string>('');
   const [commissionAmount, setCommissionAmount] = useState<string>('');
+  const [platformCommissionAmount, setPlatformCommissionAmount] = useState<string>('');
+  const [protocolCommissionAmount, setProtocolCommissionAmount] = useState<string>('');
   const [totalAmount, setTotalAmount] = useState<string>('');
-  const [platformFee, setPlatformFee] = useState<number>(0.003); // 0.3% por defecto
-  const [platformFeePercent, setPlatformFeePercent] = useState<string>('0.3');
+  const [platformFee, setPlatformFee] = useState<number>(0.027);
+  const [totalClientFeePercent, setTotalClientFeePercent] = useState<string>('3');
   
   // Estados para el popup
   const [showPopup, setShowPopup] = useState(false);
   const [popupType, setPopupType] = useState<'success' | 'error'>('success');
   const [popupTitle, setPopupTitle] = useState('');
   const [popupMessage, setPopupMessage] = useState('');
+  /** URL absoluta a postular (con ?from=hire); null si no hay task_id. */
+  const [postCreateApplyUrl, setPostCreateApplyUrl] = useState<string | null>(null);
+  const [copyLinkFeedback, setCopyLinkFeedback] = useState<'success' | 'error' | null>(null);
+  const [invitedWorkerWallet, setInvitedWorkerWallet] = useState<string | null>(null);
+  const [loadingInvitedWallet, setLoadingInvitedWallet] = useState(false);
+  const [showPrivateOfferEscrowPopup, setShowPrivateOfferEscrowPopup] = useState(false);
+  const [pendingPrivateTask, setPendingPrivateTask] = useState<{
+    id: number;
+    title: string;
+    description: string;
+    price: string;
+    deployTxHash?: string;
+    contractId?: string;
+  } | null>(null);
+
+  const { address: clientWallet, isConnected, connectWallet, kit } = useWallet();
+  const { deployEscrow } = useInitializeEscrow();
+  const { fundEscrow } = useFundEscrow();
+  const { sendTransaction } = useSendTransaction();
+  const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds();
 
   // Obtener el usuario logeado
   const storedUser = localStorage.getItem('user');
@@ -58,7 +147,7 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
     if (!user?.id) return;
     
     try {
-      const response = await axios.get(`${API_URL}/auth/task_stats.php?user_id=${user.id}`);
+      const response = await axios.get(arcusxApiUrl('task_stats', { user_id: user.id }));
       setUserLimits(response.data);
     } catch (error: any) {
       // Para usuarios nuevos, establecer valores por defecto que permitan crear tareas
@@ -99,12 +188,38 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
     };
   }, [user?.id]);
 
+  useEffect(() => {
+    if (!hireContext?.userId) {
+      setInvitedWorkerWallet(null);
+      return;
+    }
+    let cancelled = false;
+    setLoadingInvitedWallet(true);
+    axios
+      .get(arcusxApiUrl('get_user_details', { user_id: hireContext.userId }))
+      .then((res) => {
+        if (cancelled) return;
+        const w = res.data?.private_payout_wallet ?? res.data?.wallet_address;
+        setInvitedWorkerWallet(isValidStellarGAddress(w) ? String(w).trim() : null);
+      })
+      .catch(() => {
+        if (!cancelled) setInvitedWorkerWallet(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingInvitedWallet(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [hireContext?.userId]);
+
   // Función para cargar platform fee del backend
   const loadPlatformFee = async () => {
     try {
       const fee = await getPlatformFee();
+      const percents = clientFeePercents(fee);
       setPlatformFee(fee);
-      setPlatformFeePercent((fee * 100).toFixed(2));
+      setTotalClientFeePercent(percents.totalPercent);
     } catch (error) {
       // Mantener valores por defecto si falla
     }
@@ -115,26 +230,26 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
     if (formData.price && formData.price.trim() !== '') {
       const workerAmountValue = parseFloat(formData.price);
       if (!isNaN(workerAmountValue) && workerAmountValue > 0) {
-        // IMPORTANTE: Usar la misma fórmula que en ProposalReview
-        // Trustless Work calcula la comisión sobre el amount del escrow al liberar
-        // Para que el trabajador reciba exactamente workerAmount:
-        // escrowAmount = workerAmount / (1 - platformFee)
-        // commission = escrowAmount - workerAmount
-        const escrowAmount = workerAmountValue / (1 - platformFee);
-        const commission = escrowAmount - workerAmountValue;
-        const total = escrowAmount; // Total que debe pagar el cliente
+        const q = quoteEscrowCommission(workerAmountValue, platformFee);
+        const total = q.fundAmount;
         
         setWorkerAmount(workerAmountValue.toFixed(2));
-        setCommissionAmount(commission.toFixed(7));
+        setCommissionAmount(q.totalCommission.toFixed(7));
+        setPlatformCommissionAmount(q.platformCommission.toFixed(7));
+        setProtocolCommissionAmount(q.protocolCommission.toFixed(7));
         setTotalAmount(total.toFixed(7));
       } else {
         setWorkerAmount('');
         setCommissionAmount('');
+        setPlatformCommissionAmount('');
+        setProtocolCommissionAmount('');
         setTotalAmount('');
       }
     } else {
       setWorkerAmount('');
       setCommissionAmount('');
+      setPlatformCommissionAmount('');
+      setProtocolCommissionAmount('');
       setTotalAmount('');
     }
   }, [formData.price, platformFee]);
@@ -157,6 +272,7 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
 
   // Función para mostrar popup de éxito
   const showSuccessPopup = (title: string, message: string) => {
+    setCopyLinkFeedback(null);
     setPopupType('success');
     setPopupTitle(title);
     setPopupMessage(message);
@@ -165,6 +281,8 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
 
   // Función para mostrar popup de error
   const showErrorPopup = (title: string, message: string) => {
+    setPostCreateApplyUrl(null);
+    setCopyLinkFeedback(null);
     setPopupType('error');
     setPopupTitle(title);
     setPopupMessage(message);
@@ -174,16 +292,71 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
   // Función para cerrar popup
   const closePopup = () => {
     setShowPopup(false);
+    setPostCreateApplyUrl(null);
+    setCopyLinkFeedback(null);
   };
+
+  const handleCopyApplyLink = useCallback(async () => {
+    if (!postCreateApplyUrl) return;
+    try {
+      await navigator.clipboard.writeText(postCreateApplyUrl);
+      setCopyLinkFeedback('success');
+    } catch {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = postCreateApplyUrl;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        setCopyLinkFeedback('success');
+      } catch {
+        setCopyLinkFeedback('error');
+      }
+    }
+    window.setTimeout(() => setCopyLinkFeedback(null), 2800);
+  }, [postCreateApplyUrl]);
 
   // Función para manejar el botón del popup
   const handlePopupButton = () => {
     if (popupType === 'success') {
+      setPostCreateApplyUrl(null);
+      setCopyLinkFeedback(null);
       navigate('/dashboard');
     } else {
-      // Solo cerrar el popup si es error
       closePopup();
     }
+  };
+
+  const applyCreatedTaskSuccess = (data: { task_id?: number | string; message?: string }) => {
+    const raw = data?.task_id;
+    const taskId = raw != null && raw !== '' ? Number(raw) : NaN;
+    const applyUrl =
+      !Number.isNaN(taskId) && taskId > 0
+        ? `${window.location.origin}/apply-task/${taskId}?from=hire`
+        : null;
+    setPostCreateApplyUrl(applyUrl);
+
+    const baseMsg = t('create.task.created.message');
+    const shareHint = hireContext
+      ? t('hire.success.share.hint').replace(/\{\{username\}\}/g, hireContext.username)
+      : t('create.success.share.hint');
+    showSuccessPopup(t('create.task.created.title'), `${baseMsg}\n\n${shareHint}`);
+
+    setFormData({
+      title: '',
+      description: hireContext
+        ? t('hire.context.desc.prefix').replace('{{username}}', hireContext.username)
+        : '',
+      price: '',
+      currency: 'USDC',
+      difficulty: 'Fácil',
+      category: suggestCategoryFromSkill(hireContext?.skill),
+      subtitle: ''
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -211,72 +384,136 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
     // Si no hay límites cargados, permitir crear (usuario nuevo)
     // El backend validará los límites reales
 
+    if (hireContext) {
+      if (!invitedWorkerWallet) {
+        showErrorPopup(
+          t('common.error'),
+          t('hire.error.workerNoWallet').replace(/\{\{username\}\}/g, hireContext.username),
+        );
+        setLoading(false);
+        return;
+      }
+      if (!isConnected || !clientWallet) {
+        showErrorPopup(t('common.error'), t('hire.error.clientWallet'));
+        setLoading(false);
+        return;
+      }
+      if (!kit) {
+        showErrorPopup(t('common.error'), t('hire.error.clientWallet'));
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
-      // Enviar los datos de la tarea a la API PHP
-      const response = await axios.post(`${API_URL}/auth/create_task.php`, {
+      const response = await axios.post(`${arcusxApiUrl('create_task')}`, {
         ...formData,
-        user_id: user.id
+        user_id: user.id,
+        ...(hireContext
+          ? { is_private_invite: 1, invited_user_id: hireContext.userId }
+          : {}),
       });
 
-      // Verificar si la respuesta es exitosa (200-299) o si tiene el mensaje de éxito
-      if (response.status >= 200 && response.status < 300 && response.data && response.data.message) {
-        showSuccessPopup('¡Tarea Creada!', 'Tu tarea ha sido publicada exitosamente. Los trabajadores podrán verla y aplicar.');
-        setFormData({
-          title: '',
-          description: '',
-          price: '',
-          currency: 'USDC',
-          difficulty: 'Fácil',
-          category: 'Desarrollo',
-          subtitle: ''
-        });
-        
-        // Recargar límites del usuario (con manejo de errores)
-        try {
-          const limitsResponse = await axios.get(`${API_URL}/auth/task_stats.php?user_id=${user.id}`);
-          if (limitsResponse.data) {
-            setUserLimits(limitsResponse.data);
-          }
-        } catch (limitsError: any) {
-          // No mostrar error al usuario, solo loguear
-          // Recargar límites con valores por defecto
-          setUserLimits({
-            can_create: true,
-            cooldown_remaining: 0,
-            tasks_today: 0,
-            tasks_this_week: 0,
-            next_task_time: 'Ahora'
-          });
-        }
-      } else {
+      const okPayload =
+        (response.status >= 200 && response.status < 300 && response.data?.success) ||
+        response.data?.success;
+      if (!okPayload) {
         showErrorPopup(t('common.error'), t('create.task.error.server'));
+        setLoading(false);
+        return;
       }
 
-    } catch (err: any) {
-      // Si el error es 201 (Created), la tarea se creó exitosamente
-      if (err.response && err.response.status === 201) {
-        showSuccessPopup('¡Tarea Creada!', 'Tu tarea ha sido publicada exitosamente. Los trabajadores podrán verla y aplicar.');
-        setFormData({
-          title: '',
-          description: '',
-          price: '',
-          currency: 'USDC',
-          difficulty: 'Fácil',
-          category: 'Desarrollo',
-          subtitle: ''
+      const rawId = response.data?.task_id;
+      const taskId = rawId != null && rawId !== '' ? Number(rawId) : NaN;
+
+      if (hireContext && !Number.isNaN(taskId) && taskId > 0) {
+        setPendingPrivateTask({
+          id: taskId,
+          title: formData.title,
+          description: formData.description,
+          price: formData.price,
         });
-        
-        // Recargar límites
+        setShowPrivateOfferEscrowPopup(true);
+        setLoading(false);
+        return;
+      }
+
+      applyCreatedTaskSuccess(response.data);
+      try {
+        const limitsResponse = await axios.get(arcusxApiUrl('task_stats', { user_id: user.id }));
+        if (limitsResponse.data) setUserLimits(limitsResponse.data);
+      } catch {
+        setUserLimits({
+          can_create: true,
+          cooldown_remaining: 0,
+          tasks_today: 0,
+          tasks_this_week: 0,
+          next_task_time: 'Ahora',
+        });
+      }
+    } catch (err: unknown) {
+      const ax = err as { response?: { status?: number; data?: { success?: boolean; message?: string; task_id?: number } } };
+      if (ax.response?.status === 201 && ax.response.data?.success) {
+        if (hireContext && ax.response.data.task_id) {
+          setLoading(false);
+          showErrorPopup(t('common.error'), t('create.task.error.create'));
+          return;
+        }
+        applyCreatedTaskSuccess(ax.response.data);
         try {
           await loadUserLimits();
-        } catch (e) {
+        } catch {
+          /* noop */
         }
       } else {
-        showErrorPopup(t('common.error'), err.response?.data?.message || t('create.task.error.create'));
+        showErrorPopup(
+          t('common.error'),
+          ax.response?.data?.message || t('create.task.error.create'),
+        );
       }
     } finally {
       setLoading(false);
     }
+  };
+
+  const privateEscrowHooks = {
+    kit,
+    deployEscrow,
+    fundEscrow,
+    sendTransaction,
+    getEscrowByContractIds: async (
+      contractIds: string[] | { contractIds: string[]; validateOnChain?: boolean },
+    ) => {
+      const ids = Array.isArray(contractIds) ? contractIds : contractIds.contractIds;
+      const result = await getEscrowByContractIds({
+        contractIds: ids,
+        validateOnChain: Array.isArray(contractIds)
+          ? false
+          : contractIds.validateOnChain ?? false,
+      });
+      return Array.isArray(result) ? result : (result as { escrows?: unknown[] })?.escrows ?? result ?? [];
+    },
+  };
+
+  const handlePrivateOfferComplete = async () => {
+    if (!hireContext) return;
+    showSuccessPopup(
+      t('hire.success.sent.title'),
+      t('hire.success.sent.message').replace(/\{\{username\}\}/g, hireContext.username),
+    );
+    setFormData({
+      title: '',
+      description: hireContext
+        ? t('hire.context.desc.prefix').replace('{{username}}', hireContext.username)
+        : '',
+      price: '',
+      currency: 'USDC',
+      difficulty: 'Fácil',
+      category: suggestCategoryFromSkill(hireContext?.skill),
+      subtitle: '',
+    });
+    setPendingPrivateTask(null);
+    await loadUserLimits();
   };
 
   return (
@@ -290,7 +527,46 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
 
       <div className="create-task-form-card">
         <h2>{t('create.title')}</h2>
-        
+
+        {/* Contexto de contratación rápida */}
+        {hireContext && (
+          <div className="hire-context-chip">
+            <span className="hire-context-chip-dot" />
+            {t('hire.context.chip').replace('{{username}}', hireContext.username)}
+          </div>
+        )}
+        {hireContext && (
+          <p className="hire-context-private-hint" style={{ marginTop: '0.75rem', fontSize: '0.9rem', opacity: 0.9 }}>
+            {t('hire.context.private').replace(/\{\{username\}\}/g, hireContext.username)}
+          </p>
+        )}
+        {hireContext && (
+          <div className="hire-context-wallet-status" style={{ marginTop: '0.5rem', fontSize: '0.88rem' }}>
+            {loadingInvitedWallet ? (
+              <span>{t('edit.wallet.loading')}</span>
+            ) : invitedWorkerWallet ? (
+              <span style={{ color: 'var(--primary-green, #10dd88)' }}>
+                ✓ {t('edit.wallet.registered')}: {invitedWorkerWallet.slice(0, 6)}…
+                {invitedWorkerWallet.slice(-6)}
+              </span>
+            ) : (
+              <span style={{ color: '#f59e0b' }}>
+                {t('hire.error.workerNoWallet').replace(/\{\{username\}\}/g, hireContext.username)}
+              </span>
+            )}
+            {!isConnected && (
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ marginTop: '0.5rem', display: 'block' }}
+                onClick={() => void connectWallet()}
+              >
+                {t('hire.error.clientWallet')}
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Mostrar límites del usuario */}
         {userLimits ? (
           <div className="user-limits-info">
@@ -437,9 +713,13 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
                 <p className="net-amount-text">
                    {t('create.worker.receives')} <strong>{workerAmount} USDC</strong>
                 </p>
-                <p className="commission-text">
-                   {t('create.commission.label')} ({platformFeePercent}%): {commissionAmount} USDC
-                </p>
+                <EscrowFeeBreakdown
+                  className="commission-text"
+                  platformFee={platformFee}
+                  totalUsdc={commissionAmount}
+                  platformUsdc={platformCommissionAmount}
+                  protocolUsdc={protocolCommissionAmount}
+                />
                 <p className="total-amount-text" style={{ fontWeight: 'bold', color: '#10dd88', fontSize: '1.1em' }}>
                   <FaCreditCard style={{ marginRight: '6px' }} /> {t('create.total.pay')} <strong>{totalAmount} USDC</strong>
                 </p>
@@ -455,9 +735,9 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
                   <FaDollarSign style={{ marginRight: '6px', fontSize: '14px' }} />
                   {t('create.label.payment')}
                 </label>
-                <p className="helper-text" style={{ fontSize: '0.85em', color: 'rgba(255, 255, 255, 0.7)', marginTop: '0.25rem', marginBottom: '0.5rem' }}>
+                <p className="helper-text" style={{ fontSize: '0.85em', color: 'var(--text-muted)', marginTop: '0.25rem', marginBottom: '0.5rem' }}>
                   <FaInfoCircle style={{ marginRight: '4px', fontSize: '12px' }} />
-                  {t('create.helper.payment').replace('{{p}}', String(platformFeePercent))}
+                  {t('create.helper.payment').replace('{{p}}', String(totalClientFeePercent))}
                 </p>
                 <input
                   type="number"
@@ -545,9 +825,14 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
               <p style={{ marginTop: '1rem' }}><strong> {t('create.costs.title')}</strong></p>
               <ul>
                 <li>{t('create.costs.bullet.worker')}</li>
-                <li>{t('create.costs.bullet.commission').replace('{{p}}', String(platformFeePercent))}</li>
+                <li>
+                  {t('create.costs.bullet.commission')
+                    .replace('{{total}}', String(totalClientFeePercent))
+                    .replace('{{platform}}', clientFeePercents(platformFee).platformPercent)
+                    .replace('{{protocol}}', clientFeePercents(platformFee).protocolPercent)}
+                </li>
                 <li>{t('create.costs.bullet.currency')}</li>
-                <li>{t('create.costs.bullet.total').replace('{{p}}', String(platformFeePercent))}</li>
+                <li>{t('create.costs.bullet.total').replace('{{p}}', String(totalClientFeePercent))}</li>
                 <li>{t('create.costs.bullet.fees')}</li>
                 <li>{t('create.costs.bullet.note')}</li>
               </ul>
@@ -556,17 +841,39 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
 
           {/* Botón de envío */}
           <div className="form-actions">
-            <button 
-              type="submit" 
-              disabled={loading || (userLimits?.can_create === false) || false}
+            <button
+              type="submit"
+              disabled={
+                loading ||
+                userLimits?.can_create === false ||
+                Boolean(
+                  hireContext &&
+                    (loadingInvitedWallet ||
+                      !invitedWorkerWallet ||
+                      !isConnected ||
+                      !clientWallet),
+                )
+              }
               className="submit-button"
               style={{
-                opacity: (loading || (userLimits && userLimits.can_create === false)) ? 0.5 : 1
+                opacity:
+                  loading ||
+                  userLimits?.can_create === false ||
+                  (hireContext &&
+                    (loadingInvitedWallet || !invitedWorkerWallet || !isConnected))
+                    ? 0.5
+                    : 1,
               }}
             >
-              {loading ? t('create.submitting') : 
-               (userLimits && userLimits.can_create === false) ? t('create.limit.reached.title') :
-               t('create.publish')}
+              {showPrivateOfferEscrowPopup
+                ? t('hire.escrow.processing')
+                : loading
+                  ? t('create.submitting')
+                  : userLimits?.can_create === false
+                    ? t('create.limit.reached.title')
+                    : hireContext
+                      ? t('hire.submit.private')
+                      : t('create.publish')}
             </button>
           </div>
         </form>
@@ -579,9 +886,122 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
         type={popupType}
         title={popupTitle}
         message={popupMessage}
-        buttonText={popupType === 'success' ? 'Entendido' : 'Entiendo'}
+        buttonText={popupType === 'success' ? t('create.popup.ok') : t('create.popup.dismiss')}
         onButtonClick={handlePopupButton}
+        children={
+          popupType === 'success' && postCreateApplyUrl ? (
+            <div className="hire-success-extras">
+              <label className="hire-success-label" htmlFor="hire-apply-url">
+                {t('create.success.apply.link.label')}
+              </label>
+              <div className="hire-success-url-row">
+                <input
+                  id="hire-apply-url"
+                  readOnly
+                  className="hire-success-url-input"
+                  value={postCreateApplyUrl}
+                  onFocus={(e) => e.target.select()}
+                />
+                <button type="button" className="hire-success-copy-btn" onClick={handleCopyApplyLink}>
+                  {t('create.success.copy.button')}
+                </button>
+              </div>
+              {copyLinkFeedback === 'success' && (
+                <p className="hire-copy-feedback hire-copy-feedback--ok">{t('create.success.copy.done')}</p>
+              )}
+              {copyLinkFeedback === 'error' && (
+                <p className="hire-copy-feedback hire-copy-feedback--err">{t('create.success.copy.fail')}</p>
+              )}
+            </div>
+          ) : undefined
+        }
       />
+
+      {showPrivateOfferEscrowPopup && pendingPrivateTask && hireContext && invitedWorkerWallet && clientWallet && (
+        <PrivateOfferEscrowPopup
+          isOpen={showPrivateOfferEscrowPopup}
+          onClose={() => {
+            setShowPrivateOfferEscrowPopup(false);
+          }}
+          onComplete={handlePrivateOfferComplete}
+          taskTitle={pendingPrivateTask.title}
+          taskPrice={pendingPrivateTask.price}
+          workerName={hireContext.username}
+          onCreateEscrow={async () => {
+            const result = await createPrivateOfferEscrow({
+              task: pendingPrivateTask,
+              clientAddress: clientWallet,
+              workerAddress: invitedWorkerWallet,
+              platformFee,
+              hooks: privateEscrowHooks,
+            });
+            if (result.contractId) {
+              setPendingPrivateTask((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      contractId: result.contractId,
+                      deployTxHash: result.deployTxHash,
+                    }
+                  : prev,
+              );
+            }
+            return {
+              success: result.success,
+              escrowId: result.contractId,
+              contractId: result.contractId,
+              deployTxHash: result.deployTxHash,
+              error: result.error,
+            };
+          }}
+          onFundEscrow={async (contractId) =>
+            fundPrivateOfferEscrow({
+              contractId,
+              task: pendingPrivateTask,
+              clientAddress: clientWallet,
+              platformFee,
+              hooks: privateEscrowHooks,
+            })
+          }
+          onSendOffer={async (contractId, fundTxHash) => {
+            const sent = await sendPrivateOffer({
+              taskId: pendingPrivateTask.id,
+              invitedUserId: hireContext.userId,
+              workerAddress: invitedWorkerWallet,
+              clientAddress: clientWallet,
+              contractId,
+              fundTxHash,
+              deployTxHash: pendingPrivateTask.deployTxHash,
+              task: pendingPrivateTask,
+              platformFee,
+            });
+            if (!sent.success && pendingPrivateTask.contractId) {
+              try {
+                const amount = quoteEscrowFundAmount(
+                  parseFloat(String(pendingPrivateTask.price)),
+                  platformFee,
+                );
+                await finalizePrivateOffer({
+                  task_id: pendingPrivateTask.id,
+                  invited_user_id: hireContext.userId,
+                  worker_wallet_address: invitedWorkerWallet,
+                  escrow_id: contractId,
+                  transaction_hash: fundTxHash,
+                  deploy_transaction_hash: pendingPrivateTask.deployTxHash,
+                  escrow_amount: amount,
+                  platform_fee: platformFee,
+                  trustline_address: USDC_ISSUER,
+                  client_wallet_address: clientWallet,
+                });
+                return { success: true };
+              } catch {
+                return sent;
+              }
+            }
+            return sent;
+          }}
+        />
+      )}
     </div>
   );
 };

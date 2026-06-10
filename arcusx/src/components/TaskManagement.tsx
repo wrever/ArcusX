@@ -6,6 +6,8 @@ import { useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hoo
 import { useI18n } from '../i18n/I18nProvider';
 import '../css/AdminPanel.css';
 import EscrowLifecycle from './EscrowLifecycle';
+import UsernameWithVerified from './UsernameWithVerified';
+import { parseTaskExchangeFiles, taskHasExchangeFiles } from '../utils/taskExchangeFiles';
 
 interface TaskManagementProps {
   onUpdate?: () => void;
@@ -304,8 +306,27 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                         {task.title || t('common.noTitle')}
                       </div>
                     </td>
-                    <td>{task.creator_username || 'N/A'}</td>
-                    <td>{task.worker_username || 'N/A'}</td>
+                    <td>
+                      {task.creator_username ? (
+                        <UsernameWithVerified
+                          name={task.creator_display_name || task.creator_username}
+                          verifiedEnterprise={!!task.creator_verified_enterprise}
+                          verifiedIndividual={!!task.creator_verified_individual}
+                        />
+                      ) : (
+                        'N/A'
+                      )}
+                    </td>
+                    <td>
+                      {task.worker_username ? (
+                        <UsernameWithVerified
+                          name={task.worker_display_name || task.worker_username}
+                          verified={!!task.worker_verified}
+                        />
+                      ) : (
+                        'N/A'
+                      )}
+                    </td>
                     <td>
                       {task.price ? `${parseFloat(task.price).toFixed(7)} ${task.currency || 'USDC'}` : 'N/A'}
                     </td>
@@ -422,17 +443,71 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                   )}
                 </div>
 
+                {/* Intercambio de archivos (= evidencia de entrega) */}
+                <div className="dispute-details-section">
+                  <h4>Intercambio de archivos</h4>
+                  {(() => {
+                    const exchangeFiles = parseTaskExchangeFiles(selectedTask.files);
+                    const blocksCancel = taskHasExchangeFiles(selectedTask.files);
+                    return (
+                      <>
+                        <div className="detail-grid">
+                          <div className="detail-item">
+                            <label>Archivos en intercambio</label>
+                            <span>{exchangeFiles.length}</span>
+                          </div>
+                          <div className="detail-item">
+                            <label>Cancelación cliente (reembolso directo)</label>
+                            <span className={`badge ${blocksCancel ? 'warning' : 'success'}`}>
+                              {blocksCancel ? 'Bloqueada — usar disputa' : 'Permitida'}
+                            </span>
+                          </div>
+                        </div>
+                        {exchangeFiles.length > 0 && (
+                          <ul style={{ marginTop: '12px', paddingLeft: '20px', fontSize: '14px' }}>
+                            {exchangeFiles.map((f, idx) => (
+                              <li key={String(f.id ?? idx)}>
+                                {String(f.filename ?? f.name ?? 'archivo')}
+                                {f.uploaded_by != null ? ` (usuario #${f.uploaded_by})` : ''}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+
                 {/* Información de usuarios */}
                 <div className="dispute-details-section">
                   <h4>{t('admin.tasks.section.users')}</h4>
                   <div className="detail-grid">
                     <div className="detail-item">
                       <label>{t('admin.tasks.th.client')}:</label>
-                      <span>{selectedTask.creator_username || 'N/A'}</span>
+                      <span>
+                        {selectedTask.creator_username ? (
+                          <UsernameWithVerified
+                            name={selectedTask.creator_display_name || selectedTask.creator_username}
+                            verifiedEnterprise={!!selectedTask.creator_verified_enterprise}
+                            verifiedIndividual={!!selectedTask.creator_verified_individual}
+                          />
+                        ) : (
+                          'N/A'
+                        )}
+                      </span>
                     </div>
                     <div className="detail-item">
                       <label>{t('admin.tasks.th.worker')}:</label>
-                      <span>{selectedTask.worker_username || 'N/A'}</span>
+                      <span>
+                        {selectedTask.worker_username ? (
+                          <UsernameWithVerified
+                            name={selectedTask.worker_display_name || selectedTask.worker_username}
+                            verified={!!selectedTask.worker_verified}
+                          />
+                        ) : (
+                          'N/A'
+                        )}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -447,7 +522,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                     {loadingEscrowInfo ? (
                       <div style={{ padding: '20px', textAlign: 'center' }}>
                         <FaSpinner className="spinning" style={{ fontSize: '24px', margin: '0 auto', display: 'block' }} />
-                        <p style={{ marginTop: '10px', color: 'rgba(255, 255, 255, 0.6)' }}>
+                        <p style={{ marginTop: '10px', color: 'var(--text-muted)' }}>
                           Cargando información del escrow...
                         </p>
                       </div>
@@ -516,7 +591,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                               }}>
                                 <FaExclamationTriangle style={{ color: '#ef4444', marginRight: '8px' }} />
                                 <strong style={{ color: '#ef4444' }}>Inconsistencias Detectadas:</strong>
-                                <p style={{ marginTop: '8px', color: 'rgba(255, 255, 255, 0.8)' }}>
+                                <p style={{ marginTop: '8px', color: 'var(--text-secondary)' }}>
                                   {JSON.stringify(escrowInfo.inconsistencies, null, 2)}
                                 </p>
                               </div>
@@ -530,7 +605,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                       <div style={{ 
                         padding: '20px', 
                         textAlign: 'center',
-                        color: 'rgba(255, 255, 255, 0.6)'
+                        color: 'var(--text-muted)'
                       }}>
                         <FaExclamationTriangle style={{ marginBottom: '10px', fontSize: '24px' }} />
                         <p>{t('admin.tasks.error.escrowFetch')}</p>

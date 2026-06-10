@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaCommentAlt, FaLink, FaWallet, FaInfoCircle } from 'react-icons/fa';
-import axios from 'axios';
-import { API_URL } from '../config/database';
+import axios from '../config/axios';
+import { arcusxApiUrl } from '../config/arcusxApi';
+import { normalizeDisplayText } from '../utils/utf8Mojibake';
 import '../css/ApplyTask.css'; // Necesitas crear este archivo CSS
 import { useI18n } from '../i18n/I18nProvider';
-import { authService } from '../services/authService';
 import { useWallet } from '../hooks/useWallet';
+import { canAccessTaskSupervision } from '../utils/escrowStatus';
+import { authService } from '../services/authService';
+import { devError } from '../utils/logger';
+import { clearStoredRefCode } from '../utils/referralCapture';
+import PrivateOfferActions from './PrivateOfferActions';
 
 interface TaskData {
   id: number;
@@ -19,6 +24,13 @@ interface TaskData {
   category: string;
   creator_username: string;
   created_at: string;
+  is_private_invite?: boolean;
+  invited_user_id?: number | string | null;
+  escrow_status?: string | null;
+  accepted_applicant_id?: number | string | null;
+  escrow_id?: string | null;
+  escrow_fund_tx_hash?: string | null;
+  status?: string;
 }
 
 interface ApplicationData {
@@ -29,8 +41,20 @@ interface ApplicationData {
 
 const ApplyTask = () => {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const { address: connectedWallet } = useWallet();
-  const { taskId } = useParams<{ taskId: string }>(); // Obtener el ID de la tarea de la URL
+  const { taskId } = useParams<{ taskId: string }>();
+  const [searchParams] = useSearchParams();
+  const isHireInviteLink =
+    searchParams.get('from') === 'hire' ||
+    searchParams.get('ref') === 'hire';
+  const isPrivateOfferReview = searchParams.get('from') === 'private-offer';
+
+  useEffect(() => {
+    if (isHireInviteLink) {
+      clearStoredRefCode();
+    }
+  }, [isHireInviteLink]);
   const [task, setTask] = useState<TaskData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,9 +102,38 @@ const ApplyTask = () => {
       setError(null);
       try {
         // TODO: Crear este endpoint en el backend
-        const response = await axios.get(`${API_URL}/auth/get_task_details.php?task_id=${taskId}`);
+        const response = await axios.get(arcusxApiUrl('get_task_details', { task_id: taskId }));
         if (response.data) {
-          setTask(response.data);
+          const d = response.data;
+          const normalized: TaskData = {
+            ...d,
+            title: normalizeDisplayText(d.title),
+            subtitle: normalizeDisplayText(d.subtitle),
+            description: normalizeDisplayText(d.description),
+            category: normalizeDisplayText(d.category),
+            difficulty: normalizeDisplayText(d.difficulty),
+            creator_username: normalizeDisplayText(d.creator_username),
+          };
+          setTask(normalized);
+
+          const uid = user?.id != null ? String(user.id) : null;
+          const workerId =
+            normalized.accepted_applicant_id != null
+              ? String(normalized.accepted_applicant_id)
+              : null;
+          if (
+            normalized.is_private_invite &&
+            uid &&
+            workerId === uid &&
+            canAccessTaskSupervision(
+              normalized.escrow_id,
+              normalized.escrow_status,
+              normalized.escrow_fund_tx_hash,
+            )
+          ) {
+            navigate(`/supervise-task/${taskId}/${workerId}`, { replace: true });
+            return;
+          }
         } else {
           setError(t('apply.error.no.details'));
         }
@@ -97,35 +150,39 @@ const ApplyTask = () => {
       setError(t('apply.error.no.task.id'));
       setLoading(false);
     }
-  }, [taskId]); // Ejecutar efecto cuando cambie el taskId de la URL
+  }, [taskId, user?.id, navigate]);
 
   useEffect(() => {
+    if (!isHireInviteLink || !user?.id) return;
     let cancelled = false;
-    const fillRegisteredWallet = async () => {
-      if (!user?.id) return;
-      try {
-        const res = await authService.verifyWallet();
-        if (
-          cancelled ||
-          !res.success ||
-          !res.has_wallet ||
-          !res.wallet_address
-        ) {
-          return;
+    axios
+      .get(arcusxApiUrl('get_user_details', { user_id: user.id }))
+      .then((res) => {
+        if (cancelled) return;
+        const payout = res.data?.private_payout_wallet ?? res.data?.wallet_address;
+        if (typeof payout === 'string' && payout.trim()) {
+          setApplicationData((prev) => ({
+            ...prev,
+            walletAddress: prev.walletAddress.trim() ? prev.walletAddress : payout.trim(),
+            message: prev.message.trim()
+              ? prev.message
+              : t('hire.apply.prefill.message'),
+          }));
         }
-        setApplicationData((prev) => ({
-          ...prev,
-          walletAddress: prev.walletAddress.trim() ? prev.walletAddress : res.wallet_address || ''
-        }));
-      } catch {
-        /* sin wallet registrada */
-      }
-    };
-    fillRegisteredWallet();
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [user?.id]);
+  }, [isHireInviteLink, user?.id, t]);
+
+  useEffect(() => {
+    if (!connectedWallet?.trim()) return;
+    setApplicationData((prev) => ({
+      ...prev,
+      walletAddress: prev.walletAddress.trim() ? prev.walletAddress : connectedWallet.trim(),
+    }));
+  }, [connectedWallet]);
 
   // Manejar el envío del formulario de aplicación
   const handleApplicationSubmit = async (e: React.FormEvent) => {
@@ -135,6 +192,14 @@ const ApplyTask = () => {
     setSubmitting(true);
 
     if (!user || !user.id) {
+      setSubmitError(t('apply.error.login'));
+      setShowErrorPopup(true);
+      setSubmitting(false);
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) {
       setSubmitError(t('apply.error.login'));
       setShowErrorPopup(true);
       setSubmitting(false);
@@ -181,9 +246,14 @@ const ApplyTask = () => {
       };
 
 
-      const response = await axios.post(`${API_URL}/auth/apply_task.php`, payload);
+      const response = await axios.post(`${arcusxApiUrl('apply_task')}`, payload);
 
-      if (response.data && response.data.message) {
+      if (response.data?.success !== false && response.data?.message) {
+        try {
+          await authService.registerWallet(applicationData.walletAddress.trim());
+        } catch (walletErr: unknown) {
+          devError('registerWallet after apply failed (non-fatal)', walletErr);
+        }
         setSubmitMessage(response.data.message);
         setApplicationData({
           message: '',
@@ -236,7 +306,7 @@ const ApplyTask = () => {
   }
 
   if (error) {
-    return <div className="apply-task-container error-message">Error: {error}</div>;
+    return <div className="apply-task-container error-message">{t('common.error')}: {error}</div>;
   }
 
   if (!task) {
@@ -245,12 +315,27 @@ const ApplyTask = () => {
 
   return (
     <div className="apply-task-container">
-       <Link to="/dashboard" className="back-button">
+       <Link
+         to={isPrivateOfferReview ? '/dashboard?tab=private-offers' : '/dashboard'}
+         className="back-button"
+       >
          <FaArrowLeft />
-         <span>{t('apply.back')}</span>
+         <span>
+           {isPrivateOfferReview ? t('apply.back.privateOffers') : t('apply.back')}
+         </span>
        </Link>
 
       <div className="apply-task-content">
+        {isHireInviteLink && (
+          <div className="apply-hire-ref-banner" role="status">
+            {t('hire.apply.ref.banner')}
+          </div>
+        )}
+        {isPrivateOfferReview && (
+          <div className="apply-private-offer-banner" role="status">
+            {t('privateOffer.review.banner')}
+          </div>
+        )}
         <div className="task-details-card">
           <div className="task-header">
             <h2>{task.title}</h2>
@@ -285,6 +370,32 @@ const ApplyTask = () => {
         </div>
 
         <div className="application-form-card">
+          {task.is_private_invite &&
+          task.escrow_id &&
+          task.escrow_fund_tx_hash &&
+          !task.accepted_applicant_id &&
+          (task.status === 'private_offer_pending' || task.status === 'open') &&
+          user?.id ? (
+            <div className="private-offer-decision-card">
+              <h3>{t('privateOffer.review.title')}</h3>
+              <p>{t('privateOffer.review.intro')}</p>
+              <ul className="private-offer-decision-hints">
+                <li>{t('privateOffer.review.hint.description')}</li>
+                <li>{t('privateOffer.review.hint.funded')}</li>
+                <li>{t('privateOffer.review.hint.decide')}</li>
+              </ul>
+              <p className="private-offer-decision-funded">
+                <FaInfoCircle aria-hidden />
+                {t('privateOffer.respond.body')}
+              </p>
+              <PrivateOfferActions
+                taskId={task.id}
+                workerUserId={user.id}
+                onUpdated={() => navigate('/dashboard?tab=private-offers')}
+              />
+            </div>
+          ) : (
+          <>
           <h3>{t('apply.title')}</h3>
            {submitMessage && <div className="success-message">{submitMessage}</div>}
            {submitError && <div className="error-message">{submitError}</div>}
@@ -361,6 +472,8 @@ const ApplyTask = () => {
               {submitting ? t('apply.submitting') : t('apply.submit')}
             </button>
           </form>
+          </>
+          )}
         </div>
 
       </div>

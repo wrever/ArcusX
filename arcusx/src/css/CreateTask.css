@@ -177,6 +177,24 @@
   box-shadow: var(--shadow-md);
 }
 
+:root[data-theme="light"] .create-task-container .back-button,
+:root[data-theme="light"] .create-task-container .back-button span,
+:root[data-theme="light"] .create-task-container .back-button svg {
+  color: #0f172a !important;
+}
+
+:root[data-theme="light"] .create-task-container .back-button {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+:root[data-theme="light"] .create-task-container .back-button:hover,
+:root[data-theme="light"] .create-task-container .back-button:hover span,
+:root[data-theme="light"] .create-task-container .back-button:hover svg {
+  color: var(--primary-blue) !important;
+  background: var(--bg-hover) !important;
+}
+
 .create-task-form-card {
   background: var(--bg-card);
   backdrop-filter: blur(20px);
@@ -1114,4 +1132,115 @@ input[type="date"]:focus {
   background: #ffffff !important;
   border-color: var(--primary-blue) !important;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
-} 
+}
+
+/* ── Hire Context Chip ────────────────────────────────────── */
+.hire-context-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 1rem;
+  margin-bottom: 1.25rem;
+  border-radius: 999px;
+  background: rgba(16, 221, 136, 0.1);
+  border: 1px solid rgba(16, 221, 136, 0.35);
+  color: #10dd88;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.hire-context-chip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10dd88;
+  box-shadow: 0 0 6px rgba(16, 221, 136, 0.7);
+  animation: hire-pulse 2s infinite;
+  flex-shrink: 0;
+}
+
+@keyframes hire-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.85); }
+}
+
+:root[data-theme="light"] .hire-context-chip {
+  background: rgba(10, 184, 106, 0.08);
+  border-color: rgba(10, 184, 106, 0.3);
+  color: #0a8c50;
+}
+
+:root[data-theme="light"] .hire-context-chip-dot {
+  background: #0a8c50;
+  box-shadow: 0 0 6px rgba(10, 140, 80, 0.5);
+}
+
+/* Popup éxito: enlace para postular (flujo contratar / compartir) */
+.popup-container--extra .hire-success-extras {
+  margin: 0 0 0.85rem;
+  text-align: left;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.popup-container--extra .hire-success-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted, rgba(255, 255, 255, 0.75));
+  margin-bottom: 0.35rem;
+}
+
+.popup-container--extra .hire-success-url-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: stretch;
+}
+
+.popup-container--extra .hire-success-url-input {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 0.7rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.2));
+  background: var(--bg-input, rgba(0, 0, 0, 0.25));
+  color: var(--text-primary, #fff);
+  word-break: break-all;
+}
+
+.popup-container--extra .hire-success-copy-btn {
+  align-self: flex-start;
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.8rem;
+  background: linear-gradient(135deg, #10dd88, #0ab86a);
+  color: #0a1628;
+}
+
+.hire-success-copy-btn:hover {
+  filter: brightness(1.05);
+}
+
+.popup-container--extra .hire-copy-feedback {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+}
+
+.hire-copy-feedback--ok {
+  color: #10dd88;
+}
+
+.hire-copy-feedback--err {
+  color: #f87171;
+}
+
+:root[data-theme="light"] .hire-success-url-input {
+  background: rgba(0, 0, 0, 0.06);
+  color: #0f172a;
+}

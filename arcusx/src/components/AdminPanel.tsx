@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaChartLine, FaExclamationTriangle, FaBell, FaGavel, FaUsers, FaSignOutAlt, FaCoins, FaShieldAlt, FaTasks, FaWallet } from 'react-icons/fa';
+import { FaChartLine, FaExclamationTriangle, FaBell, FaGavel, FaUsers, FaSignOutAlt, FaCoins, FaShieldAlt, FaTasks, FaWallet, FaUserPlus, FaHistory } from 'react-icons/fa';
+import AdminActivity from './AdminActivity';
 import AdminStats from './AdminStats';
 import NotificationManagement from './NotificationManagement';
 import DisputeManagement from './DisputeManagement';
@@ -9,8 +10,9 @@ import EscrowManagement from './EscrowManagement';
 import UserManagement from './UserManagement';
 import FeeManagement from './FeeManagement';
 import TokenManagement from './TokenManagement';
-import { getAdminStats, getAdminConfig, adminLogout } from '../services/adminService';
-import { useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks';
+import ReferralManagement from './ReferralManagement';
+import KycManagement from './KycManagement';
+import { getAdminStats, getAdminConfig, getReferralStats, adminLogout } from '../services/adminService';
 import '../css/AdminPanel.css';
 
 interface AdminStats {
@@ -28,6 +30,24 @@ interface AdminStats {
   feesThisWeek?: number;
   volumeToday?: number;
   feesToday?: number;
+  totalUsers?: number;
+  totalReferralUsers?: number;
+  volumeTasksUsdc?: number;
+  volumeDealsUsdc?: number;
+  feesTasksUsdc?: number;
+  feesDealsUsdc?: number;
+  releasedTransactions?: number;
+  taskEscrows?: number;
+  dealEscrows?: number;
+  totalDeals?: number;
+  completedDeals?: number;
+  openTasks?: number;
+  usersToday?: number;
+  usersThisWeek?: number;
+  usersThisMonth?: number;
+  usersWithWallet?: number;
+  tasksToday?: number;
+  dataSource?: string;
 }
 
 interface AdminPanelProps {
@@ -41,9 +61,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Hook de Trustless Work para consultar estados reales
-  const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds();
-
   // Verificar permisos de admin
   useEffect(() => {
     if (!isAdmin) {
@@ -58,8 +75,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
     setLoading(true);
     setError(null);
     try {
-      // Obtener estadísticas del backend
-      const backendStats = await getAdminStats();
+      const [backendStats, referralStats] = await Promise.all([
+        getAdminStats(),
+        getReferralStats().catch(() => null),
+      ]);
       
       // Obtener configuración del sistema
       let configs: any[] = [];
@@ -75,62 +94,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
       const treasuryConfig = configs.find(c => c.config_key === 'treasury_address');
       const arbitratorConfig = configs.find(c => c.config_key === 'arbitrator_address');
       
-      // Convertir platform_fee de porcentaje (0.3) a número para mostrar (0.3%)
+      // platform_fee en BD es decimal (0.027 = 2.7% ArcusX)
       const platformFeeValue = platformFeeConfig?.config_value;
       const platformFeeDisplay = typeof platformFeeValue === 'number' 
         ? platformFeeValue * 100 
-        : (typeof platformFeeValue === 'string' ? parseFloat(platformFeeValue) * 100 : 0.3);
+        : (typeof platformFeeValue === 'string' ? parseFloat(platformFeeValue) * 100 : 2.7);
       
-      //  MEJORA: Obtener disputas activas consultando Trustless Work para estados reales
-      let activeDisputes = 0;
-      try {
-        const adminService = await import('../services/adminService');
-        // Obtener todas las disputas de la BD (sin filtro)
-        const disputesData = await adminService.getAdminDisputes({ status: undefined, limit: 1000 });
-        const allDisputes = disputesData.disputes || [];
-        
-        // Obtener escrow_ids de las disputas
-        const escrowIds = allDisputes
-          .map((d: any) => d.escrow_id)
-          .filter((id: any): id is string => id && typeof id === 'string' && id.startsWith('C'));
-        
-        // Consultar Trustless Work para obtener estados reales
-        if (escrowIds.length > 0) {
-          try {
-            const result = await getEscrowByContractIds({ 
-              contractIds: escrowIds,
-              validateOnChain: true 
-            });
-            
-            const escrows = Array.isArray(result) ? result : (result as any)?.escrows || [];
-            
-            // Contar disputas que están realmente en disputa en Trustless Work
-            const disputedEscrowIds = new Set<string>();
-            escrows.forEach((escrow: any) => {
-              const contractId = escrow.contractId || escrow.id;
-              const flags = escrow.flags || {};
-              const isDisputed = flags.disputed === true || escrow.isDisputed === true || escrow.disputed === true;
-              
-              if (isDisputed && contractId) {
-                disputedEscrowIds.add(contractId);
-              }
-            });
-            
-            // Contar disputas que están en disputa en Trustless Work
-            activeDisputes = disputedEscrowIds.size;
-          } catch (twError) {
-            // Fallback: contar disputas pendientes en BD
-            activeDisputes = allDisputes.filter((d: any) => d.status === 'pending').length;
-          }
-        } else {
-          // Si no hay escrow_ids, contar disputas pendientes en BD
-          activeDisputes = allDisputes.filter((d: any) => d.status === 'pending').length;
-        }
-      } catch (disputeError) {
-        // Si falla, dejar en 0
-      }
-      
-      // Usar estadísticas por período del backend
+      const activeDisputes = backendStats.active_disputes ?? backendStats.pending_transactions ?? 0;
+
+      // Usar estadísticas por período del backend (Supabase)
       const volumeToday = backendStats.volume_today || 0;
       const feesToday = backendStats.fees_today || 0;
       const volumeThisWeek = backendStats.volume_this_week || 0;
@@ -144,7 +116,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
         totalVolume: backendStats.total_volume_usdc || 0,
         totalFees: backendStats.total_commission_usdc || 0,
         activeDisputes: activeDisputes,
-        platformFee: platformFeeDisplay || 0.3,
+        platformFee: platformFeeDisplay || 2.7,
         referralFee: referralFeeConfig?.config_value || 0,
         treasury: treasuryConfig?.config_value || '',
         arbitrator: arbitratorConfig?.config_value || '',
@@ -153,7 +125,25 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
         volumeThisWeek: volumeThisWeek,
         feesThisWeek: feesThisWeek,
         volumeToday: volumeToday,
-        feesToday: feesToday
+        feesToday: feesToday,
+        totalUsers: backendStats.total_users ?? 0,
+        totalReferralUsers: referralStats?.total_valid_referrals ?? 0,
+        volumeTasksUsdc: backendStats.volume_tasks_usdc ?? 0,
+        volumeDealsUsdc: backendStats.volume_deals_usdc ?? 0,
+        feesTasksUsdc: backendStats.fees_tasks_usdc ?? 0,
+        feesDealsUsdc: backendStats.fees_deals_usdc ?? 0,
+        releasedTransactions: backendStats.released_transactions ?? 0,
+        taskEscrows: backendStats.task_escrows ?? 0,
+        dealEscrows: backendStats.deal_escrows ?? 0,
+        totalDeals: backendStats.total_deals ?? 0,
+        completedDeals: backendStats.completed_deals ?? 0,
+        openTasks: backendStats.open_tasks ?? 0,
+        usersToday: backendStats.users_today ?? 0,
+        usersThisWeek: backendStats.users_this_week ?? 0,
+        usersThisMonth: backendStats.users_this_month ?? 0,
+        usersWithWallet: backendStats.users_with_wallet ?? 0,
+        tasksToday: backendStats.tasks_today ?? 0,
+        dataSource: backendStats.data_source ?? 'supabase',
       });
     } catch (err: any) {
       setError(err.message || 'Error al cargar estadísticas. Verifica tu conexión.');
@@ -171,7 +161,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
     { id: 'fees', label: 'Gestión de Fees', icon: <FaCoins /> },
     { id: 'tokens', label: 'Tokens', icon: <FaShieldAlt /> },
     { id: 'notifications', label: 'Notificaciones', icon: <FaBell /> },
-    { id: 'disputes', label: 'Arbitraje', icon: <FaGavel /> }
+    { id: 'disputes', label: 'Arbitraje', icon: <FaGavel /> },
+    { id: 'referrals', label: 'Referidos', icon: <FaUserPlus /> },
+    { id: 'kyc', label: 'KYB / KYC', icon: <FaShieldAlt /> },
+    { id: 'activity', label: 'Actividad', icon: <FaHistory /> },
   ];
 
   if (!isAdmin) {
@@ -214,7 +207,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
 
   const handleLogout = () => {
     adminLogout();
-    navigate('/admin/login');
+    navigate('/dashboard');
   };
 
   return (
@@ -303,6 +296,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
             onUpdate={fetchAdminStats}
           />
         )}
+
+        {activeTab === 'referrals' && (
+          <ReferralManagement />
+        )}
+
+        {activeTab === 'kyc' && <KycManagement />}
+
+        {activeTab === 'activity' && <AdminActivity />}
       </div>
     </div>
   );

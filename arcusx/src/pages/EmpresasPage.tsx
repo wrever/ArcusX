@@ -1,5 +1,5 @@
 import { useLayoutEffect, type ReactNode } from "react";
-import { Helmet } from "react-helmet-async";
+import SEO from "../components/SEO";
 import { useI18n } from "../i18n/I18nProvider";
 import {
   getEnterprisePortalUrl,
@@ -79,7 +79,7 @@ function IconPillar({ children }: { children: ReactNode }) {
 }
 
 export default function EmpresasPage() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const year = new Date().getFullYear();
   const onEnterpriseHost = isEnterpriseLandingHost();
   /** En el sitio público, el CTA lleva primero al landing B2B (subdominio); ya en empresas.*, al login. */
@@ -150,18 +150,17 @@ export default function EmpresasPage() {
         </>
       )}
 
-      <Helmet>
-        <title>{t("empresa.meta.title")}</title>
-        <meta name="description" content={t("empresa.meta.description")} />
-        <link
-          rel="canonical"
-          href={
-            typeof window !== "undefined" && onEnterpriseHost
-              ? `${window.location.origin}/`
-              : `${MAIN_SITE_URL}/empresas`
-          }
-        />
-      </Helmet>
+      <SEO
+        title={t("empresa.meta.title")}
+        description={t("empresa.meta.description")}
+        url={onEnterpriseHost ? "/" : "/empresas"}
+        canonical={
+          onEnterpriseHost && typeof window !== "undefined"
+            ? `${window.location.origin}/`
+            : `${MAIN_SITE_URL}/empresas`
+        }
+        locale={lang}
+      />
 
       <div className="ax-empresas__shell">
         <section className="ax-empresas__hero" aria-labelledby="empresa-hero-title">

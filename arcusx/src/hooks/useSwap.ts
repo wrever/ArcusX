@@ -12,7 +12,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWallet } from './useWallet';
 import soroswapService, { QuoteResponse } from '../services/soroswapService';
-import StellarSdk from '@stellar/stellar-sdk';
+import { Horizon } from '@stellar/stellar-sdk';
 import { USDC_ISSUER } from '../config/usdc';
 
 // ============================================================================
@@ -43,10 +43,8 @@ export interface SwapState {
 // ============================================================================
 
 const getHorizonServer = () => {
-  // Siempre usar testnet
   const horizonUrl = 'https://horizon-testnet.stellar.org';
-  // En versiones 11.x, Server es el export por defecto
-  return new StellarSdk(horizonUrl);
+  return new Horizon.Server(horizonUrl);
 };
 
 // ============================================================================

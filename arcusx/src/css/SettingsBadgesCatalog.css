@@ -1,0 +1,195 @@
+.settings-badges-catalog {
+  margin: 2.75rem 0 2.5rem;
+  padding-top: 2.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.settings-badges-catalog__header {
+  margin-bottom: 2rem;
+  max-width: 42rem;
+}
+
+.settings-section-title {
+  margin: 0 0 0.85rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--text-primary, #f0f4fc);
+}
+
+.settings-section-lead {
+  margin: 0 0 1.15rem;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.68));
+}
+
+.settings-badges-summary {
+  margin: 0;
+  padding-top: 0.35rem;
+  font-size: 0.9rem;
+  color: var(--primary-green, #10dd88);
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.settings-badges-load-error {
+  margin: 0.65rem 0 0;
+  font-size: 0.82rem;
+  color: #fbbf24;
+  line-height: 1.45;
+}
+
+.settings-badges-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.35rem 1.5rem;
+}
+
+.settings-badge-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  min-height: 11.5rem;
+  padding: 1.35rem 1.2rem 1.1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.settings-badge-card.is-earned {
+  border-color: rgba(16, 221, 136, 0.35);
+  background: rgba(16, 221, 136, 0.06);
+}
+
+.settings-badge-card.is-soon {
+  opacity: 0.78;
+}
+
+.settings-badge-card__visual {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 1rem;
+  min-height: 56px;
+}
+
+.settings-badge-card__visual img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+
+.settings-badge-card__visual img.is-muted {
+  filter: grayscale(0.85);
+  opacity: 0.65;
+}
+
+.settings-badge-card__lock {
+  position: absolute;
+  right: calc(50% - 36px);
+  bottom: -2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.58rem;
+  color: #fff;
+}
+
+.settings-badge-card__body {
+  flex: 1;
+  text-align: center;
+  padding: 0 0.15rem;
+}
+
+.settings-badge-card__body h4 {
+  margin: 0 0 0.55rem;
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.settings-badge-card__body p {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  opacity: 0.88;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.72));
+}
+
+.settings-badge-card__footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 1.1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.settings-badge-card__status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.settings-badge-card__status.earned {
+  background: rgba(16, 221, 136, 0.2);
+  color: var(--primary-green, #10dd88);
+}
+
+.settings-badge-card__status.soon {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.settings-badge-card__status.available {
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+}
+
+@media (max-width: 600px) {
+  .settings-badges-grid {
+    grid-template-columns: 1fr;
+    gap: 1.15rem;
+  }
+
+  .settings-badge-card {
+    min-height: 0;
+  }
+}
+
+:root[data-theme='light'] .settings-badges-catalog {
+  border-top-color: rgba(0, 0, 0, 0.08);
+}
+
+:root[data-theme='light'] .settings-badge-card {
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+:root[data-theme='light'] .settings-badge-card.is-earned {
+  background: rgba(16, 221, 136, 0.06);
+  border-color: rgba(16, 221, 136, 0.3);
+}
+
+:root[data-theme='light'] .settings-badge-card__footer {
+  border-top-color: rgba(0, 0, 0, 0.06);
+}
+
+:root[data-theme='light'] .settings-badge-card__body p {
+  color: rgba(0, 0, 0, 0.62);
+}

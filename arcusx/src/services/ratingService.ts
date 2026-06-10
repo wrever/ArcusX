@@ -2,7 +2,7 @@
  * Servicio para operaciones de ratings y reviews
  */
 
-import { API_URL } from '../config/database';
+import { arcusxApiUrl, arcusxApiHeaders } from '../config/arcusxApi';
 
 export interface Rating {
   id: number;
@@ -42,7 +42,8 @@ export interface RatingsResponse {
 }
 
 export interface CreateRatingPayload {
-  task_id: number;
+  task_id?: number;
+  agreement_id?: string;
   rated_user_id: number;
   rating: number;
   review?: string;
@@ -58,12 +59,9 @@ export async function createRating(payload: CreateRatingPayload): Promise<{ succ
       throw new Error('No hay token de autenticación');
     }
 
-    const response = await fetch(`${API_URL}/auth/create_rating.php`, {
+    const response = await fetch(`${arcusxApiUrl('create_rating')}`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+      headers: arcusxApiHeaders(),
       body: JSON.stringify(payload),
     });
 
@@ -81,6 +79,9 @@ export async function createRating(payload: CreateRatingPayload): Promise<{ succ
     }
 
     const data = await response.json();
+    if (data?.success === false) {
+      throw new Error(data.message || 'Error al crear rating');
+    }
     return data;
   } catch (error: any) {
     if (error.message) {
@@ -115,12 +116,9 @@ export async function getRatings(
     params.append('page', page.toString());
     params.append('limit', limit.toString());
 
-    const response = await fetch(`${API_URL}/auth/get_ratings.php?${params.toString()}`, {
+    const response = await fetch(arcusxApiUrl('get_ratings', params), {
       method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+      headers: arcusxApiHeaders(),
     });
 
     if (!response.ok) {
@@ -150,12 +148,9 @@ export async function getUserRatingSummary(userId?: number): Promise<RatingSumma
       params.append('user_id', userId.toString());
     }
 
-    const response = await fetch(`${API_URL}/auth/get_user_rating_summary.php?${params.toString()}`, {
+    const response = await fetch(arcusxApiUrl('get_user_rating_summary', params), {
       method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+      headers: arcusxApiHeaders(),
     });
 
     if (!response.ok) {

@@ -5,22 +5,31 @@
 
 import { useState, useEffect } from 'react';
 import { getPlatformFee } from '../services/platformFeeService';
+import { normalizePlatformFeeRate } from '../config/platformFee';
+import { clientFeePercents, DEFAULT_TOTAL_CLIENT_FEE_PERCENT } from '../utils/escrowFeeDisplay';
 
 /**
  * Hook para obtener el platform fee
- * @returns El platform fee como decimal (ej: 0.005 para 0.5%) y el porcentaje como string
+ * @returns El platform fee como decimal (ej: 0.03 para 3%) y el porcentaje como string
  */
 export function usePlatformFee() {
-  const [platformFee, setPlatformFee] = useState<number>(0.003); // 0.3% por defecto
-  const [platformFeePercent, setPlatformFeePercent] = useState<string>('0.3');
+  const [platformFee, setPlatformFee] = useState<number>(0.027);
+  const [platformFeePercent, setPlatformFeePercent] = useState<string>('2.7');
+  const [totalClientFeePercent, setTotalClientFeePercent] = useState<string>(
+    DEFAULT_TOTAL_CLIENT_FEE_PERCENT,
+  );
+  const [protocolFeePercent, setProtocolFeePercent] = useState<string>('0.3');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadFee = async () => {
       try {
-        const fee = await getPlatformFee();
+        const fee = normalizePlatformFeeRate(await getPlatformFee());
+        const percents = clientFeePercents(fee);
         setPlatformFee(fee);
-        setPlatformFeePercent((fee * 100).toFixed(2));
+        setPlatformFeePercent(percents.platformPercent);
+        setTotalClientFeePercent(percents.totalPercent);
+        setProtocolFeePercent(percents.protocolPercent);
       } catch (error) {
         // Mantener valores por defecto si falla
       } finally {
@@ -36,6 +45,12 @@ export function usePlatformFee() {
     return () => clearInterval(interval);
   }, []);
 
-  return { platformFee, platformFeePercent, loading };
+  return {
+    platformFee,
+    platformFeePercent,
+    totalClientFeePercent,
+    protocolFeePercent,
+    loading,
+  };
 }
 

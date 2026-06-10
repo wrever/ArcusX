@@ -1,4 +1,4 @@
-import { API_URL } from '../config/database';
+import { arcusxApiUrl, arcusxApiHeaders } from '../config/arcusxApi';
 
 export interface UserDispute {
   dispute_id: number;
@@ -152,12 +152,9 @@ export async function getUserDisputes(): Promise<UserDisputesResponse> {
     throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
   }
 
-  const response = await fetch(`${API_URL}/auth/get_user_disputes.php`, {
+  const response = await fetch(`${arcusxApiUrl('get_user_disputes')}`, {
     method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: arcusxApiHeaders(),
   });
 
   if (!response.ok) {
@@ -184,12 +181,9 @@ export async function getDisputeRefundXDR(disputeId: number): Promise<{ success:
   }
 
   // Llamar al endpoint del admin para obtener la XDR firmada
-  const response = await fetch(`${API_URL}/auth/admin_release_dispute_funds.php`, {
+  const response = await fetch(`${arcusxApiUrl('admin_release_dispute_funds')}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: arcusxApiHeaders(),
     body: JSON.stringify({ dispute_id: disputeId }),
   });
 
@@ -210,19 +204,28 @@ export async function getDisputeRefundXDR(disputeId: number): Promise<{ success:
 /**
  * Obtener el chat completo de una disputa (solo para admins)
  */
-export async function getDisputeChat(disputeId: number): Promise<DisputeChatResponse> {
+export async function getDisputeChat(
+  disputeId?: number,
+  taskId?: number,
+  agreementId?: string,
+): Promise<DisputeChatResponse> {
   const token = getAuthToken();
   
   if (!token) {
     throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
   }
 
-  const response = await fetch(`${API_URL}/auth/get_dispute_chat.php?dispute_id=${disputeId}`, {
+  const query: Record<string, string | number> = disputeId
+    ? { dispute_id: disputeId }
+    : taskId
+      ? { task_id: taskId }
+      : agreementId
+        ? { agreement_id: agreementId }
+        : (() => { throw new Error('dispute_id, task_id o agreement_id requerido'); })();
+
+  const response = await fetch(arcusxApiUrl('get_dispute_chat', query), {
     method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: arcusxApiHeaders(),
   });
 
   if (!response.ok) {
@@ -242,19 +245,28 @@ export async function getDisputeChat(disputeId: number): Promise<DisputeChatResp
 /**
  * Obtener todos los archivos relacionados con una disputa (solo para admins)
  */
-export async function getDisputeFiles(disputeId: number): Promise<DisputeFilesResponse> {
+export async function getDisputeFiles(
+  disputeId?: number,
+  taskId?: number,
+  agreementId?: string,
+): Promise<DisputeFilesResponse> {
   const token = getAuthToken();
   
   if (!token) {
     throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
   }
 
-  const response = await fetch(`${API_URL}/auth/get_dispute_files.php?dispute_id=${disputeId}`, {
+  const query: Record<string, string | number> = disputeId
+    ? { dispute_id: disputeId }
+    : taskId
+      ? { task_id: taskId }
+      : agreementId
+        ? { agreement_id: agreementId }
+        : (() => { throw new Error('dispute_id, task_id o agreement_id requerido'); })();
+
+  const response = await fetch(arcusxApiUrl('get_dispute_files', query), {
     method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: arcusxApiHeaders(),
   });
 
   if (!response.ok) {
@@ -274,19 +286,28 @@ export async function getDisputeFiles(disputeId: number): Promise<DisputeFilesRe
 /**
  * Obtener el timeline de eventos de una disputa (solo para admins)
  */
-export async function getDisputeTimeline(disputeId: number): Promise<DisputeTimelineResponse> {
+export async function getDisputeTimeline(
+  disputeId?: number,
+  taskId?: number,
+  agreementId?: string,
+): Promise<DisputeTimelineResponse> {
   const token = getAuthToken();
   
   if (!token) {
     throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
   }
 
-  const response = await fetch(`${API_URL}/auth/get_dispute_timeline.php?dispute_id=${disputeId}`, {
+  const query: Record<string, string | number> = disputeId
+    ? { dispute_id: disputeId }
+    : taskId
+      ? { task_id: taskId }
+      : agreementId
+        ? { agreement_id: agreementId }
+        : (() => { throw new Error('dispute_id, task_id o agreement_id requerido'); })();
+
+  const response = await fetch(arcusxApiUrl('get_dispute_timeline', query), {
     method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: arcusxApiHeaders(),
   });
 
   if (!response.ok) {

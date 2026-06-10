@@ -14,6 +14,16 @@ export interface Freelancer {
   skills?: string[];
   public_profile: boolean;
   joined_date: string;
+  /** Wallet G… registrada para cobrar ofertas privadas */
+  has_payout_wallet?: boolean;
+  /** Presente en API reciente; el front calcula has_payout_wallet si falta */
+  private_payout_wallet?: string | null;
+  kyc_verified?: boolean;
+  creator_verified?: boolean;
+  creator_verified_enterprise?: boolean;
+  creator_verified_individual?: boolean;
+  display_name?: string;
+  public_badges?: string[];
 }
 
 export interface FreelancersResponse {
@@ -36,5 +46,7 @@ export interface FreelancerFilters {
   sortOrder?: 'asc' | 'desc';
   page?: number;
   limit?: number;
+  /** Si true, el backend ordena primero por perfil (foto, bio, skills) y luego por sortBy. */
+  preferProfile?: boolean;
 }
 

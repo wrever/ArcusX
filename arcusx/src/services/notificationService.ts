@@ -1,108 +1,82 @@
-import { API_URL } from '../config/database';
+import { supabase, hasSupabase } from '../config/supabase';
+import {
+  getUserNotificationsSupabase,
+  markNotificationAsReadSupabase,
+  dismissNotificationSupabase,
+} from './arcusxNotificationsSupabase';
+import { prepareSupabaseArcusxSession } from './arcusxMessagingSupabase';
+import type { NotificationsResponse } from '../types/notification';
 
-export interface Notification {
-  id: number;
-  user_id: number | null;
-  title: string;
-  message: string;
-  type: 'info' | 'warning' | 'success' | 'error';
-  created_at: string;
-  is_global: boolean;
-  is_read: boolean;
-}
+export type { Notification, NotificationsResponse } from '../types/notification';
 
-export interface NotificationsResponse {
-  success: boolean;
-  notifications: Notification[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    total_pages: number;
-  };
-  unread_count: number;
+export function isNotificationSessionError(message: string): boolean {
+  return /not_authenticated|not authenticated|link_required|permission_denied|permission denied|no hay sesión|sesión supabase|jwt expired|invalid refresh|refresh token|auth session|supabase_not_configured/i.test(
+    message,
+  );
 }
 
 /**
- * Obtener token JWT del localStorage
- */
-function getAuthToken(): string | null {
-  const token = localStorage.getItem('token');
-  return token;
-}
-
-/**
- * Obtener notificaciones del usuario autenticado
- * Incluye notificaciones globales (user_id = null) e individuales (user_id = id del usuario)
+ * Notificaciones vía Supabase (RPC). Requiere sesión OAuth y `arcusx_user_link`.
  */
 export async function getUserNotifications(params?: {
   page?: number;
   limit?: number;
+  mysqlUserId?: number;
 }): Promise<NotificationsResponse> {
-  const token = getAuthToken();
-  
-  if (!token) {
-    throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
+  if (!hasSupabase) {
+    throw new Error('supabase_not_configured');
   }
 
-  const queryParams = new URLSearchParams();
-  if (params?.page) queryParams.append('page', params.page.toString());
-  if (params?.limit) queryParams.append('limit', params.limit.toString());
-
-  const url = `${API_URL}/auth/get_notifications.php${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-  
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
-    throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
+  const mysqlUserId = params?.mysqlUserId;
+  if (mysqlUserId != null && Number.isFinite(mysqlUserId)) {
+    await prepareSupabaseArcusxSession(mysqlUserId);
+  } else {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) {
+      const { data: refreshed } = await supabase.auth.refreshSession();
+      if (!refreshed.session) {
+        throw new Error('not_authenticated');
+      }
+    }
   }
 
-  const data = await response.json();
-  
-  if (!data.success) {
-    throw new Error(data.message || 'Error al obtener notificaciones');
-  }
-
-  return data;
+  return getUserNotificationsSupabase({ page: params?.page, limit: params?.limit });
 }
 
-/**
- * Marcar notificación como leída
- */
-export async function markNotificationAsRead(notificationId: number): Promise<{ success: boolean; message: string }> {
-  const token = getAuthToken();
-  
-  if (!token) {
-    throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
+export async function markNotificationAsRead(
+  notificationId: number,
+  mysqlUserId?: number,
+): Promise<{ success: boolean; message: string }> {
+  if (!hasSupabase) {
+    throw new Error('supabase_not_configured');
   }
-
-  const response = await fetch(`${API_URL}/auth/mark_notification_read.php`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ notification_id: notificationId }),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
-    throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
+  if (mysqlUserId != null) {
+    await prepareSupabaseArcusxSession(mysqlUserId);
+  } else {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) throw new Error('not_authenticated');
   }
-
-  const data = await response.json();
-  
-  if (!data.success) {
-    throw new Error(data.message || 'Error al marcar notificación como leída');
-  }
-
-  return data;
+  return markNotificationAsReadSupabase(notificationId);
 }
 
+export async function dismissNotification(
+  notificationId: number,
+  mysqlUserId?: number,
+): Promise<{ success: boolean; message: string }> {
+  if (!hasSupabase) {
+    throw new Error('supabase_not_configured');
+  }
+  if (mysqlUserId != null) {
+    await prepareSupabaseArcusxSession(mysqlUserId);
+  } else {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session) throw new Error('not_authenticated');
+  }
+  return dismissNotificationSupabase(notificationId);
+}

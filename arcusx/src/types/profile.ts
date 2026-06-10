@@ -10,6 +10,9 @@ export interface UserProfile {
   bio?: string;
   portfolio_url?: string;
   verified: boolean;
+  kyc_verified?: boolean;
+  display_name?: string;
+  public_badges?: string[];
   public_profile: boolean;
   member_since: string;
   skills: Skill[];

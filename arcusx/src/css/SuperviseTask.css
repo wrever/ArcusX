@@ -37,14 +37,14 @@
   color: #ffffff !important;
   background: linear-gradient(90deg, var(--primary-blue), var(--secondary-blue));
   border: none;
-  box-shadow: 0 2px 10px rgba(16, 221, 136, 0.28);
+  box-shadow: 0 2px 10px rgba(59, 130, 246, 0.28);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .supervise-back-dashboard-btn:hover {
   color: #ffffff !important;
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(16, 221, 136, 0.38);
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.38);
 }
 
 .supervise-back-dashboard-btn svg {
@@ -163,6 +163,11 @@
   font-size: 1rem;
   color: var(--text-secondary);
   line-height: 1.6;
+}
+
+.task-details-section__deletion {
+  margin-top: auto;
+  padding-top: 1rem;
 }
 
 /* Chat Section */
@@ -827,6 +832,33 @@
   100% { transform: rotate(360deg); }
 }
 
+.supervise-escrow-setup-banner {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.supervise-escrow-setup-banner--pending {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.supervise-escrow-setup-banner p {
+  margin: 0 0 0.65rem;
+}
+
+.supervise-escrow-cta {
+  display: inline-block;
+  text-decoration: none;
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+}
+
 /* Blockchain Status Styles - Diseño Mejorado */
 .blockchain-status {
   margin-top: 0;
@@ -889,6 +921,29 @@
   padding: 0.75rem;
   border: 1px solid var(--border-color);
   transition: all 0.3s ease;
+}
+
+:root[data-theme="light"] .blockchain-status {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(241, 245, 249, 1) 100%) !important;
+  border: 2px solid rgba(100, 116, 139, 0.35) !important;
+}
+
+:root[data-theme="light"] .blockchain-status::before {
+  background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6) !important;
+}
+
+:root[data-theme="light"] .blockchain-info-label {
+  color: #2563eb !important;
+}
+
+:root[data-theme="light"] .blockchain-info-value {
+  color: #0f172a !important;
+}
+
+:root[data-theme="light"] .blockchain-info-value.escrow-id {
+  background: var(--bg-tertiary) !important;
+  border-color: var(--border-color) !important;
+  color: #0f172a !important;
 }
 
 /* Bordes más oscuros en modo claro */
@@ -1295,4 +1350,108 @@
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
+}
+
+/* Modales (disputa, confirmación, etc.) — variables de tema */
+.arcusx-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: var(--overlay);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  backdrop-filter: blur(10px);
+}
+
+.arcusx-modal-panel {
+  background: var(--bg-card);
+  border-radius: 20px;
+  padding: 32px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 2px solid var(--border-color-active);
+  box-shadow: var(--shadow-lg);
+  color: var(--text-primary);
+}
+
+.arcusx-modal-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.arcusx-modal-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 28px;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.arcusx-modal-close:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.arcusx-modal-info-box {
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.arcusx-modal-info-box--danger {
+  background-color: rgba(220, 38, 38, 0.1);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+}
+
+.arcusx-modal-label {
+  display: block;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.arcusx-modal-muted {
+  color: var(--text-secondary);
+  line-height: 1.7;
+  font-size: 15px;
+}
+
+.arcusx-modal-secondary-btn {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.arcusx-modal-secondary-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--border-color-hover);
+}
+
+.arcusx-modal-textarea {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--input-background);
+  border: 1px solid var(--input-border);
+  color: var(--text-primary);
+  font-family: inherit;
+  resize: vertical;
 } 

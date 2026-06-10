@@ -1,0 +1,390 @@
+/**
+ * Modo claro — páginas admin, disputas, escrow admin y componentes sin overrides locales.
+ */
+
+/* --- Disputas --- */
+:root[data-theme="light"] .dispute-case-header,
+:root[data-theme="light"] .dispute-case-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+:root[data-theme="light"] .dispute-case-id,
+:root[data-theme="light"] .dispute-case-card-title,
+:root[data-theme="light"] .v {
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .dispute-case-sub,
+:root[data-theme="light"] .k {
+  color: var(--text-muted);
+}
+
+:root[data-theme="light"] .dispute-case-status {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .dispute-case-card.resolution {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+/* --- Admin: tokens, fees, escrow stats, referrals --- */
+:root[data-theme="light"] .token-management,
+:root[data-theme="light"] .fee-management,
+:root[data-theme="light"] .referral-mgmt {
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .token-header h2,
+:root[data-theme="light"] .fee-header h2,
+:root[data-theme="light"] .referral-mgmt h2,
+:root[data-theme="light"] .referral-mgmt h3 {
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .token-header p,
+:root[data-theme="light"] .fee-header p,
+:root[data-theme="light"] .token-management-loading p,
+:root[data-theme="light"] .fee-management-loading p,
+:root[data-theme="light"] .referral-mgmt-loading {
+  color: var(--text-secondary);
+}
+
+:root[data-theme="light"] .token-card,
+:root[data-theme="light"] .token-item,
+:root[data-theme="light"] .fee-form-section,
+:root[data-theme="light"] .fee-preview-card,
+:root[data-theme="light"] .referral-stat-card,
+:root[data-theme="light"] .referral-mgmt-card,
+:root[data-theme="light"] .referral-table-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+:root[data-theme="light"] .referral-stat-card .referral-stat-value,
+:root[data-theme="light"] .referral-stat-card .referral-stat-label {
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .referral-mgmt input,
+:root[data-theme="light"] .referral-mgmt select,
+:root[data-theme="light"] .referral-mgmt textarea,
+:root[data-theme="light"] .token-form input,
+:root[data-theme="light"] .token-form select,
+:root[data-theme="light"] .fee-form input,
+:root[data-theme="light"] .fee-form select {
+  background: var(--input-background);
+  border: 1px solid var(--input-border);
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .escrow-stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+:root[data-theme="light"] .escrow-stat-content h3 {
+  color: var(--text-muted);
+}
+
+:root[data-theme="light"] .escrow-stat-value {
+  color: var(--text-primary);
+}
+
+/* Admin panel: tablas, modales, filtros (complementa auth-surfaces-light) */
+:root[data-theme="light"] .admin-panel-container .admin-tab {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+:root[data-theme="light"] .admin-panel-container .admin-table-container,
+:root[data-theme="light"] .admin-panel-container .admin-modal-content,
+:root[data-theme="light"] .admin-panel-container .modal-content {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-lg);
+}
+
+:root[data-theme="light"] .admin-panel-container .admin-search-input,
+:root[data-theme="light"] .admin-panel-container .admin-filter-select,
+:root[data-theme="light"] .admin-panel-container input,
+:root[data-theme="light"] .admin-panel-container select,
+:root[data-theme="light"] .admin-panel-container textarea {
+  background: var(--input-background);
+  border-color: var(--input-border);
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .admin-panel-container .pagination-button {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .admin-stats .stat-card::before {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(37, 99, 235, 0.06) 100%);
+}
+
+:root[data-theme="light"] .admin-stats .refresh-button,
+:root[data-theme="light"] .token-management .add-token-button,
+:root[data-theme="light"] .fee-management .save-fee-button {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #ffffff;
+  box-shadow: var(--shadow-blue);
+}
+
+/* --- Ratings --- */
+:root[data-theme="light"] .rating-system-container,
+:root[data-theme="light"] .rating-display-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .rating-system-container h3,
+:root[data-theme="light"] .rating-display-card h4 {
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .rating-system-container p,
+:root[data-theme="light"] .rating-display-meta {
+  color: var(--text-secondary);
+}
+
+/* --- Evidence / escrow lifecycle --- */
+:root[data-theme="light"] .evidence-upload-zone,
+:root[data-theme="light"] .escrow-lifecycle-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .evidence-upload-zone p,
+:root[data-theme="light"] .escrow-lifecycle-step-label {
+  color: var(--text-secondary);
+}
+
+/* --- Swap details --- */
+:root[data-theme="light"] .swap-details-container,
+:root[data-theme="light"] .swap-details-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .swap-details-label {
+  color: var(--text-muted);
+}
+
+:root[data-theme="light"] .swap-details-value {
+  color: var(--text-primary);
+}
+
+/* --- Footer dashboard --- */
+:root[data-theme="light"] .dashboard-footer {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+:root[data-theme="light"] .dashboard-footer a {
+  color: var(--primary-blue);
+}
+
+/* --- Language FAB --- */
+:root[data-theme="light"] .language-fab-trigger {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-md);
+}
+
+/* --- Support bot widget --- */
+:root[data-theme="light"] .support-bot-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .support-bot-message--bot {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* --- Modales compartidos (SuperviseTask, popups) --- */
+:root[data-theme="light"] .arcusx-modal-overlay {
+  background-color: var(--overlay) !important;
+}
+
+:root[data-theme="light"] .arcusx-modal-panel {
+  background: var(--bg-card) !important;
+  border: 2px solid var(--border-color) !important;
+  box-shadow: var(--shadow-lg) !important;
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .arcusx-modal-title,
+:root[data-theme="light"] .arcusx-modal-label,
+:root[data-theme="light"] .arcusx-modal-body,
+:root[data-theme="light"] .arcusx-modal-panel h2,
+:root[data-theme="light"] .arcusx-modal-panel h3,
+:root[data-theme="light"] .arcusx-modal-panel p {
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .arcusx-modal-muted,
+:root[data-theme="light"] .arcusx-modal-panel .arcusx-modal-muted {
+  color: var(--text-secondary) !important;
+}
+
+:root[data-theme="light"] .arcusx-modal-close {
+  color: var(--text-secondary) !important;
+}
+
+:root[data-theme="light"] .arcusx-modal-close:hover {
+  color: var(--text-primary) !important;
+}
+
+:root[data-theme="light"] .arcusx-modal-info-box {
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+:root[data-theme="light"] .arcusx-modal-info-box--danger {
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.25);
+}
+
+:root[data-theme="light"] .arcusx-modal-secondary-btn {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+:root[data-theme="light"] .arcusx-modal-secondary-btn:hover {
+  background: var(--bg-hover) !important;
+}
+
+:root[data-theme="light"] .arcusx-modal-textarea,
+:root[data-theme="light"] .arcusx-modal-input {
+  background: var(--input-background);
+  border: 1px solid var(--input-border);
+  color: var(--text-primary);
+}
+
+/* --- AdminStats: bloque indexador escrows --- */
+:root[data-theme="light"] .escrows-status-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+
+:root[data-theme="light"] .escrows-status-section h3 {
+  color: var(--text-primary);
+}
+
+:root[data-theme="light"] .escrows-status-label {
+  color: var(--text-muted);
+}
+
+:root[data-theme="light"] .referral-mgmt .referral-form-row input,
+:root[data-theme="light"] .referral-mgmt .referral-select {
+  background: var(--input-background);
+  border-color: var(--input-border);
+  color: var(--text-primary);
+}
+
+/* --- Disputas (chat / archivos / timeline) --- */
+:root[data-theme="light"] .dispute-chat-header,
+:root[data-theme="light"] .dispute-chat-filters,
+:root[data-theme="light"] .dispute-chat-stats,
+:root[data-theme="light"] .dispute-panel-header,
+:root[data-theme="light"] .dispute-panel-toolbar {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+}
+
+:root[data-theme="light"] .dispute-chat-bubble--client,
+:root[data-theme="light"] .dispute-chat-bubble--worker,
+:root[data-theme="light"] .dispute-card,
+:root[data-theme="light"] .dispute-timeline-item,
+:root[data-theme="light"] .dispute-file-card {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+:root[data-theme="light"] .dispute-chat-attachment,
+:root[data-theme="light"] .dispute-file-download {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+  color: var(--primary-blue);
+}
+
+:root[data-theme="light"] .dispute-tab.active {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.35);
+  color: var(--primary-blue);
+}
+
+/* --- Deals dashboard --- */
+:root[data-theme="light"] .dashboard-deals-panel .dashboard-deals-panel__icon {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--primary-blue);
+  border-color: rgba(59, 130, 246, 0.25);
+}
+
+:root[data-theme="light"] .dashboard-deals-open-link {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+:root[data-theme="light"] .deals-status-badge.sent,
+:root[data-theme="light"] .deals-status-badge.draft {
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  border-color: rgba(59, 130, 246, 0.25);
+}
+
+:root[data-theme="light"] .deals-status-badge.accepted,
+:root[data-theme="light"] .deals-status-badge.funding {
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+:root[data-theme="light"] .deals-status-badge.funded,
+:root[data-theme="light"] .deals-status-badge.active {
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  border-color: rgba(59, 130, 246, 0.28);
+}
+
+:root[data-theme="light"] .deals-status-badge.completed {
+  background: rgba(22, 163, 74, 0.12);
+  color: #15803d;
+  border-color: rgba(22, 163, 74, 0.3);
+}
+
+/* --- Escrow popups éxito --- */
+:root[data-theme="light"] .complete-popup-success-overlay {
+  background: var(--modal-overlay);
+}
+
+:root[data-theme="light"] .complete-popup-success-card {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+:root[data-theme="light"] .complete-popup-success-title,
+:root[data-theme="light"] .complete-popup-fee-total-label,
+:root[data-theme="light"] .complete-popup-fee-total-value,
+:root[data-theme="light"] .dispute-accent-text {
+  color: var(--primary-blue);
+}

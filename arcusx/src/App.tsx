@@ -12,15 +12,18 @@ import Login from './components/Login';
 import Register from './components/Register';
 import AuthCallback from './components/AuthCallback';
 import Preloader from './components/Preloader';
-import AdminLogin from './components/AdminLogin';
+import AdminLoginRedirect from './components/AdminLoginRedirect';
 import AdminRoute from './components/AdminRoute';
 import ProtectedRoute from './components/ProtectedRoute';
 import UserProfile from './components/UserProfile';
+import ReferralBootstrap from './components/ReferralBootstrap';
+import { isReferralEntryPath } from './utils/referralCapture';
 import './App.css';
 import './css/enterprise-professional.css';
 
 // Code splitting - Lazy load de componentes pesados
 const Dashboard = lazy(() => import('./dashboard'));
+const DashboardKycPage = lazy(() => import('./pages/DashboardKycPage'));
 const CreateTask = lazy(() => import('./components/CreateTask'));
 const ApplyTask = lazy(() => import('./components/ApplyTask'));
 const ProposalReview = lazy(() => import('./components/ProposalReview'));
@@ -30,6 +33,11 @@ const EditProfile = lazy(() => import('./components/EditProfile'));
 const SwapPage = lazy(() => import('./pages/SwapPage'));
 const TutorialsPage = lazy(() => import('./pages/TutorialsPage'));
 const EmpresasPage = lazy(() => import('./pages/EmpresasPage'));
+const DealWizardPage = lazy(() => import('./pages/DealWizardPage'));
+const DealPublicPage = lazy(() => import('./pages/DealPublicPage'));
+const DealJoinRedirect = lazy(() => import('./pages/DealJoinRedirect'));
+const DealWorkspacePage = lazy(() => import('./pages/DealWorkspacePage'));
+import ReferralLanding from './pages/ReferralLanding';
 const SupportChatButton = lazy(() => import('./components/SupportChatButton'));
 
 function HomeRoute() {
@@ -76,9 +84,11 @@ function AppContent({ isLoading }: { isLoading: boolean }) {
     path === '/tutoriales' ||
     path === '/login' ||
     path === '/register' ||
-    path === '/empresas';
+    path === '/empresas' ||
+    path.startsWith('/ref/') ||
+    path.startsWith('/r/');
   // Si no estamos en una ruta de app (dashboard, profile, etc.), mostrar FAB por si cPanel devuelve un path distinto
-  const isAppRoute = path.startsWith('/dashboard') || path.startsWith('/admin') || path.startsWith('/profile') || path.startsWith('/create-task') || path.startsWith('/apply-task') || path.startsWith('/proposals') || path.startsWith('/supervise-task') || path.startsWith('/auth');
+  const isAppRoute = path.startsWith('/dashboard') || path.startsWith('/admin') || path.startsWith('/profile') || path.startsWith('/create-task') || path.startsWith('/apply-task') || path.startsWith('/proposals') || path.startsWith('/supervise-task') || path.startsWith('/auth') || path.startsWith('/deals') || path.startsWith('/deal/');
   const showFloatingButtons = isPublicLanding || (!isAppRoute && path.length <= 20);
   const showSupportButton = isRoot && !isEnterpriseLandingHost();
 
@@ -99,6 +109,7 @@ function AppContent({ isLoading }: { isLoading: boolean }) {
         <Preloader />
       ) : (
         <div className="app">
+          <ReferralBootstrap />
           <Suspense fallback={<Preloader />}>
             <Routes>
               <Route path="/" element={<HomeRoute />} />
@@ -120,20 +131,34 @@ function AppContent({ isLoading }: { isLoading: boolean }) {
                 element={isEnterpriseLandingHost() ? <Navigate to="/login" replace /> : <Register />}
               />
               <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/ref/:code" element={<><Navbar /><ReferralLanding /></>} />
+              <Route path="/r/:code" element={<><Navbar /><ReferralLanding /></>} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/deals/new" element={<ProtectedRoute><DealWizardPage /></ProtectedRoute>} />
+              <Route path="/deals/workspace/:id" element={<ProtectedRoute><DealWorkspacePage /></ProtectedRoute>} />
+              <Route path="/deal/:token" element={<DealPublicPage mode="preview" />} />
+              <Route
+                path="/deals/join/:token"
+                element={
+                  <ProtectedRoute>
+                    <DealJoinRedirect />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/create-task" element={<ProtectedRoute><CreateTask /></ProtectedRoute>} />
               <Route path="/apply-task/:taskId" element={<ProtectedRoute><ApplyTask /></ProtectedRoute>} />
               <Route path="/proposals/:taskId" element={<ProtectedRoute><ProposalReview /></ProtectedRoute>} />
               <Route path="/supervise-task/:taskId/:acceptedApplicantId" element={<ProtectedRoute><SuperviseTask /></ProtectedRoute>} />
               <Route path="/profile/:userId" element={<UserProfile />} />
               <Route path="/dashboard/settings/profile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
+              <Route path="/dashboard/kyc" element={<ProtectedRoute><DashboardKycPage /></ProtectedRoute>} />
               <Route path="/swap" element={<><Navbar /><SwapPage /></>} />
               <Route path="/tutoriales" element={<><Navbar /><TutorialsPage /></>} />
               <Route path="/empresas" element={<EmpresasRoute />} />
               <Route path="/landing" element={<Navigate to="/empresas" replace />} />
-              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin/login" element={<AdminLoginRedirect />} />
               <Route path="/admin/dashboard" element={<AdminRoute><AdminPanel isAdmin={true} /></AdminRoute>} />
-              <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
+              <Route path="/admin" element={<AdminLoginRedirect />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
@@ -144,9 +169,13 @@ function AppContent({ isLoading }: { isLoading: boolean }) {
 }
 
 function App() {
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => !isReferralEntryPath());
 
   useEffect(() => {
+    if (isReferralEntryPath()) {
+      setIsLoading(false);
+      return;
+    }
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 2000);

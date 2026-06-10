@@ -1,4 +1,12 @@
-import { API_URL } from '../config/database';
+import { arcusxAdminUrl, arcusxApiHeaders } from '../config/arcusxApi';
+import { supabase, hasSupabase } from '../config/supabase';
+import { authService } from './authService';
+import {
+  clearAdminSessionMarkers,
+  isAdminFromJwt,
+  isPlatformAdmin,
+  syncAdminSessionFromMarketplaceToken,
+} from '../utils/platformAdmin';
 
 export interface AdminUser {
   id: number;
@@ -21,11 +29,25 @@ export interface AdminStats {
   total_tasks: number;
   active_tasks: number;
   completed_tasks: number;
+  open_tasks?: number;
   total_escrows: number;
+  task_escrows?: number;
+  deal_escrows?: number;
+  total_deals?: number;
+  completed_deals?: number;
   total_volume_usdc: number;
   total_commission_usdc: number;
+  volume_tasks_usdc?: number;
+  volume_deals_usdc?: number;
+  fees_tasks_usdc?: number;
+  fees_deals_usdc?: number;
+  released_transactions?: number;
+  active_disputes?: number;
   pending_transactions: number;
   users_today: number;
+  users_this_week?: number;
+  users_this_month?: number;
+  users_with_wallet?: number;
   tasks_today: number;
   volume_today?: number;
   fees_today?: number;
@@ -33,6 +55,7 @@ export interface AdminStats {
   fees_this_week?: number;
   volume_this_month?: number;
   fees_this_month?: number;
+  data_source?: string;
 }
 
 /**
@@ -40,21 +63,32 @@ export interface AdminStats {
  */
 export async function adminLogin(email: string, password: string): Promise<AdminLoginResponse> {
   try {
-    const response = await fetch(`${API_URL}/auth/admin_login.php`, {
+    const response = await fetch(arcusxAdminUrl('admin_login'), {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
-      },
-      body: JSON.stringify({ email, password }),
+      headers: arcusxApiHeaders(
+        { 'X-Requested-With': 'XMLHttpRequest' },
+        { skipAuth: true },
+      ),
+      body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
     });
 
-    const data = await response.json();
+    const raw = await response.text();
+    let data: AdminLoginResponse & { message?: string };
+    try {
+      data = raw ? JSON.parse(raw) : { success: false, message: 'Respuesta vacía del servidor' };
+    } catch {
+      return {
+        success: false,
+        message: response.ok
+          ? 'Respuesta inválida del servidor admin'
+          : `Error ${response.status}: ${raw.slice(0, 120) || response.statusText}`,
+      };
+    }
 
     if (!response.ok) {
       return {
         success: false,
-        message: data.message || 'Error al iniciar sesión',
+        message: data.message || `Error al iniciar sesión (${response.status})`,
         is_admin: data.is_admin || false,
       };
     }
@@ -76,9 +110,16 @@ export async function adminLogin(email: string, password: string): Promise<Admin
       message: data.message || 'Error al iniciar sesión',
     };
   } catch (error) {
+    const detail = error instanceof Error ? error.message : '';
+    const hint =
+      error instanceof Error && error.message.includes('API Edge no disponible')
+        ? 'Configura VITE_SUPABASE_URL en el build de producción.'
+        : detail.includes('Failed to fetch') || detail.includes('NetworkError')
+        ? 'No se pudo conectar con arcusx-admin (red o CORS). ¿VITE_SUPABASE_URL correcto?'
+        : detail || 'Error de conexión. Por favor, intenta nuevamente.';
     return {
       success: false,
-      message: 'Error de conexión. Por favor, intenta nuevamente.',
+      message: hint,
     };
   }
 }
@@ -87,7 +128,7 @@ export async function adminLogin(email: string, password: string): Promise<Admin
  * Obtener token de admin del localStorage
  */
 export function getAdminToken(): string | null {
-  return localStorage.getItem('admin_token');
+  return localStorage.getItem('admin_token') || localStorage.getItem('token');
 }
 
 /**
@@ -107,17 +148,36 @@ export function getAdminUser(): AdminUser | null {
  * Verificar si hay una sesión de admin activa
  */
 export function isAdminLoggedIn(): boolean {
+  if (!authService.isAuthenticated()) return false;
   const token = getAdminToken();
-  const user = getAdminUser();
-  return !!(token && user && user.is_admin);
+  if (!token) return false;
+
+  syncAdminSessionFromMarketplaceToken();
+
+  const marketplaceUser = authService.getUser() as AdminUser | null;
+  if (isPlatformAdmin(marketplaceUser)) return true;
+
+  const adminUser = getAdminUser();
+  if (isPlatformAdmin(adminUser)) return true;
+
+  return isAdminFromJwt(token);
 }
 
-/**
- * Cerrar sesión de admin
- */
+/** Salir del panel admin sin cerrar sesión OAuth del marketplace */
 export function adminLogout(): void {
-  localStorage.removeItem('admin_token');
-  localStorage.removeItem('admin_user');
+  clearAdminSessionMarkers();
+}
+
+function normalizeAdminPagination(
+  pagination: Record<string, unknown> | undefined,
+  fallback?: { page?: number; limit?: number; total?: number },
+) {
+  const total = Number(pagination?.total ?? fallback?.total ?? 0);
+  const limit = Number(pagination?.limit ?? fallback?.limit ?? 20);
+  const page = Number(pagination?.page ?? fallback?.page ?? 1);
+  const total_pages =
+    Number(pagination?.total_pages) || (total > 0 ? Math.ceil(total / limit) : 0);
+  return { page, limit, total, total_pages };
 }
 
 /**
@@ -150,17 +210,17 @@ async function adminApiCall(action: string, method: string = 'GET', body?: any, 
 
   // Construir URL correctamente
   // admin.php está en /api/auth/ igual que admin_login.php
-  let url = `${API_URL}/auth/admin.php?action=${action}`;
-  if (queryParams && queryParams.toString()) {
-    url += `&${queryParams.toString()}`;
+  const query: Record<string, string> = {};
+  if (queryParams) {
+    queryParams.forEach((v, k) => {
+      query[k] = v;
+    });
   }
-  
+  const url = arcusxAdminUrl(action, query);
+
   const options: RequestInit = {
     method,
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: arcusxApiHeaders(),
   };
   
   if (body && method !== 'GET') {
@@ -212,6 +272,33 @@ async function adminApiCall(action: string, method: string = 'GET', body?: any, 
 /**
  * Obtener estadísticas del sistema
  */
+export interface DomainEventRow {
+  id: number;
+  entity_type: string;
+  entity_id: string;
+  event_type: string;
+  actor_user_id: number | null;
+  payload: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export async function getAdminDomainEvents(params?: {
+  page?: number;
+  limit?: number;
+  entity_type?: string;
+  event_type?: string;
+}): Promise<{
+  events: DomainEventRow[];
+  pagination: { page: number; limit: number; total: number; total_pages: number };
+}> {
+  const query = new URLSearchParams();
+  if (params?.page) query.set('page', String(params.page));
+  if (params?.limit) query.set('limit', String(params.limit));
+  if (params?.entity_type) query.set('entity_type', params.entity_type);
+  if (params?.event_type) query.set('event_type', params.event_type);
+  return adminApiCall('get_domain_events', 'GET', undefined, query);
+}
+
 export async function getAdminStats(): Promise<AdminStats> {
   const data = await adminApiCall('get_stats');
   return data.stats;
@@ -235,7 +322,14 @@ export async function getAdminUsers(params: {
   if (params.is_admin !== undefined) queryParams.append('is_admin', params.is_admin.toString());
 
   const data = await adminApiCall('get_users', 'GET', undefined, queryParams);
-  return { users: data.users, pagination: data.pagination };
+  return {
+    users: data.users,
+    pagination: normalizeAdminPagination(data.pagination, {
+      page: params.page,
+      limit: params.limit,
+      total: data.total,
+    }),
+  };
 }
 
 /**
@@ -380,7 +474,14 @@ export async function getAdminDisputes(params: {
   if (params.status) queryParams.append('status', params.status);
 
   const data = await adminApiCall('get_disputes', 'GET', undefined, queryParams);
-  return { disputes: data.disputes, pagination: data.pagination };
+  return {
+    disputes: data.disputes,
+    pagination: normalizeAdminPagination(data.pagination, {
+      page: params.page,
+      limit: params.limit,
+      total: data.pagination?.total,
+    }),
+  };
 }
 
 /**
@@ -394,12 +495,25 @@ export async function getAdminDisputeDetails(disputeId: number): Promise<any> {
 }
 
 /**
+ * Asegura registro en arcusx_disputes para una tarea (disputas virtuales TW).
+ */
+export async function ensureAdminDispute(taskId: number): Promise<number> {
+  const data = await adminApiCall('ensure_dispute', 'POST', { task_id: taskId });
+  const id = Number(data.dispute_id);
+  if (!id) throw new Error('No se pudo crear la disputa en BD');
+  return id;
+}
+
+/**
  * Resolver una disputa
  */
 export async function resolveAdminDispute(disputeId: number, resolution: {
   decision: 'client' | 'worker' | 'split';
   reason: string;
   refund_percentage?: number; // Para split
+  /** Tras liberar fondos on-chain con Trustless Work */
+  funds_released_on_chain?: boolean;
+  tx_hash?: string;
 }): Promise<any> {
   return await adminApiCall('resolve_dispute', 'POST', {
     dispute_id: disputeId,
@@ -453,48 +567,388 @@ export async function getAdminNotifications(params: {
   if (params.user_id) queryParams.append('user_id', params.user_id.toString());
 
   const data = await adminApiCall('get_notifications', 'GET', undefined, queryParams);
-  return { notifications: data.notifications, pagination: data.pagination };
+  const pag = data.pagination ?? {};
+  const total = Number(pag.total ?? data.total ?? 0);
+  const limit = Number(pag.limit ?? params.limit ?? 20);
+  const totalPages =
+    Number(pag.total_pages) ||
+    (total > 0 ? Math.ceil(total / limit) : 0);
+  const notifications = (data.notifications ?? []).map((n: Record<string, unknown>) => ({
+    ...n,
+    user_id: n.user_id_mysql ?? n.user_id ?? null,
+    is_global: n.user_id_mysql == null && n.user_id == null,
+  }));
+  return {
+    notifications,
+    pagination: { ...pag, total, limit, total_pages: totalPages },
+  };
 }
 
 /**
- * Obtener detalles de un escrow
- * TODO: Implementar en backend (admin.php)
+ * Detalle de un escrow por contract id (misma forma que una fila de get_escrows).
  */
-/*
 export async function getAdminEscrowDetails(escrowId: string): Promise<any> {
   const queryParams = new URLSearchParams();
   queryParams.append('escrow_id', escrowId);
   const data = await adminApiCall('get_escrow_details', 'GET', undefined, queryParams);
   return data.escrow;
 }
-*/
 
 /**
- * Obtener balance de comisiones acumuladas
- * TODO: Implementar en backend (admin.php)
+ * Comisiones acumuladas estimadas en base de datos (tareas completadas + escrow completed).
  */
-/*
 export async function getAdminCommissionBalance(): Promise<{
   total_commission_usdc: number;
   escrows_with_commission: number;
   commission_wallet: string;
 }> {
   const data = await adminApiCall('get_commission_balance');
-  return data;
+  return {
+    total_commission_usdc: Number(data.total_commission_usdc) || 0,
+    escrows_with_commission: Number(data.escrows_with_commission) || 0,
+    commission_wallet: String(data.commission_wallet ?? ''),
+  };
 }
-*/
 
 /**
- * Retirar comisiones acumuladas
- * TODO: Implementar en backend (admin.php)
+ * Retiro on-chain: el backend aún no firma transacciones; llamar lanzará error con mensaje claro.
  */
-/*
 export async function withdrawAdminCommission(amount?: number): Promise<{
   tx_hash: string;
   amount_withdrawn: number;
 }> {
   const data = await adminApiCall('withdraw_commission', 'POST', { amount });
-  return data;
+  return {
+    tx_hash: String(data.tx_hash ?? ''),
+    amount_withdrawn: Number(data.amount_withdrawn) || 0,
+  };
 }
-*/
+
+// ——— Referidos (Supabase Edge) ———
+
+type ReferralAdminPayload = Record<string, unknown>;
+
+export interface ReferralStats {
+  unread_fraud_alerts: number;
+  valid_signups_today: number;
+  rejected_signups_today: number;
+  active_partners?: number;
+  total_valid_referrals?: number;
+}
+
+export interface ReferralPartnerTimeline {
+  from: string;
+  to: string;
+  partner_id: string;
+  total_valid: number;
+  daily_rows: { signup_date: string; valid_count: number }[];
+}
+
+export interface ReferralPartner {
+  id: string;
+  display_name: string;
+  is_active: boolean;
+}
+
+export interface ReferralFraudAlert {
+  id: string;
+  title: string;
+  message: string;
+  partner_display_name: string;
+  ref_code: string;
+  flag_types: string[];
+  created_at: string;
+  is_read: boolean;
+}
+
+export interface ReferralCreateCodeResult {
+  success?: boolean;
+  link?: string;
+  link_register?: string;
+  code?: Record<string, unknown>;
+}
+
+export interface ReferralDailyReport {
+  from?: string;
+  to?: string;
+  rows: Record<string, unknown>[];
+  total_valid?: number;
+}
+
+function asArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
+async function referralAdminCall(
+  action: string,
+  payload: ReferralAdminPayload = {},
+): Promise<ReferralAdminPayload> {
+  const token = localStorage.getItem('admin_token') || localStorage.getItem('token');
+
+  if (hasSupabase && token) {
+    const { data, error } = await supabase.functions.invoke('referral-admin', {
+      body: { action, ...payload },
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (error) {
+      const msg = (error.message ?? '').toLowerCase();
+      if (
+        msg.includes('not found') ||
+        msg.includes('failed to send') ||
+        msg.includes('non-2xx')
+      ) {
+        throw new Error(
+          'Falta desplegar la Edge Function referral-admin en Supabase (Dashboard → Edge Functions → Deploy). Los Secrets solos no bastan.',
+        );
+      }
+      throw error;
+    }
+
+    if (data && typeof data === 'object') {
+      const res = data as ReferralAdminPayload;
+      if (res.success === false) {
+        throw new Error(String(res.message ?? 'Error en referidos'));
+      }
+      return res;
+    }
+
+    throw new Error(
+      'referral-admin respondió vacío. Verifica deploy y ARCUSX_JWT_SECRET en Edge Secrets.',
+    );
+  }
+
+  throw new Error(
+    'Referidos requiere Supabase configurado y sesión admin. Despliega referral-admin en Edge Functions.',
+  );
+}
+
+export async function getReferralStats(): Promise<ReferralStats> {
+  const data = await referralAdminCall('referral_stats');
+  return {
+    unread_fraud_alerts: Number(data.unread_fraud_alerts ?? 0),
+    valid_signups_today: Number(data.valid_signups_today ?? 0),
+    rejected_signups_today: Number(data.rejected_signups_today ?? 0),
+    active_partners: Number(data.active_partners ?? 0),
+    total_valid_referrals: Number(data.total_valid_referrals ?? 0),
+  };
+}
+
+export async function getReferralPartnerTimeline(
+  partnerId: string,
+  from: string,
+  to: string,
+): Promise<ReferralPartnerTimeline> {
+  const data = await referralAdminCall('referral_partner_timeline', {
+    partner_id: partnerId,
+    from,
+    to,
+  });
+  return {
+    from: String(data.from ?? from),
+    to: String(data.to ?? to),
+    partner_id: String(data.partner_id ?? partnerId),
+    total_valid: Number(data.total_valid ?? 0),
+    daily_rows: asArray<{ signup_date: string; valid_count: number }>(data.daily_rows),
+  };
+}
+
+export async function getReferralPartners(): Promise<ReferralPartner[]> {
+  const data = await referralAdminCall('referral_list_partners');
+  return asArray<ReferralPartner>(data.partners);
+}
+
+export async function createReferralPartner(payload: {
+  display_name: string;
+  contact_email?: string;
+  notes?: string;
+  owner_mysql_user_id?: number;
+}) {
+  return referralAdminCall('referral_create_partner', payload);
+}
+
+export async function createReferralCode(payload: {
+  partner_id: string;
+  code: string;
+  label?: string;
+}): Promise<ReferralCreateCodeResult> {
+  const data = await referralAdminCall('referral_create_code', payload);
+  return {
+    success: data.success === true,
+    link: typeof data.link === 'string' ? data.link : undefined,
+    link_register: typeof data.link_register === 'string' ? data.link_register : undefined,
+    code: typeof data.code === 'object' && data.code !== null
+      ? (data.code as Record<string, unknown>)
+      : undefined,
+  };
+}
+
+export async function getReferralCodes(partnerId?: string) {
+  const data = await referralAdminCall('referral_list_codes', {
+    ...(partnerId ? { partner_id: partnerId } : {}),
+  });
+  return data.codes ?? [];
+}
+
+export async function getReferralDailyReport(
+  from: string,
+  to: string,
+  partnerId?: string,
+): Promise<ReferralDailyReport> {
+  const data = await referralAdminCall('referral_daily_report', {
+    from,
+    to,
+    ...(partnerId ? { partner_id: partnerId } : {}),
+  });
+  return {
+    from: typeof data.from === 'string' ? data.from : from,
+    to: typeof data.to === 'string' ? data.to : to,
+    rows: asArray<Record<string, unknown>>(data.rows),
+    total_valid: Number(data.total_valid ?? 0),
+  };
+}
+
+export async function getReferralSignups(params?: {
+  page?: number;
+  status?: string;
+  signup_date?: string;
+}): Promise<Record<string, unknown>[]> {
+  const data = await referralAdminCall('referral_list_signups', {
+    page: params?.page ?? 1,
+    ...(params?.status ? { status: params.status } : {}),
+    ...(params?.signup_date ? { signup_date: params.signup_date } : {}),
+  });
+  return asArray<Record<string, unknown>>(data.signups);
+}
+
+export async function getReferralFraudAlerts(
+  unreadOnly = true,
+): Promise<ReferralFraudAlert[]> {
+  const data = await referralAdminCall('referral_fraud_alerts', {
+    unread_only: unreadOnly ? '1' : '0',
+  });
+  return asArray<ReferralFraudAlert>(data.alerts);
+}
+
+export async function markReferralFraudAlertRead(alertId: string) {
+  return referralAdminCall('referral_mark_alert_read', { alert_id: alertId });
+}
+
+export async function toggleReferralCode(codeId: string, isActive: boolean) {
+  return referralAdminCall('referral_toggle_code', {
+    code_id: codeId,
+    is_active: isActive,
+  });
+}
+
+export interface KycEnterpriseProfile {
+  user_id?: number;
+  legal_name?: string;
+  trade_name?: string;
+  tax_id?: string;
+  country?: string;
+  representative_name?: string;
+  representative_role?: string;
+  website?: string;
+  contact_phone?: string;
+}
+
+export interface KycAdminUser {
+  username?: string;
+  email?: string;
+  account_type?: string;
+  kyc_status?: string;
+}
+
+export interface KycIndividualProfile {
+  user_id?: number;
+  full_name?: string;
+  document_id?: string;
+  country?: string;
+}
+
+export interface KycAdminRequest {
+  id: number;
+  user_id: number;
+  request_type: string;
+  status: string;
+  created_at: string;
+  reviewed_at?: string | null;
+  rejection_reason?: string | null;
+  arcusx_users?: KycAdminUser;
+  enterprise_profile?: KycEnterpriseProfile | null;
+  individual_profile?: KycIndividualProfile | null;
+}
+
+export async function getKycRequests(params?: {
+  status?: string;
+  page?: number;
+  limit?: number;
+}): Promise<{
+  requests: KycAdminRequest[];
+  pagination: { page: number; limit: number; total: number; total_pages: number };
+}> {
+  const query = new URLSearchParams();
+  query.set('status', params?.status ?? 'under_review');
+  query.set('page', String(params?.page ?? 1));
+  query.set('limit', String(params?.limit ?? 50));
+  const data = await adminApiCall('list_kyc_requests', 'GET', undefined, query);
+  return {
+    requests: asArray<KycAdminRequest>(data.requests),
+    pagination: normalizeAdminPagination(data.pagination, {
+      page: params?.page,
+      limit: params?.limit,
+    }),
+  };
+}
+
+export interface KycDocumentView {
+  id: number;
+  document_type: string;
+  label: string;
+  original_filename?: string | null;
+  mime_type?: string | null;
+  file_size?: number | null;
+  created_at?: string;
+  signed_url: string | null;
+}
+
+export interface KycRequestDetail {
+  request: KycAdminRequest & { review_notes?: string | null };
+  user: KycAdminUser | null;
+  enterprise_profile: KycEnterpriseProfile | null;
+  individual_profile: KycIndividualProfile | null;
+  documents: KycDocumentView[];
+}
+
+export async function getKycRequestDetail(requestId: number): Promise<KycRequestDetail> {
+  const query = new URLSearchParams();
+  query.set('request_id', String(requestId));
+  const data = await adminApiCall('get_kyc_request_detail', 'GET', undefined, query);
+  return {
+    request: data.request as KycRequestDetail['request'],
+    user: data.user ?? null,
+    enterprise_profile: data.enterprise_profile ?? null,
+    individual_profile: data.individual_profile ?? null,
+    documents: asArray<KycDocumentView>(data.documents),
+  };
+}
+
+export async function approveKycRequest(body: {
+  request_id: number;
+  user_id?: number;
+}): Promise<{ message?: string }> {
+  return adminApiCall('approve_kyc', 'POST', body);
+}
+
+export async function rejectKycRequest(body: {
+  request_id: number;
+  reason: string;
+}): Promise<{ message?: string }> {
+  return adminApiCall('reject_kyc', 'POST', {
+    request_id: body.request_id,
+    reason: body.reason,
+    rejection_reason: body.reason,
+  });
+}
 

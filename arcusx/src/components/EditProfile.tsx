@@ -1,9 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaUser, FaEnvelope, FaLock, FaSave, FaTimes, FaUpload, FaGlobe, FaUnlock, FaLock as FaLockIcon } from 'react-icons/fa';
+import { FaArrowLeft, FaUser, FaEnvelope, FaLock, FaSave, FaTimes, FaUpload, FaGlobe, FaUnlock, FaLock as FaLockIcon, FaWallet } from 'react-icons/fa';
 import { getUserProfile, updateUserProfile, updateUserBasicData, uploadAvatar } from '../services/profileService';
+import { authService } from '../services/authService';
+import { useWallet } from '../hooks/useWallet';
 import type { UserProfile, Skill } from '../types/profile';
 import { getAvatarUrl } from '../utils/avatarUtils';
+import {
+  consumePostWalletRedirect,
+  dashboardTabHref,
+  getDefaultDashboardTab,
+} from '../config/dashboardTabs';
+import { useEnterpriseMode } from '../hooks/useEnterpriseMode';
 import { useI18n } from '../i18n/I18nProvider';
 import '../css/EditProfile.css';
 
@@ -14,10 +22,15 @@ interface StoredUser {
   avatar_url?: string;
 }
 
+/** Formato cuenta propia Stellar (misma regla que `register_wallet.php`). */
+const STELLAR_G_ADDRESS = /^G[A-Z0-9]{55}$/;
+
 const EditProfile: React.FC = () => {
   const navigate = useNavigate();
+  const enterprise = useEnterpriseMode();
   const { t } = useI18n();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { address: connectedWalletAddress, isConnected: walletConnected } = useWallet();
 
   const [user, setUser] = useState<StoredUser | null>(null);
   const [, setProfile] = useState<UserProfile | null>(null);
@@ -75,6 +88,12 @@ const EditProfile: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  /** `undefined` = aún no consultado al backend; `null` = sin wallet; string = dirección. */
+  const [registeredWallet, setRegisteredWallet] = useState<string | null | undefined>(undefined);
+  const [walletInput, setWalletInput] = useState('');
+  const [walletVerifyLoading, setWalletVerifyLoading] = useState(false);
+  const [walletErrorLocal, setWalletErrorLocal] = useState<string | null>(null);
+
   // Cargar datos del usuario y perfil
   useEffect(() => {
     const loadData = async () => {
@@ -116,6 +135,24 @@ const EditProfile: React.FC = () => {
         } catch (e) {
           // Si falla, usar datos básicos del localStorage
         }
+
+        setWalletVerifyLoading(true);
+        setWalletErrorLocal(null);
+        try {
+          const w = await authService.verifyWallet();
+          const payout = w.private_payout_wallet ?? w.wallet_address;
+          if (w.success && w.has_wallet && payout) {
+            setRegisteredWallet(payout);
+            setWalletInput(payout);
+          } else {
+            setRegisteredWallet(null);
+            setWalletInput('');
+          }
+        } catch {
+          setRegisteredWallet(null);
+        } finally {
+          setWalletVerifyLoading(false);
+        }
       } catch (e) {
         navigate('/login');
       } finally {
@@ -125,6 +162,13 @@ const EditProfile: React.FC = () => {
     
     loadData();
   }, [navigate]);
+
+  useEffect(() => {
+    if (window.location.hash === '#private-payout-wallet') {
+      const el = document.getElementById('private-payout-wallet');
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [loading]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -196,6 +240,24 @@ const EditProfile: React.FC = () => {
         newPassword: newPassword || undefined
       });
 
+      const walletTrimmed = walletInput.trim();
+      if (walletTrimmed) {
+        if (!STELLAR_G_ADDRESS.test(walletTrimmed)) {
+          setWalletErrorLocal(t('edit.wallet.error.format'));
+          setSaving(false);
+          return;
+        }
+        const walletRes = await authService.registerWallet(walletTrimmed);
+        if (!walletRes.success) {
+          setWalletErrorLocal(walletRes.message || t('edit.wallet.error.generic'));
+          setSaving(false);
+          return;
+        }
+        const saved = walletRes.private_payout_wallet ?? walletTrimmed;
+        setRegisteredWallet(saved);
+        setWalletInput(saved);
+      }
+
       // 2. Actualizar perfil público (bio, portfolio_url, public_profile, skills)
       await updateUserProfile({
         bio: bio.trim() || undefined,
@@ -219,10 +281,21 @@ const EditProfile: React.FC = () => {
       setNewPassword('');
       setConfirmPassword('');
       
+      const walletReturn = consumePostWalletRedirect();
+      const returnToOffers =
+        !walletReturn && window.location.hash === '#private-payout-wallet';
       setTimeout(() => {
         setSuccess(null);
-        navigate('/dashboard');
-      }, 2000);
+        if (walletReturn) {
+          navigate(walletReturn);
+          return;
+        }
+        navigate(
+          returnToOffers
+            ? dashboardTabHref('private-offers', enterprise)
+            : dashboardTabHref(getDefaultDashboardTab(enterprise), enterprise),
+        );
+      }, 1500);
     } catch (err: any) {
       const message =
         err?.response?.data?.message ||
@@ -263,6 +336,15 @@ const EditProfile: React.FC = () => {
   const getSkillLevel = (skillName: string): Skill['level'] => {
     const skill = selectedSkills.find(s => s.name === skillName);
     return skill?.level || 'beginner';
+  };
+
+  const handleUseConnectedWallet = () => {
+    setWalletErrorLocal(null);
+    if (!walletConnected || !connectedWalletAddress) {
+      setWalletErrorLocal(t('edit.wallet.error.connect'));
+      return;
+    }
+    setWalletInput(connectedWalletAddress);
   };
 
   if (loading || !user) {
@@ -490,6 +572,48 @@ const EditProfile: React.FC = () => {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Wallet para ofertas privadas */}
+          <div className="form-section" id="private-payout-wallet">
+            <h2>
+              <FaWallet style={{ marginRight: 8, verticalAlign: 'middle' }} aria-hidden />
+              {t('edit.section.wallet')}
+            </h2>
+            <p className="section-help">{t('edit.wallet.help')}</p>
+            {walletVerifyLoading ? (
+              <p className="section-help">{t('edit.wallet.loading')}</p>
+            ) : (
+              <>
+                {walletErrorLocal ? (
+                  <div className="edit-profile-alert error">{walletErrorLocal}</div>
+                ) : null}
+                {registeredWallet ? (
+                  <p className="section-help">{t('edit.wallet.changeHint')}</p>
+                ) : null}
+                <div className="form-group">
+                  <label htmlFor="walletAddress">{t('edit.wallet.fieldLabel')}</label>
+                  <input
+                    id="walletAddress"
+                    type="text"
+                    autoComplete="off"
+                    spellCheck={false}
+                    maxLength={56}
+                    value={walletInput}
+                    onChange={e => {
+                      setWalletInput(e.target.value);
+                      setWalletErrorLocal(null);
+                    }}
+                    placeholder={t('edit.wallet.placeholder')}
+                  />
+                </div>
+                <div className="form-group edit-profile-wallet-actions">
+                  <button type="button" className="btn-secondary" onClick={handleUseConnectedWallet}>
+                    {t('edit.wallet.useConnected')}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Sección 4: Seguridad */}

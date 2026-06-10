@@ -1,7 +1,15 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import axios from 'axios'; // Importar axios
-import { API_URL } from '../config/database'; // Asegúrate de que la ruta a tu config.js es correcta
+import axios from '../config/axios';
+import { arcusxApiUrl, arcusxApiHeaders } from '../config/arcusxApi';
+import { hasSupabase } from '../config/supabase';
+import {
+  fetchTaskMessagesSupabase,
+  formatArcusxMessagingError,
+  prepareSupabaseArcusxSession,
+  sendTaskMessageSupabase,
+} from '../services/arcusxMessagingSupabase';
+import { useTaskMessagesRealtime } from '../hooks/useTaskMessagesRealtime';
 import '../css/SuperviseTask.css';
 import { jwtDecode } from "jwt-decode"; // Importar jwtDecode
 import { useWallet } from '../hooks/useWallet';
@@ -28,17 +36,52 @@ import {
   cancelTask as cancelTaskService,
   confirmCancellation
 } from '../services/cancelTaskService';
+import { markWorkStarted } from '../services/taskEscrowService';
 // ============================================
 import { usePlatformFee } from '../hooks/usePlatformFee';
 import { useScheduledTaskDeletion } from '../hooks/useScheduledTaskDeletion';
 import FileExchange from './FileExchange';
 import WalletButton from './WalletButton';
 import ConfirmDialog from './ConfirmDialog';
-import RatingSystem from './RatingSystem';
-import CompleteTaskPopup from './CompleteTaskPopup';
+import CompleteTaskPopup, { type TaskCompletionPayload } from './CompleteTaskPopup';
+import TaskReleaseSummary from './TaskReleaseSummary';
+import StellarTxHashLink from './StellarTxHashLink';
+import TaskDeletionNotice from './TaskDeletionNotice';
 import { FaExclamationTriangle, FaTimes, FaFlag, FaLock, FaHome, FaDollarSign, FaComments, FaMapMarkerAlt, FaArrowLeft, FaPaperPlane } from 'react-icons/fa';
 import { useI18n } from '../i18n/I18nProvider';
+import {
+  assertClientCanSignEscrowAction,
+  isDealMilestoneApproved,
+  resolveEscrowApprover,
+  resolveEscrowReleaseSigner,
+  type DealEscrowIndexerRow,
+} from '../utils/dealEscrowVerification';
+import {
+  canClientAcceptOrRejectWork,
+  isEscrowFunded,
+  isEscrowPending,
+  isTaskSupervisionActive,
+  mergeEscrowStatusFromIndexer,
+} from '../utils/escrowStatus';
+import { taskHasExchangeFiles } from '../utils/taskExchangeFiles';
+import { isStellarTxHash } from '../utils/stellarNetwork';
+import { quoteEscrowFundAmount } from '../utils/escrowFeeQuote';
 import '../css/ConfirmDialog.css';
+
+function parseTaskDetailsPayload(raw: Record<string, unknown>): Record<string, unknown> {
+  const { success: _s, message: _m, ...rest } = raw;
+  return rest;
+}
+
+/** Disputa real en Trustless Work (no usar solo escrow.status del indexer). */
+function escrowIndexerIsDisputed(escrow: Record<string, unknown>): boolean {
+  const flags = (escrow.flags ?? {}) as Record<string, unknown>;
+  return (
+    flags.disputed === true ||
+    escrow.isDisputed === true ||
+    escrow.disputed === true
+  );
+}
 
 interface TaskDetails {
     id: string;
@@ -59,8 +102,14 @@ interface TaskDetails {
     escrow_status?: string; // Estado del escrow
     escrow_created_at?: string; // Fecha de creación del escrow
     escrow_completed_at?: string; // Fecha de finalización
+    escrow_release_tx_hash?: string | null;
+    scheduled_deletion_at?: string | null;
+    completed_at?: string | null;
+    dispute_resolved_at?: string | null;
     escrow_amount?: number | string; // Monto del escrow
+    escrow_platform_fee?: number | string; // Fee decimal (0.03) al crear el escrow
     accepted_applicant_id?: string; // ID del trabajador asignado
+    worker_started_at?: string | null; // Edge mark_work_started
     worker_wallet_address?: string; // Wallet del trabajador desde la aplicación
     worker_username?: string; // Username del trabajador
 }
@@ -138,7 +187,7 @@ const DisputeStatusNotificationComponent = ({
                     const balance = parseFloat(escrow.balance || escrow.currentBalance || '0');
                     
                     setEscrowInfo({
-                        isDisputed: flags.disputed === true || escrow.isDisputed === true || escrow.disputed === true,
+                        isDisputed: escrowIndexerIsDisputed(escrow as Record<string, unknown>),
                         isResolved: flags.resolved === true,
                         isRefunded: flags.resolved === true && balance === 0,
                         balance: balance
@@ -158,14 +207,7 @@ const DisputeStatusNotificationComponent = ({
 
     if (loadingEscrowInfo) {
         return (
-            <div style={{
-                padding: '15px',
-                marginBottom: '15px',
-                backgroundColor: '#fff3cd',
-                border: '1px solid #ffc107',
-                borderRadius: '5px',
-                color: '#856404'
-            }}>
+            <div className="arcusx-alert arcusx-alert--warning" style={{ marginBottom: '15px' }}>
                 <strong> {t('supervise.escrow.dispute')}</strong>
                 <p style={{ margin: '5px 0 0 0' }}>
                     {t('supervise.dispute.verifying')}
@@ -176,23 +218,26 @@ const DisputeStatusNotificationComponent = ({
 
     const isRefunded = escrowInfo?.isRefunded || task?.escrow_status === 'refunded';
     const isResolved = escrowInfo?.isResolved || false;
+    const isDisputed = escrowInfo?.isDisputed === true;
+
+    if (!loadingEscrowInfo && !isDisputed && !isRefunded && !isResolved) {
+        return null;
+    }
 
     return (
-        <div style={{
-            padding: '15px',
-            marginBottom: '15px',
-            backgroundColor: isRefunded ? '#d4edda' : '#fff3cd',
-            border: `1px solid ${isRefunded ? '#28a745' : '#ffc107'}`,
-            borderRadius: '5px',
-            color: isRefunded ? '#155724' : '#856404'
-        }}>
+        <div
+            className={`arcusx-alert ${isRefunded ? 'arcusx-alert--success' : 'arcusx-alert--warning'}`}
+            style={{ marginBottom: '15px' }}
+        >
             <strong>{isRefunded ? '' : ''} {t('supervise.escrow.dispute')}</strong>
             <p style={{ margin: '5px 0 0 0' }}>
                 {isRefunded 
                     ? t('supervise.dispute.resolved.refund')
                     : isResolved
                     ? t('supervise.dispute.resolved.processing')
-                    : t('supervise.dispute.in.dispute')
+                    : isDisputed
+                    ? t('supervise.dispute.in.dispute')
+                    : t('supervise.dispute.verifying')
                 }
             </p>
             {escrowInfo && (
@@ -208,10 +253,21 @@ const SuperviseTask = () => {
     const { taskId, acceptedApplicantId } = useParams<{ taskId: string, acceptedApplicantId: string }>();
     const navigate = useNavigate();
     const { t } = useI18n();
+
+    const messagingErrorLabel = useCallback(
+        (code: string) => {
+            if (code === 'link_required') return t('supervise.error.messaging.link');
+            if (code === 'not_authenticated') return t('supervise.error.messaging.session');
+            if (code === 'permission_denied') return t('supervise.error.messaging.permission');
+            return code;
+        },
+        [t],
+    );
+
     const [task, setTask] = useState<TaskDetails | null>(null);
-    const [withdrawingFunds, setWithdrawingFunds] = useState(false);
     const [worker, setWorker] = useState<UserDetails | null>(null);
     const [loading, setLoading] = useState(true);
+    const [notifyingDelivery, setNotifyingDelivery] = useState(false);
     const [error, setError] = useState<string | null>(null);
     
     // Estados para popups de éxito
@@ -219,8 +275,6 @@ const SuperviseTask = () => {
     const [showClientPaymentPopup, setShowClientPaymentPopup] = useState(false);
     
     // Estados para sistema de ratings
-    const [showRatingModal, setShowRatingModal] = useState(false);
-    const [hasRated, setHasRated] = useState(false);
     const [paymentSuccessData, setPaymentSuccessData] = useState<{
         amount: string;
         txHash: string;
@@ -266,7 +320,6 @@ const SuperviseTask = () => {
     // Estados para acciones de trabajo
     const [acceptingWork] = useState(false);
     const [showCompleteTaskPopup, setShowCompleteTaskPopup] = useState(false);
-    
     // Cache para escrow data y debouncing
     const [escrowCache, setEscrowCache] = useState<any>(null);
     const [lastEscrowFetch, setLastEscrowFetch] = useState<number>(0);
@@ -340,27 +393,41 @@ const SuperviseTask = () => {
             setLoading(true);
             setError(null);
             try {
-                const taskResponse = await axios.get(`${API_URL}/auth/get_task_details.php?task_id=${taskId}`);
+                const taskResponse = await axios.get(arcusxApiUrl('get_task_details', { task_id: taskId }));
+                let taskRow: TaskDetails | null = null;
                 
                 if (taskResponse.data) {
-                    if (taskResponse.data.user_id === undefined || taskResponse.data.user_id === null || typeof taskResponse.data.user_id !== 'string') {
+                    taskRow = parseTaskDetailsPayload(
+                      taskResponse.data as Record<string, unknown>,
+                    ) as unknown as TaskDetails;
+
+                    const apiResolved =
+                      taskRow.escrow_status === 'resolved' ||
+                      taskRow.status === 'resolved' ||
+                      Boolean(taskRow.dispute_resolved_at);
+                    if (apiResolved) {
+                      setIsResolved(true);
+                      setHasExistingDispute(false);
+                    }
+
+                    if (taskRow.user_id === undefined || taskRow.user_id === null || typeof taskRow.user_id !== 'string') {
                          setError(t('supervise.error.detailsNoUserId'));
                          setLoading(false);
                          return;
                     }
-                    if (taskResponse.data.client_accepted_completion === undefined || typeof taskResponse.data.client_accepted_completion !== 'number' ||
-                        taskResponse.data.worker_accepted_completion === undefined || typeof taskResponse.data.worker_accepted_completion !== 'number') {
+                    if (taskRow.client_accepted_completion === undefined || typeof taskRow.client_accepted_completion !== 'number' ||
+                        taskRow.worker_accepted_completion === undefined || typeof taskRow.worker_accepted_completion !== 'number') {
                         setError(t('supervise.error.detailsNoAcceptance'));
                         setLoading(false);
                         return;
                     }
 
                     // Verificar estado del escrow desde Trustless Work si hay escrow_id
-                    let updatedTaskData = { ...taskResponse.data };
-                    if (taskResponse.data.escrow_id && getEscrowByContractIds) {
+                    let updatedTaskData = { ...taskRow };
+                    if (taskRow.escrow_id && getEscrowByContractIds) {
                         try {
                             const escrowResult = await getEscrowByContractIds({ 
-                                contractIds: [taskResponse.data.escrow_id],
+                                contractIds: [taskRow.escrow_id],
                                 validateOnChain: true 
                             });
                             
@@ -370,10 +437,9 @@ const SuperviseTask = () => {
                                 const escrow = escrows[0];
                                 const flags = escrow.flags || {};
                                 // Verificar disputa usando flags.disputed (método correcto según DisputeManagement)
-                                const isDisputed = flags.disputed === true || 
-                                                  escrow.isDisputed === true || 
-                                                  escrow.disputed === true || 
-                                                  escrow.status === 'disputed';
+                                const isDisputed = escrowIndexerIsDisputed(
+                                  escrow as Record<string, unknown>,
+                                );
                                 
                                 //  CRÍTICO: Verificar si el escrow está resuelto
                                 const escrowIsResolved = flags.resolved === true || 
@@ -388,18 +454,45 @@ const SuperviseTask = () => {
                                 if (escrowIsResolved) {
                                     updatedTaskData.escrow_status = 'resolved';
                                     updatedTaskData.status = 'resolved';
+                                    setHasExistingDispute(false);
                                 } else if (isDisputed) {
                                     updatedTaskData.escrow_status = 'disputed';
                                     updatedTaskData.status = 'disputed';
                                     setHasExistingDispute(true);
                                 } else if (escrow.status) {
-                                    // Actualizar con el estado del escrow si está disponible
-                                    updatedTaskData.escrow_status = escrow.status;
+                                    updatedTaskData.escrow_status = mergeEscrowStatusFromIndexer(
+                                      updatedTaskData.escrow_status,
+                                      String(escrow.status),
+                                    );
                                 }
                             }
                         } catch (escrowError: any) {
                             // Continuar con los datos del backend
                         }
+                    }
+
+                    const onChainResolved =
+                      updatedTaskData.escrow_status === 'resolved' ||
+                      updatedTaskData.status === 'resolved';
+                    if (onChainResolved && !updatedTaskData.scheduled_deletion_at) {
+                      try {
+                        const refresh = await axios.get(
+                          arcusxApiUrl('get_task_details', { task_id: taskId }),
+                        );
+                        const refreshed = parseTaskDetailsPayload(
+                          refresh.data as Record<string, unknown>,
+                        ) as Partial<TaskDetails>;
+                        updatedTaskData = {
+                          ...updatedTaskData,
+                          ...refreshed,
+                          escrow_status: 'resolved',
+                          status: refreshed.status === 'disputed'
+                            ? 'resolved'
+                            : (refreshed.status ?? updatedTaskData.status),
+                        };
+                      } catch {
+                        /* keep indexer overlay */
+                      }
                     }
 
                     setTask(updatedTaskData);
@@ -409,14 +502,15 @@ const SuperviseTask = () => {
                     return;
                 }
 
-                const workerIdToFetch = taskResponse.data.accepted_applicant_id || acceptedApplicantId;
+                const workerIdToFetch = taskRow?.accepted_applicant_id || acceptedApplicantId;
                 
                 if (!workerIdToFetch) {
+                    setError(t('supervise.error.missingIds'));
                     setLoading(false);
                     return;
                 }
                 
-                const workerResponse = await axios.get(`${API_URL}/auth/get_user_details.php?user_id=${workerIdToFetch}`);
+                const workerResponse = await axios.get(arcusxApiUrl('get_user_details', { user_id: workerIdToFetch }));
                 
                 if (workerResponse.data) {
                     if (workerResponse.data.id === undefined || workerResponse.data.id === null) {
@@ -465,6 +559,39 @@ const SuperviseTask = () => {
         }
     }, [taskId, acceptedApplicantId]); // Dependencias del useEffect
 
+    const workStartMarkedRef = useRef(false);
+    useEffect(() => {
+        if (!taskId || !task || !currentUser || workStartMarkedRef.current) return;
+        if (String(task.accepted_applicant_id) !== String(currentUser.id)) return;
+        if (!task.escrow_id || task.escrow_status !== 'active') return;
+        if (task.worker_started_at) return;
+
+        workStartMarkedRef.current = true;
+        markWorkStarted(parseInt(taskId, 10))
+            .then((r) => {
+                setTask((prev) =>
+                    prev
+                        ? {
+                              ...prev,
+                              worker_started_at: r.started_at ?? prev.worker_started_at,
+                              status: prev.status === 'assigned' ? 'in_progress' : prev.status,
+                          }
+                        : prev,
+                );
+            })
+            .catch(() => {
+                workStartMarkedRef.current = false;
+            });
+    }, [
+        taskId,
+        task?.id,
+        task?.worker_started_at,
+        task?.escrow_status,
+        task?.escrow_id,
+        task?.accepted_applicant_id,
+        currentUser?.id,
+    ]);
+
     // Cargar mensajes: `silent` evita loading en pantalla (polling) para que no parpadee el chat
     const fetchMessages = useCallback(async (opts?: { silent?: boolean }) => {
         const silent = opts?.silent === true;
@@ -473,18 +600,33 @@ const SuperviseTask = () => {
         }
 
         if (!silent) {
-            setLoadingMessages(true);
+        setLoadingMessages(true);
         }
         try {
-            const response = await axios.get(`${API_URL}/auth/get_messages.php?task_id=${taskId}`);
-            
-            if (response.data && Array.isArray(response.data)) {
-                const formattedMessages: Message[] = response.data.map(msg => ({
+            if (!hasSupabase) {
+                if (!silent) {
+                    setError(t('common.error.supabaseMessaging'));
+                }
+                setMessages([]);
+            } else {
+                const raw = localStorage.getItem('user');
+                const u = raw ? JSON.parse(raw) : null;
+                if (u?.id != null) {
+                    await prepareSupabaseArcusxSession(Number(u.id));
+                } else {
+                    throw new Error('not_authenticated');
+                }
+                const tid = parseInt(String(taskId), 10);
+                const rows = await fetchTaskMessagesSupabase(tid);
+                const formattedMessages: Message[] = rows.map((msg) => ({
                     ...msg,
                     id: String(msg.id),
                     task_id: String(msg.task_id),
                     sender_id: String(msg.sender_id),
-                    receiver_id: String(msg.receiver_id)
+                    receiver_id: String(msg.receiver_id),
+                    message: String((msg as { message?: string }).message ?? ''),
+                    is_read: (msg as { is_read?: boolean | number }).is_read ? 1 : 0,
+                    created_at: String((msg as { created_at?: string }).created_at ?? ''),
                 }));
                 setMessages((prev) => {
                     if (
@@ -504,54 +646,75 @@ const SuperviseTask = () => {
                     }
                     return formattedMessages;
                 });
-            } else {
-                 setMessages([]);
             }
-        } catch (error) {
+        } catch (error: unknown) {
              if (!silent) {
-                 setError(t('supervise.error.load.messages'));
+                 const raw = error instanceof Error ? error.message : String(error);
+                 const code = formatArcusxMessagingError(raw);
+                 setError(t('supervise.error.load.messages') + ' ' + messagingErrorLabel(code));
              }
         } finally {
             if (!silent) {
-                setLoadingMessages(false);
-            }
+            setLoadingMessages(false);
         }
-    }, [taskId, t]);
+        }
+    }, [taskId, t, messagingErrorLabel]);
 
-    // Cargar mensajes al obtener los detalles de la tarea, trabajador y usuario actual
+    const taskIdNum = taskId ? parseInt(String(taskId), 10) : null;
+    useTaskMessagesRealtime({
+        taskId: Number.isFinite(taskIdNum) ? taskIdNum : null,
+        enabled: Boolean(task && worker && currentUser),
+        onChange: () => {
+            void fetchMessages({ silent: true });
+        },
+    });
+
     useEffect(() => {
         if (task && worker && currentUser) {
             void fetchMessages();
             const interval = setInterval(() => {
                 void fetchMessages({ silent: true });
-            }, 5000);
+            }, 120000);
             return () => clearInterval(interval);
         }
     }, [task, worker, currentUser, fetchMessages]);
 
-    // Mostrar popup de éxito automáticamente si el cliente ya aceptó el trabajo
+    // Popup de pago al recargar supervisión tras liberar fondos (solo con hash real on-chain)
     useEffect(() => {
-        if (task && currentUser && task.client_accepted_completion === 1) {
-            // Verificar si es el cliente (creador de la tarea)
+        if (!task || !currentUser || task.client_accepted_completion !== 1) return;
+
             const isClientUser = String(currentUser.id) === String(task.user_id);
-            
-            if (isClientUser && !showClientPaymentPopup && !paymentSuccessData) {
-                // Calcular los montos usando la fórmula correcta
+        const releaseHash = task.escrow_release_tx_hash?.trim() ?? '';
+        const fundsReleased =
+            task.status === 'completed' ||
+            task.escrow_status === 'completed' ||
+            isStellarTxHash(releaseHash);
+
+        if (
+            isClientUser &&
+            fundsReleased &&
+            isStellarTxHash(releaseHash) &&
+            !showClientPaymentPopup &&
+            !paymentSuccessData
+        ) {
                 const workerAmount = parseFloat(task.price);
-                const escrowAmount = workerAmount / (1 - platformFee);
-                
-                // Mostrar popup automáticamente
+            const fee =
+                task.escrow_platform_fee != null
+                    ? Number(task.escrow_platform_fee)
+                    : platformFee;
+            const escrowAmount =
+                task.escrow_amount != null
+                    ? Number(task.escrow_amount)
+                    : quoteEscrowFundAmount(workerAmount, fee);
+
                 setPaymentSuccessData({
                     amount: escrowAmount.toFixed(7),
-                    txHash: task.escrow_completed_at ? t('supervise.tx.completedPreviously') : 'N/A',
-                    netAmount: workerAmount.toFixed(7)
-                });
-                
-                // Mostrar popup después de un pequeño delay para asegurar que el estado se actualice
-                setTimeout(() => {
-                    setShowClientPaymentPopup(true);
-                }, 300);
-            }
+                txHash: releaseHash,
+                netAmount: workerAmount.toFixed(7),
+            });
+
+            const timer = window.setTimeout(() => setShowClientPaymentPopup(true), 300);
+            return () => window.clearTimeout(timer);
         }
     }, [task, currentUser, showClientPaymentPopup, paymentSuccessData, platformFee]);
 
@@ -777,10 +940,9 @@ const SuperviseTask = () => {
                 if (escrow) {
                     const flags = escrow.flags || {};
                     // Verificar disputa usando flags.disputed (método correcto según DisputeManagement)
-                    const isDisputed = flags.disputed === true || 
-                                      escrow.isDisputed === true || 
-                                      escrow.disputed === true || 
-                                      escrow.status === 'disputed';
+                    const isDisputed = escrowIndexerIsDisputed(
+                      escrow as Record<string, unknown>,
+                    );
                     
                     //  CRÍTICO: Verificar si el escrow está resuelto
                     const escrowIsResolved = flags.resolved === true || 
@@ -788,18 +950,50 @@ const SuperviseTask = () => {
                                              escrow.resolved === true || 
                                              escrow.status === 'resolved';
                     
-                    // Si el escrow está resuelto pero el estado local no lo refleja, actualizar
-                    if (escrowIsResolved && task.escrow_status !== 'resolved' && task.status !== 'resolved') {
+                    if (escrowIsResolved) {
                         setIsResolved(true);
-                        setTask(prevTask => {
-                            if (!prevTask) return null;
-                            return { 
-                                ...prevTask, 
-                                status: 'resolved',
-                                escrow_status: 'resolved'
-                            };
-                        });
-                        return; // No verificar disputa si ya está resuelto
+                        setHasExistingDispute(false);
+
+                        const needsSchedule = !task.scheduled_deletion_at;
+                        const needsStatusSync =
+                          task.escrow_status !== 'resolved' || task.status !== 'resolved';
+
+                        if (needsStatusSync) {
+                          setTask((prevTask) =>
+                            prevTask
+                              ? {
+                                  ...prevTask,
+                                  status: 'resolved',
+                                  escrow_status: 'resolved',
+                                }
+                              : prevTask,
+                          );
+                        }
+
+                        if (needsSchedule) {
+                          axios
+                            .get(arcusxApiUrl('get_task_details', { task_id: taskId }))
+                            .then((refresh) => {
+                              const refreshed = parseTaskDetailsPayload(
+                                refresh.data as Record<string, unknown>,
+                              ) as Partial<TaskDetails>;
+                              setTask((prev) =>
+                                prev
+                                  ? {
+                                      ...prev,
+                                      ...refreshed,
+                                      escrow_status: 'resolved',
+                                      status:
+                                        refreshed.status === 'disputed'
+                                          ? 'resolved'
+                                          : (refreshed.status ?? prev.status),
+                                    }
+                                  : prev,
+                              );
+                            })
+                            .catch(() => undefined);
+                        }
+                        return;
                     }
                     
                     // Si el escrow está en disputa pero el estado local no lo refleja, actualizar
@@ -849,53 +1043,49 @@ const SuperviseTask = () => {
         setSendingMessage(true);
         setError(null);
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                setError(t('supervise.error.noToken'));
-                setSendingMessage(false);
+            if (!hasSupabase) {
+                setError(t('common.error.supabaseMessaging'));
                 return;
             }
 
-            // Asegurarse de que los IDs son números para el backend
-            const senderIdNum = parseInt(currentUser.id, 10);
-            const taskIdNum = parseInt(taskId, 10); // Asegurarse de que el taskId es un número
+            const raw = localStorage.getItem('user');
+            const u = raw ? JSON.parse(raw) : null;
+            if (u?.id == null) {
+                setError(t('supervise.error.messaging.session'));
+                return;
+            }
+            await prepareSupabaseArcusxSession(Number(u.id));
 
-            // Determinar el receiver_id dinámicamente
-            // Si el current user es el creador de la tarea, el receptor es el trabajador
-            // Si el current user es el trabajador, el receptor es el creador
+            const taskIdNum = parseInt(taskId, 10);
+
             let actualReceiverId = 0;
-            if (currentUser.id === task.user_id) { // Si el usuario actual es el creador de la tarea
-                actualReceiverId = parseInt(acceptedApplicantId, 10); // El receptor es el trabajador aceptado
-            } else if (currentUser.id === worker.id) { // Si el usuario actual es el trabajador
-                actualReceiverId = parseInt(task.user_id, 10); // El receptor es el creador de la tarea
+            if (currentUser.id === task.user_id) {
+                actualReceiverId = parseInt(acceptedApplicantId, 10);
+            } else if (currentUser.id === worker.id) {
+                actualReceiverId = parseInt(task.user_id, 10);
             } else {
                 setError(t('supervise.error.unauthorizedSend'));
-                setSendingMessage(false);
                 return;
             }
             
-            const response = await axios.post(`${API_URL}/auth/send_message.php`, 
-                {
+            const result = await sendTaskMessageSupabase({
                     task_id: taskIdNum,
-                    sender_id: senderIdNum,
-                    receiver_id: actualReceiverId,
-                message: newMessage.trim()
-                },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                }
-            );
-            
-            if (response.data.success) {
+                receiver_mysql_id: actualReceiverId,
+                body: newMessage.trim(),
+            });
+            if (result.success) {
                 setNewMessage('');
                 void fetchMessages({ silent: true });
             } else {
-                setError(t('supervise.error.messageNotSent') + ' ' + (response.data.message || t('supervise.error.sendMessage')));
+                setError(t('supervise.error.messageNotSent') + ' ' + (result.message || t('supervise.error.sendMessage')));
             }
-        } catch (err: any) {
-            setError(t('supervise.error.sendMessage') + ' ' + (err.response?.data?.message || err.message));
+        } catch (err: unknown) {
+            const raw =
+                err instanceof Error
+                    ? err.message
+                    : String((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? err);
+            const code = formatArcusxMessagingError(raw);
+            setError(t('supervise.error.sendMessage') + ' ' + messagingErrorLabel(code));
         } finally {
             setSendingMessage(false);
         }
@@ -926,15 +1116,18 @@ const SuperviseTask = () => {
         }
 
         const indexerWrapper = async (_contractIds: string[]) => {
-            // Usar función optimizada
             const escrow = await getEscrowDataOptimized(true);
             return escrow ? [escrow] : [];
         };
 
+        const escrowRow = (await getEscrowDataOptimized(false)) as DealEscrowIndexerRow | null;
+        const approver = resolveEscrowApprover(escrowRow, address);
+        assertClientCanSignEscrowAction(approver, address, 'aprobar milestone');
+
         const result = await approveMilestoneTrustlessEscrow(
                     task.escrow_id,
             '0',
-                       address,
+                       approver,
             kit,
             approveMilestone,
             sendTransaction,
@@ -966,12 +1159,22 @@ const SuperviseTask = () => {
             throw new Error('Wallet no conectada o datos faltantes');
         }
 
+        const indexerWrapper = async (_contractIds: string[]) => {
+            const escrow = await getEscrowDataOptimized(true);
+            return escrow ? [escrow] : [];
+        };
+
+        const escrowRow = (await getEscrowDataOptimized(false)) as DealEscrowIndexerRow | null;
+        const releaseSigner = resolveEscrowReleaseSigner(escrowRow, address);
+        assertClientCanSignEscrowAction(releaseSigner, address, 'liberar fondos');
+
         const result = await releaseFundsTrustlessEscrow(
                     task.escrow_id,
-            address,
+            releaseSigner,
                     kit,
                     releaseFunds,
-                    sendTransaction
+                    sendTransaction,
+                    indexerWrapper
                 );
 
         return result;
@@ -983,85 +1186,87 @@ const SuperviseTask = () => {
         }
 
         try {
-            // Usar función optimizada con cache
-            const escrow = await getEscrowDataOptimized(false);
-            
-            if (escrow) {
-                const milestones = escrow.milestones || [];
-                if (milestones.length > 0) {
-                    const milestone = milestones[0];
-                    return milestone.status === 'approved' || milestone.approved === true;
-                }
-            }
-        } catch (error) {
-            // Error silencioso en verificación de milestone
-            if (process.env.NODE_ENV === 'development') {
-            }
+            const escrow = (await getEscrowDataOptimized(false)) as DealEscrowIndexerRow | null;
+            return isDealMilestoneApproved(escrow);
+        } catch {
+            return false;
         }
-        
-        return false;
     };
 
-    const handleCompleteTaskPopupComplete = async () => {
-        // Actualizar BD después de completar el proceso
+    const handlePersistTaskRelease = async (payload: {
+        releaseTxHash?: string;
+        rating?: number;
+        taskId?: number;
+        workerId?: number;
+    }): Promise<{ success: boolean; error?: string }> => {
         try {
-            const token = localStorage.getItem('token');
-
-            // Verificar que el escrow esté completado
-            let escrowCompleted = false;
-            let attempts = 0;
-            const maxAttempts = 12;
-            
-            while (!escrowCompleted && attempts < maxAttempts) {
-                try {
-                    await new Promise(resolve => setTimeout(resolve, 2000)); // Aumentar a 2 segundos para reducir peticiones
-                    // Usar función optimizada con cache
-                    const escrow = await getEscrowDataOptimized(true); // Force refresh para verificar estado actual
-                    
-                    if (escrow) {
-                        const balance = parseFloat(escrow.balance || '0');
-                        
-                        if (balance === 0 || escrow.status === 'released' || escrow.status === 'completed') {
-                            escrowCompleted = true;
-                        }
-                    }
-                } catch (err) {
-                    // Error al verificar escrow, continuar
-                }
-                attempts++;
-            }
-
-            const response = await axios.post(`${API_URL}/auth/complete_task.php`, {
-                task_id: parseInt(taskId!, 10),
-                action: 'accept',
-                escrow_completed: escrowCompleted,
-                tx_hash: null
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+            const response = await fetch(arcusxApiUrl('complete_task'), {
+                method: 'POST',
+                headers: arcusxApiHeaders(),
+                body: JSON.stringify({
+                    task_id: payload.taskId ?? parseInt(taskId!, 10),
+                    action: 'accept',
+                    escrow_completed: true,
+                    tx_hash: payload.releaseTxHash ?? null,
+                    rating: payload.rating,
+                    rated_user_id: payload.workerId,
+                }),
             });
-
-            if (!response.data.success) {
-                throw new Error(response.data.message || 'Error al actualizar estado en BD');
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || data?.success === false) {
+                return {
+                    success: false,
+                    error: data?.message || 'Error al actualizar estado en BD',
+                };
             }
+            return { success: true };
+        } catch (err: unknown) {
+            return {
+                success: false,
+                error: err instanceof Error ? err.message : 'Error al actualizar estado en BD',
+            };
+        }
+    };
 
-            // Actualizar estado local
+    const handleCompleteTaskPopupComplete = async (payload?: TaskCompletionPayload) => {
+        const releaseTxHash = payload?.releaseTxHash;
+
+        try {
+            const completedAt = new Date().toISOString();
+            const scheduledDeletionAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
             setTask(prev => prev ? {
                 ...prev,
                 client_accepted_completion: 1,
-                status: response.data.status || prev.status
+                worker_accepted_completion: prev.worker_accepted_completion || 1,
+                status: 'completed',
+                escrow_status: 'completed',
+                escrow_completed_at: completedAt,
+                completed_at: completedAt,
+                escrow_release_tx_hash: releaseTxHash ?? prev.escrow_release_tx_hash ?? null,
+                scheduled_deletion_at: scheduledDeletionAt,
             } : null);
+            if (releaseTxHash && task) {
+                const workerAmount = parseFloat(task.price);
+                const fee =
+                    task.escrow_platform_fee != null
+                        ? Number(task.escrow_platform_fee)
+                        : platformFee;
+                const escrowAmount =
+                    task.escrow_amount != null
+                        ? Number(task.escrow_amount)
+                        : quoteEscrowFundAmount(workerAmount, fee);
+                setPaymentSuccessData({
+                    amount: escrowAmount.toFixed(7),
+                    txHash: releaseTxHash,
+                    netAmount: workerAmount.toFixed(7),
+                });
+            }
 
             // Recargar datos
             setTimeout(() => {
                 fetchData();
             }, 500);
 
-            // Verificar si se debe mostrar el modal de rating
-            setTimeout(() => {
-                checkAndShowRatingModal();
-            }, 3000);
         } catch (err: any) {
             setError(t('supervise.error.updateTask') + ' ' + (err.response?.data?.message || err.message));
         }
@@ -1073,6 +1278,11 @@ const SuperviseTask = () => {
     const handleCancelTask = async () => {
         if (!task || !task.escrow_id || !isConnected || !address || !kit) {
             setError(t('supervise.error.connectFreighterCancel'));
+            return;
+        }
+
+        if (taskHasExchangeFiles(task.files)) {
+            setError(t('supervise.status.useDisputeForRefund'));
             return;
         }
 
@@ -1107,8 +1317,11 @@ const SuperviseTask = () => {
             // 2. Si está permitida, mostrar popup de confirmación
             setConfirmDialogConfig({
                 title: t('supervise.confirm.cancel.title'),
-                message: t('supervise.confirm.cancel.message').replace('{{amount}}', checkResult.canRefund ? String(task.escrow_amount || task.price || '0') : '0'),
-                type: 'info',
+                message: t('supervise.confirm.cancel.message').replace(
+                    '{{amount}}',
+                    String(task.escrow_amount ?? task.price ?? '—'),
+                ),
+                type: 'warning',
                 onConfirm: () => {
                     setShowConfirmDialog(false);
                     executeCancelTask();
@@ -1171,13 +1384,13 @@ const SuperviseTask = () => {
                 //  MEJORA: Crear registro en la tabla disputes para que aparezca en el dashboard de admin
                 try {
                     const token = localStorage.getItem('token');
-                    if (token && refundResult.txHash) {
+                    if (token) {
                         await axios.post(
-                            `${API_URL}/auth/create_dispute.php`,
+                            `${arcusxApiUrl('create_dispute')}`,
                             {
                                 task_id: parseInt(taskId!, 10),
                                 reason: 'Cancelación de tarea - Reembolso solicitado',
-                                tx_hash: refundResult.txHash
+                                tx_hash: refundResult.txHash ?? null
                             },
                             {
                                 headers: {
@@ -1218,11 +1431,9 @@ const SuperviseTask = () => {
                         
                         if (escrows && escrows.length > 0) {
                             const escrow = escrows[0];
-                            const flags = escrow.flags || {};
-                            const isDisputed = flags.disputed === true || 
-                                              escrow.isDisputed === true || 
-                                              escrow.disputed === true || 
-                                              escrow.status === 'disputed';
+                            const isDisputed = escrowIndexerIsDisputed(
+                              escrow as Record<string, unknown>,
+                            );
                             
                             // Actualizar estado local con el estado real del escrow
                             if (isDisputed) {
@@ -1256,9 +1467,12 @@ const SuperviseTask = () => {
                 return;
             }
 
-            // 4. Si hay transacción para firmar (esto no debería pasar con el flujo actual)
+            // 4. Firma directa de reembolso (flujo legacy si TW devuelve XDR)
             if (!refundResult.unsignedTransaction) {
-                throw new Error('No se recibió transacción de reembolso del servicio de escrow');
+                throw new Error(
+                    refundResult.message ||
+                    'No se recibió transacción de reembolso. Si iniciaste disputa, espera resolución del admin.',
+                );
             }
 
             // 5. Mostrar popup de firma (solo si hay transacción para firmar)
@@ -1344,50 +1558,6 @@ const SuperviseTask = () => {
 
     // handleRejectWork ahora es handleCancelTask (mantener compatibilidad con código existente)
 
-    // En Trustless Work, el trabajador NO retira fondos directamente
-    // El cliente debe aprobar y liberar los fondos
-    const handleWithdrawFunds = async () => {
-        if (!task || !task.escrow_id) {
-            setError(t('supervise.error.noEscrow'));
-                return;
-            }
-
-        // Verificar que es el trabajador
-    const isWorker = currentUser?.id === worker?.id;
-        if (!isWorker) {
-            setError(t('supervise.error.onlyWorkerWithdraw'));
-            return;
-        }
-
-        if (!isConnected || !address || !kit) {
-            setError(t('supervise.error.connectFreighterWithdraw'));
-            return;
-        }
-
-        const bothAccepted = task.client_accepted_completion === 1 && 
-                            task.worker_accepted_completion === 1;
-        
-        if (!bothAccepted) {
-            setError(t('supervise.error.bothAcceptWithdraw'));
-            return;
-        }
-
-        setWithdrawingFunds(true);
-        setError(null);
-
-        try {
-            // En Trustless Work, el trabajador NO libera fondos directamente
-            // El cliente debe aprobar el milestone primero y luego liberar los fondos
-            throw new Error(t('supervise.error.clientMustRelease'));
-        } catch (err: any) {
-            const errorMessage = err.response?.data?.message || err.message || 'Error desconocido';
-            
-            setError(t('supervise.error.withdrawFunds') + ' ' + errorMessage);
-        } finally {
-            setWithdrawingFunds(false);
-        }
-    };
-
     // submitCompleteTransaction eliminada - No se usa en Trustless Work
     // getWorkerWalletAddress eliminada - No se usa en Trustless Work
 
@@ -1400,8 +1570,8 @@ const SuperviseTask = () => {
 
         // Mostrar popup de confirmación en lugar de confirm()
         setConfirmDialogConfig({
-            title: t('supervise.confirm.complete.title'),
-            message: t('supervise.confirm.complete.message'),
+            title: t('supervise.confirm.notify.title'),
+            message: t('supervise.confirm.notify.message'),
             type: 'info',
             onConfirm: () => {
                 setShowConfirmDialog(false);
@@ -1417,26 +1587,21 @@ const SuperviseTask = () => {
             return;
         }
 
-        setLoading(true);
+        setNotifyingDelivery(true);
         setError(null);
         try {
             const token = localStorage.getItem('token');
             if (!token) {
                 setError(t('supervise.error.noToken'));
-                setLoading(false);
                 return;
             }
 
-            // Determinar si es trabajador o cliente
-            const isClient = String(currentUser?.id) === String(task?.user_id);
-            const isWorker = String(currentUser?.id) === String(worker?.id);
+            const isWorkerUser = String(currentUser?.id) === String(worker?.id);
+            if (!isWorkerUser) {
+                throw new Error(t('supervise.error.clientUseReleaseFlow'));
+            }
 
-            // SOLO EL TRABAJADOR puede notificar al cliente (sin cambiar milestone)
-            // SOLO EL CLIENTE puede aprobar el milestone y liberar fondos
-            if (isWorker) {
-                // TRABAJADOR: Solo notificar al cliente (actualizar BD)
-                // NO cambiar el estado del milestone - eso solo lo hace el cliente
-                const response = await axios.post(`${API_URL}/auth/complete_task.php`, 
+            const response = await axios.post(`${arcusxApiUrl('complete_task')}`, 
                     {
                         task_id: parseInt(taskId, 10),
                         action: 'accept'
@@ -1452,7 +1617,6 @@ const SuperviseTask = () => {
                     throw new Error(response.data.message || 'Error al actualizar estado en BD');
                 }
 
-                // Actualizar estado local
                 setTask(prevTask => {
                     if (!prevTask) return null;
                     return { 
@@ -1461,40 +1625,7 @@ const SuperviseTask = () => {
                         worker_accepted_completion: 1
                     };
                 });
-            } else if (isClient) {
-                // CLIENTE: Puede aprobar el milestone y liberar fondos
-                // Esto se maneja en otro lugar (handleApproveMilestone, handleReleaseFunds)
-                // Por ahora, solo actualizar BD si es necesario
-            const response = await axios.post(`${API_URL}/auth/complete_task.php`, 
-                {
-                    task_id: parseInt(taskId, 10),
-                    action: 'accept'
-                },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                }
-            );
-
-            if (!response.data.success) {
-                    throw new Error(response.data.message || 'Error al actualizar estado en BD');
-            }
-
-                // Actualizar estado local
-            setTask(prevTask => {
-                if (!prevTask) return null;
-                return { 
-                    ...prevTask, 
-                    status: response.data.status || prevTask.status,
-                        client_accepted_completion: 1
-                };
-            });
-            } else {
-                throw new Error(t('supervise.error.noPermissionComplete'));
-            }
               
-            // Recargar datos para actualizar la UI
             setTimeout(() => {
                 fetchData();
             }, 500);
@@ -1503,7 +1634,7 @@ const SuperviseTask = () => {
         } catch (err: any) {
             setError(t('supervise.error.completeTask') + ' ' + (err.response?.data?.message || err.message));
         } finally {
-            setLoading(false);
+            setNotifyingDelivery(false);
         }
     };
 
@@ -1546,39 +1677,6 @@ const SuperviseTask = () => {
         checkExistingDispute();
     }, [taskId, task?.status]);
     
-    // Función para verificar si se debe mostrar el modal de rating
-    const checkAndShowRatingModal = async () => {
-        if (!task || !currentUser || !worker) return;
-        
-        // Solo mostrar si la tarea está completada y pagada
-        if (task.status !== 'completed' || task.escrow_status !== 'completed') {
-            return;
-        }
-        
-        // Verificar si ya se calificó
-        try {
-            const { getRatings } = await import('../services/ratingService');
-            const data = await getRatings(undefined, parseInt(taskId!, 10));
-            const existingRating = data.ratings.find(
-                (r) => r.rater_id === parseInt(currentUser.id, 10)
-            );
-            
-            if (!existingRating) {
-                setShowRatingModal(true);
-            } else {
-                setHasRated(true);
-            }
-        } catch (error) {
-        }
-    };
-    
-    // Verificar rating cuando la tarea se completa
-    useEffect(() => {
-        if (task?.status === 'completed' && task?.escrow_status === 'completed') {
-            checkAndShowRatingModal();
-        }
-    }, [task?.status, task?.escrow_status]);
-    
     // Función para crear una disputa
     const handleCreateDispute = async () => {
         if (!taskId || !disputeReason.trim()) {
@@ -1600,13 +1698,13 @@ const SuperviseTask = () => {
             setError(t('supervise.error.connectFreighterDispute'));
             return;
         }
-
+        
         //  MEJORA: Validar permisos antes de iniciar disputa
         if (!currentUser) {
             setError(t('supervise.error.verifyIdentity'));
             return;
         }
-
+        
         const isClient = currentUser.id === task.user_id;
         const isWorker = task.accepted_applicant_id && currentUser.id === task.accepted_applicant_id;
 
@@ -1649,7 +1747,7 @@ const SuperviseTask = () => {
             
             // Paso 2: Crear registro en la base de datos
             const response = await axios.post(
-                `${API_URL}/auth/create_dispute.php`,
+                `${arcusxApiUrl('create_dispute')}`,
                 {
                     task_id: parseInt(taskId, 10),
                     reason: disputeReason.trim(),
@@ -1697,11 +1795,9 @@ const SuperviseTask = () => {
                         
                         if (escrows && escrows.length > 0) {
                             const escrow = escrows[0];
-                            const flags = escrow.flags || {};
-                            const isDisputed = flags.disputed === true || 
-                                              escrow.isDisputed === true || 
-                                              escrow.disputed === true || 
-                                              escrow.status === 'disputed';
+                            const isDisputed = escrowIndexerIsDisputed(
+                              escrow as Record<string, unknown>,
+                            );
                             
                             // Actualizar estado local con el estado real del escrow
                             if (isDisputed) {
@@ -1769,7 +1865,7 @@ const SuperviseTask = () => {
     const condition1 = (isClient || isWorker);
     const condition2 = !!task?.escrow_id;
     // Permitir disputa si el escrow está activo O si está completado (caso de error al retirar)
-    const condition3 = task?.escrow_status === 'active' || task?.escrow_status === 'completed';
+    const condition3 = isEscrowFunded(task?.escrow_status);
     // Permitir disputa en más estados: assigned, in_progress, y también si el escrow está completado
     const condition4 = (task?.status === 'assigned' || 
                         task?.status === 'in_progress' || 
@@ -1780,48 +1876,68 @@ const SuperviseTask = () => {
     // Determinar si se puede mostrar el botón de disputa
     const canShowDisputeButton = condition1 && condition2 && condition3 && condition4 && condition5 && condition6;
 
-    // Determinar el mensaje del botón y si está deshabilitado
-    let buttonText = t('supervise.button.markComplete');
-    let isButtonDisabled: boolean = loading;
+    const supervisionActive = isTaskSupervisionActive(task.status);
+    const showWorkActionsSection =
+      supervisionActive ||
+      (Number(task.client_accepted_completion) === 1 && Number(task.worker_accepted_completion) === 1);
+    const clientCanAcceptReject = canClientAcceptOrRejectWork(task.escrow_status);
+    const hasExchangeFile = taskHasExchangeFiles(task.files);
+    const taskIsResolved =
+      isResolved ||
+      task.status === 'resolved' ||
+      task.escrow_status === 'resolved';
 
-    //  CRÍTICO: Si el escrow está resuelto, no mostrar ningún botón de completado
-    // El admin debe manejar la liberación en estados resueltos
-    // También verificar que el escrow_status sea 'active' para mostrar botones
-    if (isResolved || task.escrow_status === 'resolved' || task.status === 'resolved' || 
-        (task.escrow_id && task.escrow_status !== 'active' && task.escrow_status !== undefined)) {
-        buttonText = t('supervise.button.taskResolved');
+    const taskInDispute =
+      !taskIsResolved &&
+      (hasExistingDispute ||
+        task.status === 'disputed' ||
+        task.escrow_status === 'disputed');
+    const clientCanReleaseOrRefund =
+      clientCanAcceptReject &&
+      task.status !== 'resolved' &&
+      task.status !== 'cancelled' &&
+      !taskInDispute &&
+      !isRefunded &&
+      !isResolved;
+
+    const taskFundsReleased =
+      task.status === 'completed' ||
+      task.escrow_status === 'completed' ||
+      Boolean(task.escrow_release_tx_hash);
+
+    const releaseTxHash = [task.escrow_release_tx_hash, paymentSuccessData?.txHash]
+      .find((h) => isStellarTxHash(h)) ?? null;
+
+    const workerCanNotifyDelivery =
+      isWorker &&
+      task.worker_accepted_completion === 0 &&
+      Boolean(task.escrow_id) &&
+      isEscrowFunded(task.escrow_status) &&
+      clientCanAcceptReject &&
+      task.status !== 'completed' &&
+      task.status !== 'cancelled' &&
+      task.status !== 'disputed' &&
+      task.status !== 'resolved' &&
+      !taskInDispute &&
+      !isResolved &&
+      !isRefunded;
+
+    let buttonText = t('supervise.button.notifyDelivery');
+    let isButtonDisabled = false;
+
+    if (notifyingDelivery) {
+        buttonText = t('supervise.button.notifyingDelivery');
         isButtonDisabled = true;
-    } else if (task.status === 'completed') {
-        buttonText = t('supervise.button.taskCompleted');
-        isButtonDisabled = true;
-    } else if (isClient && task.client_accepted_completion === 1) {
-        //  Solo mostrar este mensaje si el escrow está activo
-        if (task.escrow_id && task.escrow_status === 'active') {
-        buttonText = t('supervise.button.waitingWorker');
-        isButtonDisabled = true;
-        } else {
-            buttonText = t('supervise.button.taskResolved');
-            isButtonDisabled = true;
-        }
     } else if (isWorker && task.worker_accepted_completion === 1) {
-        //  Solo mostrar este mensaje si el escrow está activo
-        if (task.escrow_id && task.escrow_status === 'active') {
-        buttonText = t('supervise.button.waitingClient');
+        buttonText = t('supervise.button.deliveryNotified');
         isButtonDisabled = true;
-        } else {
-            buttonText = t('supervise.button.taskResolved');
-            isButtonDisabled = true;
-        }
-    } else if (isWorker && task.client_accepted_completion === 0) {
-        // El trabajador puede marcar como completado para notificar al cliente
-        //  Solo si el escrow está activo
-        if (task.escrow_id && task.escrow_status === 'active') {
-        buttonText = t('supervise.button.markCompleteShort');
-        isButtonDisabled = false; // Permitir que el trabajador marque como completado
-        } else {
-            buttonText = t('supervise.button.taskResolved');
-            isButtonDisabled = true;
-        }
+    } else if (isWorker && !workerCanNotifyDelivery) {
+        buttonText = task.status === 'completed'
+            ? t('supervise.button.taskCompleted')
+            : t('supervise.button.taskResolved');
+        isButtonDisabled = true;
+    } else if (!isWorker) {
+        isButtonDisabled = loading;
     }
 
     return (
@@ -1872,12 +1988,51 @@ const SuperviseTask = () => {
                 <p><span className="detail-label">{t('supervise.label.reward')}</span> {parseFloat(task.price).toFixed(2)} {task.currency}</p>
                 <p><span className="detail-label">{t('supervise.label.category')}</span> {task.category}</p>
                 <p><span className="detail-label">{t('supervise.label.difficulty')}</span> {task.difficulty}</p>
+                <div className="task-details-section__deletion">
+                  <TaskDeletionNotice
+                    scheduledDeletionAt={task.scheduled_deletion_at}
+                    completedAt={task.completed_at || task.escrow_completed_at}
+                    escrowStatus={task.escrow_status}
+                    status={task.status}
+                    escrowReleaseTxHash={task.escrow_release_tx_hash}
+                    clientAcceptedCompletion={task.client_accepted_completion}
+                    disputeResolvedAt={task.dispute_resolved_at}
+                    closureHints={{
+                      taskFundsReleased,
+                      isResolved: taskIsResolved,
+                      isRefunded,
+                      taskInDispute,
+                    }}
+                    variant="compact"
+                  />
+                </div>
             </div>
 
                 {/* Columna derecha: Estado de Blockchain */}
-                {task.escrow_id && (
                     <div className="blockchain-status">
                         <h3>{t('supervise.blockchain.status')}</h3>
+
+                        {!task.escrow_id && (
+                          <div className="supervise-escrow-setup-banner">
+                            <p>{t('supervise.escrow.missing')}</p>
+                            {isClient && (
+                              <Link to={`/proposals/${task.id}`} className="btn-primary supervise-escrow-cta">
+                                {t('supervise.escrow.gotoProposals')}
+                              </Link>
+                            )}
+                          </div>
+                        )}
+
+                        {task.escrow_id && isEscrowPending(task.escrow_status) && (
+                          <div className="supervise-escrow-setup-banner supervise-escrow-setup-banner--pending">
+                            <p>{t('supervise.escrow.pendingFunding')}</p>
+                            {isClient && (
+                              <Link to={`/proposals/${task.id}`} className="btn-primary supervise-escrow-cta">
+                                {t('supervise.escrow.completeFunding')}
+                              </Link>
+                            )}
+                          </div>
+                        )}
                         
                         {/* Estado de Wallet */}
                         <div className="wallet-status">
@@ -1910,6 +2065,7 @@ const SuperviseTask = () => {
                             </div>
                         </div>
                         
+                        {task.escrow_id && (
                         <div className="blockchain-info-grid">
                             <div className="blockchain-info-item">
                                 <div className="blockchain-info-label">
@@ -1931,7 +2087,7 @@ const SuperviseTask = () => {
                                             return 'resolved';
                                         }
                                         // Si está en disputa, usar clase 'disputed'
-                                        if (task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute) {
+                                        if (taskInDispute) {
                                             return 'disputed';
                                         }
                                         return task.escrow_status || 'active';
@@ -1942,7 +2098,7 @@ const SuperviseTask = () => {
                                                 return 'RESOLVED';
                                             }
                                             // Si está en disputa, mostrar "DISPUTED"
-                                            if (task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute) {
+                                            if (taskInDispute) {
                                                 return 'DISPUTED';
                                             }
                                             return task.escrow_status?.toUpperCase() || 'ACTIVE';
@@ -1987,9 +2143,9 @@ const SuperviseTask = () => {
                                 </div>
                             )}
                         </div>
+                        )}
                         
                     </div>
-                )}
             </div>
 
             {/* Chat Section */}
@@ -2020,8 +2176,8 @@ const SuperviseTask = () => {
                                 const isMyMessage = String(msg.sender_id) === String(currentUser.id);
                                 const senderName = isMyMessage ? currentUser.username : (isClient ? worker.username : task.creator_username);
                                 return (
-                                    <div
-                                        key={msg.id}
+                            <div 
+                                key={msg.id} 
                                         className={`chat-message-row ${isMyMessage ? 'chat-message-row--mine' : 'chat-message-row--theirs'}`}
                                     >
                                         {!isMyMessage && (
@@ -2033,16 +2189,16 @@ const SuperviseTask = () => {
                                             {!isMyMessage && (
                                                 <div className="message-sender-name">{senderName}</div>
                                             )}
-                                            <div className="message-bubble">
-                                                {msg.message}
-                                            </div>
+                                <div className="message-bubble">
+                                    {msg.message}
+                                </div>
                                             <span className="message-time">
                                                 {new Date(msg.created_at).toLocaleTimeString('es-ES', {
                                                     hour: '2-digit',
                                                     minute: '2-digit'
                                                 })}
                                             </span>
-                                        </div>
+                            </div>
                                     </div>
                                 );
                             })}
@@ -2068,7 +2224,7 @@ const SuperviseTask = () => {
                         type="button"
                         className="chat-send-btn"
                         onClick={sendMessage}
-                        disabled={sendingMessage || !newMessage.trim()}
+                         disabled={sendingMessage || !newMessage.trim()}
                         title={t('supervise.send')}
                         aria-label={t('supervise.send')}
                     >
@@ -2087,10 +2243,27 @@ const SuperviseTask = () => {
             />
 
             {/* Sección de Acciones de Trabajo */}
-            {/* Mostrar sección si hay escrow y la tarea está asignada O si ambos han aceptado (para permitir retiro de fondos) */}
-            {task.escrow_id && (task.status === 'assigned' || (Number(task.client_accepted_completion) === 1 && Number(task.worker_accepted_completion) === 1)) && (
+            {showWorkActionsSection && (
                 <div className="work-actions-section">
                     <h3>{t('supervise.work.actions')}</h3>
+
+                    {isClient && !task.escrow_id && (
+                      <div className="supervise-escrow-setup-banner">
+                        <p>{t('supervise.escrow.missingActions')}</p>
+                        <Link to={`/proposals/${task.id}`} className="btn-primary supervise-escrow-cta">
+                          {t('supervise.escrow.gotoProposals')}
+                        </Link>
+                      </div>
+                    )}
+
+                    {isClient && task.escrow_id && isEscrowPending(task.escrow_status) && (
+                      <div className="supervise-escrow-setup-banner supervise-escrow-setup-banner--pending">
+                        <p>{t('supervise.escrow.pendingFundingActions')}</p>
+                        <Link to={`/proposals/${task.id}`} className="btn-primary supervise-escrow-cta">
+                          {t('supervise.escrow.completeFunding')}
+                        </Link>
+                      </div>
+                    )}
                     
                     {/* Mostrar error si existe (especialmente errores de retiro de fondos) */}
                     {error && (
@@ -2130,15 +2303,16 @@ const SuperviseTask = () => {
                     
                     {isClient && (
                         <div className="client-actions">
+                            {task.client_accepted_completion === 0 &&
+                             clientCanReleaseOrRefund &&
+                             Number(task.worker_accepted_completion) === 1 && (
+                                <p className="info-message" style={{ marginBottom: '12px' }}>
+                                    {t('supervise.status.workerDeliveryNotified')}
+                                </p>
+                            )}
                             {task.client_accepted_completion === 0 && (
                                 <>
-                                    {/*  CRÍTICO: Ocultar botones si el estado del escrow NO es 'active' */}
-                                    {/* En estados 'cancelled', 'disputed', 'resolved', etc., el admin debe manejar la liberación */}
-                                    {task.escrow_status === 'active' && 
-                                     task.status !== 'resolved' &&
-                                     task.status !== 'cancelled' &&
-                                     task.status !== 'disputed' &&
-                                     !(hasExistingDispute || isRefunded || isResolved) ? (
+                                    {clientCanReleaseOrRefund ? (
                                         <>
                                             <button 
                                                 className="btn-success"
@@ -2147,15 +2321,7 @@ const SuperviseTask = () => {
                                             >
                                         {acceptingWork ? t('supervise.accept.work.processing') : t('supervise.accept.work.button')}
                                             </button>
-                                    {/*  PROTECCIÓN: Ocultar botón de cancelar si hay archivos subidos por el trabajador */}
-                                    {/* Esto protege a los trabajadores que han entregado su trabajo correctamente */}
-                                    {(() => {
-                                        // Verificar si hay archivos subidos
-                                        const hasFiles = task?.files && Array.isArray(task.files) && task.files.length > 0;
-                                        
-                                        if (!hasFiles) {
-                                            // Si no hay archivos, mostrar el botón de cancelar normalmente
-                                            return (
+                                            {!hasExchangeFile && (
                                             <button 
                                                 className="btn-danger"
                                                 onClick={handleCancelTask}
@@ -2163,48 +2329,7 @@ const SuperviseTask = () => {
                                             >
                                                     {checkingCancellation ? t('supervise.verifying') : cancellingTask ? t('supervise.processing') : ' ' + t('supervise.cancel.task.refund')}
                                             </button>
-                                            );
-                                        }
-                                        
-                                        // Si hay archivos, verificar si alguno fue subido por el trabajador
-                                        const workerFiles = task.files.filter((file: any) => {
-                                            // Verificar si el archivo NO fue subido por el cliente actual
-                                            // Si uploaded_by es diferente al ID del cliente, es del trabajador
-                                            const fileUploaderId = String(file.uploaded_by || '');
-                                            const clientId = String(task.user_id || '');
-                                            const workerId = String(task.accepted_applicant_id || '');
-                                            
-                                            // Si uploaded_by coincide con el trabajador, es del trabajador
-                                            if (fileUploaderId === workerId) {
-                                                return true;
-                                            }
-                                            
-                                            // Si uploaded_by NO coincide con el cliente, también puede ser del trabajador
-                                            if (fileUploaderId !== clientId && fileUploaderId !== '') {
-                                                return true;
-                                            }
-                                            
-                                            return false;
-                                        });
-                                        
-                                        const hasWorkerFiles = workerFiles.length > 0;
-                                        
-                                        // Si hay archivos del trabajador, NO mostrar el botón de cancelar
-                                        if (hasWorkerFiles) {
-                                            return null;
-                                        }
-                                        
-                                        // Si solo hay archivos del cliente, mostrar el botón normalmente
-                                        return (
-                                            <button 
-                                                className="btn-danger"
-                                                onClick={handleCancelTask}
-                                                disabled={cancellingTask || checkingCancellation || !isConnected}
-                                            >
-                                                {checkingCancellation ? t('supervise.verifying') : cancellingTask ? t('supervise.processing') : ' ' + t('supervise.cancel.task.refund')}
-                                            </button>
-                                        );
-                                    })()}
+                                            )}
                                         </>
                                     ) : (
                                         <>
@@ -2249,42 +2374,24 @@ const SuperviseTask = () => {
                                                         {t('supervise.status.taskRefundedDisabled')}
                                             </p>
                                         </div>
-                                            )}
-                                        </>
                                     )}
                                 </>
                             )}
-                            {task.client_accepted_completion === 1 && task.worker_accepted_completion === 1 && (
+                                </>
+                            )}
+                            {task.client_accepted_completion === 1 && (
                                 <>
-                                    {/* Verificar si el escrow está en disputa o fue reembolsado - Ocultar botones si está en disputa o fue reembolsado */}
-                                    {!(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute || isRefunded) ? (
+                                    {!(taskInDispute || isRefunded) ? (
                                 <>
-                                    <p className="info-message" style={{ marginBottom: '10px' }}> {t('supervise.status.bothAcceptedCompletion')}</p>
-                                    {/* Si hay transacción pendiente firmada por el trabajador, el cliente puede completarla */}
-                                    {pendingTransaction?.hasPending && pendingTransaction.signedBy === 'worker' && (
-                                        <>
-                                            <p className="info-message" style={{ marginBottom: '10px', color: '#856404' }}>
-                                                {t('supervise.status.workerSignedCompleteSign')}
-                                            </p>
-                                            <button 
-                                                className="btn-success"
-                                                onClick={handleWithdrawFunds}
-                                                disabled={withdrawingFunds || !isConnected || !address}
-                                                style={{
-                                                    fontSize: '16px',
-                                                    padding: '12px 24px',
-                                                    fontWeight: 'bold'
-                                                }}
-                                            >
-                                                {withdrawingFunds ? ' ' + t('supervise.processing') : ' ' + t('supervise.status.completeSignAndRelease')}
-                                            </button>
-                                        </>
-                                    )}
-                                    {pendingTransaction?.hasPending && pendingTransaction.signedBy === 'client' && (
-                                        <p className="info-message">{t('supervise.status.youSignedWaitingWorker')}</p>
-                                    )}
-                                    {(!pendingTransaction?.hasPending) && (
-                                        <p className="info-message">{t('supervise.status.waitingWorkerWithdraw')}</p>
+                                    {taskFundsReleased ? (
+                                        <TaskReleaseSummary
+                                            variant="client"
+                                            txHash={releaseTxHash}
+                                        />
+                                    ) : (
+                                        <p className="info-message" style={{ marginBottom: '10px' }}>
+                                            {t('supervise.status.clientReleaseInProgress')}
+                                        </p>
                                     )}
                                 </>
                                     ) : (
@@ -2311,15 +2418,15 @@ const SuperviseTask = () => {
                                                         <br />
                                                         <strong>{t('supervise.status.verifyFreighter')}</strong>
                                                     </p>
-                                                </div>
-                                            )}
+                        </div>
+                    )}
                                             {isRefunded && !isResolved && task.escrow_status !== 'resolved' && task.status !== 'resolved' && (
                                                 <div style={{
-                                                    padding: '15px',
+                                    padding: '15px',
                                                     marginTop: '15px',
                                                     backgroundColor: '#d4edda',
                                                     border: '2px solid #10dd88',
-                                                    borderRadius: '8px',
+                                    borderRadius: '8px',
                                                     color: '#155724',
                                                     textAlign: 'center'
                                                 }}>
@@ -2334,28 +2441,20 @@ const SuperviseTask = () => {
                                         </>
                                     )}
                                 </>
+                                    )}
+                                </div>
                             )}
-                            {/*  CRÍTICO: Ocultar mensaje si el escrow está resuelto */}
-                            {task.client_accepted_completion === 1 && 
-                             task.worker_accepted_completion === 0 && 
-                             !isResolved &&
-                             task.escrow_status !== 'resolved' &&
-                             task.status !== 'resolved' && (
-                                <p className="info-message"> {t('supervise.status.youAcceptedWaitingWorker')}</p>
-                            )}
-                        </div>
-                    )}
-
+                            
                     {isWorker && (
                         <div className="worker-actions">
                             {/* Notificación para trabajador cuando el escrow está resuelto */}
                             {isResolved && (
-                                <div style={{
+                                        <div style={{
                                     padding: '20px',
-                                    marginBottom: '20px',
+                                            marginBottom: '20px',
                                     backgroundColor: '#f8d7da',
                                     border: '2px solid #dc3545',
-                                    borderRadius: '8px',
+                                            borderRadius: '8px',
                                     color: '#721c24',
                                     textAlign: 'center'
                                 }}>
@@ -2365,98 +2464,24 @@ const SuperviseTask = () => {
                                     <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6' }}>
                                         {t('supervise.status.taskCancelledRefund')}
                                     </p>
-                                </div>
-                            )}
-                            
-                            {/* Retirar: trabajador cuando cliente y trabajador confirmaron entrega en la app y el flujo on-chain permite retiro */}
-                            {isWorker &&
-                             Number(task.client_accepted_completion) === 1 && 
-                             Number(task.worker_accepted_completion) === 1 && 
-                             task.escrow_id && task.escrow_id.trim() !== '' && 
-                             !(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute || isRefunded || isResolved) && (
-                                <div className="withdraw-funds-section" style={{
-                                    marginBottom: '20px',
-                                    padding: '15px',
-                                    backgroundColor: '#f8f9fa',
-                                    borderRadius: '8px',
-                                    border: '2px solid #10dd88'
-                                }}>
-                                    <h3 style={{ marginTop: 0, marginBottom: '10px', color: '#28a745', fontSize: '18px' }}> {t('supervise.withdraw.funds')}</h3>
-                                    <p style={{ marginBottom: '15px', color: '#666', fontSize: '14px' }}>
-                                        {t('supervise.status.bothAcceptedClickWithdraw')}
-                                    </p>
-                                    <button 
-                                        className="btn-success"
-                                        onClick={handleWithdrawFunds}
-                                        disabled={withdrawingFunds || !isConnected || !address}
-                                        style={{
-                                            fontSize: '16px',
-                                            padding: '12px 24px',
-                                            fontWeight: 'bold',
-                                            width: '100%',
-                                            maxWidth: '400px'
-                                        }}
-                                    >
-                                        {withdrawingFunds ? t('supervise.processing') : t('supervise.withdraw.funds')}
-                                    </button>
-                                    {!isConnected && (
-                                        <p style={{ marginTop: '10px', color: '#dc3545', fontSize: '14px' }}>
-                                             {t('supervise.error.connectFreighterWithdraw')}
-                                        </p>
-                                    )}
-                                </div>
-                            )}
-                            
-                            {/* Mensajes de estado para mostrar el progreso - SOLO para trabajador */}
-                            {isWorker && Number(task.client_accepted_completion) === 1 && 
-                             Number(task.worker_accepted_completion) === 1 && 
-                             task.escrow_id && task.escrow_id.trim() !== '' && 
-                             !(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute || isRefunded || isResolved) && (
-                                <>
-                                    {pendingTransaction?.hasPending && pendingTransaction.signedBy !== 'both' && (
-                                        <div style={{
-                                            marginBottom: '20px',
-                                            padding: '15px',
-                                            backgroundColor: '#fff3cd',
-                                            borderRadius: '8px',
-                                            border: '2px solid #ffc107'
-                                        }}>
-                                            {pendingTransaction.signedBy === 'client' && (
-                                                <p style={{ margin: 0, color: '#856404', fontSize: '14px' }}>
-                                                     {t('supervise.status.clientSignedClickWithdraw')}
-                                                </p>
-                                            )}
-                                            {pendingTransaction.signedBy === 'worker' && (
-                                                <p style={{ margin: 0, color: '#856404', fontSize: '14px' }}>
-                                                     {t('supervise.status.youSignedWaitingClient')}
-                                                </p>
-                                            )}
                                         </div>
                                     )}
-                                    {!pendingTransaction?.hasPending && (
-                                        <div style={{
-                                            marginBottom: '20px',
-                                            padding: '15px',
-                                            backgroundColor: 'rgba(16, 221, 136, 0.12)',
-                                            borderRadius: '8px',
-                                            border: '2px solid rgba(16, 221, 136, 0.5)'
-                                        }}>
-                                            <p style={{ margin: 0, color: '#10dd88', fontSize: '14px' }}>
-                                                 {t('supervise.status.bothAcceptedClickStart')}
-                                            </p>
-                                        </div>
-                                    )}
-                                </>
-                            )}
                             
+                            {isWorker && taskFundsReleased && (
+                                <TaskReleaseSummary
+                                    variant="worker"
+                                    txHash={releaseTxHash}
+                                />
+                            )}
+
                             {/* Notificación para trabajador cuando el escrow está resuelto */}
                             {(isResolved || task.escrow_status === 'resolved' || task.status === 'resolved') && (
-                                <div style={{
+                                        <div style={{
                                     padding: '20px',
-                                    marginBottom: '20px',
+                                            marginBottom: '20px',
                                     backgroundColor: '#f8d7da',
                                     border: '2px solid #dc3545',
-                                    borderRadius: '8px',
+                                            borderRadius: '8px',
                                     color: '#721c24',
                                     textAlign: 'center'
                                 }}>
@@ -2465,73 +2490,36 @@ const SuperviseTask = () => {
                                     </strong>
                                     <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6' }}>
                                         {t('supervise.status.taskCancelledRefund')}
-                                    </p>
-                                </div>
+                                            </p>
+                                        </div>
                             )}
                             
-                            {/*  CRÍTICO: Botón de completado - Solo visible si el estado del escrow es 'active' */}
-                            {/* En estados 'cancelled', 'disputed', 'resolved', etc., el admin debe manejar la liberación */}
-                            {/* Verificar tanto task.escrow_status como task.status y el estado real del escrow desde Trustless Work */}
-                            {/* Si isResolved es true (desde Trustless Work), NO mostrar el botón aunque task.escrow_status sea 'active' */}
-                            {!isResolved &&
-                             task.escrow_status === 'active' && 
-                             task.status !== 'resolved' &&
-                             task.status !== 'cancelled' &&
-                             task.status !== 'disputed' &&
-                             task.worker_accepted_completion === 0 && 
-                             !(hasExistingDispute || isRefunded) && (
-                                <>
-                                    {task.client_accepted_completion === 0 ? (
+                            {workerCanNotifyDelivery && (
                                         <div style={{ textAlign: 'center' }}>
-                                            <p className="info-message" style={{ color: '#856404', marginBottom: '15px' }}>
-                                                 {t('supervise.status.youCanMarkComplete')}
-                                            </p>
                                             <button 
-                                                className="btn-primary"
+                                        className="btn-success"
                                                 onClick={handleCompleteTask}
                                                 disabled={isButtonDisabled}
                                                 style={{ display: 'inline-block' }}
                                             >
                                                 {buttonText}
                                             </button>
+                                    {error && <p className="error-message">{error}</p>}
                                         </div>
-                                    ) : pendingTransaction?.escrowCompleted ? (
+                            )}
+                            {isWorker && task.worker_accepted_completion === 1 && task.status !== 'completed' && (
                                         <div style={{
                                             marginBottom: '20px',
                                             padding: '15px',
-                                            backgroundColor: '#d4edda',
+                                    backgroundColor: 'rgba(16, 221, 136, 0.12)',
                                             borderRadius: '8px',
-                                            border: '2px solid #10dd88'
-                                        }}>
-                                            <p style={{ margin: 0, color: '#155724', fontSize: '14px', fontWeight: 'bold' }}>
-                                                 {t('supervise.status.paymentReceived')}
-                                            </p>
-                                            <p style={{ margin: '10px 0 0 0', color: '#155724', fontSize: '13px' }}>
-                                                {t('supervise.status.taskCompletedCheckWallet')}
+                                    border: '2px solid rgba(16, 221, 136, 0.5)',
+                                    textAlign: 'center'
+                                }}>
+                                    <p style={{ margin: 0, color: '#10dd88', fontSize: '14px', fontWeight: 'bold' }}>
+                                        {t('supervise.button.deliveryNotified')}
                                             </p>
                                         </div>
-                                    ) : !pendingTransaction?.hasPending || pendingTransaction.signedBy !== 'client' ? (
-                                        <div>
-                                            <p className="info-message" style={{ color: '#856404', marginBottom: '15px' }}>
-                                                 {t('supervise.status.waitingClientRelease')}
-                                        </p>
-                                            <p className="info-message" style={{ color: '#856404', fontSize: '13px' }}>
-                                                 {t('supervise.status.youMarkedCompleteClientNotified')}
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        <div style={{ textAlign: 'center' }}>
-                                        <button 
-                                            className="btn-primary"
-                                            onClick={handleCompleteTask}
-                                                disabled={isButtonDisabled}
-                                                style={{ display: 'inline-block' }}
-                                        >
-                                            {buttonText}
-                                        </button>
-                                        </div>
-                                    )}
-                                </>
                             )}
                             {/* Mostrar notificación de disputa para trabajador si está en disputa */}
                             {task.worker_accepted_completion === 0 && 
@@ -2540,14 +2528,6 @@ const SuperviseTask = () => {
                                     task={task}
                                     getEscrowByContractIds={getEscrowByContractIds}
                                 />
-                            )}
-                            {/*  CRÍTICO: Ocultar mensaje si el escrow está resuelto */}
-                            {task.worker_accepted_completion === 1 && 
-                             task.client_accepted_completion === 0 && 
-                             !isResolved &&
-                             task.escrow_status !== 'resolved' &&
-                             task.status !== 'resolved' && (
-                                <p className="info-message"> {t('supervise.status.youMarkedCompleteWaitingClient')}</p>
                             )}
                         </div>
                     )}
@@ -2571,31 +2551,6 @@ const SuperviseTask = () => {
             )}
 
 
-            {/*  CRÍTICO: Botón para marcar tarea como completada - Solo visible si el estado del escrow es 'active' */}
-            {/* En estados 'cancelled', 'disputed', 'resolved', etc., el admin debe manejar la liberación */}
-            {/* NO mostrar el botón si el escrow está resuelto, incluso si está deshabilitado */}
-            {!isResolved &&
-             task.escrow_status !== 'resolved' &&
-             task.status !== 'resolved' &&
-             (!task.escrow_id || task.status !== 'assigned') && 
-             (isWorker || isClient) && 
-             (!task.escrow_id || task.escrow_status === 'active') &&
-             task.status !== 'cancelled' &&
-             task.status !== 'disputed' &&
-             !(task.escrow_status === 'disputed' || task.status === 'disputed' || hasExistingDispute) && (
-                <div className="completion-buttons" style={{ textAlign: 'center' }}>
-                    <button 
-                        className="btn-success"
-                        onClick={handleCompleteTask}
-                        disabled={isButtonDisabled} 
-                        style={{ display: 'inline-block' }} 
-                    >
-                        {buttonText}
-                    </button>
-                    {error && <p className="error-message">{error}</p>}
-                </div>
-            )}
-
             {/* Modal de Disputa */}
             {showDisputeModal && (
                 <div style={{
@@ -2604,7 +2559,7 @@ const SuperviseTask = () => {
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    backgroundColor: 'var(--overlay)',
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
@@ -2618,14 +2573,14 @@ const SuperviseTask = () => {
                     }
                 }}>
                     <div style={{
-                        backgroundColor: 'rgba(10, 10, 10, 0.98)',
+                        backgroundColor: 'var(--bg-card)',
                         borderRadius: '20px',
                         padding: '32px',
                         maxWidth: '600px',
                         width: '90%',
                         maxHeight: '90vh',
                         overflowY: 'auto',
-                        border: '2px solid rgba(16, 221, 136, 0.3)',
+                        border: '2px solid var(--border-color-active)',
                         boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
                     }} onClick={(e) => e.stopPropagation()}>
                         <div style={{
@@ -2636,7 +2591,7 @@ const SuperviseTask = () => {
                         }}>
                             <h2 style={{
                                 margin: 0,
-                                color: '#fff',
+                                color: 'var(--text-primary)',
                                 fontSize: '24px',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -2657,7 +2612,7 @@ const SuperviseTask = () => {
                                 style={{
                                     background: 'none',
                                     border: 'none',
-                                    color: '#fff',
+                                    color: 'var(--text-primary)',
                                     fontSize: '28px',
                                     cursor: creatingDispute ? 'not-allowed' : 'pointer',
                                     opacity: creatingDispute ? 0.5 : 1,
@@ -2682,7 +2637,7 @@ const SuperviseTask = () => {
                             marginBottom: '24px'
                         }}>
                             <h3 style={{
-                                color: '#fff',
+                                color: 'var(--text-primary)',
                                 fontSize: '18px',
                                 fontWeight: '600',
                                 marginTop: 0,
@@ -2695,7 +2650,7 @@ const SuperviseTask = () => {
                                 ¿Tienes un problema con esta tarea?
                             </h3>
                             <p style={{
-                                color: 'rgba(255, 255, 255, 0.9)',
+                                color: 'var(--text-secondary)',
                                 marginBottom: 0,
                                 lineHeight: '1.7',
                                 fontSize: '15px'
@@ -2720,7 +2675,7 @@ const SuperviseTask = () => {
                         <div style={{ marginBottom: '24px' }}>
                             <label style={{
                                 display: 'block',
-                                color: '#fff',
+                                color: 'var(--text-primary)',
                                 marginBottom: '8px',
                                 fontWeight: '600',
                                 fontSize: '14px'
@@ -2739,10 +2694,10 @@ const SuperviseTask = () => {
                                     width: '100%',
                                     minHeight: '150px',
                                     padding: '12px',
-                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                    border: '2px solid rgba(16, 221, 136, 0.3)',
+                                    backgroundColor: 'var(--bg-tertiary)',
+                                    border: '2px solid var(--border-color-active)',
                                     borderRadius: '8px',
-                                    color: '#fff',
+                                    color: 'var(--text-primary)',
                                     fontSize: '14px',
                                     fontFamily: 'inherit',
                                     resize: 'vertical',
@@ -2751,16 +2706,16 @@ const SuperviseTask = () => {
                                 }}
                                 onFocus={(e) => {
                                     e.currentTarget.style.borderColor = '#10dd88';
-                                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
+                                    e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
                                 }}
                                 onBlur={(e) => {
                                     e.currentTarget.style.borderColor = 'rgba(16, 221, 136, 0.3)';
-                                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                                    e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
                                 }}
                             />
                             <p style={{
                                 marginTop: '8px',
-                                color: 'rgba(255, 255, 255, 0.6)',
+                                color: 'var(--text-muted)',
                                 fontSize: '12px'
                             }}>
                                 Mínimo 10 caracteres. {disputeReason.length}/10
@@ -2783,10 +2738,10 @@ const SuperviseTask = () => {
                                 disabled={creatingDispute}
                                 style={{
                                     padding: '12px 24px',
-                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                                    backgroundColor: 'var(--bg-tertiary)',
+                                    border: '1px solid var(--border-color)',
                                     borderRadius: '8px',
-                                    color: '#fff',
+                                    color: 'var(--text-primary)',
                                     fontSize: '15px',
                                     fontWeight: '600',
                                     cursor: creatingDispute ? 'not-allowed' : 'pointer',
@@ -2795,11 +2750,11 @@ const SuperviseTask = () => {
                                 }}
                                 onMouseOver={(e) => {
                                     if (!creatingDispute) {
-                                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                                        e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
                                     }
                                 }}
                                 onMouseOut={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                                    e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
                                 }}
                             >
                                 {t('common.cancel')}
@@ -2812,7 +2767,7 @@ const SuperviseTask = () => {
                                     backgroundColor: creatingDispute || disputeReason.trim().length < 10 ? 'rgba(255, 152, 0, 0.5)' : '#ff9800',
                                     border: 'none',
                                     borderRadius: '8px',
-                                    color: '#fff',
+                                    color: 'var(--text-primary)',
                                     fontSize: '15px',
                                     fontWeight: '600',
                                     cursor: creatingDispute || disputeReason.trim().length < 10 ? 'not-allowed' : 'pointer',
@@ -2895,14 +2850,14 @@ const SuperviseTask = () => {
                         </h3>
                         <div style={{
                             marginBottom: '30px',
-                            color: 'rgba(255, 255, 255, 0.9)',
+                            color: 'var(--text-secondary)',
                             lineHeight: '1.6'
                         }}>
                             <p style={{ 
                                 fontSize: '18px', 
                                 marginBottom: '15px', 
                                 fontWeight: '500',
-                                color: 'rgba(255, 255, 255, 0.8)'
+                                color: 'var(--text-secondary)'
                             }}>
                                 {t('supervise.popup.paidWorkerAllGood')}
                             </p>
@@ -2914,34 +2869,25 @@ const SuperviseTask = () => {
                                 textAlign: 'left',
                                 border: '1px solid rgba(16, 221, 136, 0.2)'
                             }}>
-                                <p style={{ margin: '8px 0', fontSize: '16px', color: '#fff' }}>
+                                <p style={{ margin: '8px 0', fontSize: '16px', color: 'var(--text-primary)' }}>
                                     <strong style={{ color: '#10dd88' }}> {t('supervise.popup.totalPaid')}</strong> {paymentSuccessData.amount} USDC
                                 </p>
-                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'var(--text-muted)' }}>
                                     <strong style={{ color: '#10dd88', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><FaDollarSign /> {t('supervise.popup.workerReceives')}</strong> {paymentSuccessData.netAmount} USDC
                                 </p>
-                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'var(--text-muted)' }}>
                                     <strong style={{ color: '#10dd88' }}> {t('supervise.popup.platformCommission')}</strong> {(parseFloat(paymentSuccessData.amount) - parseFloat(paymentSuccessData.netAmount || '0')).toFixed(7)} USDC
                                 </p>
-                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
-                                    <strong style={{ color: '#10dd88' }}> {t('supervise.popup.txHash')}</strong>
-                                </p>
-                                <code style={{
-                                    display: 'block',
-                                    fontSize: '12px',
-                                    color: '#10dd88',
-                                    background: 'rgba(16, 221, 136, 0.1)',
-                                    padding: '8px',
-                                    borderRadius: '4px',
-                                    wordBreak: 'break-all',
-                                    marginTop: '5px',
-                                    border: '1px solid rgba(16, 221, 136, 0.2)'
-                                }}>
-                                    {paymentSuccessData.txHash}
-                                </code>
-                                <p style={{ margin: '15px 0 0 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic' }}>
-                                    ⏰ {t('supervise.popup.taskDeleted24h')}
-                                </p>
+                                <StellarTxHashLink
+                                    txHash={paymentSuccessData.txHash}
+                                    label={t('supervise.popup.txHash')}
+                                />
+                                <TaskDeletionNotice
+                                    scheduledDeletionAt={task?.scheduled_deletion_at}
+                                    completedAt={task?.completed_at || task?.escrow_completed_at}
+                                    escrowStatus={task?.escrow_status}
+                                    disputeResolvedAt={task?.dispute_resolved_at}
+                                />
                             </div>
                         </div>
                         <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -2952,7 +2898,7 @@ const SuperviseTask = () => {
                                 }}
                                 style={{
                                     background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
-                                    color: '#fff',
+                                    color: 'var(--text-primary)',
                                     border: 'none',
                                     padding: '14px 32px',
                                     borderRadius: '10px',
@@ -2982,9 +2928,9 @@ const SuperviseTask = () => {
                                     navigate('/dashboard');
                                 }}
                                 style={{
-                                    background: 'rgba(255, 255, 255, 0.1)',
-                                    color: '#fff',
-                                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                                    background: 'var(--bg-tertiary)',
+                                    color: 'var(--text-primary)',
+                                    border: '1px solid var(--border-color)',
                                     padding: '14px 32px',
                                     borderRadius: '10px',
                                     fontSize: '16px',
@@ -2994,11 +2940,11 @@ const SuperviseTask = () => {
                                     minWidth: '200px'
                                 }}
                                 onMouseOver={(e) => {
-                                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                                    e.currentTarget.style.background = 'var(--bg-hover)';
                                     e.currentTarget.style.transform = 'translateY(-2px)';
                                 }}
                                 onMouseOut={(e) => {
-                                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                                    e.currentTarget.style.background = 'var(--bg-tertiary)';
                                     e.currentTarget.style.transform = 'translateY(0)';
                                 }}
                             >
@@ -3055,14 +3001,14 @@ const SuperviseTask = () => {
                         </h3>
                         <div style={{
                             marginBottom: '30px',
-                            color: 'rgba(255, 255, 255, 0.9)',
+                            color: 'var(--text-secondary)',
                             lineHeight: '1.6'
                         }}>
                             <p style={{ 
                                 fontSize: '18px', 
                                 marginBottom: '15px', 
                                 fontWeight: '500',
-                                color: 'rgba(255, 255, 255, 0.8)'
+                                color: 'var(--text-secondary)'
                             }}>
                                 {t('supervise.popup.receivedCorrectly')}
                             </p>
@@ -3074,33 +3020,24 @@ const SuperviseTask = () => {
                                 textAlign: 'left',
                                 border: '1px solid rgba(16, 221, 136, 0.2)'
                             }}>
-                                <p style={{ margin: '8px 0', fontSize: '16px', color: '#fff' }}>
+                                <p style={{ margin: '8px 0', fontSize: '16px', color: 'var(--text-primary)' }}>
                                     <strong style={{ color: '#10dd88' }}> {t('supervise.popup.amountReceived')}</strong> {paymentSuccessData.netAmount || paymentSuccessData.amount} USDC
                                 </p>
                                 {paymentSuccessData.netAmount && (
-                                    <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                    <p style={{ margin: '8px 0', fontSize: '14px', color: 'var(--text-muted)' }}>
                                         <strong style={{ color: '#10dd88' }}> {t('supervise.popup.totalAmountAfterCommission')}</strong> {paymentSuccessData.amount} USDC ({t('supervise.afterCommission')})
                                     </p>
                                 )}
-                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
-                                    <strong style={{ color: '#10dd88' }}> {t('supervise.popup.txHash')}</strong>
-                                </p>
-                                <code style={{
-                                    display: 'block',
-                                    fontSize: '12px',
-                                    color: '#10dd88',
-                                    background: 'rgba(16, 221, 136, 0.1)',
-                                    padding: '8px',
-                                    borderRadius: '4px',
-                                    wordBreak: 'break-all',
-                                    marginTop: '5px',
-                                    border: '1px solid rgba(16, 221, 136, 0.2)'
-                                }}>
-                                    {paymentSuccessData.txHash}
-                                </code>
-                                <p style={{ margin: '15px 0 0 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic' }}>
-                                    ⏰ {t('supervise.popup.taskDeleted24h')}
-                                </p>
+                                <StellarTxHashLink
+                                    txHash={paymentSuccessData.txHash}
+                                    label={t('supervise.popup.txHash')}
+                                />
+                                <TaskDeletionNotice
+                                    scheduledDeletionAt={task?.scheduled_deletion_at}
+                                    completedAt={task?.completed_at || task?.escrow_completed_at}
+                                    escrowStatus={task?.escrow_status}
+                                    disputeResolvedAt={task?.dispute_resolved_at}
+                                />
                             </div>
                         </div>
                         <div style={{ display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -3111,7 +3048,7 @@ const SuperviseTask = () => {
                                 }}
                                 style={{
                                     background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
-                                    color: '#fff',
+                                    color: 'var(--text-primary)',
                                     border: 'none',
                                     padding: '14px 32px',
                                     borderRadius: '10px',
@@ -3141,9 +3078,9 @@ const SuperviseTask = () => {
                                     navigate('/dashboard');
                                 }}
                                 style={{
-                                    background: 'rgba(255, 255, 255, 0.1)',
-                                    color: '#fff',
-                                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                                    background: 'var(--bg-tertiary)',
+                                    color: 'var(--text-primary)',
+                                    border: '1px solid var(--border-color)',
                                     padding: '14px 32px',
                                     borderRadius: '10px',
                                     fontSize: '16px',
@@ -3153,11 +3090,11 @@ const SuperviseTask = () => {
                                     minWidth: '200px'
                                 }}
                                 onMouseOver={(e) => {
-                                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                                    e.currentTarget.style.background = 'var(--bg-hover)';
                                     e.currentTarget.style.transform = 'translateY(-2px)';
                                 }}
                                 onMouseOut={(e) => {
-                                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                                    e.currentTarget.style.background = 'var(--bg-tertiary)';
                                     e.currentTarget.style.transform = 'translateY(0)';
                                 }}
                             >
@@ -3214,14 +3151,14 @@ const SuperviseTask = () => {
                         </h3>
                         <div style={{
                             marginBottom: '30px',
-                            color: 'rgba(255, 255, 255, 0.9)',
+                            color: 'var(--text-secondary)',
                             lineHeight: '1.6'
                         }}>
                             <p style={{ 
                                 fontSize: '18px', 
                                 marginBottom: '15px', 
                                 fontWeight: '500',
-                                color: 'rgba(255, 255, 255, 0.8)'
+                                color: 'var(--text-secondary)'
                             }}>
                                 Para recibir tu reembolso, debes firmar la transacción con tu wallet Stellar
                             </p>
@@ -3233,13 +3170,13 @@ const SuperviseTask = () => {
                                 textAlign: 'left',
                                 border: '1px solid rgba(16, 221, 136, 0.2)'
                             }}>
-                                <p style={{ margin: '8px 0', fontSize: '16px', color: '#fff' }}>
+                                <p style={{ margin: '8px 0', fontSize: '16px', color: 'var(--text-primary)' }}>
                                     <strong style={{ color: '#10dd88' }}> {t('supervise.popup.refundAmount')}</strong> {refundTransaction.refundAmount.toFixed(7)} USDC
                                 </p>
-                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'var(--text-muted)' }}>
                                     <strong style={{ color: '#10dd88', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><FaMapMarkerAlt aria-hidden="true" /> {t('supervise.popup.yourAddress')}</strong> {address?.slice(0, 6)}...{address?.slice(-4)}
                                 </p>
-                                <p style={{ margin: '8px 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', fontStyle: 'italic' }}>
+                                <p style={{ margin: '8px 0', fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
                                      {t('supervise.popup.signRefundNote')}
                                 </p>
                             </div>
@@ -3266,9 +3203,9 @@ const SuperviseTask = () => {
                                 }}
                                 disabled={cancellingTask}
                                 style={{
-                                    background: 'rgba(255, 255, 255, 0.1)',
-                                    color: '#fff',
-                                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                                    background: 'var(--bg-tertiary)',
+                                    color: 'var(--text-primary)',
+                                    border: '1px solid var(--border-color)',
                                     padding: '14px 32px',
                                     borderRadius: '10px',
                                     fontSize: '16px',
@@ -3286,7 +3223,7 @@ const SuperviseTask = () => {
                                 disabled={cancellingTask || !isConnected || !kit}
                                 style={{
                                     background: cancellingTask || !isConnected || !kit ? 'rgba(16, 221, 136, 0.5)' : 'linear-gradient(90deg, #10dd88, #0ab86a)',
-                                    color: '#fff',
+                                    color: 'var(--text-primary)',
                                     border: 'none',
                                     padding: '14px 32px',
                                     borderRadius: '10px',
@@ -3378,14 +3315,14 @@ const SuperviseTask = () => {
                         </h3>
                         <div style={{
                             marginBottom: '30px',
-                            color: 'rgba(255, 255, 255, 0.9)',
+                            color: 'var(--text-secondary)',
                             lineHeight: '1.6'
                         }}>
                             <p style={{ 
                                 fontSize: '18px', 
                                 marginBottom: '15px', 
                                 fontWeight: '500',
-                                color: 'rgba(255, 255, 255, 0.9)'
+                                color: 'var(--text-secondary)'
                             }}>
                                 {refundNotificationMessage}
                             </p>
@@ -3397,14 +3334,14 @@ const SuperviseTask = () => {
                                 textAlign: 'left',
                                 border: '1px solid rgba(16, 221, 136, 0.2)'
                             }}>
-                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.8)' }}>
+                                <p style={{ margin: '8px 0', fontSize: '14px', color: 'var(--text-secondary)' }}>
                                     <strong style={{ color: '#10dd88' }}> {t('supervise.popup.nextSteps')}</strong>
                                 </p>
                                 <ul style={{ 
                                     margin: '10px 0', 
                                     paddingLeft: '20px', 
                                     fontSize: '14px', 
-                                    color: 'rgba(255, 255, 255, 0.7)',
+                                    color: 'var(--text-muted)',
                                     lineHeight: '1.8'
                                 }}>
                                     <li>{t('supervise.refund.bullet1')}</li>
@@ -3421,7 +3358,7 @@ const SuperviseTask = () => {
                                 }}
                                 style={{
                                     background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
-                                    color: '#fff',
+                                    color: 'var(--text-primary)',
                                     border: 'none',
                                     padding: '14px 32px',
                                     borderRadius: '10px',
@@ -3496,14 +3433,14 @@ const SuperviseTask = () => {
                         </h3>
                         <div style={{
                             marginBottom: '30px',
-                            color: 'rgba(255, 255, 255, 0.9)',
+                            color: 'var(--text-secondary)',
                             lineHeight: '1.6'
                         }}>
                             <p style={{ 
                                 fontSize: '18px', 
                                 marginBottom: '15px', 
                                 fontWeight: '500',
-                                color: 'rgba(255, 255, 255, 0.8)'
+                                color: 'var(--text-secondary)'
                             }}>
                                 {t('supervise.popup.disputeRegistered')}
                             </p>
@@ -3516,7 +3453,7 @@ const SuperviseTask = () => {
                                     textAlign: 'left',
                                     border: '1px solid rgba(16, 221, 136, 0.2)'
                                 }}>
-                                    <p style={{ margin: '8px 0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)' }}>
+                                    <p style={{ margin: '8px 0', fontSize: '14px', color: 'var(--text-muted)' }}>
                                         <strong style={{ color: '#10dd88' }}> {t('supervise.popup.txHash')}</strong>
                                     </p>
                                     <code style={{
@@ -3543,7 +3480,7 @@ const SuperviseTask = () => {
                                 }}
                                 style={{
                                     background: 'linear-gradient(90deg, #10dd88, #0ab86a)',
-                                    color: '#fff',
+                                    color: 'var(--text-primary)',
                                     border: 'none',
                                     padding: '14px 32px',
                                     borderRadius: '10px',
@@ -3572,87 +3509,6 @@ const SuperviseTask = () => {
                 </div>
             )}
             
-            {/* Modal de Rating */}
-            {showRatingModal && task && worker && currentUser && (
-                <div style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    zIndex: 10000,
-                    backdropFilter: 'blur(10px)'
-                }} onClick={() => {
-                    // No cerrar al hacer clic fuera si no se ha calificado
-                    if (hasRated) {
-                        setShowRatingModal(false);
-                    }
-                }}>
-                    <div style={{
-                        backgroundColor: 'white',
-                        borderRadius: '20px',
-                        padding: '32px',
-                        maxWidth: '700px',
-                        width: '90%',
-                        maxHeight: '90vh',
-                        overflowY: 'auto',
-                        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)'
-                    }} onClick={(e) => e.stopPropagation()}>
-                        <div style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            marginBottom: '24px'
-                        }}>
-                            <h2 style={{
-                                margin: 0,
-                                color: '#333',
-                                fontSize: '24px'
-                            }}>
-                                {t('supervise.rating.title')}
-                            </h2>
-                            {hasRated && (
-                                <button
-                                    onClick={() => setShowRatingModal(false)}
-                                    style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        color: '#666',
-                                        fontSize: '28px',
-                                        cursor: 'pointer',
-                                        padding: '0',
-                                        width: '32px',
-                                        height: '32px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center'
-                                    }}
-                                >
-                                    <FaTimes />
-                                </button>
-                            )}
-                        </div>
-                        
-                        <RatingSystem
-                            userId={parseInt(currentUser.id, 10)}
-                            taskId={parseInt(taskId!, 10)}
-                            showForm={!hasRated}
-                            ratedUserId={isClient ? parseInt(worker.id, 10) : parseInt(task.user_id, 10)}
-                            ratedUserName={isClient ? worker.username : task.creator_username}
-                            onRatingSubmitted={() => {
-                                setHasRated(true);
-                                setShowRatingModal(false);
-                            }}
-                            compact={false}
-                        />
-                    </div>
-                </div>
-            )}
-            
             {/* Popup de Confirmación */}
             {confirmDialogConfig && (
                 <ConfirmDialog
@@ -3676,14 +3532,19 @@ const SuperviseTask = () => {
                     isOpen={showCompleteTaskPopup}
                     onClose={() => setShowCompleteTaskPopup(false)}
                     onComplete={handleCompleteTaskPopupComplete}
+                    onStayOnSupervision={() => {
+                        setTimeout(() => fetchData(), 500);
+                    }}
+                    onGoToDashboard={() => navigate('/dashboard')}
                     taskPrice={task.price}
                     escrowId={task.escrow_id}
                     clientAddress={address || ''}
-                    taskId={task.id ? parseInt(task.id) : undefined}
-                    workerId={task.accepted_applicant_id ? parseInt(task.accepted_applicant_id) : undefined}
+                    taskId={task.id != null ? Number(task.id) : undefined}
+                    workerId={task.accepted_applicant_id != null ? Number(task.accepted_applicant_id) : undefined}
                     workerName={task.worker_username}
                     onApproveMilestone={handleApproveMilestone}
                     onReleaseFunds={handleReleaseFunds}
+                    onPersistRelease={handlePersistTaskRelease}
                     onVerifyMilestone={handleVerifyMilestone}
                 />
             )}

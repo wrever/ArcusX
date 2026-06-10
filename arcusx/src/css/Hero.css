@@ -367,6 +367,20 @@
   white-space: nowrap;
 }
 
+:root[data-theme="light"] .landing-hero-search-loading {
+  color: #2563eb;
+}
+
+:root[data-theme="light"] .landing-hero-search-results {
+  background: #ffffff;
+  border-color: var(--border-color);
+  box-shadow: var(--shadow-lg);
+}
+
+:root[data-theme="light"] .hero-carousel-loading {
+  color: var(--text-secondary);
+}
+
 .landing-hero-search-hint {
   font-size: 0.9rem;
   color: var(--text-muted);
@@ -626,6 +640,9 @@
   flex-shrink: 0;
   width: 48px;
   height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0 !important;
   border-radius: 50%;
   border: 1px solid var(--border-color);
   background: var(--bg-card);
@@ -634,7 +651,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  z-index: 2;
   transition: all 0.2s ease;
+}
+
+.hero-carousel-btn svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  display: block;
+  flex-shrink: 0;
+  color: inherit;
+  fill: currentColor;
 }
 
 .hero-carousel-btn:hover {
@@ -690,6 +718,30 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
+/* Texto legible al hover (tema oscuro / default): evita que todo se perciba “apagado” */
+:root[data-theme="dark"] .hero-carousel-card:hover .hero-carousel-card-title,
+:root:not([data-theme]) .hero-carousel-card:hover .hero-carousel-card-title,
+:root[data-theme="dark"] .hero-carousel-card:hover .hero-carousel-card-meta,
+:root:not([data-theme]) .hero-carousel-card:hover .hero-carousel-card-meta,
+:root[data-theme="dark"] .hero-carousel-card:hover .hero-carousel-card-desc,
+:root:not([data-theme]) .hero-carousel-card:hover .hero-carousel-card-desc,
+:root[data-theme="dark"] .hero-carousel-card:hover .hero-freelancer-skills-preview,
+:root:not([data-theme]) .hero-carousel-card:hover .hero-freelancer-skills-preview {
+  color: #ffffff;
+}
+
+:root[data-theme="light"] .hero-carousel-card:hover .hero-carousel-card-title,
+:root[data-theme="light"] .hero-carousel-card:hover .hero-carousel-card-meta,
+:root[data-theme="light"] .hero-carousel-card:hover .hero-carousel-card-desc,
+:root[data-theme="light"] .hero-carousel-card:hover .hero-freelancer-skills-preview {
+  color: var(--text-primary);
+}
+
+:root[data-theme="dark"] .hero-carousel-card:hover .hero-carousel-card-price,
+:root:not([data-theme]) .hero-carousel-card:hover .hero-carousel-card-price {
+  color: #b6ffe4;
+}
+
 .hero-carousel-card-title {
   font-size: 1.1rem;
   font-weight: 600;
@@ -709,7 +761,52 @@
   color: var(--text-secondary);
   line-height: 1.45;
   flex: 1;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
+  min-height: 0;
+}
+
+/* Bloque creador en carrusel de tareas (separado del precio / CTA) */
+.hero-carousel-card-creator {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+  width: 100%;
+  min-width: 0;
+  margin-top: 0.5rem;
+  margin-bottom: 0.9rem;
+  padding: 0.65rem 0 0;
+  border-top: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+}
+
+.hero-carousel-card-creator-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted, rgba(255, 255, 255, 0.45));
+  line-height: 1;
+}
+
+.hero-carousel-card-creator .task-creator-line,
+.hero-carousel-card-creator .task-creator-line__verified {
+  width: 100%;
+  max-width: 100%;
+}
+
+.hero-carousel-card-creator .task-creator-line__name,
+.hero-carousel-card-creator .username-with-verified__name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.hero-carousel-card-creator .username-with-verified__link {
+  max-width: 100%;
+}
+
+.hero-carousel-card:not(.hero-freelancer-card) .hero-carousel-card-footer {
+  padding-top: 0.15rem;
 }
 
 .hero-carousel-card-footer {
@@ -735,15 +832,77 @@
   font-size: 0.9rem;
   font-weight: 600;
   background: var(--primary-green, #10dd88);
-  color: var(--bg-primary);
-  border: none;
+  background-color: var(--primary-green, #10dd88);
+  color: #0a0a0a;
+  border: none !important;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-.hero-carousel-card-apply:hover {
-  filter: brightness(1.1);
+/* index.css button:hover pisa el CTA: hover = fondo oscuro + texto blanco (normal = verde + negro) */
+.hero-carousel-card-apply:hover,
+.hero-carousel-card-apply:focus-visible {
+  background: #0a0a0a !important;
+  background-color: #0a0a0a !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(16, 221, 136, 0.4) !important;
+  filter: none;
   transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.hero-carousel-card-apply:hover svg,
+.hero-carousel-card-apply:focus-visible svg {
+  color: #ffffff;
+  fill: currentColor;
+}
+
+.hero-freelancer-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.hero-freelancer-verified-row,
+.hero-freelancer-verified-row .username-with-verified__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.hero-freelancer-name-text {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.25;
+}
+
+.hero-freelancer-verified-row .username-with-verified__link:hover .hero-freelancer-name-text {
+  color: var(--primary-green, #10dd88);
+  text-decoration: underline;
+}
+
+:root[data-theme="dark"] .hero-carousel-card:hover .hero-freelancer-name-text,
+:root:not([data-theme]) .hero-carousel-card:hover .hero-freelancer-name-text {
+  color: #ffffff;
+}
+
+:root[data-theme="dark"] .hero-carousel-card:hover .hero-freelancer-verified-row .username-with-verified__link:hover .hero-freelancer-name-text,
+:root:not([data-theme]) .hero-carousel-card:hover .hero-freelancer-verified-row .username-with-verified__link:hover .hero-freelancer-name-text {
+  color: var(--primary-green, #10dd88);
+}
+
+:root[data-theme="light"] .hero-carousel-card:hover .hero-freelancer-name-text {
+  color: var(--text-primary);
 }
 
 @media (max-width: 768px) {
@@ -754,11 +913,142 @@
   .hero-carousel-btn {
     width: 40px;
     height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0 !important;
+  }
+
+  .hero-carousel-btn svg {
+    width: 1.1rem;
+    height: 1.1rem;
   }
 
   .hero-carousel-card {
     width: 260px;
     min-height: 160px;
+  }
+}
+
+/* — Carrusel de freelancers (debajo de la franja Stellar · USDC…) — */
+.hero-freelancer-carousel-section {
+  padding: 2rem 1rem 2.35rem;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.hero-freelancer-carousel-section .hero-carousel-wrap {
+  max-width: 1400px;
+}
+
+.hero-freelancer-carousel-viewport {
+  scroll-snap-type: none;
+}
+
+.hero-freelancer-card {
+  width: 300px;
+  min-height: 218px;
+}
+
+.hero-freelancer-card-top {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  margin-bottom: 0.35rem;
+}
+
+.hero-freelancer-avatar-wrap {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid rgba(16, 221, 136, 0.38);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+}
+
+.hero-freelancer-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hero-freelancer-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(145deg, rgba(16, 221, 136, 0.28), rgba(16, 221, 136, 0.06));
+  color: var(--primary-green, #10dd88);
+}
+
+.hero-freelancer-card-head {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.hero-freelancer-skills-preview {
+  font-size: 0.72rem;
+  color: var(--text-muted, rgba(255, 255, 255, 0.45));
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hero-freelancer-bio {
+  margin-bottom: 0.75rem;
+}
+
+.hero-freelancer-card-footer {
+  justify-content: flex-end;
+}
+
+.hero-freelancer-card-cta {
+  width: 100%;
+  justify-content: center;
+}
+
+.hero-freelancer-card-cta-secondary {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color-active, rgba(16, 221, 136, 0.45));
+  box-shadow: none;
+}
+
+.hero-freelancer-card-cta-secondary:hover,
+.hero-freelancer-card-cta-secondary:focus-visible {
+  background: rgba(16, 221, 136, 0.08);
+  color: var(--primary-green, #10dd88);
+  border-color: var(--primary-green, #10dd88);
+  transform: translateY(-1px);
+}
+
+:root[data-theme="light"] .hero-freelancer-card-cta-secondary {
+  border-color: rgba(16, 221, 136, 0.35);
+  color: var(--text-primary);
+}
+
+@media (max-width: 768px) {
+  .hero-freelancer-carousel-section {
+    padding: 1.5rem 0.75rem 1.85rem;
+  }
+
+  .hero-freelancer-card {
+    width: 272px;
+    min-height: 200px;
+  }
+
+  .hero-freelancer-avatar-wrap {
+    width: 48px;
+    height: 48px;
   }
 }
 
@@ -1875,9 +2165,58 @@
   box-shadow: var(--shadow-md), 0 0 0 1px rgba(16, 221, 136, 0.1);
 }
 
+:root[data-theme="light"] .landing-roadmap--arcusx {
+  background-image: radial-gradient(ellipse 100% 60% at 50% 30%, rgba(59, 130, 246, 0.06), transparent 55%);
+}
+
+:root[data-theme="light"] .landing-roadmap-title {
+  color: #0f172a;
+}
+
+:root[data-theme="light"] .landing-roadmap-subtitle {
+  color: #475569;
+}
+
+:root[data-theme="light"] .landing-roadmap-track {
+  background: rgba(100, 116, 139, 0.25);
+}
+
+:root[data-theme="light"] .landing-roadmap-track-progress {
+  background: linear-gradient(180deg, #3b82f6, rgba(37, 99, 235, 0.45));
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.25);
+}
+
+:root[data-theme="light"] .landing-roadmap-phase-date {
+  color: #64748b;
+}
+
+:root[data-theme="light"] .landing-roadmap-item[data-phase="done"] .landing-roadmap-phase-date,
+:root[data-theme="light"] .landing-roadmap-item[data-phase="now"] .landing-roadmap-phase-date {
+  color: #2563eb;
+}
+
 :root[data-theme="light"] .landing-roadmap-card {
   background: var(--bg-card);
   border-color: var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+:root[data-theme="light"] .landing-roadmap-card h3 {
+  color: #0f172a;
+  border-bottom-color: var(--border-color);
+}
+
+:root[data-theme="light"] .landing-roadmap-card li {
+  color: #475569;
+}
+
+:root[data-theme="light"] .landing-roadmap-card li::before {
+  background: #3b82f6;
+}
+
+:root[data-theme="light"] .landing-roadmap-item[data-phase="now"] .landing-roadmap-node {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
 }
 
 .landing-roadmap-card h3 {

@@ -1,0 +1,7 @@
+project_id = "atgsesbstjleabesclzs"
+
+[functions.arcusx-api]
+verify_jwt = false
+
+[functions.arcusx-admin]
+verify_jwt = false

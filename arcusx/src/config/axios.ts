@@ -1,20 +1,29 @@
 import axios from 'axios';
+import { supabaseAnonKey } from './supabase';
+import { useSupabaseApi } from './arcusxApi';
 
-// Configuración de axios
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://arcusx.pro/api',
+  baseURL: useSupabaseApi && import.meta.env.VITE_SUPABASE_URL
+    ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/arcusx-api`
+    : '',
   timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
+    ...(supabaseAnonKey ? { apikey: supabaseAnonKey } : {}),
   },
 });
 
-// Interceptor para agregar token a las peticiones
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token =
+      localStorage.getItem('token') ||
+      localStorage.getItem('admin_token') ||
+      localStorage.getItem('supabase_access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    if (supabaseAnonKey && !config.headers.apikey) {
+      config.headers.apikey = supabaseAnonKey;
     }
     return config;
   },

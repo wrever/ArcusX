@@ -14,7 +14,7 @@ interface FeeManagementProps {
 
 const FeeManagement: React.FC<FeeManagementProps> = ({ onUpdate }) => {
   const [config, setConfig] = useState<FeeConfig>({
-    platformFeeBps: 500, // 5%
+    platformFeeBps: 270, // 2.7% ArcusX (+ 0.3% TW = 3% total)
     referralFeeBps: 100, // 1%
     treasury: ''
   });
@@ -41,7 +41,7 @@ const FeeManagement: React.FC<FeeManagementProps> = ({ onUpdate }) => {
       const platformFeeValue = platformFeeConfig?.config_value;
       const platformFeeBps = typeof platformFeeValue === 'number' 
         ? platformFeeValue * 10000 
-        : (typeof platformFeeValue === 'string' ? parseFloat(platformFeeValue) * 10000 : 30); // 0.3% = 30 bps
+        : (typeof platformFeeValue === 'string' ? parseFloat(platformFeeValue) * 10000 : 270);
       
       const referralFeeValue = referralFeeConfig?.config_value;
       const referralFeeBps = typeof referralFeeValue === 'number' 
@@ -104,7 +104,7 @@ const FeeManagement: React.FC<FeeManagementProps> = ({ onUpdate }) => {
 
   const handleReset = () => {
     setConfig({
-      platformFeeBps: 500,
+      platformFeeBps: 270,
       referralFeeBps: 100,
       treasury: ''
     });
@@ -161,7 +161,10 @@ const FeeManagement: React.FC<FeeManagementProps> = ({ onUpdate }) => {
             </div>
             <div className="input-info">
               <FaInfoCircle />
-              <span>Máximo: 1000 bps (10%). Actual: {(config.platformFeeBps / 100).toFixed(1)}%</span>
+              <span>
+                ArcusX: {(config.platformFeeBps / 100).toFixed(1)}% + costo de operación 0.3% ={' '}
+                {((config.platformFeeBps + 30) / 100).toFixed(1)}% total al cliente. Máx. 1000 bps (10% solo ArcusX).
+              </span>
             </div>
           </div>
 
@@ -213,9 +216,11 @@ const FeeManagement: React.FC<FeeManagementProps> = ({ onUpdate }) => {
           <h3>Vista Previa</h3>
           <div className="preview-cards">
             <div className="preview-card">
-              <h4>Fee de Plataforma</h4>
-              <p className="preview-value">{(config.platformFeeBps / 100).toFixed(1)}%</p>
-              <p className="preview-description">Se cobra sobre cada milestone liberado</p>
+              <h4>Comisión total cliente</h4>
+              <p className="preview-value">{((config.platformFeeBps + 30) / 100).toFixed(1)}%</p>
+              <p className="preview-description">
+                ArcusX {(config.platformFeeBps / 100).toFixed(1)}% + TW 0.3% al liberar
+              </p>
             </div>
             <div className="preview-card">
               <h4>Fee de Referral</h4>

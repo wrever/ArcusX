@@ -5,13 +5,13 @@
  * La comisión se retiene en el escrow y puede ser retirada manualmente
  */
 
-// Valor por defecto (0.3%) - se usa solo si no se puede obtener del backend
-export const DEFAULT_COMMISSION_RATE = 0.003; // 0.3%
+// Valor por defecto ArcusX (2.7%); TW suma 0.3% → 3% total al cliente
+export const DEFAULT_COMMISSION_RATE = 0.027;
 
 /**
  * Calcula la comisión sobre un monto dado usando el fee del backend
  * @param amount Monto total en USDC
- * @param commissionRate Opcional: tasa de comisión como decimal (ej: 0.005 para 0.5%). Si no se proporciona, se obtiene del backend
+ * @param commissionRate Opcional: tasa de comisión como decimal (ej: 0.03 para 3%). Si no se proporciona, se obtiene del backend
  * @returns Comisión calculada con 7 decimales
  */
 export async function calculateCommission(amount: number, commissionRate?: number): Promise<number> {
@@ -33,7 +33,7 @@ export async function calculateCommission(amount: number, commissionRate?: numbe
 /**
  * Calcula la comisión sobre un monto dado (versión síncrona con rate proporcionado)
  * @param amount Monto total en USDC
- * @param commissionRate Tasa de comisión como decimal (ej: 0.005 para 0.5%)
+ * @param commissionRate Tasa de comisión como decimal (ej: 0.03 para 3%)
  * @returns Comisión calculada con 7 decimales
  */
 export function calculateCommissionSync(amount: number, commissionRate: number = DEFAULT_COMMISSION_RATE): number {
@@ -65,7 +65,7 @@ export async function calculateNetAmount(amount: number, commissionRate?: number
  * En el nuevo modelo, el trabajador recibe el monto exacto ingresado.
  * Se mantiene para compatibilidad con código legacy.
  * @param amount Monto total en USDC
- * @param commissionRate Tasa de comisión como decimal (ej: 0.005 para 0.5%)
+ * @param commissionRate Tasa de comisión como decimal (ej: 0.03 para 3%)
  * @returns Monto neto (monto total - comisión) con 7 decimales
  */
 export function calculateNetAmountSync(amount: number, commissionRate: number = DEFAULT_COMMISSION_RATE): number {
@@ -80,7 +80,7 @@ export function calculateNetAmountSync(amount: number, commissionRate: number = 
 /**
  * Calcula el total que debe pagar el cliente (workerAmount + commission)
  * @param workerAmount Monto que recibirá el trabajador
- * @param commissionRate Tasa de comisión como decimal (ej: 0.005 para 0.5%)
+ * @param commissionRate Tasa de comisión como decimal (ej: 0.03 para 3%)
  * @returns Total a pagar (workerAmount + commission) con 7 decimales
  */
 export function calculateTotalWithCommission(
@@ -98,7 +98,7 @@ export function calculateTotalWithCommission(
 /**
  * Calcula la comisión que se cobrará al cliente sobre el monto del trabajador
  * @param workerAmount Monto que recibirá el trabajador
- * @param commissionRate Tasa de comisión como decimal (ej: 0.005 para 0.5%)
+ * @param commissionRate Tasa de comisión como decimal (ej: 0.03 para 3%)
  * @returns Comisión calculada con 7 decimales
  */
 export function calculateCommissionFromWorkerAmount(

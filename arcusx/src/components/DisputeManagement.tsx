@@ -1,11 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { FaGavel, FaEye, FaCheckCircle, FaTimesCircle, FaExclamationTriangle, FaComments, FaFile, FaClock, FaBolt } from 'react-icons/fa';
-import { getAdminDisputes, getAdminDisputeDetails, resolveAdminDispute } from '../services/adminService';
+import {
+  getAdminDisputes,
+  getAdminDisputeDetails,
+  resolveAdminDispute,
+  ensureAdminDispute,
+} from '../services/adminService';
 import { useWallet } from '../hooks/useWallet';
 import { useResolveDispute, useSendTransaction, useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks';
 import { resolveDisputeTrustlessEscrow } from '../services/trustlessWorkEscrowService';
 import { USDC_ISSUER } from '../config/usdc';
+import { PLATFORM_WALLET } from '../config/trustlessWork';
+import {
+  assertDisputePayoutsForDecision,
+  allocateDisputeSplitAmounts,
+  resolveClientRefundWallet,
+  resolveDisputePayoutTargets,
+  resolveWorkerPayoutWallet,
+} from '../utils/disputePartyWallet';
 import DisputeChatView from './DisputeChatView';
 import DisputeFilesView from './DisputeFilesView';
 import DisputeTimelineView from './DisputeTimelineView';
@@ -15,8 +28,121 @@ import WalletButton from './WalletButton';
 import { useI18n } from '../i18n/I18nProvider';
 import '../css/AdminPanel.css';
 
+function dedupeAdminDisputes(disputes: any[]): any[] {
+  const realByEscrow = new Set<string>();
+  const realByTask = new Set<number>();
+  for (const d of disputes) {
+    if (typeof d.id !== 'number') continue;
+    if (d.escrow_id) realByEscrow.add(String(d.escrow_id));
+    if (d.task_id) realByTask.add(Number(d.task_id));
+  }
+  return disputes.filter((d) => {
+    if (typeof d.id === 'number') return true;
+    if (!String(d.id).startsWith('virtual-')) return true;
+    if (d.escrow_id && realByEscrow.has(String(d.escrow_id))) return false;
+    if (d.task_id && realByTask.has(Number(d.task_id))) return false;
+    return true;
+  });
+}
+
+function getDisputePanelIds(dispute: {
+  id?: number | string;
+  task_id?: number | null;
+  agreement_id?: string | null;
+}) {
+  if (typeof dispute?.id === 'number') {
+    return {
+      disputeId: dispute.id,
+      taskId: undefined as number | undefined,
+      agreementId: undefined as string | undefined,
+    };
+  }
+  const agreementId = dispute?.agreement_id ? String(dispute.agreement_id).trim() : '';
+  if (agreementId) {
+    return {
+      disputeId: undefined as number | undefined,
+      taskId: undefined as number | undefined,
+      agreementId,
+    };
+  }
+  const taskId = Number(dispute?.task_id);
+  if (Number.isFinite(taskId) && taskId > 0) {
+    return {
+      disputeId: undefined as number | undefined,
+      taskId,
+      agreementId: undefined as string | undefined,
+    };
+  }
+  return {
+    disputeId: undefined as number | undefined,
+    taskId: undefined as number | undefined,
+    agreementId: undefined as string | undefined,
+  };
+}
+
 interface DisputeManagementProps {
   onUpdate?: () => void;
+}
+
+function getDisputeEscrowId(dispute: {
+  escrow_id?: string | null;
+  task_escrow_id?: string | null;
+  arcusx_tasks?: { escrow_id?: string | null } | null;
+} | null): string | null {
+  if (!dispute) return null;
+  const raw =
+    dispute.escrow_id ??
+    dispute.task_escrow_id ??
+    dispute.arcusx_tasks?.escrow_id;
+  return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : null;
+}
+
+function normalizeDisputeRecord(dispute: any): any {
+  if (!dispute) return dispute;
+  const task = dispute.arcusx_tasks;
+  const deal = dispute.arcusx_agreements;
+  const escrowId = getDisputeEscrowId(dispute);
+  let resolutionParsed: Record<string, unknown> | null = null;
+  const rawResolution = dispute.resolution;
+  if (rawResolution && typeof rawResolution === 'object') {
+    resolutionParsed = rawResolution as Record<string, unknown>;
+  } else if (typeof rawResolution === 'string' && rawResolution.trim()) {
+    try {
+      const parsed = JSON.parse(rawResolution);
+      if (parsed && typeof parsed === 'object') {
+        resolutionParsed = parsed as Record<string, unknown>;
+      }
+    } catch {
+      resolutionParsed = { decision: rawResolution };
+    }
+  }
+  return {
+    ...dispute,
+    escrow_id: escrowId,
+    escrow_status: dispute.escrow_status ?? task?.escrow_status ?? null,
+    task_title: dispute.task_title ?? task?.title ?? deal?.title ?? null,
+    entity_type: dispute.entity_type ?? (dispute.agreement_id ? 'deal' : 'task'),
+    resolution_decision:
+      dispute.resolution_decision ?? resolutionParsed?.decision ?? null,
+    resolution_reason: dispute.resolution_reason ?? resolutionParsed?.reason ?? null,
+  };
+}
+
+function escrowNeedsOnChainRelease(dispute: any): boolean {
+  if (!dispute) return false;
+  if (dispute.fundsReleasePending === true) return true;
+  if (dispute.funds_release_pending === true) return true;
+  if (dispute.trustlessWorkIsDisputed === true && dispute.trustlessWorkIsResolved !== true) {
+    return true;
+  }
+  const escrowSt = String(dispute.escrow_status ?? '').toLowerCase();
+  if (
+    (escrowSt === 'disputed' || escrowSt === 'pending_dispute_resolution') &&
+    dispute.trustlessWorkIsResolved !== true
+  ) {
+    return true;
+  }
+  return false;
 }
 
 const DisputeManagement: React.FC<DisputeManagementProps> = () => {
@@ -66,6 +192,10 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
   
   // Estado para disputeResolver requerido (para mostrar en el formulario)
   const [requiredDisputeResolver, setRequiredDisputeResolver] = useState<string | null>(null);
+  const [payoutWalletPreview, setPayoutWalletPreview] = useState<{
+    client: { wallet: string; source: string; isTreasury: boolean } | null;
+    worker: { wallet: string; source: string; isTreasury: boolean } | null;
+  }>({ client: null, worker: null });
   
   // Estado para tabs del modal de detalles
   const [activeTab, setActiveTab] = useState<'summary' | 'chat' | 'files' | 'timeline'>('summary');
@@ -76,15 +206,15 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
 
   useEffect(() => {
     const loadRequiredDisputeResolver = async () => {
+      const escrowId = getDisputeEscrowId(selectedDispute);
       if (
         showDetails &&
         activeTab === 'summary' &&
-        selectedDispute?.escrow_id &&
-        selectedDispute.escrow_id.startsWith('C')
+        escrowId?.startsWith('C')
       ) {
         try {
           const escrowData = await getEscrowByContractIds({
-            contractIds: [selectedDispute.escrow_id],
+            contractIds: [escrowId],
             validateOnChain: true
           });
           const escrow = Array.isArray(escrowData) ? escrowData[0] : (escrowData as any)?.escrows?.[0];
@@ -93,11 +223,66 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
           } else {
             setRequiredDisputeResolver(null);
           }
+
+          let dbClientWallet: string | null = null;
+          let dbWorkerWallet: string | null = null;
+          try {
+            const { getAdminUserDetails } = await import('../services/adminService');
+            if (selectedDispute?.client_id) {
+              const clientDetails = await getAdminUserDetails(selectedDispute.client_id);
+              dbClientWallet = clientDetails?.wallet_address ?? null;
+            }
+            if (selectedDispute?.worker_id) {
+              const workerDetails = await getAdminUserDetails(selectedDispute.worker_id);
+              dbWorkerWallet = workerDetails?.wallet_address ?? null;
+            }
+          } catch {
+            /* optional */
+          }
+
+          const taskFunderWallet =
+            selectedDispute?.client_funder_wallet ??
+            selectedDispute?.arcusx_tasks?.client_funder_wallet ??
+            null;
+          const proposalWorkerWallet =
+            selectedDispute?.worker_payout_wallet ?? null;
+
+          const clientPick = resolveClientRefundWallet({
+            escrow,
+            taskFunderWallet,
+            dbUserWallet: dbClientWallet,
+            platformWallet: PLATFORM_WALLET,
+          });
+          const workerPick = resolveWorkerPayoutWallet({
+            escrow,
+            proposalWorkerWallet,
+            dbUserWallet: dbWorkerWallet,
+            platformWallet: PLATFORM_WALLET,
+          });
+
+          setPayoutWalletPreview({
+            client: clientPick
+              ? {
+                  wallet: clientPick.wallet,
+                  source: clientPick.source,
+                  isTreasury: clientPick.isPlatformTreasury,
+                }
+              : null,
+            worker: workerPick
+              ? {
+                  wallet: workerPick.wallet,
+                  source: workerPick.source,
+                  isTreasury: workerPick.isPlatformTreasury,
+                }
+              : null,
+          });
         } catch {
           setRequiredDisputeResolver(null);
+          setPayoutWalletPreview({ client: null, worker: null });
         }
       } else {
         setRequiredDisputeResolver(null);
+        setPayoutWalletPreview({ client: null, worker: null });
       }
     };
 
@@ -120,8 +305,8 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
       //  MEJORA CRÍTICA: Buscar escrows en disputa desde Trustless Work que NO tienen registro en disputes
       const missingDisputes = await findDisputedEscrowsWithoutDisputeRecord();
       
-      // Combinar disputas de BD con disputas encontradas en Trustless Work
-      const allDisputes = [...enrichedDisputes, ...missingDisputes];
+      // Combinar disputas de BD con disputas encontradas en Trustless Work (sin duplicar)
+      const allDisputes = dedupeAdminDisputes([...enrichedDisputes, ...missingDisputes]);
       
       // Ordenar por fecha de creación (más recientes primero)
       allDisputes.sort((a, b) => {
@@ -178,7 +363,12 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
       const existingEscrowIds = new Set(
         existingDisputes
           .map((d: any) => d.escrow_id)
-          .filter((id: any): id is string => id && typeof id === 'string')
+          .filter((id: any): id is string => id && typeof id === 'string'),
+      );
+      const existingTaskIds = new Set(
+        existingDisputes
+          .map((d: any) => Number(d.task_id))
+          .filter((id: number) => Number.isFinite(id) && id > 0),
       );
       
       // Crear disputas virtuales para escrows en disputa sin registro en BD
@@ -205,15 +395,18 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
         // 3. Tiene balance > 0 O está resuelto pero sin registro en BD (para poder ver el historial)
         //  IMPORTANTE: Mostrar TODOS los escrows en disputa, incluso si están resueltos, para gestión manual
         // Solo excluir si ya tiene registro en BD
-        if (isDisputed && contractId && !existingEscrowIds.has(contractId)) {
+        const escrowInfo = trustlessEscrows.find((e: any) => e.escrow_id === contractId);
+        const linkedTaskId = Number(escrowInfo?.task_id);
+        const hasDbRecord =
+          existingEscrowIds.has(contractId) ||
+          (Number.isFinite(linkedTaskId) && linkedTaskId > 0 && existingTaskIds.has(linkedTaskId));
+
+        if (isDisputed && contractId && !hasDbRecord) {
           // Si está resuelto pero sin balance, aún así crear la disputa virtual para que aparezca en gestión
           // Esto permite al admin ver y gestionar todos los escrows que estuvieron en disputa
           const shouldCreate = balance > 0 || isResolved;
           
           if (shouldCreate) {
-            // Buscar el escrow en la lista de escrows para obtener información de la tarea
-            const escrowInfo = trustlessEscrows.find((e: any) => e.escrow_id === contractId);
-            
             //  MEJORA: Incluir también escrows sin información en BD (pueden ser escrows creados directamente)
             // Si no hay escrowInfo, crear disputa virtual con información mínima del escrow desde Trustless Work
             if (escrowInfo || contractId) {
@@ -260,7 +453,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
             // Escrow en disputa pero sin balance y no resuelto (caso raro)
             noBalanceCount++;
           }
-        } else if (isDisputed && existingEscrowIds.has(contractId)) {
+        } else if (isDisputed && hasDbRecord) {
           alreadyInDbCount++;
         }
       });
@@ -283,8 +476,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
     const disputeEscrowMap = new Map<number, string>();
     
     disputes.forEach(dispute => {
-      // El escrow_id ahora viene del backend en la consulta
-      const escrowId = dispute.escrow_id;
+      const escrowId = getDisputeEscrowId(dispute);
       
       if (escrowId && typeof escrowId === 'string' && escrowId.startsWith('C')) {
         if (!escrowIds.includes(escrowId)) {
@@ -487,6 +679,50 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
     return false;
   };
 
+  const attachTrustlessWorkStatus = async (dispute: any): Promise<any> => {
+    const normalized = normalizeDisputeRecord(dispute);
+    const escrowId = getDisputeEscrowId(normalized);
+    if (!escrowId?.startsWith('C')) return normalized;
+
+    try {
+      const result = await getEscrowByContractIds({
+        contractIds: [escrowId],
+        validateOnChain: true,
+      });
+      const escrow = Array.isArray(result) ? result[0] : (result as any)?.escrows?.[0];
+      if (!escrow) return normalized;
+
+      const flags = escrow.flags || {};
+      const isDisputed =
+        flags.disputed === true || escrow.isDisputed === true || escrow.disputed === true;
+      const isResolved =
+        flags.resolved === true || escrow.isResolved === true || escrow.resolved === true;
+      const isReleased =
+        flags.released === true || escrow.isReleased === true || escrow.released === true;
+      const balance = parseFloat(escrow.balance || escrow.currentBalance || '0');
+      const onChainSettled = isResolved || isReleased;
+      const fundsReleasePending = isDisputed && !onChainSettled && balance > 0;
+
+      let displayStatus = normalized.status;
+      if (fundsReleasePending || (isDisputed && !onChainSettled)) {
+        displayStatus = 'pending';
+      } else if (onChainSettled) {
+        displayStatus = 'resolved';
+      }
+
+      return {
+        ...normalized,
+        trustlessWorkIsDisputed: isDisputed,
+        trustlessWorkIsResolved: onChainSettled,
+        trustlessWorkBalance: balance,
+        displayStatus,
+        fundsReleasePending,
+      };
+    } catch {
+      return normalized;
+    }
+  };
+
   const handleViewDetails = async (disputeId: number | string) => {
     setLoadingDetails(true);
     setError(null);
@@ -499,17 +735,19 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
           setError(t('admin.disputes.notFound'));
           return;
         }
-      setSelectedDispute(dispute);
+      const enriched = await attachTrustlessWorkStatus(dispute);
+      setSelectedDispute(enriched);
       setShowDetails(true);
         
         // Obtener información del escrow desde Trustless Work y el disputeResolver requerido
-        if (dispute.escrow_id && dispute.escrow_id.startsWith('C')) {
-          fetchEscrowInfo(dispute.escrow_id);
+        const escrowId = getDisputeEscrowId(enriched);
+        if (escrowId?.startsWith('C')) {
+          fetchEscrowInfo(escrowId);
           
           // Obtener el disputeResolver requerido
           try {
             const escrowData = await getEscrowByContractIds({ 
-              contractIds: [dispute.escrow_id],
+              contractIds: [escrowId],
               validateOnChain: true 
             });
             const escrow = Array.isArray(escrowData) ? escrowData[0] : (escrowData as any)?.escrows?.[0];
@@ -521,19 +759,50 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
         }
       } else {
         // Disputa normal de BD
-        const dispute = await getAdminDisputeDetails(disputeId as number);
+        const dispute = await attachTrustlessWorkStatus(
+          await getAdminDisputeDetails(disputeId as number),
+        );
         setSelectedDispute(dispute);
         setShowDetails(true);
         
-        // Si hay escrow_id, obtener información del escrow desde Trustless Work
-        if (dispute.escrow_id && dispute.escrow_id.startsWith('C')) {
-          fetchEscrowInfo(dispute.escrow_id);
+        const escrowId = getDisputeEscrowId(dispute);
+        if (escrowId?.startsWith('C')) {
+          fetchEscrowInfo(escrowId);
         }
       }
     } catch (err: any) {
       setError(err.message || t('admin.disputes.error.details'));
     } finally {
       setLoadingDetails(false);
+    }
+  };
+
+  const persistResolvedDisputeToDb = async (
+    txHash: string,
+    refundPercentage?: number,
+  ) => {
+    if (!selectedDispute) return;
+    let dbDisputeId: number | null =
+      typeof selectedDispute.id === 'number' ? selectedDispute.id : null;
+    if (!dbDisputeId && selectedDispute.task_id) {
+      try {
+        dbDisputeId = await ensureAdminDispute(Number(selectedDispute.task_id));
+      } catch {
+        /* on-chain ya resuelto; BD opcional */
+      }
+    }
+    if (!dbDisputeId) return;
+    try {
+      await resolveAdminDispute(dbDisputeId, {
+        decision: resolution.decision,
+        reason: resolution.reason,
+        refund_percentage:
+          resolution.decision === 'split' ? refundPercentage ?? resolution.refund_percentage : undefined,
+        funds_released_on_chain: true,
+        tx_hash: txHash,
+      });
+    } catch {
+      /* on-chain ya resuelto */
     }
   };
 
@@ -559,33 +828,23 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
       };
 
       if (resolution.decision === 'split') {
-        if (resolution.refund_percentage < 0 || resolution.refund_percentage > 100) {
-          throw new Error('El porcentaje de reembolso debe estar entre 0 y 100');
+        if (resolution.refund_percentage < 1 || resolution.refund_percentage > 99) {
+          throw new Error(
+            'El porcentaje al cliente debe estar entre 1 y 99. Para 0% o 100% usa Cliente o Trabajador.',
+          );
         }
-        
-        //  MEJORA: Validar que la suma de porcentajes sea 100%
-        // El porcentaje de pago se calcula como 100 - refund_percentage
-        // Por lo tanto, refund_percentage debe estar entre 0 y 100, y la suma siempre será 100
-        // Pero validamos que no sea exactamente 0 o 100 (esos casos deberían usar 'client' o 'worker')
-        if (resolution.refund_percentage === 0 || resolution.refund_percentage === 100) {
-          throw new Error('Para un reembolso del 0% o 100%, usa la opción "Cliente" o "Trabajador" en lugar de "Dividir"');
-        }
-        
         resolutionData.refund_percentage = resolution.refund_percentage;
       }
 
+      const contractId = getDisputeEscrowId(selectedDispute);
       //  CRÍTICO: TODAS las disputas con escrow_id de Trustless Work deben usar el flujo nuevo
-      // No solo las virtuales, sino también las que tienen registro en BD pero usan Trustless Work
-      if (selectedDispute.escrow_id && selectedDispute.escrow_id.startsWith('C')) {
+      if (contractId?.startsWith('C')) {
         if (!isConnected || !walletAddress) {
           throw new Error('Debes conectar tu wallet (Freighter) para resolver disputas y liberar fondos. Por favor, conecta tu wallet e intenta nuevamente.');
         }
         if (!kit) {
           throw new Error('Kit de Stellar no está disponible. Por favor, recarga la página e intenta nuevamente.');
         }
-        // Resolver directamente desde Trustless Work sin crear registro en BD
-        const contractId = selectedDispute.escrow_id;
-        
         // Obtener información del escrow para calcular distribuciones y obtener el disputeResolver correcto
         const escrowData = await getEscrowByContractIds({ 
           contractIds: [contractId],
@@ -693,53 +952,76 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
           }
         }
         
-        //  MEJORA CRÍTICA: Obtener wallets del cliente y trabajador
-        //  SEGÚN EL WORKFLOW:
-        // - Cliente: crea tarea, selecciona propuesta, fondea contrato, libera dinero → escrow.roles.approver
-        // - Trabajador: aplica a tarea, hace trabajo, recibe dinero → escrow.roles.serviceProvider = escrow.roles.receiver
-        let clientWallet: string | null = null;
-        let workerWallet: string | null = null;
-        
-        //  PRIORIDAD 1: Obtener wallets desde BD (fuente de verdad más confiable)
+        let dbClientWallet: string | null = null;
+        let dbWorkerWallet: string | null = null;
         try {
           const adminService = await import('../services/adminService');
-          
-          // Obtener wallet del cliente desde BD
           if (selectedDispute.client_id) {
             const clientDetails = await adminService.getAdminUserDetails(selectedDispute.client_id);
-            clientWallet = clientDetails?.wallet_address;
+            dbClientWallet = clientDetails?.wallet_address ?? null;
           }
-          
-          // Obtener wallet del trabajador desde BD
           if (selectedDispute.worker_id) {
             const workerDetails = await adminService.getAdminUserDetails(selectedDispute.worker_id);
-            workerWallet = workerDetails?.wallet_address;
+            dbWorkerWallet = workerDetails?.wallet_address ?? null;
           }
-        } catch (userError) {
+        } catch {
+          /* perfil opcional */
         }
-        
-        //  PRIORIDAD 2: Fallback a escrow.roles según el workflow correcto
-        // Cliente = approver (quien aprueba y libera)
-        // Trabajador = serviceProvider (quien hace el trabajo) = receiver (quien recibe el pago)
-        if (!clientWallet && escrow.roles?.approver) {
-          clientWallet = escrow.roles.approver;
+
+        const taskFunderWallet =
+          selectedDispute.client_funder_wallet ??
+          selectedDispute.arcusx_tasks?.client_funder_wallet ??
+          null;
+        const proposalWorkerWallet =
+          selectedDispute.worker_payout_wallet ?? null;
+
+        let payoutTargets;
+        try {
+          payoutTargets = resolveDisputePayoutTargets({
+            escrow,
+            taskFunderWallet,
+            proposalWorkerWallet,
+            dbClientWallet,
+            dbWorkerWallet,
+            platformWallet: PLATFORM_WALLET,
+          });
+        } catch {
+          throw new Error(
+            'No se pudo determinar la wallet del empleador (cliente). ' +
+              `Revisa roles del escrow: signer=${escrow.roles?.signer ?? '—'}, approver=${escrow.roles?.approver ?? '—'}`,
+          );
         }
-        
-        if (!workerWallet && escrow.roles?.serviceProvider) {
-          workerWallet = escrow.roles.serviceProvider;
-        }
-        
-        // Verificación adicional: si receiver existe y es diferente de serviceProvider, puede ser el trabajador también
-        if (!workerWallet && escrow.roles?.receiver && escrow.roles.receiver !== escrow.roles?.serviceProvider) {
-          workerWallet = escrow.roles.receiver;
-        }
-        
-        if (!clientWallet || !clientWallet.startsWith('G')) {
-          throw new Error(`No se pudo obtener una dirección Stellar válida para el cliente. Escrow receiver: ${escrow.roles?.receiver || 'N/A'}`);
-        }
-        
-        if (resolution.decision === 'worker' && (!workerWallet || !workerWallet.startsWith('G'))) {
-          throw new Error(`No se pudo obtener una dirección Stellar válida para el trabajador.`);
+
+        let clientWallet: string;
+        let workerWallet: string | null;
+        try {
+          ({ clientWallet, workerWallet } = assertDisputePayoutsForDecision(
+            resolution.decision,
+            payoutTargets,
+          ));
+        } catch (payoutErr: unknown) {
+          const code = payoutErr instanceof Error ? payoutErr.message : '';
+          if (code === 'CLIENT_TREASURY_BLOCKED') {
+            throw new Error(
+              t('admin.disputes.resolve.treasuryBlocked')
+                .replace('{{wallet}}', payoutTargets.client.wallet)
+                .replace('{{platform}}', PLATFORM_WALLET || payoutTargets.client.wallet),
+            );
+          }
+          if (code === 'WORKER_TREASURY_BLOCKED') {
+            throw new Error(
+              t('admin.disputes.resolve.workerTreasuryBlocked')
+                .replace('{{wallet}}', payoutTargets.worker?.wallet ?? '—')
+                .replace('{{platform}}', PLATFORM_WALLET || '—'),
+            );
+          }
+          if (code === 'WORKER_WALLET_UNRESOLVED') {
+            throw new Error(t('admin.disputes.resolve.workerUnresolved'));
+          }
+          if (code === 'SAME_CLIENT_WORKER_WALLET') {
+            throw new Error(t('admin.disputes.resolve.samePartyWallet'));
+          }
+          throw payoutErr;
         }
         
         // Calcular montos según la decisión
@@ -751,10 +1033,11 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
         } else if (resolution.decision === 'worker') {
           workerAmount = balance;
         } else if (resolution.decision === 'split') {
-          // Calcular split basado en refund_percentage
           const refundPercentage = resolution.refund_percentage || 50;
-          clientAmount = (balance * refundPercentage) / 100;
-          workerAmount = balance - clientAmount;
+          ({ clientAmount, workerAmount } = allocateDisputeSplitAmounts(
+            balance,
+            refundPercentage,
+          ));
         }
         
         
@@ -824,17 +1107,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
             }
             
             //  Solo actualizar BD si el escrow está confirmado como resuelto en blockchain
-            if (selectedDispute && typeof selectedDispute.id === 'number') {
-              try {
-                await resolveAdminDispute(selectedDispute.id, {
-                  decision: resolution.decision,
-                  reason: resolution.reason,
-                  refund_percentage: undefined
-                });
-              } catch (dbError: any) {
-                // No fallar si la BD no se actualiza, el escrow ya está resuelto en blockchain
-              }
-            }
+            await persistResolvedDisputeToDb(String(resolveResult.txHash ?? ''));
             
             //  MEJORA CRÍTICA: Mostrar popup de éxito INMEDIATAMENTE cuando la transacción sea exitosa
             setSuccessPopupData({
@@ -991,17 +1264,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
             }
             
             //  Solo actualizar BD si el escrow está confirmado como resuelto en blockchain
-            if (selectedDispute && typeof selectedDispute.id === 'number') {
-              try {
-                await resolveAdminDispute(selectedDispute.id, {
-                  decision: resolution.decision,
-                  reason: resolution.reason,
-                  refund_percentage: undefined
-                });
-              } catch (dbError: any) {
-                // No fallar si la BD no se actualiza, el escrow ya está resuelto en blockchain
-              }
-            }
+            await persistResolvedDisputeToDb(String(resolveResult.txHash ?? ''));
             
             //  MEJORA CRÍTICA: Mostrar popup de éxito INMEDIATAMENTE cuando la transacción sea exitosa
             setSuccessPopupData({
@@ -1026,67 +1289,55 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
             setError(errorMessage);
           }
         } else if (resolution.decision === 'split') {
-          // Split: hacer dos llamadas separadas (primero cliente, luego trabajador)
-          let successMessages: string[] = [];
-          let errorMessages: string[] = [];
-          let lastTxHash: string | undefined;
-              
-              // Reembolsar al cliente
+          if (!workerWallet) {
+            throw new Error(t('admin.disputes.resolve.workerUnresolved'));
+          }
+
+          const splitDistributions: Array<{ address: string; amount: number }> = [];
           if (clientAmount > 0) {
-            try {
-              setSuccess('Preparando transacción de reembolso al cliente. Por favor, firma la transacción en Freighter...');
-              
-              const refundResult = await resolveDisputeTrustlessEscrow(
-                contractId,
-                disputeResolver,
-                {
-                  address: clientWallet,
-                  amount: clientAmount
-                },
-                kit,
-                resolveDispute,
-                sendTransaction,
-                getEscrowByContractIds
+            splitDistributions.push({ address: clientWallet, amount: clientAmount });
+          }
+          if (workerAmount > 0) {
+            splitDistributions.push({ address: workerWallet, amount: workerAmount });
+          }
+          if (splitDistributions.length === 0) {
+            throw new Error(t('admin.disputes.error.noFunds'));
+          }
+
+          setSuccess(
+            `Preparando división (${clientAmount.toFixed(7)} USDC → empleador, ` +
+              `${workerAmount.toFixed(7)} USDC → trabajador). ` +
+              'Freighter debería pedirte firmar ahora…',
+          );
+
+          const splitResult = await resolveDisputeTrustlessEscrow(
+            contractId,
+            disputeResolver,
+            splitDistributions,
+            kit,
+            resolveDispute,
+            sendTransaction,
+            getEscrowByContractIds,
+          );
+
+          const successMessages: string[] = [];
+          const errorMessages: string[] = [];
+          let lastTxHash: string | undefined;
+
+          if (splitResult.success) {
+            if (clientAmount > 0) {
+              successMessages.push(
+                `${clientAmount.toFixed(7)} USDC → empleador ${clientWallet.slice(0, 8)}…`,
               );
-              
-              if (refundResult.success) {
-                successMessages.push(`${clientAmount.toFixed(7)} USDC reembolsados al cliente`);
-                lastTxHash = refundResult.txHash;
-                  } else {
-                errorMessages.push(`Error al reembolsar al cliente: ${refundResult.error}`);
-                  }
-            } catch (refundError: any) {
-              errorMessages.push(`Error al reembolsar al cliente: ${refundError.message}`);
-                }
-              }
-              
-              // Pagar al trabajador
-          if (workerAmount > 0 && workerWallet) {
-            try {
-              setSuccess('Preparando transacción de pago al trabajador. Por favor, firma la transacción en Freighter...');
-              
-              const paymentResult = await resolveDisputeTrustlessEscrow(
-                contractId,
-                disputeResolver,
-                {
-                  address: workerWallet,
-                  amount: workerAmount
-                },
-                kit,
-                resolveDispute,
-                sendTransaction,
-                getEscrowByContractIds
-                );
-                
-                if (paymentResult.success) {
-                successMessages.push(`${workerAmount.toFixed(7)} USDC pagados al trabajador`);
-                lastTxHash = paymentResult.txHash;
-                } else {
-                errorMessages.push(`Error al pagar al trabajador: ${paymentResult.error}`);
-              }
-            } catch (paymentError: any) {
-              errorMessages.push(`Error al pagar al trabajador: ${paymentError.message}`);
             }
+            if (workerAmount > 0) {
+              successMessages.push(
+                `${workerAmount.toFixed(7)} USDC → trabajador ${workerWallet.slice(0, 8)}…`,
+              );
+            }
+            lastTxHash = splitResult.txHash;
+          } else {
+            errorMessages.push(splitResult.error || 'Error al dividir fondos');
           }
           
           if (successMessages.length > 0) {
@@ -1138,17 +1389,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
             }
             
             //  Solo actualizar BD si el escrow está confirmado como resuelto en blockchain
-            if (selectedDispute && typeof selectedDispute.id === 'number') {
-              try {
-                await resolveAdminDispute(selectedDispute.id, {
-                  decision: resolution.decision,
-                  reason: resolution.reason,
-                  refund_percentage: resolution.decision === 'split' ? resolution.refund_percentage : undefined
-                });
-              } catch (dbError: any) {
-                // No fallar si la BD no se actualiza, el escrow ya está resuelto en blockchain
-              }
-            }
+            await persistResolvedDisputeToDb(lastTxHash ?? '');
             
             //  MEJORA CRÍTICA: Mostrar popup de éxito INMEDIATAMENTE cuando la transacción sea exitosa
             setSuccessPopupData({
@@ -1193,7 +1434,8 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
       //  CRÍTICO: Si llegamos aquí, la disputa NO tiene escrow_id de Trustless Work
       // Esto significa que es una disputa del sistema antiguo (sin escrow en blockchain)
       // En este caso, solo actualizamos la BD (el sistema antiguo no usa blockchain)
-      if (!selectedDispute.escrow_id || !selectedDispute.escrow_id.startsWith('C')) {
+      const legacyEscrowId = getDisputeEscrowId(selectedDispute);
+      if (!legacyEscrowId?.startsWith('C')) {
         await resolveAdminDispute(selectedDispute.id, resolutionData);
         setSuccess('Disputa resuelta correctamente');
         fetchDisputes();
@@ -1205,14 +1447,30 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
       // Si no, hay un error en la lógica - esto NO debería pasar
       throw new Error('Error: La disputa tiene escrow_id pero no fue procesada correctamente. Por favor, recarga la página e intenta nuevamente.');
     } catch (err: any) {
-      
-      const errorMessage = err.message || t('admin.disputes.error.resolve');
+      const raw = err?.message ?? '';
+      let errorMessage = raw || t('admin.disputes.error.resolve');
+      if (raw === 'SPLIT_PERCENT_INVALID' || raw === 'SPLIT_AMOUNT_TOO_SMALL') {
+        errorMessage =
+          'No se pudo calcular el split: usa un porcentaje entre 1 y 99 y verifica que el escrow tenga balance.';
+      } else if (raw === 'SPLIT_BALANCE_ZERO') {
+        errorMessage = 'El escrow no tiene balance para dividir.';
+      }
       setError(errorMessage);
-      
-      // Si el error es sobre wallet o firma, mostrar mensaje más específico
-      if (errorMessage.includes('wallet') || errorMessage.includes('firmar') || errorMessage.includes('sign')) {
+
+      if (
+        errorMessage.includes('wallet') ||
+        errorMessage.includes('firmar') ||
+        errorMessage.includes('sign') ||
+        errorMessage.includes('Freighter')
+      ) {
         setError(errorMessage + '\n\n' + t('admin.disputes.error.walletHint'));
       }
+      window.requestAnimationFrame(() => {
+        document.querySelector('.admin-alert.error')?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+        });
+      });
     } finally {
       setResolving(false);
     }
@@ -1223,11 +1481,14 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
 
   const disputeIsPending = (d: any): boolean => {
     if (!d) return false;
+    if (String(d.status || '').toLowerCase() === 'cancelled') return false;
+    if (escrowNeedsOnChainRelease(d)) return true;
     const st = String(d.displayStatus || d.status || '').toLowerCase();
-    if (st === 'resolved' || st === 'cancelled') return false;
-    if (d.resolved_at) return false;
+    if (st === 'cancelled') return false;
+    if (st === 'resolved' && d.trustlessWorkIsResolved === true) return false;
     if (d.trustlessWorkIsResolved === true) return false;
-    return true;
+    if (d.resolved_at && st === 'resolved') return false;
+    return st === 'pending' || !d.resolved_at;
   };
 
   const getStatusBadge = (status: string) => {
@@ -1271,7 +1532,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
             border: '1px solid rgba(255, 152, 0, 0.3)',
             borderRadius: '8px',
             fontSize: '0.9em',
-            color: 'rgba(255, 255, 255, 0.9)',
+            color: 'var(--text-secondary)',
             display: 'flex',
             alignItems: 'flex-start',
             gap: '10px'
@@ -1387,7 +1648,23 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                     </td>
                     <td>
                       <div>
-                        <strong>#{dispute.task_id}</strong>
+                        <strong>
+                          {dispute.agreement_id
+                            ? `Deal ${String(dispute.agreement_id).slice(0, 8)}…`
+                            : `#${dispute.task_id}`}
+                        </strong>
+                        {dispute.entity_type === 'deal' && (
+                          <span style={{
+                            marginLeft: '8px',
+                            fontSize: '0.75em',
+                            padding: '2px 6px',
+                            background: 'rgba(16, 221, 136, 0.15)',
+                            borderRadius: '4px',
+                            color: '#10dd88',
+                          }}>
+                            Deal
+                          </span>
+                        )}
                         {dispute.isVirtualDispute && (
                           <span style={{ 
                             marginLeft: '8px',
@@ -1404,9 +1681,9 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                         {dispute.task_price && (
                           <small>{parseFloat(dispute.task_price).toFixed(2)} USDC</small>
                         )}
-                        {dispute.escrow_id && (
+                        {getDisputeEscrowId(dispute) && (
                           <div style={{ fontSize: '0.75em', color: '#666', marginTop: '2px' }}>
-                            Escrow: {dispute.escrow_id.substring(0, 8)}...
+                            Escrow: {getDisputeEscrowId(dispute)!.substring(0, 8)}...
                           </div>
                         )}
                         {/*  MEJORA: Mensaje especial para disputas por cancelación */}
@@ -1543,7 +1820,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                         : 'rgba(255, 255, 255, 0.1)',
                       border: `1px solid ${activeTab === 'summary' ? 'transparent' : 'rgba(16, 221, 136, 0.3)'}`,
                       borderRadius: '8px',
-                      color: '#fff',
+                      color: 'var(--text-primary)',
                       fontWeight: 'bold',
                       cursor: 'pointer',
                       transition: 'all 0.3s ease',
@@ -1554,12 +1831,12 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                     }}
                     onMouseOver={(e) => {
                       if (activeTab !== 'summary') {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                        e.currentTarget.style.background = 'var(--bg-hover)';
                       }
                     }}
                     onMouseOut={(e) => {
                       if (activeTab !== 'summary') {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                        e.currentTarget.style.background = 'var(--bg-tertiary)';
                       }
                     }}
                   >
@@ -1576,7 +1853,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                         : 'rgba(255, 255, 255, 0.1)',
                       border: `1px solid ${activeTab === 'chat' ? 'transparent' : 'rgba(16, 221, 136, 0.3)'}`,
                       borderRadius: '8px',
-                      color: '#fff',
+                      color: 'var(--text-primary)',
                       fontWeight: 'bold',
                       cursor: 'pointer',
                       transition: 'all 0.3s ease',
@@ -1587,12 +1864,12 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                     }}
                     onMouseOver={(e) => {
                       if (activeTab !== 'chat') {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                        e.currentTarget.style.background = 'var(--bg-hover)';
                       }
                     }}
                     onMouseOut={(e) => {
                       if (activeTab !== 'chat') {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                        e.currentTarget.style.background = 'var(--bg-tertiary)';
                       }
                     }}
                   >
@@ -1609,7 +1886,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                         : 'rgba(255, 255, 255, 0.1)',
                       border: `1px solid ${activeTab === 'files' ? 'transparent' : 'rgba(16, 221, 136, 0.3)'}`,
                       borderRadius: '8px',
-                      color: '#fff',
+                      color: 'var(--text-primary)',
                       fontWeight: 'bold',
                       cursor: 'pointer',
                       transition: 'all 0.3s ease',
@@ -1620,12 +1897,12 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                     }}
                     onMouseOver={(e) => {
                       if (activeTab !== 'files') {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                        e.currentTarget.style.background = 'var(--bg-hover)';
                       }
                     }}
                     onMouseOut={(e) => {
                       if (activeTab !== 'files') {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                        e.currentTarget.style.background = 'var(--bg-tertiary)';
                       }
                     }}
                   >
@@ -1642,7 +1919,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                         : 'rgba(255, 255, 255, 0.1)',
                       border: `1px solid ${activeTab === 'timeline' ? 'transparent' : 'rgba(16, 221, 136, 0.3)'}`,
                       borderRadius: '8px',
-                      color: '#fff',
+                      color: 'var(--text-primary)',
                       fontWeight: 'bold',
                       cursor: 'pointer',
                       transition: 'all 0.3s ease',
@@ -1653,12 +1930,12 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                     }}
                     onMouseOver={(e) => {
                       if (activeTab !== 'timeline') {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                        e.currentTarget.style.background = 'var(--bg-hover)';
                       }
                     }}
                     onMouseOut={(e) => {
                       if (activeTab !== 'timeline') {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                        e.currentTarget.style.background = 'var(--bg-tertiary)';
                       }
                     }}
                   >
@@ -1689,7 +1966,55 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                         </h4>
                         <p className="dispute-resolve-intro">{t('admin.disputes.resolve.intro')}</p>
 
-                        {selectedDispute.escrow_id?.startsWith('C') && (
+                        {selectedDispute.resolved_at && escrowNeedsOnChainRelease(selectedDispute) && (
+                          <div
+                            className="admin-alert warning dispute-resolve-wallet-msg"
+                            style={{ marginBottom: '16px' }}
+                          >
+                            <FaExclamationTriangle aria-hidden />
+                            <span>{t('admin.disputes.resolve.onChainPending')}</span>
+                          </div>
+                        )}
+
+                        {payoutWalletPreview.client &&
+                          (resolution.decision === 'client' || resolution.decision === 'split') && (
+                          <div
+                            className={`admin-alert ${payoutWalletPreview.client.isTreasury ? 'error' : 'success'} dispute-resolve-wallet-msg`}
+                            style={{ marginBottom: '12px' }}
+                          >
+                            {payoutWalletPreview.client.isTreasury ? (
+                              <FaExclamationTriangle aria-hidden />
+                            ) : (
+                              <FaCheckCircle aria-hidden />
+                            )}
+                            <span>
+                              {t('admin.disputes.resolve.refundDestination')
+                                .replace('{{wallet}}', payoutWalletPreview.client.wallet)
+                                .replace('{{source}}', payoutWalletPreview.client.source)}
+                            </span>
+                          </div>
+                        )}
+
+                        {payoutWalletPreview.worker &&
+                          (resolution.decision === 'worker' || resolution.decision === 'split') && (
+                          <div
+                            className={`admin-alert ${payoutWalletPreview.worker.isTreasury ? 'error' : 'success'} dispute-resolve-wallet-msg`}
+                            style={{ marginBottom: '12px' }}
+                          >
+                            {payoutWalletPreview.worker.isTreasury ? (
+                              <FaExclamationTriangle aria-hidden />
+                            ) : (
+                              <FaCheckCircle aria-hidden />
+                            )}
+                            <span>
+                              {t('admin.disputes.resolve.workerDestination')
+                                .replace('{{wallet}}', payoutWalletPreview.worker.wallet)
+                                .replace('{{source}}', payoutWalletPreview.worker.source)}
+                            </span>
+                          </div>
+                        )}
+
+                        {getDisputeEscrowId(selectedDispute)?.startsWith('C') && (
                           <>
                             <p className="dispute-resolve-wallet-line">{t('admin.disputes.resolve.walletRequired')}</p>
                             {requiredDisputeResolver &&
@@ -1715,7 +2040,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                           </>
                         )}
 
-                        {!selectedDispute.escrow_id?.startsWith('C') && (
+                        {!getDisputeEscrowId(selectedDispute)?.startsWith('C') && (
                           <div
                             className="dispute-resolve-legacy"
                             style={{
@@ -1828,19 +2153,19 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
 
                 {activeTab === 'chat' && selectedDispute && (
                   <div style={{ minHeight: '400px' }}>
-                    <DisputeChatView disputeId={selectedDispute.id} />
+                    <DisputeChatView {...getDisputePanelIds(selectedDispute)} />
                   </div>
                 )}
 
                 {activeTab === 'files' && selectedDispute && (
                   <div style={{ minHeight: '400px' }}>
-                    <DisputeFilesView disputeId={selectedDispute.id} />
+                    <DisputeFilesView {...getDisputePanelIds(selectedDispute)} />
                   </div>
                 )}
 
                 {activeTab === 'timeline' && selectedDispute && (
                   <div style={{ minHeight: '400px' }}>
-                    <DisputeTimelineView disputeId={selectedDispute.id} />
+                    <DisputeTimelineView {...getDisputePanelIds(selectedDispute)} />
                   </div>
                 )}
               </div>

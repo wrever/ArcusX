@@ -1,8 +1,8 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // Leer de .env (desarrollo) o de lo embebido en el build (producción: npm run build debe ejecutarse CON .env o .env.production)
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+export const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+export const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 const hasValidUrl = Boolean(supabaseUrl && !supabaseUrl.includes('your-project'));
 const hasValidKey = Boolean(supabaseAnonKey && supabaseAnonKey.length > 20);

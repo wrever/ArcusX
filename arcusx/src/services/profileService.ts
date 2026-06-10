@@ -2,7 +2,7 @@
  * Servicio para interactuar con los endpoints de perfil de usuario
  */
 
-import { API_URL } from '../config/database';
+import { arcusxApiUrl, arcusxApiHeaders } from '../config/arcusxApi';
 import type {
   UserProfile,
   UpdateProfileData,
@@ -16,31 +16,12 @@ import type {
 } from '../types/profile';
 
 /**
- * Obtener token de autenticación
- */
-function getAuthToken(): string | null {
-  const token = localStorage.getItem('token');
-  if (token) return token;
-  const adminToken = localStorage.getItem('admin_token');
-  return adminToken;
-}
-
-/**
  * Obtener perfil público de usuario
  */
 export async function getUserProfile(userId: number): Promise<UserProfile> {
-  const token = getAuthToken();
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-  
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  
-  const response = await fetch(`${API_URL}/auth/get_user_profile.php?user_id=${userId}`, {
+  const response = await fetch(arcusxApiUrl('get_user_profile', { user_id: userId }), {
     method: 'GET',
-    headers,
+    headers: arcusxApiHeaders(),
   });
   
   if (!response.ok) {
@@ -66,17 +47,9 @@ export async function updateUserBasicData(data: {
   currentPassword?: string;
   newPassword?: string;
 }): Promise<void> {
-  const token = getAuthToken();
-  if (!token) {
-    throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
-  }
-  
-  const response = await fetch(`${API_URL}/auth/update_user.php`, {
+  const response = await fetch(`${arcusxApiUrl('update_user')}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: arcusxApiHeaders(),
     body: JSON.stringify({
       id: data.id,
       name: data.name,
@@ -101,17 +74,9 @@ export async function updateUserBasicData(data: {
  * Actualizar perfil del usuario
  */
 export async function updateUserProfile(data: UpdateProfileData): Promise<void> {
-  const token = getAuthToken();
-  if (!token) {
-    throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
-  }
-  
-  const response = await fetch(`${API_URL}/auth/update_user_profile.php`, {
+  const response = await fetch(`${arcusxApiUrl('update_user_profile')}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: arcusxApiHeaders(),
     body: JSON.stringify(data),
   });
   
@@ -130,19 +95,14 @@ export async function updateUserProfile(data: UpdateProfileData): Promise<void> 
  * Subir avatar/foto de perfil
  */
 export async function uploadAvatar(file: File): Promise<string> {
-  const token = getAuthToken();
-  if (!token) {
-    throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
-  }
-  
   const formData = new FormData();
   formData.append('file', file);
-  
-  const response = await fetch(`${API_URL}/auth/upload_avatar.php`, {
+  const headers = arcusxApiHeaders();
+  headers.delete('Content-Type');
+
+  const response = await fetch(`${arcusxApiUrl('upload_avatar')}`, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
+    headers,
     body: formData,
   });
   
@@ -163,18 +123,9 @@ export async function uploadAvatar(file: File): Promise<string> {
  * Obtener portfolio del usuario
  */
 export async function getPortfolio(userId: number): Promise<PortfolioItem[]> {
-  const token = getAuthToken();
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-  
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  
-  const response = await fetch(`${API_URL}/auth/manage_portfolio.php?user_id=${userId}`, {
+  const response = await fetch(arcusxApiUrl('manage_portfolio', { user_id: userId }), {
     method: 'GET',
-    headers,
+    headers: arcusxApiHeaders(),
   });
   
   if (!response.ok) {
@@ -194,17 +145,9 @@ export async function getPortfolio(userId: number): Promise<PortfolioItem[]> {
  * Agregar item al portfolio
  */
 export async function addPortfolioItem(item: CreatePortfolioItemData): Promise<number> {
-  const token = getAuthToken();
-  if (!token) {
-    throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
-  }
-  
-  const response = await fetch(`${API_URL}/auth/manage_portfolio.php`, {
+  const response = await fetch(`${arcusxApiUrl('manage_portfolio')}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: arcusxApiHeaders(),
     body: JSON.stringify(item),
   });
   
@@ -225,17 +168,9 @@ export async function addPortfolioItem(item: CreatePortfolioItemData): Promise<n
  * Actualizar item del portfolio
  */
 export async function updatePortfolioItem(item: UpdatePortfolioItemData): Promise<void> {
-  const token = getAuthToken();
-  if (!token) {
-    throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
-  }
-  
-  const response = await fetch(`${API_URL}/auth/manage_portfolio.php`, {
+  const response = await fetch(`${arcusxApiUrl('manage_portfolio')}`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: arcusxApiHeaders(),
     body: JSON.stringify(item),
   });
   
@@ -254,16 +189,9 @@ export async function updatePortfolioItem(item: UpdatePortfolioItemData): Promis
  * Eliminar item del portfolio
  */
 export async function deletePortfolioItem(itemId: number): Promise<void> {
-  const token = getAuthToken();
-  if (!token) {
-    throw new Error('No hay token de autenticación. Por favor, inicia sesión.');
-  }
-  
-  const response = await fetch(`${API_URL}/auth/manage_portfolio.php?id=${itemId}`, {
+  const response = await fetch(arcusxApiUrl('manage_portfolio', { id: itemId }), {
     method: 'DELETE',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
+    headers: arcusxApiHeaders(),
   });
   
   if (!response.ok) {
@@ -281,11 +209,9 @@ export async function deletePortfolioItem(itemId: number): Promise<void> {
  * Obtener estadísticas públicas del usuario
  */
 export async function getUserPublicStats(userId: number): Promise<UserStatistics> {
-  const response = await fetch(`${API_URL}/auth/get_user_public_stats.php?user_id=${userId}`, {
+  const response = await fetch(arcusxApiUrl('get_user_public_stats', { user_id: userId }), {
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: arcusxApiHeaders(),
   });
   
   if (!response.ok) {

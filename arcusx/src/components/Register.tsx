@@ -1,9 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { FaArrowLeft, FaGoogle, FaGithub, FaGem, FaGlobe, FaTasks } from 'react-icons/fa';
 import '../css/Register.css';
 import '../css/Register.enterprise.css';
 import { authService } from '../services/authService';
+import {
+  captureRefFromSearch,
+  getStoredRefCode,
+  isReferralRefCode,
+  normalizeRefCode,
+} from '../utils/referralCapture';
 import { useEnterpriseMode } from '../hooks/useEnterpriseMode';
 import { useAuth } from '../hooks/useAuth';
 import { useI18n } from '../i18n/I18nProvider';
@@ -15,7 +21,16 @@ const Register = () => {
   const [error, setError] = useState('');
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
+  const refFromUrl = searchParams.get('ref') ?? searchParams.get('r');
+  const refCode = refFromUrl && isReferralRefCode(refFromUrl)
+    ? normalizeRefCode(refFromUrl)
+    : getStoredRefCode();
+
+  useEffect(() => {
+    captureRefFromSearch(window.location.search);
+  }, [searchParams]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -94,6 +109,21 @@ const Register = () => {
             <div className="register-form">
               <h2>{t('register.title')}</h2>
               {error && <div className="register-error">{error}</div>}
+
+              {refCode && (
+                <p
+                  style={{
+                    marginBottom: '1rem',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    background: 'rgba(16, 221, 136, 0.12)',
+                    border: '1px solid rgba(16, 221, 136, 0.35)',
+                    fontSize: '14px',
+                  }}
+                >
+                  Invitación de referido activa · código <strong>{refCode}</strong>
+                </p>
+              )}
 
               <div className="oauth-buttons">
                 <button

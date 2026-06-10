@@ -2,12 +2,53 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
 import { FaRocket, FaUsers, FaLaptopCode, FaMoneyBillWave, FaArrowRight, FaLock, FaBolt, FaCheck, FaMapMarkedAlt, FaChevronDown, FaSearch, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
-import axios from 'axios';
-import { API_URL } from '../config/database';
+import axios from '../config/axios';
+import { arcusxApiUrl } from '../config/arcusxApi';
+import { hasSupabase, supabase } from '../config/supabase';
+import { getFreelancers } from '../services/freelancerService';
+import type { Freelancer } from '../types/freelancer';
+import { getAvatarUrl } from '../utils/avatarUtils';
+import { normalizeDisplayText } from '../utils/utf8Mojibake';
 import '../css/Hero.css';
 import { useI18n } from '../i18n/I18nProvider';
 import Footer from './Footer';
 import SEO from './SEO';
+import TaskCreatorLine from './TaskCreatorLine';
+import UsernameWithVerified from './UsernameWithVerified';
+import {
+  hasEnterpriseVerifiedBadge,
+  hasIndividualVerifiedBadge,
+} from '../utils/profileVerification';
+
+/** URL de /create-task con contexto de contratación (también leída por query en CreateTask). */
+function buildHireTaskUrl(freelancer: Freelancer): string {
+  const firstSkill = freelancer.skills?.[0];
+  const skillLabel =
+    typeof firstSkill === 'string'
+      ? firstSkill
+      : firstSkill &&
+          typeof firstSkill === 'object' &&
+          firstSkill !== null &&
+          'name' in firstSkill
+        ? String((firstSkill as { name: string }).name)
+        : undefined;
+  const params = new URLSearchParams();
+  params.set('for_user', String(freelancer.id));
+  params.set('hire_username', encodeURIComponent(freelancer.username));
+  if (skillLabel) params.set('hire_skill', encodeURIComponent(skillLabel));
+  return `/create-task?${params.toString()}`;
+}
+
+function freelancerDisplayInitials(name: string): string {
+  if (!name) return '?';
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}
 
 interface TaskResult {
   id: number;
@@ -18,8 +59,27 @@ interface TaskResult {
   category?: string;
   difficulty?: string;
   creator_username?: string;
+  creator_display_name?: string;
+  creator_verified?: boolean;
+  creator_verified_enterprise?: boolean;
+  creator_verified_individual?: boolean;
+  creator_id?: number;
   created_at?: string;
   proposal_count?: number;
+}
+
+/** Hero landing: <10 valor exacto; ≥10 prefijo + y piso a decenas (199 → +190). */
+function formatHeroLandingCount(n: number): string {
+  const v = Math.max(0, Math.floor(Number(n) || 0));
+  if (v < 10) return String(v);
+  return `+${Math.floor(v / 10) * 10}`;
+}
+
+/** Misma regla en dólares enteros (647 → +$640; 5 → $5). */
+function formatHeroLandingMoney(usdc: number): string {
+  const v = Math.max(0, Math.round(Number(usdc) || 0));
+  if (v < 10) return `$${v}`;
+  return `+$${Math.floor(v / 10) * 10}`;
 }
 
 const viewportScroll = { once: true, amount: 0.2 };
@@ -38,22 +98,34 @@ const Hero = () => {
   const carouselTrackRef = useRef<HTMLDivElement>(null);
   const [carouselTasks, setCarouselTasks] = useState<TaskResult[]>([]);
   const [loadingCarousel, setLoadingCarousel] = useState(true);
-  /* Mockup stats para la landing (sin fetch) */
-  const heroStats = { openTasks: 10, totalUsers: 190, totalVolumeUsdc: 600 };
+  const [landingFreelancers, setLandingFreelancers] = useState<Freelancer[]>([]);
+  const [loadingLandingFreelancers, setLoadingLandingFreelancers] = useState(true);
+  const [publicStats, setPublicStats] = useState<{
+    open_tasks: number;
+    total_users: number;
+    total_volume_usdc: number;
+  } | null>(null);
 
   // Carrusel infinito: muchas copias de la lista para sensación de “millones de opciones”; el scroll avanza y al pasar un bloque se reubica sin que se note
   const REPEAT_COPIES = 8;
   const infiniteCarouselTasks = carouselTasks.length > 0
     ? Array.from({ length: REPEAT_COPIES }, () => carouselTasks).flat()
     : [];
+  const infiniteLandingFreelancers = landingFreelancers.length > 0
+    ? Array.from({ length: REPEAT_COPIES }, () => landingFreelancers).flat()
+    : [];
   const oneSetWidthRef = useRef(0);
   const autoScrollRef = useRef<number | null>(null);
+  const freelancerCarouselRef = useRef<HTMLDivElement>(null);
+  const freelancerTrackRef = useRef<HTMLDivElement>(null);
+  const freelancerOneSetWidthRef = useRef(0);
+  const freelancerAutoScrollRef = useRef<number | null>(null);
 
   useEffect(() => {
     const fetchCarouselTasks = async () => {
       setLoadingCarousel(true);
       try {
-        const url = `${API_URL}/auth/get_tasks.php?sort_by=date_desc`;
+        const url = arcusxApiUrl('get_tasks', { sort_by: 'date_desc' });
         const response = await axios.get(url);
         const data = Array.isArray(response.data) ? response.data : (response.data?.tasks ?? []);
         setCarouselTasks(Array.isArray(data) ? data.slice(0, 12) : []);
@@ -64,6 +136,117 @@ const Hero = () => {
       }
     };
     fetchCarouselTasks();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadLandingFreelancers = async () => {
+      setLoadingLandingFreelancers(true);
+      try {
+        const res = await getFreelancers({
+          page: 1,
+          limit: 40,
+          sortBy: 'rating',
+          sortOrder: 'desc',
+          preferProfile: true,
+        });
+        if (!cancelled) {
+          const list = Array.isArray(res.freelancers) ? res.freelancers : [];
+          setLandingFreelancers(list.slice(0, 16));
+        }
+      } catch {
+        if (!cancelled) setLandingFreelancers([]);
+      } finally {
+        if (!cancelled) setLoadingLandingFreelancers(false);
+      }
+    };
+    loadLandingFreelancers();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadPublicStats = async () => {
+      let open_tasks = 0;
+      let total_users = 0;
+      let total_volume_usdc = 0;
+
+      const parseLandingStats = (d: {
+        success?: boolean;
+        open_tasks?: number;
+        total_users?: number;
+        total_volume_usdc?: number;
+      } | null | undefined) => {
+        if (!d || d.success === false) return;
+        open_tasks = Number(d.open_tasks) || 0;
+        total_users = Number(d.total_users) || 0;
+        total_volume_usdc = Number(d.total_volume_usdc) || 0;
+      };
+
+      if (hasSupabase) {
+        try {
+          const res = await axios.get<{
+            success?: boolean;
+            open_tasks?: number;
+            total_users?: number;
+            total_volume_usdc?: number;
+          }>(arcusxApiUrl('get_landing_market_stats'));
+          if (cancelled) return;
+          parseLandingStats(res.data);
+        } catch {
+          try {
+            const [uRes, oRes, vRes] = await Promise.all([
+              supabase.rpc('get_landing_oauth_user_count'),
+              supabase.rpc('get_landing_open_tasks_count'),
+              supabase.rpc('get_landing_completed_volume_usdc'),
+            ]);
+            if (cancelled) return;
+            const parseRpcInt = (data: unknown): number | null => {
+              if (data == null) return null;
+              const n = typeof data === 'string' ? parseInt(data, 10) : Number(data);
+              return !Number.isNaN(n) && n >= 0 ? n : null;
+            };
+            if (!uRes.error) {
+              const n = parseRpcInt(uRes.data);
+              if (n != null) total_users = n;
+            }
+            if (!oRes.error) {
+              const n = parseRpcInt(oRes.data);
+              if (n != null) open_tasks = n;
+            }
+            if (!vRes.error) {
+              const n = parseRpcInt(vRes.data);
+              if (n != null) total_volume_usdc = n;
+            }
+          } catch {
+            /* 0 */
+          }
+        }
+      } else {
+        try {
+          const res = await axios.get<{
+            success?: boolean;
+            open_tasks?: number;
+            total_users?: number;
+            total_volume_usdc?: number;
+          }>(arcusxApiUrl('get_landing_market_stats'));
+          if (cancelled) return;
+          parseLandingStats(res.data);
+        } catch {
+          /* valores en 0 */
+        }
+      }
+
+      if (!cancelled) {
+        setPublicStats({ open_tasks, total_users, total_volume_usdc });
+      }
+    };
+    loadPublicStats();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -79,8 +262,7 @@ const Hero = () => {
           const params = new URLSearchParams();
           params.append('search', searchQuery.trim());
           params.append('sort_by', 'date_desc');
-          const url = `${API_URL}/auth/get_tasks.php?${params.toString()}`;
-          const response = await axios.get(url);
+          const response = await axios.get(arcusxApiUrl('get_tasks', params));
           const data = Array.isArray(response.data) ? response.data : (response.data?.tasks ?? []);
           setSearchResults(Array.isArray(data) ? data.slice(0, 8) : []);
           setShowResults(true);
@@ -118,11 +300,29 @@ const Hero = () => {
     setSearchResults([]);
   };
 
+  const handleFreelancerHireClick = (freelancer: Freelancer) => {
+    const target = buildHireTaskUrl(freelancer);
+    const token = localStorage.getItem('token');
+    if (token) {
+      navigate(target);
+    } else {
+      navigate(`/login?redirect=${encodeURIComponent(target)}`);
+    }
+  };
+
   const scrollCarousel = (dir: 'left' | 'right') => {
     const el = carouselRef.current;
     if (!el) return;
     const step = el.clientWidth * 0.85;
     el.scrollBy({ left: dir === 'left' ? -step : step, behavior: 'smooth' });
+  };
+
+  /** Botones: inverso al carrusel de tareas (misma sensación que el auto-scroll RTL del track). */
+  const scrollFreelancerCarousel = (dir: 'left' | 'right') => {
+    const el = freelancerCarouselRef.current;
+    if (!el) return;
+    const step = el.clientWidth * 0.85;
+    el.scrollBy({ left: dir === 'left' ? step : -step, behavior: 'smooth' });
   };
 
   // Movimiento automático continuo; se reinicia cuando el carrusel se muestra de nuevo (p. ej. al borrar la búsqueda)
@@ -154,6 +354,42 @@ const Hero = () => {
       if (autoScrollRef.current != null) cancelAnimationFrame(autoScrollRef.current);
     };
   }, [carouselTasks.length, showCarousel]);
+
+  useEffect(() => {
+    if (landingFreelancers.length === 0) return;
+    const viewport = freelancerCarouselRef.current;
+    const track = freelancerTrackRef.current;
+    if (!viewport || !track) return;
+
+    const setWidth = track.scrollWidth / REPEAT_COPIES;
+    if (setWidth <= 0) return;
+    freelancerOneSetWidthRef.current = setWidth;
+
+    // Evita un frame en 0 y salto al envolver: empezar dentro del primer bloque repetido.
+    const maxStart = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+    viewport.scrollLeft = Math.min(Math.max(0, setWidth * 0.5), maxStart);
+
+    const SPEED_PX = 0.85;
+    const loop = () => {
+      const setW = freelancerOneSetWidthRef.current;
+      if (setW <= 0) {
+        freelancerAutoScrollRef.current = requestAnimationFrame(loop);
+        return;
+      }
+      // Sentido opuesto al carrusel de tareas (tareas: scrollLeft +; freelancers: −).
+      let next = viewport.scrollLeft - SPEED_PX;
+      if (next < 0) {
+        next += setW;
+      }
+      viewport.scrollLeft = next;
+      freelancerAutoScrollRef.current = requestAnimationFrame(loop);
+    };
+
+    freelancerAutoScrollRef.current = requestAnimationFrame(loop);
+    return () => {
+      if (freelancerAutoScrollRef.current != null) cancelAnimationFrame(freelancerAutoScrollRef.current);
+    };
+  }, [landingFreelancers.length]);
 
   const toggleRoadmap = (index: number) => {
     setExpandedRoadmap((prev) => {
@@ -196,7 +432,7 @@ const Hero = () => {
     name: 'Trabajos Online en Stellar Blockchain',
     provider: { '@type': 'Organization', name: 'ArcusX' },
     description: 'Plataforma de trabajos online en Stellar con escrow seguro y pagos en USDC.',
-    offers: { '@type': 'Offer', price: '0.5', priceCurrency: 'USD', description: 'Comisión 0.5% por transacción' }
+    offers: { '@type': 'Offer', price: '3', priceCurrency: 'USD', description: 'Comisión 3% al cliente en escrow por transacción' }
   };
   const productSchema = {
     '@context': 'https://schema.org',
@@ -234,27 +470,33 @@ const Hero = () => {
           </div>
           <div className="landing-hero-inner">
             <h1 className="landing-hero-title">
-              {t('hero.title.line1')}{' '}
+            {t('hero.title.line1')}{' '}
               <span className="landing-hero-highlight">{t('hero.title.web3')}</span>{' '}
-              {t('hero.title.for')}{' '}
+            {t('hero.title.for')}{' '}
               <span className="landing-hero-highlight">{t('hero.title.talent')}</span>{' '}
-              {t('hero.title.latam')}
-            </h1>
+            {t('hero.title.latam')}
+          </h1>
             <p className="landing-hero-desc">{t('hero.desc')}</p>
             {/* Stats arriba del buscador (lupa) */}
             <div className="landing-hero-trust" role="list" aria-label={t('hero.stats.aria')}>
               <span className="landing-hero-stat-item" role="listitem">
-                <span className="landing-hero-stat">+{heroStats.openTasks}</span>
+                <span className="landing-hero-stat">
+                  {formatHeroLandingCount(publicStats?.open_tasks ?? 0)}
+                </span>
                 <span className="landing-hero-stat-desc">{t('hero.stats.tasks')}</span>
               </span>
               <span className="landing-hero-stat-sep" aria-hidden="true">·</span>
               <span className="landing-hero-stat-item" role="listitem">
-                <span className="landing-hero-stat">+{heroStats.totalUsers}</span>
+                <span className="landing-hero-stat">
+                  {formatHeroLandingCount(publicStats?.total_users ?? 0)}
+                </span>
                 <span className="landing-hero-stat-desc">{t('hero.stats.users')}</span>
               </span>
               <span className="landing-hero-stat-sep" aria-hidden="true">·</span>
               <span className="landing-hero-stat-item" role="listitem">
-                <span className="landing-hero-stat">+${heroStats.totalVolumeUsdc}</span>
+                <span className="landing-hero-stat">
+                  {formatHeroLandingMoney(publicStats?.total_volume_usdc ?? 0)}
+                </span>
                 <span className="landing-hero-stat-desc">{t('hero.stats.payments.processed')}</span>
               </span>
             </div>
@@ -303,6 +545,20 @@ const Hero = () => {
                                   {task.description.slice(0, 100)}{task.description.length > 100 ? '…' : ''}
                                 </p>
                               )}
+                              {(task.creator_display_name || task.creator_username) && (
+                                <TaskCreatorLine
+                                  displayName={
+                                    task.creator_display_name?.trim() ||
+                                    task.creator_username?.trim() ||
+                                    ''
+                                  }
+                                  username={task.creator_username}
+                                  creatorId={task.creator_id}
+                                  verifiedEnterprise={Boolean(task.creator_verified_enterprise)}
+                                  verifiedIndividual={Boolean(task.creator_verified_individual)}
+                                  linkToProfile={Boolean(task.creator_id)}
+                                />
+                              )}
                               <div className="landing-hero-search-card-footer">
                                 <span className="landing-hero-search-card-price">
                                   {parseFloat(task.price).toFixed(2)} {task.currency}
@@ -314,14 +570,14 @@ const Hero = () => {
                                 >
                                   {t('hero.search.apply')} <FaArrowRight />
                                 </button>
-                              </div>
-                            </div>
+              </div>
+            </div>
                           </li>
                         ))}
                       </ul>
                     </>
                   )}
-                </div>
+              </div>
               )}
             </div>
 
@@ -353,6 +609,25 @@ const Hero = () => {
                                   {task.description.slice(0, 120)}{task.description.length > 120 ? '…' : ''}
                                 </p>
                               )}
+                              {(task.creator_display_name || task.creator_username) && (
+                                <div className="hero-carousel-card-creator">
+                                  <span className="hero-carousel-card-creator-label">
+                                    {t('hero.carousel.creator')}
+                                  </span>
+                                  <TaskCreatorLine
+                                    displayName={
+                                      task.creator_display_name?.trim() ||
+                                      task.creator_username?.trim() ||
+                                      ''
+                                    }
+                                    username={task.creator_username}
+                                    creatorId={task.creator_id}
+                                    verifiedEnterprise={Boolean(task.creator_verified_enterprise)}
+                                    verifiedIndividual={Boolean(task.creator_verified_individual)}
+                                    linkToProfile={Boolean(task.creator_id)}
+                                  />
+              </div>
+                              )}
                               <div className="hero-carousel-card-footer">
                                 <span className="hero-carousel-card-price">
                                   {task.price && parseFloat(task.price).toFixed(2)} {task.currency || 'USDC'}
@@ -360,20 +635,20 @@ const Hero = () => {
                                 <button type="button" className="hero-carousel-card-apply" onClick={() => handleApplyClick(task.id)}>
                                   {t('hero.search.apply')} <FaArrowRight />
                                 </button>
-                              </div>
+              </div>
                             </article>
                           ))}
-                        </div>
-                      </div>
+              </div>
+            </div>
                       <button type="button" className="hero-carousel-btn hero-carousel-btn-next" onClick={() => scrollCarousel('right')} aria-label={t('hero.carousel.next')}>
                         <FaChevronRight />
                       </button>
-                    </div>
+              </div>
                   )}
-                </div>
+              </div>
               </section>
             )}
-          </div>
+              </div>
         </header>
 
         {/* — Trust strip: rápido y seguro — */}
@@ -382,6 +657,126 @@ const Hero = () => {
             <span className="landing-trust-text">{t('landing.trust.line')}</span>
           </div>
         </section>
+
+        <section className="hero-carousel-section hero-freelancer-carousel-section" aria-label={t('hero.freelancer.carousel.aria')}>
+          <div className="hero-carousel-wrap">
+            {loadingLandingFreelancers ? (
+              <p className="hero-carousel-loading">{t('hero.freelancer.carousel.loading')}</p>
+            ) : landingFreelancers.length === 0 ? (
+              <p className="hero-carousel-empty">{t('hero.freelancer.carousel.empty')}</p>
+            ) : (
+              <div className="hero-carousel-nav-wrap">
+                <button
+                  type="button"
+                  className="hero-carousel-btn hero-carousel-btn-prev"
+                  onClick={() => scrollFreelancerCarousel('left')}
+                  aria-label={t('hero.carousel.prev')}
+                >
+                  <FaChevronLeft />
+                </button>
+                <div className="hero-carousel-viewport hero-freelancer-carousel-viewport" ref={freelancerCarouselRef}>
+                  <div className="hero-carousel-track" ref={freelancerTrackRef}>
+                    {infiniteLandingFreelancers.map((fl, idx) => {
+                      const avatarSrc = fl.avatar_url ? getAvatarUrl(fl.avatar_url) : null;
+                      const rawBio = fl.bio?.trim() ?? '';
+                      const normalizedBio = rawBio ? normalizeDisplayText(rawBio) : '';
+                      const bioText = normalizedBio
+                        ? `${normalizedBio.slice(0, 110)}${normalizedBio.length > 110 ? '…' : ''}`
+                        : t('hero.freelancer.carousel.bioFallback');
+                      const skillsPreview = (fl.skills || [])
+                        .filter((s): s is string => typeof s === 'string')
+                        .slice(0, 2)
+                        .join(' · ');
+                      const metaLine = t('hero.freelancer.carousel.meta')
+                        .replace('{{rating}}', fl.average_rating.toFixed(1))
+                        .replace('{{tasks}}', String(fl.tasks_completed));
+                      return (
+                        <article key={`${fl.id}-${idx}`} className="hero-carousel-card hero-freelancer-card">
+                          <div className="hero-freelancer-card-top">
+                            <div className="hero-freelancer-avatar-wrap">
+                              {avatarSrc ? (
+                                <img
+                                  src={avatarSrc}
+                                  alt={fl.username}
+                                  className="hero-freelancer-avatar-img"
+                                  loading="lazy"
+                                  decoding="async"
+                                />
+                              ) : (
+                                <span className="hero-freelancer-avatar-placeholder" aria-hidden>
+                                  {freelancerDisplayInitials(fl.username)}
+                                </span>
+                              )}
+            </div>
+                            <div className="hero-freelancer-card-head">
+                              <div className="hero-freelancer-name-row">
+                                <UsernameWithVerified
+                                  name={fl.display_name || fl.username}
+                                  userId={fl.id}
+                                  verifiedEnterprise={Boolean(
+                                    fl.creator_verified_enterprise ||
+                                      hasEnterpriseVerifiedBadge(fl.public_badges),
+                                  )}
+                                  verifiedIndividual={Boolean(
+                                    fl.creator_verified_individual ||
+                                      hasIndividualVerifiedBadge(fl.public_badges),
+                                  )}
+                                  linkToProfile
+                                  compact
+                                  tooltipPlacement="below"
+                                  className="hero-freelancer-verified-row"
+                                  nameClassName="hero-freelancer-name-text"
+                                />
+              </div>
+                              <span className="hero-carousel-card-meta hero-freelancer-meta-line">{metaLine}</span>
+                              {skillsPreview ? (
+                                <span className="hero-freelancer-skills-preview">{skillsPreview}</span>
+                              ) : null}
+                  </div>
+                </div>
+                          <p className="hero-carousel-card-desc hero-freelancer-bio">{bioText}</p>
+                          <div className="hero-carousel-card-footer hero-freelancer-card-footer">
+                            {fl.has_payout_wallet ? (
+                              <button
+                                type="button"
+                                className="hero-carousel-card-apply hero-freelancer-card-cta"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleFreelancerHireClick(fl);
+                                }}
+                              >
+                                {t('freelancers.card.hire')} <FaArrowRight />
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="hero-carousel-card-apply hero-freelancer-card-cta hero-freelancer-card-cta-secondary"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/profile/${fl.id}`);
+                                }}
+                              >
+                                {t('hero.freelancer.carousel.viewProfile')}
+                              </button>
+                            )}
+                  </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </div>
+                <button 
+                  type="button"
+                  className="hero-carousel-btn hero-carousel-btn-next"
+                  onClick={() => scrollFreelancerCarousel('right')}
+                  aria-label={t('hero.carousel.next')}
+                >
+                  <FaChevronRight />
+                </button>
+              </div>
+            )}
+        </div>
+      </section>
 
         {/* — Value: trabajo real, pago real — */}
         <section id="valor" className="landing-value">
@@ -410,7 +805,7 @@ const Hero = () => {
                 </li>
               </ul>
               <Link to="/register" className="landing-value-cta">{t('solution.button.start')} <FaArrowRight /></Link>
-            </div>
+              </div>
             <div className="landing-value-visual" aria-hidden="true">
               <div className="landing-value-diagram">
                 <div className="landing-value-node landing-value-node-talent" title={t('solution.stat1.label')}>
@@ -424,7 +819,7 @@ const Hero = () => {
                 <div className="landing-value-node landing-value-node-escrow" title={t('solution.stat4.label')}>
                   <FaLock className="landing-value-node-icon" />
                   <span className="landing-value-node-label">{t('solution.stat4.label')}</span>
-                </div>
+                  </div>
                 <div className="landing-value-connector landing-value-connector-diag-left" aria-hidden="true">
                   <span className="landing-value-connector-line" />
                   <span className="landing-value-connector-flow" />
@@ -432,7 +827,7 @@ const Hero = () => {
                 <div className="landing-value-node landing-value-node-pay" title={t('solution.stat3.label')}>
                   <FaMoneyBillWave className="landing-value-node-icon" />
                   <span className="landing-value-node-label">{t('solution.stat3.label')}</span>
-                </div>
+                  </div>
                 <div className="landing-value-connector landing-value-connector-diag-right" aria-hidden="true">
                   <span className="landing-value-connector-line" />
                   <span className="landing-value-connector-flow" />
@@ -490,7 +885,7 @@ const Hero = () => {
               </motion.div>
             </div>
           </motion.div>
-        </section>
+      </section>
 
         {/* — Features: grilla 2x2 con más info — */}
         <section id="caracteristicas" className="landing-features">
@@ -522,8 +917,8 @@ const Hero = () => {
                 transition={{ duration: 0.45, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
               >
                 <div className="landing-feature-icon"><FaRocket /></div>
-                <h3>{t('features.card1.title')}</h3>
-                <p>{t('features.card1.desc')}</p>
+              <h3>{t('features.card1.title')}</h3>
+              <p>{t('features.card1.desc')}</p>
                 <span className="landing-feature-bullet">{t('features.card1.bullet')}</span>
               </motion.article>
               <motion.article
@@ -558,13 +953,13 @@ const Hero = () => {
                 transition={{ duration: 0.45, delay: 0.32, ease: [0.22, 1, 0.36, 1] }}
               >
                 <div className="landing-feature-icon"><FaUsers /></div>
-                <h3>{t('features.card2.title')}</h3>
-                <p>{t('features.card2.desc')}</p>
+              <h3>{t('features.card2.title')}</h3>
+              <p>{t('features.card2.desc')}</p>
                 <span className="landing-feature-bullet">{t('features.card2.bullet')}</span>
               </motion.article>
-            </div>
           </div>
-        </section>
+        </div>
+      </section>
 
         {/* — Roadmap ArcusX: timeline vertical alternado + animación al scroll — */}
         <section id="roadmap" className="landing-roadmap landing-roadmap--arcusx">
@@ -620,12 +1015,12 @@ const Hero = () => {
                         <li>{t('roadmap.mvp.2')}</li>
                         <li>{t('roadmap.mvp.3')}</li>
                       </ul>
-                    </div>
+                </div>
                   </div>
                 </div>
                 <div className="landing-roadmap-node" aria-hidden="true">
                   <FaCheck />
-                </div>
+              </div>
                 <div className="landing-roadmap-spacer" aria-hidden="true" />
               </motion.div>
               <motion.div
@@ -697,7 +1092,7 @@ const Hero = () => {
                         <li>{t('roadmap.now.3')}</li>
                         <li>{t('roadmap.now.4')}</li>
                       </ul>
-                    </div>
+                </div>
                   </div>
                 </div>
                 <div className="landing-roadmap-node" aria-hidden="true">
@@ -718,7 +1113,7 @@ const Hero = () => {
                 <div className="landing-roadmap-spacer" aria-hidden="true" />
                 <div className="landing-roadmap-node" aria-hidden="true">
                   <FaMapMarkedAlt />
-                </div>
+              </div>
                 <div className="landing-roadmap-content">
                   <div className="landing-roadmap-card">
                     <button
@@ -739,9 +1134,9 @@ const Hero = () => {
                         <li>{t('roadmap.next.2')}</li>
                         <li>{t('roadmap.next.3')}</li>
                       </ul>
-                    </div>
-                  </div>
-                </div>
+            </div>
+          </div>
+        </div>
               </motion.div>
               <motion.div
                 className={`landing-roadmap-item ${expandedRoadmap.has(4) ? 'landing-roadmap-item--expanded' : ''}`}
@@ -773,16 +1168,16 @@ const Hero = () => {
                         <li>{t('roadmap.vision.2')}</li>
                         <li>{t('roadmap.vision.3')}</li>
                       </ul>
-                    </div>
-                  </div>
-                </div>
+              </div>
+            </div>
+              </div>
                 <div className="landing-roadmap-node" aria-hidden="true">
                   <FaMapMarkedAlt />
-                </div>
+            </div>
                 <div className="landing-roadmap-spacer" aria-hidden="true" />
               </motion.div>
             </div>
-          </div>
+              </div>
         </section>
 
         {/* — FAQ: 2x2 — */}
@@ -838,9 +1233,9 @@ const Hero = () => {
                 <h3 className="landing-faq-q">{t('faq.q4')}</h3>
                 <p className="landing-faq-a">{t('faq.a4')}</p>
               </motion.article>
-            </div>
           </div>
-        </section>
+        </div>
+      </section>
 
         {/* — CTA final — */}
         <section className="landing-cta">
@@ -859,10 +1254,10 @@ const Hero = () => {
           </motion.div>
         </section>
 
-        <Footer />
-      </div>
+      <Footer />
+    </div>
     </>
   );
 };
 
-export default Hero;
+export default Hero; 

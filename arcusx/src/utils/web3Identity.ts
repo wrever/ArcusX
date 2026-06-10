@@ -55,8 +55,7 @@ export function getFreelancerSignals(f: Freelancer): {
   const wallet = getPseudoWalletAddress(f.id, f.username);
   const walletShort = shortWallet(wallet);
 
-  // "Verified" = enough history + public profile
-  const isVerified = !!f.public_profile && (f.tasks_completed >= 5 || f.total_ratings >= 5);
+  const isVerified = !!(f.kyc_verified || f.creator_verified);
 
   // Deterministic "avg delivery" between 2 and 14 days
   const h = hash32(`${f.id}:${f.username}:delivery`);

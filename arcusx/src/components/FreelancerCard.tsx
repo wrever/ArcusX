@@ -4,13 +4,14 @@
  */
 
 import { memo, useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { FaCheckCircle, FaStar } from 'react-icons/fa';
+import { Link, useNavigate } from 'react-router-dom';
+import { FaPlus } from 'react-icons/fa';
+import UsernameWithVerified from './UsernameWithVerified';
 import RatingDisplay from './RatingDisplay';
 import { useI18n } from '../i18n/I18nProvider';
 import type { Freelancer } from '../types/freelancer';
 import { getAvatarUrl } from '../utils/avatarUtils';
-import { getFreelancerSignals } from '../utils/web3Identity';
+import { normalizeDisplayText } from '../utils/utf8Mojibake';
 import '../css/FreelancerCard.css';
 
 interface FreelancerCardProps {
@@ -19,6 +20,7 @@ interface FreelancerCardProps {
 
 const FreelancerCard = memo(({ freelancer }: FreelancerCardProps) => {
   const { t } = useI18n();
+  const navigate = useNavigate();
 
   const getInitials = (name: string): string => {
     if (!name) return '??';
@@ -34,8 +36,9 @@ const FreelancerCard = memo(({ freelancer }: FreelancerCardProps) => {
   const truncatedBio = useMemo(() => {
     const maxLength = 120;
     if (!freelancer.bio) return t('freelancers.card.no.bio');
-    if (freelancer.bio.length <= maxLength) return freelancer.bio;
-    return freelancer.bio.substring(0, maxLength).trim() + '...';
+    const bio = normalizeDisplayText(freelancer.bio);
+    if (bio.length <= maxLength) return bio;
+    return bio.substring(0, maxLength).trim() + '...';
   }, [freelancer.bio, t]);
 
   const avatarUrl = useMemo(
@@ -43,7 +46,22 @@ const FreelancerCard = memo(({ freelancer }: FreelancerCardProps) => {
     [freelancer.avatar_url]
   );
 
-  const signals = useMemo(() => getFreelancerSignals(freelancer), [freelancer]);
+  const verifiedEnterprise = useMemo(
+    () =>
+      Boolean(
+        freelancer.creator_verified_enterprise ||
+          freelancer.public_badges?.includes('arcusxVerificadoEmpresa'),
+      ),
+    [freelancer],
+  );
+  const verifiedIndividual = useMemo(
+    () =>
+      Boolean(
+        freelancer.creator_verified_individual ||
+          freelancer.public_badges?.includes('arcusxVerificado'),
+      ),
+    [freelancer],
+  );
 
   const skills = useMemo(() => {
     const list = freelancer.skills || [];
@@ -53,6 +71,27 @@ const FreelancerCard = memo(({ freelancer }: FreelancerCardProps) => {
   }, [freelancer.skills]);
 
   const profileUrl = `/profile/${freelancer.id}`;
+
+  const handleHire = () => {
+    const firstSkill = skills.visible[0];
+    const skillLabel = typeof firstSkill === 'string' ? firstSkill : (firstSkill && typeof firstSkill === 'object' && 'name' in firstSkill ? (firstSkill as { name: string }).name : undefined);
+    const params = new URLSearchParams();
+    params.set('for_user', String(freelancer.id));
+    params.set('hire_username', encodeURIComponent(freelancer.username));
+    if (skillLabel) params.set('hire_skill', encodeURIComponent(skillLabel));
+    navigate(
+      { pathname: '/create-task', search: params.toString() },
+      {
+        state: {
+          hireContext: {
+            userId: freelancer.id,
+            username: freelancer.username,
+            skill: skillLabel,
+          },
+        },
+      }
+    );
+  };
 
   return (
     <div className="freelancer-card-horizontal" aria-label={`Freelancer ${freelancer.username}`}>
@@ -75,21 +114,16 @@ const FreelancerCard = memo(({ freelancer }: FreelancerCardProps) => {
       <div className="freelancer-card-content">
         <div className="freelancer-card-header">
           <div className="freelancer-name-row">
-            <h3 className="freelancer-name">{freelancer.username}</h3>
-
-            {signals.isVerified && (
-              <span className="freelancer-badge verified" title={t('freelancers.badge.verified')}>
-                <FaCheckCircle />
-                {t('freelancers.badge.verified')}
-              </span>
-            )}
-
-            {signals.badges.includes('topRated') && (
-              <span className="freelancer-badge top" title={t('freelancers.badge.top')}>
-                <FaStar />
-                {t('freelancers.badge.top')}
-              </span>
-            )}
+            <h3 className="freelancer-name">
+              <UsernameWithVerified
+                name={freelancer.display_name || freelancer.username}
+                verifiedEnterprise={verifiedEnterprise}
+                verifiedIndividual={verifiedIndividual}
+                richTooltip
+                tooltipPlacement="below"
+                nameClassName="freelancer-name-text"
+              />
+            </h3>
           </div>
         </div>
 
@@ -118,9 +152,12 @@ const FreelancerCard = memo(({ freelancer }: FreelancerCardProps) => {
         <Link to={profileUrl} className="freelancer-view-profile-btn">
           {t('freelancers.card.view.profile')}
         </Link>
-        <Link to={`${profileUrl}?hire=1`} className="freelancer-hire-btn">
-          {t('freelancers.card.hire')}
-        </Link>
+        {freelancer.has_payout_wallet ? (
+          <button type="button" onClick={handleHire} className="freelancer-hire-btn">
+            <FaPlus style={{ marginRight: '6px', fontSize: '12px' }} />
+            {t('freelancers.card.hire')}
+          </button>
+        ) : null}
       </div>
     </div>
   );
