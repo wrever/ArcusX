@@ -29,8 +29,8 @@ import {
   releaseSignerWallet,
   type DealEscrowHooks,
 } from '../services/dealEscrow';
-import { dealPlatformFeeRate } from '../utils/dealHelpers';
-import { quoteEscrowCommission } from '../utils/escrowFeeQuote';
+import { dealBeneficiaryNet, dealPlatformFeeRate, isDealBeneficiaryViewer } from '../utils/dealHelpers';
+import { quoteBilateralFromNominal } from '../utils/bilateralFeeModel';
 import EscrowFeeBreakdown from '../components/EscrowFeeBreakdown';
 import { devError } from '../utils/logger';
 import Navbar from '../components/Navbar';
@@ -296,17 +296,19 @@ const DealPublicPage = ({ mode = 'preview', embedded = false, dealToken }: DealP
             <span className={`deals-status-badge ${deal.status}`}>{deal.status}</span>
             <h2 className="deals-form-card__title">{deal.title}</h2>
             <p className="deals-public-desc">{deal.description}</p>
-            <div className="deals-summary-row"><span>{t('deals.wizard.protected')}</span><strong>{Number(deal.amount_usdc).toFixed(2)} USDC</strong></div>
+            <div className="deals-summary-row"><span>{t('deals.wizard.dealValue')}</span><strong>{Number(deal.amount_usdc).toFixed(2)} USDC</strong></div>
+            {isDealBeneficiaryViewer(deal, address) && (
+              <div className="deals-summary-row"><span>{t('deals.wizard.beneficiaryReceives')}</span><strong>{dealBeneficiaryNet(deal).toFixed(2)} USDC</strong></div>
+            )}
             {(() => {
               const feeRate = dealPlatformFeeRate(deal);
-              const quote = quoteEscrowCommission(Number(deal.amount_usdc), feeRate);
+              const bilateral = quoteBilateralFromNominal(Number(deal.amount_usdc), feeRate);
               return (
                 <EscrowFeeBreakdown
                   platformFee={feeRate}
                   layout="flex-rows"
-                  totalUsdc={quote.totalCommission.toFixed(7)}
-                  platformUsdc={quote.platformCommission.toFixed(7)}
-                  protocolUsdc={quote.protocolCommission.toFixed(7)}
+                  totalUsdc={bilateral.clientVisibleFee.toFixed(2)}
+                  variant="employer-bilateral"
                   className="deals-fee-breakdown"
                 />
               );

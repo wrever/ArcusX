@@ -64,6 +64,7 @@ import SettingsVerificationSection from './components/SettingsVerificationSectio
 import SettingsBadgesCatalog from './components/SettingsBadgesCatalog';
 import './css/SettingsVerificationSection.css';
 import './css/SettingsBadgesCatalog.css';
+import { formatWorkerNetDisplay } from './utils/bilateralFeeModel';
 import TaskCreatorLine from './components/TaskCreatorLine';
 import {
   buildDashboardSearchParams,
@@ -1462,7 +1463,7 @@ const Dashboard = () => {
                       <div className="task-detail">
                         <span className="task-detail-label">{t('dashboard.tasks.reward')}</span>
                         <span className="task-detail-value">
-                          {parseFloat(task.price).toFixed(2)} {task.currency}
+                          {formatWorkerNetDisplay(task.price)} {task.currency}
                         </span>
                       </div>
                       <div className="task-detail">
@@ -1897,7 +1898,7 @@ const Dashboard = () => {
                         <div className="task-detail">
                           <span className="task-detail-label">{t('dashboard.tasks.reward')}</span>
                           <span className="task-detail-value">
-                            {parseFloat(String(task.price)).toFixed(2)} {task.currency}
+                            {formatWorkerNetDisplay(task.price)} {task.currency}
                           </span>
                         </div>
                         <div className="task-detail">
@@ -2228,7 +2229,7 @@ const Dashboard = () => {
                           <div className="task-detail">
                             <span className="task-detail-label">{t('dashboard.tasks.reward')}</span>
                             <span className="task-detail-value">
-                              {parseFloat(task.price).toFixed(2)} {task.currency}
+                              {formatWorkerNetDisplay(task.price)} {task.currency}
                             </span>
                         </div>
                         )}

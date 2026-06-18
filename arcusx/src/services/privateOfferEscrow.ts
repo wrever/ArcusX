@@ -5,6 +5,7 @@ import {
 import { finalizePrivateOffer } from './privateOfferService';
 import { devLog, devError } from '../utils/logger';
 import { quoteEscrowFundAmount } from '../utils/escrowFeeQuote';
+import { workerNetFromTaskPrice } from '../utils/bilateralFeeModel';
 import { USDC_ISSUER } from '../config/usdc';
 
 export type PrivateEscrowHooks = {
@@ -30,7 +31,7 @@ export async function createPrivateOfferEscrow(params: {
   hooks: PrivateEscrowHooks;
 }): Promise<{ success: boolean; error?: string; contractId?: string; deployTxHash?: string }> {
   const { task, clientAddress, workerAddress, platformFee, hooks } = params;
-  const workerAmount = parseFloat(String(task.price));
+  const workerAmount = workerNetFromTaskPrice(task.price);
   if (!Number.isFinite(workerAmount) || workerAmount <= 0) {
     return { success: false, error: 'Monto de la tarea inválido' };
   }
@@ -76,7 +77,7 @@ export async function fundPrivateOfferEscrow(params: {
   hooks: PrivateEscrowHooks;
 }): Promise<{ success: boolean; error?: string; txHash?: string }> {
   const { contractId, task, clientAddress, platformFee, hooks } = params;
-  const workerAmount = parseFloat(String(task.price));
+  const workerAmount = workerNetFromTaskPrice(task.price);
   const amount = quoteEscrowFundAmount(workerAmount, platformFee);
 
   let fundResult: { success: boolean; txHash?: string; error?: string } | null = null;
@@ -120,7 +121,7 @@ export async function sendPrivateOffer(params: {
   task: PrivateEscrowTaskInput;
   platformFee: number;
 }): Promise<{ success: boolean; error?: string }> {
-  const workerAmount = parseFloat(String(params.task.price));
+  const workerAmount = workerNetFromTaskPrice(params.task.price);
   const amount = quoteEscrowFundAmount(workerAmount, params.platformFee);
 
   const finalizePayload = {

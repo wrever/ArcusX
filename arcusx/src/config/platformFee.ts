@@ -1,12 +1,17 @@
 /**
  * Comisión ArcusX en escrow Trustless Work.
- * ArcusX: 2.7 % (treasury). Protocolo TW: 0.3 % fijo al liberar. Total cliente: 3 %.
+ * ArcusX: 3.7 % (treasury). Protocolo TW: 0.3 % fijo al liberar. Total on-chain: 4 % del fondeo.
+ * UX bilateral: empleador +2 % visible, trabajador −2 % visible sobre el nominal.
  */
-export const STANDARD_PLATFORM_FEE_RATE = 0.027;
+export const STANDARD_PLATFORM_FEE_RATE = 0.037;
 
-/** Fee total visible al cliente (plataforma + protocolo TW). */
+/** Fee total on-chain (plataforma + protocolo TW) sobre el monto fondeado. */
 export const TOTAL_ESCROW_CLIENT_FEE_RATE =
   STANDARD_PLATFORM_FEE_RATE + 0.003;
+
+/** Tasas mostradas en UI (no necesariamente = fee on-chain). */
+export const BILATERAL_CLIENT_VISIBLE_RATE = 0.02;
+export const BILATERAL_WORKER_VISIBLE_RATE = 0.02;
 
 /**
  * Normaliza fee leído de BD/localStorage.
@@ -18,6 +23,7 @@ export function normalizePlatformFeeRate(raw: unknown): number {
   if (n >= 1) return STANDARD_PLATFORM_FEE_RATE;
   if (n < 0.02) return STANDARD_PLATFORM_FEE_RATE;
   if (Math.abs(n - 0.03) < 0.0001) return STANDARD_PLATFORM_FEE_RATE;
+  if (Math.abs(n - 0.027) < 0.0001) return STANDARD_PLATFORM_FEE_RATE;
   if (n > 0.15) return STANDARD_PLATFORM_FEE_RATE;
   return n;
 }

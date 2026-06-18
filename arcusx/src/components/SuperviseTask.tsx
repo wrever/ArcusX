@@ -66,6 +66,7 @@ import {
 import { taskHasExchangeFiles } from '../utils/taskExchangeFiles';
 import { isStellarTxHash } from '../utils/stellarNetwork';
 import { quoteEscrowFundAmount } from '../utils/escrowFeeQuote';
+import { workerNetFromTaskPrice, formatWorkerNetDisplay } from '../utils/bilateralFeeModel';
 import '../css/ConfirmDialog.css';
 
 function parseTaskDetailsPayload(raw: Record<string, unknown>): Record<string, unknown> {
@@ -697,7 +698,7 @@ const SuperviseTask = () => {
             !showClientPaymentPopup &&
             !paymentSuccessData
         ) {
-                const workerAmount = parseFloat(task.price);
+                const workerAmount = workerNetFromTaskPrice(task.price);
             const fee =
                 task.escrow_platform_fee != null
                     ? Number(task.escrow_platform_fee)
@@ -1246,7 +1247,7 @@ const SuperviseTask = () => {
                 scheduled_deletion_at: scheduledDeletionAt,
             } : null);
             if (releaseTxHash && task) {
-                const workerAmount = parseFloat(task.price);
+                const workerAmount = workerNetFromTaskPrice(task.price);
                 const fee =
                     task.escrow_platform_fee != null
                         ? Number(task.escrow_platform_fee)
@@ -1985,7 +1986,11 @@ const SuperviseTask = () => {
             <div className="task-details-section">
                 <h2>{t('supervise.task.details')}</h2>
                 <p><span className="detail-label">{t('supervise.label.description')}</span> {task.description}</p>
-                <p><span className="detail-label">{t('supervise.label.reward')}</span> {parseFloat(task.price).toFixed(2)} {task.currency}</p>
+                <p><span className="detail-label">{t('supervise.label.reward')}</span>{' '}
+                  {isClient
+                    ? `${parseFloat(task.price).toFixed(2)} ${task.currency}`
+                    : `${formatWorkerNetDisplay(task.price)} ${task.currency}`}
+                </p>
                 <p><span className="detail-label">{t('supervise.label.category')}</span> {task.category}</p>
                 <p><span className="detail-label">{t('supervise.label.difficulty')}</span> {task.difficulty}</p>
                 <div className="task-details-section__deletion">

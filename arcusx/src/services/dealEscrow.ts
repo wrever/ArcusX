@@ -5,6 +5,7 @@ import {
 import { completeDeal, finalizeDealEscrow, prepareDealEscrow } from './dealsService';
 import type { AgreementDeal } from './dealsService';
 import { dealDepositAmount, dealPlatformFeeRate } from '../utils/dealHelpers';
+import { workerNetFromNominal } from '../utils/bilateralFeeModel';
 import { fetchDealEscrowFromIndexer, validateCommerceEscrowRoles } from '../utils/dealEscrowVerification';
 import { devError, devLog } from '../utils/logger';
 
@@ -71,8 +72,9 @@ export function assertDealReadyForEscrowDeploy(deal: AgreementDeal): string | nu
 }
 
 function buildEscrowAmounts(deal: AgreementDeal) {
-  const workerAmount = parseFloat(String(deal.amount_usdc));
-  if (!Number.isFinite(workerAmount) || workerAmount <= 0) {
+  const nominal = parseFloat(String(deal.amount_usdc));
+  const workerAmount = workerNetFromNominal(deal.amount_usdc);
+  if (!Number.isFinite(nominal) || nominal <= 0 || !Number.isFinite(workerAmount) || workerAmount <= 0) {
     return { error: 'Monto inválido' as const };
   }
   const platformFee = dealPlatformFeeRate(deal);

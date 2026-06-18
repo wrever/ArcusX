@@ -1,12 +1,12 @@
 /**
  * Helpers para Trustless Work escrow (single-release).
  *
- * Modelo de comisión total al cliente: 3 %
- *   - ArcusX (platformFee en API): 2.7 % → treasury (platformAddress)
+ * Modelo on-chain: 4 % del fondeo
+ *   - ArcusX (platformFee en API): 3.7 % → treasury (platformAddress)
  *   - Trustless Work (protocolo, fijo): 0.3 % → cobrado on-chain al liberar
  *
- * Igual en testnet y mainnet. TW API: `platformFee` es % visible (2.7), NO decimal 0.027.
- * No enviar 3 en platformFee (serían 3.3 % total).
+ * UX bilateral: nominal $20 → fondeo ~$20.40, trabajador neto $19.60.
+ * TW API: `platformFee` es % visible (3.7), NO decimal 0.037.
  */
 
 /** Comisión fija del protocolo Trustless Work al liberar (testnet y mainnet). */
@@ -17,7 +17,7 @@ const STROOPS_PER_USDC = 10_000_000;
 /** Normaliza fee devuelto por el indexer TW (3 → 0.03). */
 export function fromTrustlessWorkPlatformFee(apiValue: number): number {
   const n = Number(apiValue);
-  if (!Number.isFinite(n) || n <= 0) return 0.027;
+  if (!Number.isFinite(n) || n <= 0) return 0.037;
   if (Math.abs(n - 0.03) < 0.0001) return 0.027;
   return n >= 1 ? n / 100 : n;
 }
@@ -25,7 +25,7 @@ export function fromTrustlessWorkPlatformFee(apiValue: number): number {
 /** Convierte fee interno (0.03) al formato que espera la API TW (3). */
 export function toTrustlessWorkPlatformFee(platformFeeDecimal: number): number {
   const n = Number(platformFeeDecimal);
-  if (!Number.isFinite(n) || n <= 0) return 2.7;
+  if (!Number.isFinite(n) || n <= 0) return 3.7;
   if (n >= 1) return n;
   return Math.round(n * 10000) / 100;
 }

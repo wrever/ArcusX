@@ -5,6 +5,7 @@ import axios from '../config/axios';
 import { arcusxApiUrl } from '../config/arcusxApi';
 import { normalizeDisplayText } from '../utils/utf8Mojibake';
 import '../css/ApplyTask.css'; // Necesitas crear este archivo CSS
+import { formatWorkerNetDisplay } from '../utils/bilateralFeeModel';
 import { useI18n } from '../i18n/I18nProvider';
 import { useWallet } from '../hooks/useWallet';
 import { canAccessTaskSupervision } from '../utils/escrowStatus';
@@ -355,7 +356,7 @@ const ApplyTask = () => {
              <div className="meta-item">
                <span className="meta-label">{t('apply.reward')}</span>
                <span className="meta-value" title={t('apply.reward.tooltip')}>
-                 {parseFloat(task.price).toFixed(2)} {task.currency}
+                 {formatWorkerNetDisplay(task.price)} {task.currency}
                </span>
              </div>
              <div className="meta-item">

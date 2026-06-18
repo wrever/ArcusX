@@ -2001,8 +2001,14 @@
   margin-left: -1px;
   top: 0;
   width: 2px;
-  height: 40%;
-  background: linear-gradient(180deg, var(--primary-blue), rgba(16, 221, 136, 0.5));
+  /* T2 cerrado + T3 en curso: pasa el ✓ de T2 y llega casi al nodo activo (5 hitos) */
+  height: 68%;
+  background: linear-gradient(
+    180deg,
+    var(--primary-blue) 0%,
+    var(--primary-blue) 72%,
+    rgba(16, 221, 136, 0.55) 100%
+  );
   border-radius: 1px;
   z-index: 0;
   box-shadow: 0 0 12px rgba(16, 221, 136, 0.35);
@@ -2429,7 +2435,7 @@
   .landing-roadmap-track-progress {
     left: 26px;
     margin-left: 0;
-    height: 200px;
+    height: 68%;
   }
 
   .landing-roadmap-item {

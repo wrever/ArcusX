@@ -1,0 +1,29 @@
+{
+  "name": "@arcusx/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for ArcusX Work Execution Layer (Stellar USDC escrow + task lifecycle)",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": ["arcusx", "stellar", "usdc", "escrow", "freelance"],
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

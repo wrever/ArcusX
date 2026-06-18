@@ -9,7 +9,6 @@ import {
 } from "../config/enterpriseSite";
 import stellarPartnerLogo from "../images/stellar.png";
 import soroswapPartnerLogo from "../images/soroswap.png";
-import trustlessPartnerLogo from "../images/trustless.png";
 import "../css/EmpresasPage.css";
 import "../css/EmpresasPage.subdomain.css";
 
@@ -256,22 +255,6 @@ export default function EmpresasPage() {
                         height={52}
                         loading="eager"
                         fetchPriority="high"
-                        decoding="async"
-                      />
-                    </a>
-                  </li>
-                  <li className="ax-empresas__hero-powered-item ax-empresas__hero-powered-item--right">
-                    <a
-                      href="https://www.trustlesswork.com/"
-                      className="ax-empresas__hero-powered-link"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <img
-                        src={trustlessPartnerLogo}
-                        alt={t("empresa.partners.trustless.alt")}
-                        className="ax-empresas__hero-powered-img"
-                        loading="lazy"
                         decoding="async"
                       />
                     </a>

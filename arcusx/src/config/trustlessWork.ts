@@ -19,8 +19,8 @@ export const TRUSTLESS_WORK_BASE_URL = import.meta.env.VITE_TRUSTLESS_WORK_BASE_
 export const PLATFORM_WALLET = import.meta.env.VITE_PLATFORM_WALLET || '';
 export const ADMIN_WALLET = import.meta.env.VITE_ADMIN_WALLET || '';
 
-// Platform fee ArcusX: 2.7% decimal (0.027). API TW recibe 2.7 (+ 0.3% protocolo TW = 3% total).
-export const PLATFORM_FEE_BPS = 2.7;
+// Platform fee ArcusX: 3.7% decimal (0.037). API TW recibe 3.7 (+ 0.3% protocolo TW = 4% total fondeo).
+export const PLATFORM_FEE_BPS = 3.7;
 
 // Verificar que las variables estén configuradas (solo en desarrollo)
 if (import.meta.env.DEV) {

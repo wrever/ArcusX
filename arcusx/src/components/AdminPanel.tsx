@@ -94,11 +94,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
       const treasuryConfig = configs.find(c => c.config_key === 'treasury_address');
       const arbitratorConfig = configs.find(c => c.config_key === 'arbitrator_address');
       
-      // platform_fee en BD es decimal (0.027 = 2.7% ArcusX)
+      // platform_fee en BD es decimal (0.037 = 3.7% ArcusX)
       const platformFeeValue = platformFeeConfig?.config_value;
       const platformFeeDisplay = typeof platformFeeValue === 'number' 
         ? platformFeeValue * 100 
-        : (typeof platformFeeValue === 'string' ? parseFloat(platformFeeValue) * 100 : 2.7);
+        : (typeof platformFeeValue === 'string' ? parseFloat(platformFeeValue) * 100 : 3.7);
       
       const activeDisputes = backendStats.active_disputes ?? backendStats.pending_transactions ?? 0;
 
@@ -116,7 +116,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isAdmin }) => {
         totalVolume: backendStats.total_volume_usdc || 0,
         totalFees: backendStats.total_commission_usdc || 0,
         activeDisputes: activeDisputes,
-        platformFee: platformFeeDisplay || 2.7,
+        platformFee: platformFeeDisplay || 3.7,
         referralFee: referralFeeConfig?.config_value || 0,
         treasury: treasuryConfig?.config_value || '',
         arbitrator: arbitratorConfig?.config_value || '',

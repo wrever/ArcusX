@@ -3,9 +3,10 @@
 Script narrativo: [`E2E_TESTNET.md`](./E2E_TESTNET.md) (8–12 min).  
 Marcar aquí tras ejecutar en **prod** o **localhost** con Freighter testnet.
 
-**Fecha ejecución:** ___________  
-**Ejecutor:** ___________  
-**Entorno:** ☐ prod `arcusx.pro` ☐ local `:5173`
+**Fecha ejecución:** 2026-05-28  
+**Ejecutor:** equipo ArcusX  
+**Entorno:** ☑ prod `arcusx.pro` (testnet)  
+**Cierre Tranche 2:** ✅ — demo grabado: marketplace + ofertas privadas + deals
 
 ---
 

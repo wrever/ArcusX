@@ -5,6 +5,7 @@ import { useI18n } from '../i18n/I18nProvider';
 import { createRating, CreateRatingPayload } from '../services/ratingService';
 import { devLog, devWarn, devError } from '../utils/logger';
 import { quoteEscrowCommission } from '../utils/escrowFeeQuote';
+import { workerNetFromTaskPrice } from '../utils/bilateralFeeModel';
 import EscrowFeeBreakdown from './EscrowFeeBreakdown';
 import StellarTxHashLink from './StellarTxHashLink';
 import TaskDeletionNotice from './TaskDeletionNotice';
@@ -93,7 +94,8 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
   const [ratingSentToServer, setRatingSentToServer] = useState(false);
   
-  const workerAmount = parseFloat(taskPrice) || 0;
+  const nominal = parseFloat(taskPrice) || 0;
+  const workerAmount = nominal > 0 ? workerNetFromTaskPrice(taskPrice) : 0;
   const quote = workerAmount > 0 ? quoteEscrowCommission(workerAmount, platformFee) : null;
   const escrowAmount = quote?.fundAmount ?? 0;
   const commission = quote?.totalCommission ?? 0;

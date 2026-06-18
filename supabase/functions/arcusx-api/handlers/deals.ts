@@ -7,7 +7,8 @@ import {
 import { logDomainEvent } from '../../_shared/domain-events.ts';
 import { persistRating } from '../../_shared/rating-persist.ts';
 import { normalizePlatformFeeRate } from '../../_shared/platform-fee.ts';
-import { quoteEscrowCommission } from '../../_shared/escrow-fee-quote.ts';
+import { quoteEscrowCommission } from './escrow-fee-quote.ts';
+import { quoteBilateralFromNominal } from './bilateral-fee.ts';
 import type { ApiContext } from './types.ts';
 import { requireUser } from './require.ts';
 
@@ -150,8 +151,9 @@ export async function createDeal(ctx: ApiContext): Promise<Response> {
   }
 
   const feeRate = await platformFeeRate(auth.supabase);
-  const feeQuote = quoteEscrowCommission(amountUsdc, feeRate);
-  const clientTotal = Math.round(feeQuote.fundAmount * 1e7) / 1e7;
+  const bilateral = quoteBilateralFromNominal(amountUsdc, feeRate);
+  const feeQuote = quoteEscrowCommission(bilateral.workerNet, feeRate);
+  const clientTotal = Math.round(bilateral.clientTotal * 1e7) / 1e7;
   const feeUsdc = Math.round(feeQuote.totalCommission * 1e7) / 1e7;
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 

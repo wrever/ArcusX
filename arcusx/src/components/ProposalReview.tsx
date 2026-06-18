@@ -20,7 +20,11 @@ import {
   fundTrustlessEscrow 
 } from '../services/trustlessWorkEscrowService';
 import { quoteEscrowCommission } from '../utils/escrowFeeQuote';
-import { clientFeePercents } from '../utils/escrowFeeDisplay';
+import {
+  quoteBilateralFromNominal,
+  workerNetFromTaskPrice,
+  CLIENT_VISIBLE_FEE_PERCENT,
+} from '../utils/bilateralFeeModel';
 import { usePlatformFee } from '../hooks/usePlatformFee';
 import EscrowProcessPopup from './EscrowProcessPopup';
 import { useI18n } from '../i18n/I18nProvider';
@@ -266,16 +270,15 @@ const ProposalReview = () => {
       
       // Crear escrow con Trustless Work
       const engagementId = `arcusx-${taskId}-${Date.now()}`;
-      // El price es el workerAmount (lo que debe recibir el trabajador después de la comisión)
-      const workerAmount = parseFloat(task.price);
-      
-      const { quoteEscrowCommission } = await import('../utils/escrowFeeQuote');
+      const workerAmount = workerNetFromTaskPrice(task.price);
+
       const quote = quoteEscrowCommission(workerAmount, platformFee);
       const amount = quote.fundAmount;
       const commission = quote.totalCommission;
       
       devLog('Cálculo del escrow:');
-      devLog('  - Worker amount (lo que recibirá):', workerAmount);
+      devLog('  - Nominal referencia:', parseFloat(task.price));
+      devLog('  - Worker net (hito escrow):', workerAmount);
       devLog('  - Platform fee:', platformFee, `(${(platformFee * 100).toFixed(2)}%)`);
       devLog('  - Escrow amount (calculado):', amount);
       devLog('  - Commission (que se deducirá):', commission.toFixed(7));
@@ -428,7 +431,7 @@ const ProposalReview = () => {
       }
 
       // Fondear el mismo monto que al crear: worker / (1 - platformFee)
-      const workerAmount = parseFloat(task.price);
+      const workerAmount = workerNetFromTaskPrice(task.price);
       
       // CRÍTICO: Usar el mismo platformFee que al crear el escrow
       // Si el escrow tiene un platformFee guardado, usarlo; si no, usar el actual
@@ -588,7 +591,7 @@ const ProposalReview = () => {
       try {
         const token = localStorage.getItem('token');
         if (token && taskId && selectedProposal) {
-          const workerAmount = parseFloat(task.price);
+          const workerAmount = workerNetFromTaskPrice(task.price);
           let feeToUse = platformFee;
           if (task.escrow_platform_fee !== undefined && task.escrow_platform_fee !== null) {
             feeToUse = typeof task.escrow_platform_fee === 'number'
@@ -795,11 +798,13 @@ const ProposalReview = () => {
       return;
     }
     // Calcular montos usando el nuevo modelo
-    const workerAmount = task?.price ? parseFloat(task.price) : 0;
+    const nominal = task?.price ? parseFloat(task.price) : 0;
+    const workerAmount = nominal > 0 ? workerNetFromTaskPrice(task!.price) : 0;
     const quote = workerAmount > 0 ? quoteEscrowCommission(workerAmount, platformFee) : null;
-    const commission = quote?.totalCommission ?? 0;
-    const totalAmount = quote?.fundAmount ?? 0;
-    const feePercent = clientFeePercents(platformFee).totalPercent;
+    const bilateral = nominal > 0 ? quoteBilateralFromNominal(nominal, platformFee) : null;
+    const commission = bilateral?.clientVisibleFee ?? quote?.totalCommission ?? 0;
+    const totalAmount = bilateral?.clientTotal ?? quote?.fundAmount ?? 0;
+    const feePercent = CLIENT_VISIBLE_FEE_PERCENT;
     
     // Mostrar mensaje de éxito mejorado
     const currency = task?.currency || 'USDC';

@@ -9,7 +9,7 @@ import {
 } from 'react-icons/fa';
 import { useI18n } from '../i18n/I18nProvider';
 import { usePlatformFee } from '../hooks/usePlatformFee';
-import { quoteEscrowCommission } from '../utils/escrowFeeQuote';
+import { quoteBilateralFromNominal } from '../utils/bilateralFeeModel';
 import '../css/PrivateOfferEscrowPopup.css';
 
 type StepStatus = 'pending' | 'in_progress' | 'completed' | 'error';
@@ -54,9 +54,10 @@ const PrivateOfferEscrowPopup = ({
 }: PrivateOfferEscrowPopupProps) => {
   const { t } = useI18n();
   const { platformFee } = usePlatformFee();
-  const workerAmount = parseFloat(taskPrice) || 0;
-  const quote = workerAmount > 0 ? quoteEscrowCommission(workerAmount, platformFee) : null;
-  const formattedTotal = (quote?.fundAmount ?? 0).toFixed(7);
+  const nominal = parseFloat(taskPrice) || 0;
+  const bilateral = nominal > 0 ? quoteBilateralFromNominal(nominal, platformFee) : null;
+  const formattedWorkerNet = (bilateral?.workerNet ?? 0).toFixed(2);
+  const formattedTotal = (bilateral?.clientTotal ?? bilateral?.fundAmount ?? 0).toFixed(2);
 
   const [currentStep, setCurrentStep] = useState(0);
   const [escrowId, setEscrowId] = useState<string | null>(null);
@@ -296,10 +297,15 @@ const PrivateOfferEscrowPopup = ({
           <p>
             <strong>{t('privateOffer.escrow.worker')}:</strong> {workerName}
           </p>
-          {quote ? (
-            <p>
-              <strong>{t('privateOffer.escrow.total')}:</strong> {formattedTotal} USDC
-            </p>
+          {bilateral ? (
+            <>
+              <p>
+                <strong>{t('create.worker.receives')}</strong> {formattedWorkerNet} USDC
+              </p>
+              <p>
+                <strong>{t('privateOffer.escrow.total')}:</strong> {formattedTotal} USDC
+              </p>
+            </>
           ) : null}
         </div>
 

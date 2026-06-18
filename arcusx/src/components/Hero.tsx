@@ -11,6 +11,7 @@ import { getAvatarUrl } from '../utils/avatarUtils';
 import { normalizeDisplayText } from '../utils/utf8Mojibake';
 import '../css/Hero.css';
 import { useI18n } from '../i18n/I18nProvider';
+import { formatWorkerNetDisplay } from '../utils/bilateralFeeModel';
 import Footer from './Footer';
 import SEO from './SEO';
 import TaskCreatorLine from './TaskCreatorLine';
@@ -88,7 +89,7 @@ const viewportScrollSoft = { once: true, amount: 0.15 };
 const Hero = () => {
   const { t, lang } = useI18n();
   const navigate = useNavigate();
-  const [expandedRoadmap, setExpandedRoadmap] = useState<Set<number>>(() => new Set([2, 3, 4]));
+  const [expandedRoadmap, setExpandedRoadmap] = useState<Set<number>>(() => new Set([3, 4]));
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<TaskResult[]>([]);
   const [loadingSearch, setLoadingSearch] = useState(false);
@@ -561,7 +562,7 @@ const Hero = () => {
                               )}
                               <div className="landing-hero-search-card-footer">
                                 <span className="landing-hero-search-card-price">
-                                  {parseFloat(task.price).toFixed(2)} {task.currency}
+                                  {formatWorkerNetDisplay(task.price)} {task.currency}
                                 </span>
                                 <button
                                   type="button"
@@ -630,7 +631,7 @@ const Hero = () => {
                               )}
                               <div className="hero-carousel-card-footer">
                                 <span className="hero-carousel-card-price">
-                                  {task.price && parseFloat(task.price).toFixed(2)} {task.currency || 'USDC'}
+                                  {task.price && formatWorkerNetDisplay(task.price)} {task.currency || 'USDC'}
                                 </span>
                                 <button type="button" className="hero-carousel-card-apply" onClick={() => handleApplyClick(task.id)}>
                                   {t('hero.search.apply')} <FaArrowRight />
@@ -1063,7 +1064,7 @@ const Hero = () => {
               </motion.div>
               <motion.div
                 className={`landing-roadmap-item ${expandedRoadmap.has(2) ? 'landing-roadmap-item--expanded' : ''}`}
-                data-phase="now"
+                data-phase="done"
                 data-side="left"
                 data-index={2}
                 initial={{ opacity: 0, x: -28 }}
@@ -1081,28 +1082,28 @@ const Hero = () => {
                       aria-controls="roadmap-body-2"
                       id="roadmap-trigger-2"
                     >
-                      <span className="landing-roadmap-phase-date">{t('roadmap.phase.now.date')}</span>
-                      <h3>{t('roadmap.phase.now')}</h3>
+                      <span className="landing-roadmap-phase-date">{t('roadmap.phase.tranche2.date')}</span>
+                      <h3>{t('roadmap.phase.tranche2')}</h3>
                       <FaChevronDown className="landing-roadmap-accordion-icon" aria-hidden />
                     </button>
                     <div id="roadmap-body-2" className="landing-roadmap-card-body" hidden={!expandedRoadmap.has(2)}>
                       <ul>
-                        <li>{t('roadmap.now.1')}</li>
-                        <li>{t('roadmap.now.2')}</li>
-                        <li>{t('roadmap.now.3')}</li>
-                        <li>{t('roadmap.now.4')}</li>
+                        <li>{t('roadmap.tranche2.1')}</li>
+                        <li>{t('roadmap.tranche2.2')}</li>
+                        <li>{t('roadmap.tranche2.3')}</li>
+                        <li>{t('roadmap.tranche2.4')}</li>
                       </ul>
                 </div>
                   </div>
                 </div>
                 <div className="landing-roadmap-node" aria-hidden="true">
-                  <FaMapMarkedAlt />
+                  <FaCheck />
                 </div>
                 <div className="landing-roadmap-spacer" aria-hidden="true" />
               </motion.div>
               <motion.div
                 className={`landing-roadmap-item ${expandedRoadmap.has(3) ? 'landing-roadmap-item--expanded' : ''}`}
-                data-phase="next"
+                data-phase="now"
                 data-side="right"
                 data-index={3}
                 initial={{ opacity: 0, x: 28 }}
@@ -1124,15 +1125,16 @@ const Hero = () => {
                       aria-controls="roadmap-body-3"
                       id="roadmap-trigger-3"
                     >
-                      <span className="landing-roadmap-phase-date">{t('roadmap.phase.next.date')}</span>
-                      <h3>{t('roadmap.phase.next')}</h3>
+                      <span className="landing-roadmap-phase-date">{t('roadmap.phase.tranche3.date')}</span>
+                      <h3>{t('roadmap.phase.tranche3')}</h3>
                       <FaChevronDown className="landing-roadmap-accordion-icon" aria-hidden />
                     </button>
                     <div id="roadmap-body-3" className="landing-roadmap-card-body" hidden={!expandedRoadmap.has(3)}>
                       <ul>
-                        <li>{t('roadmap.next.1')}</li>
-                        <li>{t('roadmap.next.2')}</li>
-                        <li>{t('roadmap.next.3')}</li>
+                        <li>{t('roadmap.tranche3.1')}</li>
+                        <li>{t('roadmap.tranche3.2')}</li>
+                        <li>{t('roadmap.tranche3.3')}</li>
+                        <li>{t('roadmap.tranche3.4')}</li>
                       </ul>
             </div>
           </div>
@@ -1140,7 +1142,7 @@ const Hero = () => {
               </motion.div>
               <motion.div
                 className={`landing-roadmap-item ${expandedRoadmap.has(4) ? 'landing-roadmap-item--expanded' : ''}`}
-                data-phase="vision"
+                data-phase="next"
                 data-side="left"
                 data-index={4}
                 initial={{ opacity: 0, x: -28 }}
@@ -1158,15 +1160,15 @@ const Hero = () => {
                       aria-controls="roadmap-body-4"
                       id="roadmap-trigger-4"
                     >
-                      <span className="landing-roadmap-phase-date">{t('roadmap.phase.vision.date')}</span>
-                      <h3>{t('roadmap.phase.vision')}</h3>
+                      <span className="landing-roadmap-phase-date">{t('roadmap.phase.next.date')}</span>
+                      <h3>{t('roadmap.phase.next')}</h3>
                       <FaChevronDown className="landing-roadmap-accordion-icon" aria-hidden />
                     </button>
                     <div id="roadmap-body-4" className="landing-roadmap-card-body" hidden={!expandedRoadmap.has(4)}>
                       <ul>
-                        <li>{t('roadmap.vision.1')}</li>
-                        <li>{t('roadmap.vision.2')}</li>
-                        <li>{t('roadmap.vision.3')}</li>
+                        <li>{t('roadmap.next.1')}</li>
+                        <li>{t('roadmap.next.2')}</li>
+                        <li>{t('roadmap.next.3')}</li>
                       </ul>
               </div>
             </div>
