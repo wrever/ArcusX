@@ -11,19 +11,10 @@
  */
 
 import axios, { AxiosInstance } from 'axios';
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
+import { getActiveStellarNetwork, type StellarNetworkId } from '../config/stellarDual';
 
 const SOROSWAP_API_BASE = import.meta.env.VITE_SOROSWAP_API_BASE || 'https://api.soroswap.finance';
-/** Solo desde env; nunca hardcodear — VITE_* va al bundle y cualquier fallback queda expuesto en el cliente. */
 const SOROSWAP_API_KEY = import.meta.env.VITE_SOROSWAP_API_KEY ?? '';
-
-// Siempre usar testnet
-const getNetwork = (): 'testnet' | 'mainnet' => {
-  return 'testnet';
-};
 
 // ============================================================================
 // TYPES
@@ -91,14 +82,12 @@ export interface SendTransactionResponse {
 
 class SoroswapService {
   private apiClient: AxiosInstance;
-  private network: 'testnet' | 'mainnet';
+  private cachedNetwork: StellarNetworkId | null = null;
   private tokensCache: Token[] | null = null;
   private tokensCacheExpiry: number = 0;
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
 
   constructor() {
-    this.network = getNetwork();
-    
     this.apiClient = axios.create({
       baseURL: SOROSWAP_API_BASE,
       headers: {
@@ -107,6 +96,17 @@ class SoroswapService {
       },
       timeout: 30000 // 30 segundos
     });
+  }
+
+  /** Red activa (sincronizada con toggle dashboard / stellarDual). */
+  private currentNetwork(): StellarNetworkId {
+    const net = getActiveStellarNetwork();
+    if (this.cachedNetwork !== net) {
+      this.cachedNetwork = net;
+      this.tokensCache = null;
+      this.tokensCacheExpiry = 0;
+    }
+    return net;
   }
 
   /**
@@ -125,7 +125,7 @@ class SoroswapService {
       // La respuesta es un array con objetos { network: string, assets: [] }
       // Necesitamos obtener los assets del network actual
       const networkData = Array.isArray(response.data) 
-        ? response.data.find((item: any) => item.network === this.network)
+        ? response.data.find((item: any) => item.network === this.currentNetwork())
         : null;
       
       const tokens = networkData?.assets || response.data?.tokens || response.data || [];
@@ -145,14 +145,14 @@ class SoroswapService {
     try {
       const response = await this.apiClient.get('/protocols', {
         params: {
-          network: this.network
+          network: this.currentNetwork()
         }
       });
       const protocols = response.data || [];
       return protocols;
     } catch (error: any) {
       // Fallback a protocolos conocidos
-      return this.network === 'testnet' ? ['sdex'] : ['soroswap', 'phoenix', 'aqua', 'sdex'];
+      return this.currentNetwork() === 'testnet' ? ['sdex'] : ['soroswap', 'phoenix', 'aqua', 'sdex'];
     }
   }
 
@@ -162,11 +162,11 @@ class SoroswapService {
   async checkPoolExists(tokenA: string, tokenB: string): Promise<boolean> {
     try {
       // En testnet, solo verificar con sdex
-      const protocolToUse = this.network === 'testnet' ? 'sdex' : 'soroswap';
+      const protocolToUse = this.currentNetwork() === 'testnet' ? 'sdex' : 'soroswap';
       
       const response = await this.apiClient.get(`/pools/${tokenA}/${tokenB}`, {
         params: {
-          network: this.network,
+          network: this.currentNetwork(),
           protocol: protocolToUse
         }
       });
@@ -190,11 +190,11 @@ class SoroswapService {
   async getAvailablePools(): Promise<any[]> {
     try {
       // En testnet, solo intentar con sdex
-      const protocolToUse = this.network === 'testnet' ? 'sdex' : 'soroswap';
+      const protocolToUse = this.currentNetwork() === 'testnet' ? 'sdex' : 'soroswap';
       
       const response = await this.apiClient.get('/pools', {
         params: {
-          network: this.network,
+          network: this.currentNetwork(),
           protocol: protocolToUse  // Un solo protocolo como string
         }
       });
@@ -301,7 +301,7 @@ class SoroswapService {
 
 
     // Fallback a contract addresses conocidos (según soporte de Soroswap)
-    if (this.network === 'testnet') {
+    if (this.currentNetwork() === 'testnet') {
       if (token === 'XLM') {
         // XLM testnet contract address
         return 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC';
@@ -349,7 +349,7 @@ class SoroswapService {
           }
         } catch (error) {
           // Fallback a protocolos conocidos
-          protocols = this.network === 'testnet' 
+          protocols = this.currentNetwork() === 'testnet' 
             ? ['sdex'] 
             : ['soroswap', 'phoenix', 'aqua', 'sdex'];
         }
@@ -357,13 +357,13 @@ class SoroswapService {
 
       // Validación final: asegurar que siempre haya al menos un protocolo
       if (!protocols || protocols.length === 0) {
-        protocols = this.network === 'testnet' 
+        protocols = this.currentNetwork() === 'testnet' 
           ? ['sdex'] 
           : ['soroswap', 'phoenix', 'aqua', 'sdex'];
       }
 
       // En testnet, usar soroswap según soporte oficial
-      if (this.network === 'testnet') {
+      if (this.currentNetwork() === 'testnet') {
         protocols = ['soroswap'];
       }
 
@@ -385,7 +385,7 @@ class SoroswapService {
         requestPayload,
         {
           params: {
-            network: this.network
+            network: this.currentNetwork()
           }
         }
       );
@@ -399,7 +399,7 @@ class SoroswapService {
       
       // Si es "No path found", agregar información útil
       if (errorDetail.includes('No path found') || errorTitle.includes('No path found')) {
-        throw new Error(`No hay ruta disponible: No se encontró liquidez para este par de tokens en ${this.network}. Intenta con otros tokens o verifica que existan pools disponibles.`);
+        throw new Error(`No hay ruta disponible: No se encontró liquidez para este par de tokens en ${this.currentNetwork()}. Intenta con otros tokens o verifica que existan pools disponibles.`);
       }
       
       throw new Error(`${errorTitle}: ${errorDetail}`);
@@ -421,7 +421,7 @@ class SoroswapService {
         },
         {
           params: {
-            network: this.network
+            network: this.currentNetwork()
           }
         }
       );
@@ -446,7 +446,7 @@ class SoroswapService {
         },
         {
           params: {
-            network: this.network
+            network: this.currentNetwork()
           }
         }
       );
@@ -484,8 +484,8 @@ class SoroswapService {
   /**
    * Obtener network actual
    */
-  getNetwork(): 'testnet' | 'mainnet' {
-    return this.network;
+  getNetwork(): StellarNetworkId {
+    return this.currentNetwork();
   }
 }
 

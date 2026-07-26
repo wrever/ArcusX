@@ -8,6 +8,13 @@ const IDEMPOTENT_ACTIONS = new Set([
   'create_deal',
   'apply_task',
   'select_proposal',
+  'create_job',
+  'create_subjob',
+  'subjob_escrow_deploy_confirm',
+  'subjob_escrow_fund_confirm',
+  'subjob_escrow_release_confirm',
+  'release_subjob_on_callback',
+  'attest_subjob',
 ]);
 
 export function wantsIdempotency(action: string): boolean {

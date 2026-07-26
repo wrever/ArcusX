@@ -19,7 +19,7 @@
 │  L3 — ARCUSX (Work Execution Layer) ← AQUÍ COBRAMOS     │
 │  Task/deal lifecycle · OAuth · disputas · ratings       │
 │  Partner API · SDK · empresas · métricas                │
-│  Take rate: 2.7–3% (hoy) → tiered bps en API            │
+│  Take rate: 3.7% platform + UX bilateral (hoy) → tiered bps en API │
 └───────────────────────────┬─────────────────────────────┘
                             │
 ┌───────────────────────────▼─────────────────────────────┐
@@ -38,12 +38,13 @@
 
 | Capa | % sobre fondeo | Quién recibe |
 |------|----------------|--------------|
-| ArcusX | **2.7%** | `VITE_PLATFORM_WALLET` |
+| ArcusX | **3.7%** | `VITE_PLATFORM_WALLET` |
 | Trustless Work | **0.3%** | Protocolo TW |
-| **Cliente paga total** | **~3%** encima del monto worker | — |
+| **UX empleador** | **+2%** sobre nominal | `clientTotal = nominal × 1.02` |
+| **Neto trabajador** | **~−4%** del fondeo | `workerNet = clientTotal × 0.96` |
 | Stellar | ~$0 | Validators |
 
-El worker recibe el monto acordado; la comisión la asume el **cliente** (igual que Upwork, pero 10× más barato).
+Detalle SDK: [`FEE_MODEL.md`](./FEE_MODEL.md). El worker ve neto; comisión on-chain sale del pipeline escrow.
 
 ### Mañana (Soroban nativo S2)
 

@@ -155,6 +155,7 @@ const PrivateOfferEscrowPopup = ({
 
   const runCreateStep = async (): Promise<string | null> => {
     updateStepStatus(0, 'in_progress');
+    setEscrowId(null);
     try {
       const result = await onCreateEscrow();
       const resolvedId = resolveEscrowId(result);

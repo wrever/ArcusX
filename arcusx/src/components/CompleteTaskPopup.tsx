@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FaCheckCircle, FaSpinner, FaTimes, FaHandshake, FaCoins, FaDollarSign, FaStar } from 'react-icons/fa';
 import { usePlatformFee } from '../hooks/usePlatformFee';
 import { useI18n } from '../i18n/I18nProvider';
@@ -157,9 +157,12 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
     ));
   };
 
+  const milestoneVerifyStarted = useRef(false);
+
   // Resetear rating cuando se abre el popup
   useEffect(() => {
     if (isOpen) {
+      milestoneVerifyStarted.current = false;
       setRating(0);
       setRatingSubmitted(false);
       setRatingSentToServer(false);
@@ -175,12 +178,12 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
     }
   }, [isOpen]);
 
-  // Verificar si el milestone ya está aprobado al abrir el popup (solo si rating ya fue enviado)
+  // Verificar milestone indexado una sola vez tras calificar (no reintentos en bucle)
   useEffect(() => {
-    if (isOpen && ratingSubmitted && !milestoneApproved) {
-      checkMilestoneStatus();
-    }
-  }, [isOpen, ratingSubmitted]);
+    if (!isOpen || !ratingSubmitted || milestoneApproved || milestoneVerifyStarted.current) return;
+    milestoneVerifyStarted.current = true;
+    void checkMilestoneStatus();
+  }, [isOpen, ratingSubmitted, milestoneApproved]);
 
   const checkMilestoneStatus = async () => {
     try {
@@ -294,25 +297,8 @@ const CompleteTaskPopup: React.FC<CompleteTaskPopupProps> = ({
           setMilestoneApproved(true);
           
           //  HABILITAR INMEDIATAMENTE: Si la aprobación fue exitosa, habilitar el botón de liberar sin esperar
-          updateStepDisabled(2, false); // Habilitar botón de liberar fondos inmediatamente (step 2)
+          updateStepDisabled(2, false);
           setCurrentStep(2);
-          
-          // Verificar en background (sin bloquear la UI)
-          setTimeout(async () => {
-            try {
-              const isApproved = await onVerifyMilestone();
-              if (!isApproved) {
-                // Si por alguna razón no está aprobado, intentar una vez más
-                setTimeout(async () => {
-                  const retryApproved = await onVerifyMilestone();
-                  if (!retryApproved && process.env.NODE_ENV === 'development') {
-                  }
-                }, 2000);
-              }
-            } catch (error) {
-              // Error silencioso en verificación background
-            }
-          }, 1000);
         } else {
           setStepError(result.error || t('complete.step.approve.error'));
           updateStepStatus(stepIndex, 'error');

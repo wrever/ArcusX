@@ -1,7 +1,8 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense, type ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { TrustlessWorkConfig } from '@trustless-work/escrow';
-import { TRUSTLESS_WORK_API_KEY, TRUSTLESS_WORK_BASE_URL } from './config/trustlessWork';
+import { trustlessWorkApiKey, trustlessWorkEnv } from './config/trustlessWork';
+import { useStellarNetwork } from './hooks/useStellarNetwork';
 import Navbar from './components/Navbar';
 import EmpresasNavbar from './components/EmpresasNavbar';
 import { isEnterpriseLandingHost } from './config/enterpriseSite';
@@ -24,6 +25,7 @@ import './css/enterprise-professional.css';
 // Code splitting - Lazy load de componentes pesados
 const Dashboard = lazy(() => import('./dashboard'));
 const DashboardKycPage = lazy(() => import('./pages/DashboardKycPage'));
+const DashboardDeveloperPage = lazy(() => import('./pages/DashboardDeveloperPage'));
 const CreateTask = lazy(() => import('./components/CreateTask'));
 const ApplyTask = lazy(() => import('./components/ApplyTask'));
 const ProposalReview = lazy(() => import('./components/ProposalReview'));
@@ -152,6 +154,7 @@ function AppContent({ isLoading }: { isLoading: boolean }) {
               <Route path="/profile/:userId" element={<UserProfile />} />
               <Route path="/dashboard/settings/profile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
               <Route path="/dashboard/kyc" element={<ProtectedRoute><DashboardKycPage /></ProtectedRoute>} />
+              <Route path="/dashboard/developer" element={<ProtectedRoute><DashboardDeveloperPage /></ProtectedRoute>} />
               <Route path="/swap" element={<><Navbar /><SwapPage /></>} />
               <Route path="/tutoriales" element={<><Navbar /><TutorialsPage /></>} />
               <Route path="/empresas" element={<EmpresasRoute />} />
@@ -165,6 +168,19 @@ function AppContent({ isLoading }: { isLoading: boolean }) {
         </div>
       )}
     </>
+  );
+}
+
+function TrustlessWorkProvider({ children }: { children: ReactNode }) {
+  const { network } = useStellarNetwork();
+  return (
+    <TrustlessWorkConfig
+      key={network}
+      baseURL={trustlessWorkEnv(network)}
+      apiKey={trustlessWorkApiKey(network)}
+    >
+      {children}
+    </TrustlessWorkConfig>
   );
 }
 
@@ -184,11 +200,11 @@ function App() {
   }, []);
 
   return (
-    <TrustlessWorkConfig baseURL={TRUSTLESS_WORK_BASE_URL} apiKey={TRUSTLESS_WORK_API_KEY}>
+    <TrustlessWorkProvider>
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AppContent isLoading={isLoading} />
       </Router>
-    </TrustlessWorkConfig>
+    </TrustlessWorkProvider>
   );
 }
 

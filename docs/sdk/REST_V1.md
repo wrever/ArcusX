@@ -9,7 +9,7 @@
 
 Los child panels y backends server-side esperan URLs estables (`POST /v1/tasks`), no `?action=create_task`. El SDK `@arcusx/sdk` **usa REST v1 por defecto**; `?action=` queda como compat interna para `arcusx.pro` hasta dogfood completo.
 
-**Lo que cobra ArcusX (2.7% + fee protocolo = ~3% cliente):** no es “acceso a TW”. Es el paquete listo para integrar:
+**Lo que cobra ArcusX (UX +2% empleador; ~4% total on-chain sobre fondeo):** no es “acceso a TW”. Es el paquete listo para integrar:
 
 - REST + SDK tipado
 - Lifecycle trabajo (3 flujos)
@@ -204,9 +204,13 @@ type EscrowBackend = 'stellar_usdc'; // hoy = TW; mañana = soroban sin cambiar 
 
 | Lo que ve el partner | Realidad interna |
 |----------------------|------------------|
-| “ArcusX platform fee ~3%” | 2.7% ArcusX + 0.3% protocolo escrow |
-| Un solo `GET /v1/.../escrow/quote` | `get_platform_fee` + cálculo Edge |
+| “+2% al empleador al fondear” | `nominal × 1.02` = `clientTotal` |
+| Trabajador ve neto | `clientTotal × 0.96` ≈ −4% del fondeo |
+| On-chain | 3.7% ArcusX + 0.3% TW sobre hito escrow |
+| Un solo `GET /v1/.../escrow/quote` | `get_platform_fee` + `quoteBilateralFromNominal` Edge |
 | Settlement USDC Stellar | TW hoy; Soroban swap transparente después |
+
+Detalle: [`FEE_MODEL.md`](./FEE_MODEL.md).
 
 No mentir: en contrato enterprise se puede desglosar. En SDK/README/quickstart: **una línea de fee ArcusX**.
 

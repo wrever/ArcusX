@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { FaHandshake, FaWallet } from 'react-icons/fa';
 import {
@@ -64,6 +64,8 @@ const DealPublicPage = ({ mode = 'preview', embedded = false, dealToken }: DealP
   const { fundEscrow } = useFundEscrow();
   const { sendTransaction } = useSendTransaction();
   const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds();
+  const getEscrowRef = useRef(getEscrowByContractIds);
+  getEscrowRef.current = getEscrowByContractIds;
   const [deal, setDeal] = useState<AgreementDeal | null>(null);
   const [canAccept, setCanAccept] = useState(false);
   const [viewerRole, setViewerRole] = useState<'initiator' | 'counterparty' | 'guest' | null>(null);
@@ -135,14 +137,14 @@ const DealPublicPage = ({ mode = 'preview', embedded = false, dealToken }: DealP
       sendTransaction: sendTransaction as DealEscrowHooks['sendTransaction'],
       getEscrowByContractIds: async (contractIds) => {
         const ids = Array.isArray(contractIds) ? contractIds : contractIds.contractIds;
-        const result = await getEscrowByContractIds({
+        const result = await getEscrowRef.current({
           contractIds: ids,
-          validateOnChain: Array.isArray(contractIds) ? true : contractIds.validateOnChain ?? true,
+          validateOnChain: Array.isArray(contractIds) ? false : contractIds.validateOnChain ?? false,
         });
         return Array.isArray(result) ? result : (result as { escrows?: unknown[] })?.escrows ?? result ?? [];
       },
     }),
-    [kit, deployEscrow, fundEscrow, sendTransaction, getEscrowByContractIds],
+    [kit, deployEscrow, fundEscrow, sendTransaction],
   );
 
   const chain = useDealEscrowChainState(deal, escrowHooks.getEscrowByContractIds);

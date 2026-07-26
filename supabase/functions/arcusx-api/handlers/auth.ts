@@ -12,7 +12,16 @@ import type { ApiContext } from './types.ts';
 import { isValidStellarG } from './types.ts';
 import { requireUser } from './require.ts';
 
-function normalizeUsername(base: string, supabaseUserId: string): string {
+type ArcusxUserRow = {
+  id: number;
+  username: string;
+  email: string;
+  supabase_user_id: string | null;
+  is_admin: boolean | null;
+  role: string | null;
+};
+
+function normalizeUsername(base: string, _supabaseUserId: string): string {
   let b = base.toLowerCase().replace(/[^a-z0-9._-]/g, '').slice(0, 48);
   if (b.length < 2) b = 'user';
   return b;
@@ -30,6 +39,113 @@ async function uniqueUsername(
     if (!data) return c;
   }
   return `${base}_${suffix}_${Date.now()}`;
+}
+
+async function findExistingArcusxUser(
+  supabase: ApiContext['supabase'],
+  email: string,
+  supabaseUserId: string,
+): Promise<ArcusxUserRow | null> {
+  const { data: bySupabase } = await supabase
+    .from('arcusx_users')
+    .select('id, username, email, supabase_user_id, is_admin, role')
+    .eq('supabase_user_id', supabaseUserId)
+    .maybeSingle();
+  if (bySupabase) return bySupabase as ArcusxUserRow;
+
+  const { data: byEmail } = await supabase
+    .from('arcusx_users')
+    .select('id, username, email, supabase_user_id, is_admin, role')
+    .eq('email', email)
+    .maybeSingle();
+  return (byEmail as ArcusxUserRow | null) ?? null;
+}
+
+async function syncIdentitySequences(supabase: ApiContext['supabase']): Promise<void> {
+  const { error } = await supabase.rpc('arcusx_sync_identity_sequences');
+  if (error) {
+    console.warn('[syncSupabaseUser] arcusx_sync_identity_sequences:', error.message);
+  }
+}
+
+async function linkSupabaseUserId(
+  supabase: ApiContext['supabase'],
+  userId: number,
+  supabaseUserId: string,
+  existingSupabaseUserId: string | null | undefined,
+): Promise<void> {
+  if (existingSupabaseUserId) return;
+  await supabase.from('arcusx_users').update({
+    supabase_user_id: supabaseUserId,
+    updated_at: new Date().toISOString(),
+  }).eq('id', userId);
+}
+
+async function insertArcusxUser(
+  supabase: ApiContext['supabase'],
+  row: {
+    username: string;
+    email: string;
+    supabase_user_id: string;
+  },
+): Promise<{ id: number } | { error: string; code?: string }> {
+  const { data: inserted, error } = await supabase.from('arcusx_users').insert({
+    username: row.username,
+    email: row.email,
+    supabase_user_id: row.supabase_user_id,
+    role: 'user',
+    is_admin: false,
+    password_hash: '',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }).select('id').single();
+
+  if (error || !inserted) {
+    return { error: error?.message ?? 'Error al crear usuario', code: error?.code };
+  }
+  return { id: inserted.id as number };
+}
+
+async function createArcusxUser(
+  supabase: ApiContext['supabase'],
+  email: string,
+  supabaseUserId: string,
+  name: string,
+  providedUsername: string,
+): Promise<{ userId: number; username: string; isNew: boolean } | { error: string }> {
+  const base = normalizeUsername(
+    providedUsername || name.replace(/\s/g, '') || email.split('@')[0],
+    supabaseUserId,
+  );
+  const username = await uniqueUsername(supabase, base, supabaseUserId);
+
+  let result = await insertArcusxUser(supabase, { username, email, supabase_user_id: supabaseUserId });
+
+  if ('error' in result) {
+    const raced = await findExistingArcusxUser(supabase, email, supabaseUserId);
+    if (raced) {
+      await linkSupabaseUserId(supabase, raced.id, supabaseUserId, raced.supabase_user_id);
+      return { userId: raced.id, username: raced.username, isNew: false };
+    }
+
+    const isPkey = result.code === '23505' &&
+      (result.error.includes('arcusx_users_pkey') || result.error.includes('duplicate key'));
+    if (isPkey) {
+      await syncIdentitySequences(supabase);
+      result = await insertArcusxUser(supabase, { username, email, supabase_user_id: supabaseUserId });
+    }
+  }
+
+  if ('error' in result) {
+    const raced = await findExistingArcusxUser(supabase, email, supabaseUserId);
+    if (raced) {
+      await linkSupabaseUserId(supabase, raced.id, supabaseUserId, raced.supabase_user_id);
+      return { userId: raced.id, username: raced.username, isNew: false };
+    }
+    return { error: result.error };
+  }
+
+  return { userId: result.id, username, isNew: true };
 }
 
 export async function syncSupabaseUser(ctx: ApiContext): Promise<Response> {
@@ -50,12 +166,7 @@ export async function syncSupabaseUser(ctx: ApiContext): Promise<Response> {
     return jsonError(req, 'Sesión OAuth no válida', 401, 'token_verify_failed');
   }
 
-  const { data: existing } = await supabase
-    .from('arcusx_users')
-    .select('id, username, email, supabase_user_id, is_admin, role')
-    .or(`email.eq.${email},supabase_user_id.eq.${supabaseUserId}`)
-    .limit(1)
-    .maybeSingle();
+  const existing = await findExistingArcusxUser(supabase, email, supabaseUserId);
 
   let userId: number;
   let username: string;
@@ -64,38 +175,20 @@ export async function syncSupabaseUser(ctx: ApiContext): Promise<Response> {
   let isNewUser = false;
 
   if (existing) {
-    userId = existing.id as number;
-    username = existing.username as string;
+    userId = existing.id;
+    username = existing.username;
     isAdmin = existing.is_admin === true || existing.role === 'admin';
     role = String(existing.role ?? (isAdmin ? 'admin' : 'user'));
-    if (!existing.supabase_user_id) {
-      await supabase.from('arcusx_users').update({
-        supabase_user_id: supabaseUserId,
-        updated_at: new Date().toISOString(),
-      }).eq('id', userId);
-    }
+    await linkSupabaseUserId(supabase, userId, supabaseUserId, existing.supabase_user_id);
   } else {
-    isNewUser = true;
     const provided = String(body.username ?? '').trim();
-    const base = normalizeUsername(
-      provided || name.replace(/\s/g, '') || email.split('@')[0],
-      supabaseUserId,
-    );
-    username = await uniqueUsername(supabase, base, supabaseUserId);
-    const { data: inserted, error } = await supabase.from('arcusx_users').insert({
-      username,
-      email,
-      supabase_user_id: supabaseUserId,
-      role: 'user',
-      is_admin: false,
-      password_hash: '',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }).select('id').single();
-    if (error || !inserted) {
-      return jsonError(req, error?.message ?? 'Error al crear usuario', 500);
+    const created = await createArcusxUser(supabase, email, supabaseUserId, name, provided);
+    if ('error' in created) {
+      return jsonError(req, created.error, 500);
     }
-    userId = inserted.id as number;
+    userId = created.userId;
+    username = created.username;
+    isNewUser = created.isNew;
     isAdmin = false;
     role = 'user';
   }

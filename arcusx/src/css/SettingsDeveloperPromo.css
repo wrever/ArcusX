@@ -1,0 +1,103 @@
+.settings-dev-promo {
+  margin: 0 0 2.5rem;
+}
+
+.settings-dev-promo__shell {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.25rem;
+  padding: 1.25rem 1.35rem;
+  border-radius: 14px;
+  background: var(--bg-card, rgba(20, 20, 20, 0.8));
+  border: 1px solid var(--border-accent, rgba(16, 221, 136, 0.25));
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.2));
+}
+
+:root[data-theme='light'] .settings-dev-promo__shell {
+  background: var(--bg-card, #fff);
+  border-color: rgba(5, 150, 105, 0.22);
+  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.06));
+}
+
+.settings-dev-promo__icon-wrap {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(16, 221, 136, 0.12);
+  color: var(--accent-text, #10dd88);
+}
+
+:root[data-theme='light'] .settings-dev-promo__icon-wrap {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+}
+
+.settings-dev-promo__icon {
+  font-size: 1.35rem;
+}
+
+.settings-dev-promo__text {
+  flex: 1;
+  min-width: 200px;
+}
+
+.settings-dev-promo__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent-text, #10dd88);
+}
+
+.settings-dev-promo__title {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+  color: var(--text-primary, #fff);
+}
+
+:root[data-theme='light'] .settings-dev-promo__title {
+  color: var(--text-primary, #0f172a);
+}
+
+.settings-dev-promo__body {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.75));
+}
+
+.settings-dev-promo__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.65rem 1.1rem;
+  border-radius: 10px;
+  background: var(--gradient-primary, linear-gradient(135deg, #10dd88, #0ab86a));
+  color: var(--on-accent, #0a0a0a);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.settings-dev-promo__cta:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-blue, 0 4px 16px rgba(16, 221, 136, 0.22));
+}
+
+@media (max-width: 640px) {
+  .settings-dev-promo__cta {
+    width: 100%;
+    justify-content: center;
+  }
+}

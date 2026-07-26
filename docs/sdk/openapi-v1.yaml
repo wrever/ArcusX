@@ -1,0 +1,360 @@
+openapi: 3.0.3
+info:
+  title: ArcusX Work Execution API
+  version: 1.0.0
+  description: |
+    REST v1 sobre arcusx-api (Supabase Edge). Alias de handlers existentes.
+    Trustless Work no aparece en esta spec — solo ArcusX Escrow / USDC settlement.
+  contact:
+    name: ArcusX
+servers:
+  - url: https://{project}.supabase.co/functions/v1/arcusx-api/v1
+    variables:
+      project:
+        default: your-project-ref
+security:
+  - supabaseAnon: []
+  - partnerKey: []
+  - bearerAuth: []
+paths:
+  /stats/market:
+    get:
+      summary: Landing market stats
+      operationId: getMarketStats
+      tags: [Public]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeSuccess'
+  /config/platform-fee:
+    get:
+      summary: Platform fee rate (decimal, e.g. 0.037)
+      operationId: getPlatformFee
+      tags: [Public]
+      responses:
+        '200':
+          description: OK
+  /tasks:
+    get:
+      summary: List public tasks
+      operationId: getTasks
+      tags: [Marketplace]
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Create task
+      operationId: createTask
+      tags: [Marketplace]
+      security:
+        - supabaseAnon: []
+        - partnerKey: []
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+      responses:
+        '200':
+          description: Created
+  /tasks/mine:
+    get:
+      summary: Current user tasks
+      operationId: getUserTasks
+      tags: [Marketplace]
+      security:
+        - supabaseAnon: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /tasks/{taskId}:
+    get:
+      summary: Task details
+      operationId: getTaskDetails
+      tags: [Marketplace]
+      parameters:
+        - $ref: '#/components/parameters/taskId'
+      security:
+        - supabaseAnon: []
+        - partnerKey: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /tasks/{taskId}/applications:
+    post:
+      summary: Apply to task
+      operationId: applyTask
+      tags: [Marketplace]
+      parameters:
+        - $ref: '#/components/parameters/taskId'
+      security:
+        - supabaseAnon: []
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message, walletAddress]
+              properties:
+                message: { type: string }
+                walletAddress: { type: string }
+      responses:
+        '200':
+          description: OK
+  /tasks/{taskId}/proposals:
+    get:
+      summary: List proposals
+      operationId: getTaskProposals
+      tags: [Marketplace]
+      parameters:
+        - $ref: '#/components/parameters/taskId'
+      security:
+        - supabaseAnon: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /tasks/{taskId}/proposals/{proposalId}/select:
+    post:
+      summary: Select proposal
+      operationId: selectProposal
+      tags: [Marketplace]
+      parameters:
+        - $ref: '#/components/parameters/taskId'
+        - in: path
+          name: proposalId
+          required: true
+          schema: { type: integer }
+      security:
+        - supabaseAnon: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /tasks/{taskId}/cancel:
+    post:
+      summary: Cancel task
+      operationId: cancelTask
+      tags: [Marketplace]
+      parameters:
+        - $ref: '#/components/parameters/taskId'
+      security:
+        - supabaseAnon: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /private-offers:
+    get:
+      summary: Private offers for current user
+      operationId: getPrivateOffers
+      tags: [Private]
+      security:
+        - supabaseAnon: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /tasks/{taskId}/private/finalize:
+    post:
+      summary: Finalize private offer after fund
+      operationId: finalizePrivateOffer
+      tags: [Private]
+      parameters:
+        - $ref: '#/components/parameters/taskId'
+      security:
+        - supabaseAnon: []
+        - partnerKey: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /deals:
+    get:
+      summary: My deals
+      operationId: getMyDeals
+      tags: [Deals]
+      security:
+        - supabaseAnon: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Create deal
+      operationId: createDeal
+      tags: [Deals]
+      security:
+        - supabaseAnon: []
+        - partnerKey: []
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDealRequest'
+      responses:
+        '200':
+          description: OK
+  /deals/token/{token}:
+    get:
+      summary: Get deal by share token
+      operationId: getDealByToken
+      tags: [Deals]
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+  /deals/{dealId}:
+    get:
+      summary: Deal details
+      operationId: getDealDetails
+      tags: [Deals]
+      parameters:
+        - $ref: '#/components/parameters/dealId'
+      security:
+        - supabaseAnon: []
+        - partnerKey: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /tasks/{taskId}/escrow:
+    get:
+      summary: Escrow status
+      operationId: getEscrowStatus
+      tags: [Escrow]
+      parameters:
+        - $ref: '#/components/parameters/taskId'
+      security:
+        - supabaseAnon: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Create escrow metadata
+      operationId: createEscrow
+      tags: [Escrow]
+      parameters:
+        - $ref: '#/components/parameters/taskId'
+      security:
+        - supabaseAnon: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+  /tasks/{taskId}/escrow/quote:
+    get:
+      summary: Escrow fee quote (bilateral model)
+      operationId: escrowQuote
+      tags: [Escrow]
+      parameters:
+        - $ref: '#/components/parameters/taskId'
+      security:
+        - supabaseAnon: []
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+components:
+  securitySchemes:
+    supabaseAnon:
+      type: apiKey
+      in: header
+      name: apikey
+    partnerKey:
+      type: apiKey
+      in: header
+      name: x-arcusx-api-key
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    taskId:
+      in: path
+      name: taskId
+      required: true
+      schema: { type: integer }
+    dealId:
+      in: path
+      name: dealId
+      required: true
+      schema: { type: string, format: uuid }
+  schemas:
+    EnvelopeSuccess:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        data: { type: object }
+        meta:
+          type: object
+          properties:
+            request_id: { type: string, format: uuid }
+            api_version: { type: string, example: v1 }
+    EnvelopeError:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+        meta:
+          type: object
+    CreateTaskRequest:
+      type: object
+      required: [user_id, title, description, price, currency, category, difficulty]
+      properties:
+        user_id: { type: integer }
+        title: { type: string }
+        subtitle: { type: string }
+        description: { type: string }
+        price: { type: number, description: Nominal reference value USDC }
+        currency: { type: string, enum: [USDC] }
+        category: { type: string }
+        difficulty: { type: string }
+        is_private_invite: { type: boolean }
+        invited_user_id: { type: integer }
+        external_id: { type: string }
+    CreateDealRequest:
+      type: object
+      required: [title, amount_usdc, initiator_wallet, beneficiary_wallet]
+      properties:
+        template_id: { type: string }
+        title: { type: string }
+        description: { type: string }
+        amount_usdc: { type: number }
+        initiator_wallet: { type: string }
+        beneficiary_wallet: { type: string }
+        release_signer_wallet: { type: string }
+        funder_role: { type: string, enum: [initiator, counterparty] }
+        counterparty_wallet: { type: string }
+        external_id: { type: string }
+    EscrowQuote:
+      type: object
+      properties:
+        nominal: { type: number }
+        workerNet: { type: number }
+        clientTotal: { type: number }
+        clientVisibleFee: { type: number }
+        platformFeeRate: { type: number }
+        fundAmount: { type: number }
+        currency: { type: string, enum: [USDC] }

@@ -31,6 +31,7 @@ import {
   canAccessTaskSupervision,
   clientCanSuperviseAcceptedTask,
 } from './utils/escrowStatus';
+import { resolveSuperviseWorkerUserId } from './utils/superviseWorkerId';
 import RatingDisplay from './components/RatingDisplay';
 import { getUserRatingSummary } from './services/ratingService';
 import { useI18n } from './i18n/I18nProvider';
@@ -48,6 +49,7 @@ import { prepareSupabaseArcusxSession } from './services/arcusxMessagingSupabase
 import { fetchPrivateOffers, type PrivateOfferTask } from './services/privateOffersService';
 import TaskDeletionNotice from './components/TaskDeletionNotice';
 import SentPrivateOfferCard from './components/SentPrivateOfferCard';
+import NetworkModeBanner from './components/NetworkModeBanner';
 import { useSentPrivateOffersChainMap } from './hooks/useSentPrivateOffersChainMap';
 import { isPrivateOfferSentToWorker } from './utils/privateOfferChainState';
 import { authService } from './services/authService';
@@ -61,8 +63,10 @@ import PayoutWalletBanner from './components/PayoutWalletBanner';
 import { usePayoutWallet } from './hooks/usePayoutWallet';
 import DashboardDealsPanel from './components/DashboardDealsPanel';
 import SettingsVerificationSection from './components/SettingsVerificationSection';
+import SettingsDeveloperPromo from './components/SettingsDeveloperPromo';
 import SettingsBadgesCatalog from './components/SettingsBadgesCatalog';
 import './css/SettingsVerificationSection.css';
+import './css/SettingsDeveloperPromo.css';
 import './css/SettingsBadgesCatalog.css';
 import { formatWorkerNetDisplay } from './utils/bilateralFeeModel';
 import TaskCreatorLine from './components/TaskCreatorLine';
@@ -729,6 +733,8 @@ const Dashboard = () => {
     fundTxHash?: string | null,
     /** API ya validó escrow fondeado (get_user_tasks.has_accepted_proposal) */
     readyForSupervision?: boolean,
+    invitedUserId?: number | null,
+    taskOwnerUserId?: number | null,
   ) => {
     const funded =
       readyForSupervision === true ||
@@ -737,8 +743,13 @@ const Dashboard = () => {
       navigate(`/proposals/${taskId}`);
       return;
     }
-    if (acceptedApplicantId) {
-      navigate(`/supervise-task/${taskId}/${acceptedApplicantId}`);
+    const workerUserId = resolveSuperviseWorkerUserId({
+      taskOwnerUserId: taskOwnerUserId ?? user?.id,
+      acceptedApplicantId,
+      invitedUserId,
+    });
+    if (workerUserId) {
+      navigate(`/supervise-task/${taskId}/${workerUserId}`);
     } else {
       navigate(`/proposals/${taskId}`);
     }
@@ -1150,6 +1161,7 @@ const Dashboard = () => {
       
       {/* Main Content */}
       <div className="dashboard-main">
+        <NetworkModeBanner />
         <header className="dashboard-header">
           <h1>
             {activeTab === 'tasks' && t('dashboard.title.tasks')}
@@ -2160,6 +2172,8 @@ const Dashboard = () => {
 
                   <SettingsVerificationSection />
 
+                  <SettingsDeveloperPromo />
+
                   <SettingsBadgesCatalog userStats={userStats} />
 
                   {/* Botón para cerrar sesión */}
@@ -2331,6 +2345,8 @@ const Dashboard = () => {
                                 task.escrow_id,
                                 task.escrow_fund_tx_hash,
                                 true,
+                                task.invited_user_id,
+                                task.creator_id ?? user?.id,
                               )
                             }
                           >

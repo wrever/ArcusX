@@ -26,7 +26,7 @@
 - Flujos deals: `createDeal`, `getDealDetails`, `acceptDeal`, `markDealReleased`
 - Auth integrador: API key header (`x-arcusx-api-key`) + documentación; JWT usuario para flujos end-user
 - `WalletAdapter` interface (implementación Freighter = ejemplo, no obligatoria en core)
-- Quickstart + `examples/node-quickstart`
+- Quickstart + `examples/sdk-node-{marketplace,private,deal}`
 - Script smoke: `scripts/smoke-sdk.mjs`
 
 **Fuera de alcance (InstaAwards SDK track):**
@@ -61,7 +61,10 @@ packages/arcusx-sdk/
       adapter.ts
   README.md
 docs/sdk/
+  CHECKLIST.md          # lista de trabajo ejecutable
+  FEE_MODEL.md
   QUICKSTART.md
+  openapi-v1.yaml
   API_REFERENCE.md
   PARTNER_AUTH.md
 examples/

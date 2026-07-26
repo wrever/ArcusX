@@ -1,5 +1,7 @@
 import { jsonError, jsonResponse, jsonSuccess } from '../../_shared/arcusx-cors.ts';
 import { normalizePlatformFeeRate } from '../../_shared/platform-fee.ts';
+import { quoteBilateralFromNominal } from '../../_shared/bilateral-fee.ts';
+import { stellarNetworkApiLabel } from '../../_shared/stellar-network.ts';
 import { insertArcusxNotification } from '../../_shared/arcusx-notifications.ts';
 import type { ApiContext } from './types.ts';
 import { qp, qpInt } from './types.ts';
@@ -8,6 +10,7 @@ import { uploadTaskFile } from './storage-helpers.ts';
 import { normalizeDisplayText } from '../../_shared/text-encoding.ts';
 import { creatorDisplayFields } from '../../_shared/creator-display.ts';
 import { logDomainEvent } from '../../_shared/domain-events.ts';
+import { emitPartnerWebhook } from '../../_shared/partner-webhooks.ts';
 import { loadCreatorEnrichment } from './kyc.ts';
 import { ensureTaskScheduledDeletion } from '../../_shared/task-purge.ts';
 import { loadReleasedVolumeRows, sumVolumeRows } from '../../_shared/admin-stats.ts';
@@ -346,6 +349,10 @@ export async function createTask(ctx: ApiContext): Promise<Response> {
     created_at: new Date().toISOString(),
   };
 
+  if (ctx.partnerId) insertRow.partner_id = ctx.partnerId;
+  const externalId = body.external_id ? String(body.external_id).trim() : '';
+  if (externalId) insertRow.external_id = externalId;
+
   const { data, error } = await auth.supabase.from('arcusx_tasks').insert(insertRow).select('id').single();
   if (error) return jsonError(req, error.message, 500);
 
@@ -375,6 +382,14 @@ export async function createTask(ctx: ApiContext): Promise<Response> {
     event_type: 'task.created',
     actor_user_id: auth.userId,
     payload: { is_private: isPrivate, price },
+  });
+
+  void emitPartnerWebhook(auth.supabase, ctx.partnerId, 'task.created', {
+    task_id: data?.id,
+    external_id: externalId || null,
+    partner_id: ctx.partnerId,
+    price,
+    is_private_invite: isPrivate,
   });
 
   return jsonSuccess(req, { task_id: data?.id, message: 'Tarea creada exitosamente' });
@@ -913,6 +928,31 @@ export async function getPlatformFee(ctx: ApiContext): Promise<Response> {
     success: true,
     platform_fee: platformFee,
     platform_fee_percent: Math.round(platformFee * 10000) / 100,
+  });
+}
+
+/** Quote bilateral de fondeo — TW oculto; integrador solo ve montos ArcusX. */
+export async function getEscrowQuote(ctx: ApiContext): Promise<Response> {
+  const { req, url, supabase, stellarNetwork } = ctx;
+  const nominal = Number(
+    url.searchParams.get('nominal') ?? url.searchParams.get('amount_usdc') ?? 0,
+  );
+  if (!Number.isFinite(nominal) || nominal <= 0) {
+    return jsonError(req, 'nominal o amount_usdc requerido (> 0)', 400);
+  }
+
+  const { data } = await supabase
+    .from('arcusx_system_config')
+    .select('config_value')
+    .eq('config_key', 'platform_fee')
+    .maybeSingle();
+  const platformFee = normalizePlatformFeeRate(data?.config_value);
+  const quote = quoteBilateralFromNominal(nominal, platformFee);
+
+  return jsonSuccess(req, {
+    currency: 'USDC',
+    network: stellarNetworkApiLabel(stellarNetwork),
+    quote,
   });
 }
 

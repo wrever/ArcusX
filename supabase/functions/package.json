@@ -1,0 +1,8 @@
+{
+  "name": "arcusx-edge-functions",
+  "private": true,
+  "description": "Tipos IDE para Edge Functions (runtime = Deno)",
+  "devDependencies": {
+    "@supabase/supabase-js": "2.49.1"
+  }
+}

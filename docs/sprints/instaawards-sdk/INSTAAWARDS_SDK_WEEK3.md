@@ -77,7 +77,7 @@ SDK does **not** custody keys; matches marketplace non-custodial model.
 
 | Metric | Value | Date |
 |--------|-------|------|
-| SDK methods shipped | _e.g. 18_ | |
+| SDK methods shipped | _target 27_ | |
 | Smoke script pass | ☐ | |
 | Quickstart run on testnet | ☐ | |
 | Sandbox partner key issued | ☐ | |
@@ -89,7 +89,7 @@ SDK does **not** custody keys; matches marketplace non-custodial model.
 - [ ] Reviewer can run quickstart without reading arcusx frontend source
 - [ ] No PHP / legacy API references in SDK docs
 - [ ] Testnet explicitly labeled; mainnet noted as next milestone
-- [ ] Platform fee documented as **3%** (client-paid)
+- [ ] Platform fee documented per [`FEE_MODEL.md`](../../sdk/FEE_MODEL.md) (bilateral UX, testnet)
 
 ---
 

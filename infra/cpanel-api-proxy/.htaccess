@@ -1,0 +1,13 @@
+# api.arcusx.pro — reenvía todo al proxy PHP
+DirectoryIndex proxy.php
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # No tocar archivos estáticos si los añades después
+  RewriteCond %{REQUEST_FILENAME} -f
+  RewriteRule . - [L]
+
+  RewriteRule ^ proxy.php [L,QSA]
+</IfModule>

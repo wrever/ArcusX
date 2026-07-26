@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { FaFlag, FaHandshake, FaTimes } from 'react-icons/fa';
 import {
@@ -68,6 +68,8 @@ const DealWorkspacePage = () => {
   const { deployEscrow } = useInitializeEscrow();
   const { fundEscrow } = useFundEscrow();
   const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds();
+  const getEscrowRef = useRef(getEscrowByContractIds);
+  getEscrowRef.current = getEscrowByContractIds;
   const { startDispute } = useStartDispute();
   const [deal, setDeal] = useState<AgreementDeal | null>(null);
   const [loading, setLoading] = useState(true);
@@ -127,14 +129,14 @@ const DealWorkspacePage = () => {
       sendTransaction: sendTransaction as DealEscrowHooks['sendTransaction'],
       getEscrowByContractIds: async (contractIds) => {
         const ids = Array.isArray(contractIds) ? contractIds : contractIds.contractIds;
-        const result = await getEscrowByContractIds({
+        const result = await getEscrowRef.current({
           contractIds: ids,
-          validateOnChain: Array.isArray(contractIds) ? true : contractIds.validateOnChain ?? true,
+          validateOnChain: Array.isArray(contractIds) ? false : contractIds.validateOnChain ?? false,
         });
         return Array.isArray(result) ? result : (result as { escrows?: unknown[] })?.escrows ?? result ?? [];
       },
     }),
-    [kit, deployEscrow, fundEscrow, sendTransaction, getEscrowByContractIds],
+    [kit, deployEscrow, fundEscrow, sendTransaction],
   );
 
   const chain = useDealEscrowChainState(deal, escrowHooks.getEscrowByContractIds);

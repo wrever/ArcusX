@@ -44,7 +44,7 @@
 | Deal lifecycle | `handlers/deals.ts` | Sí |
 | Escrow metadata + `tx_hash` validation | `escrow.ts`, `released-metrics.ts` | Sí |
 | Disputas + ratings | `disputes.ts`, `rating-persist.ts` | Sí |
-| Fees 3% | `fees.ts`, `get_platform_fee` | Sí |
+| Fees bilateral | `bilateral-fee.ts`, `get_platform_fee` (0.037) | Sí — ver `FEE_MODEL.md` |
 | Idempotency | `_shared/idempotency.ts` | Sí — extender a partners |
 
 ### Lo que bloquea ser infra pública
@@ -198,7 +198,17 @@ Migración gradual: wrappers en `jsonSuccess` / `jsonError` en `arcusx-cors.ts`.
 
 ---
 
-### Fase 2 — SDK MVP + dogfooding (2–3 semanas)
+### Fase 2a — REST v1 alias (P0, paralelo a SDK)
+
+**Meta:** URLs estables `POST /v1/tasks` además de `?action=` — **no opcional**.
+
+Ver [`REST_V1.md`](./REST_V1.md), [`CHECKLIST.md`](./CHECKLIST.md) T3-13…T3-15.
+
+**DoD:** OpenAPI `openapi-v1.yaml`; SDK usa `/v1/` por defecto.
+
+---
+
+### Fase 2b — SDK MVP + dogfood (2–3 semanas)
 
 **Meta:** `@arcusx/sdk` implementa el contrato; arcusx empieza a consumirlo.
 
@@ -288,26 +298,13 @@ await ax.escrow.confirmFund({ taskId, txHash });
 
 ---
 
-### Fase 4 — API v1 REST (opcional, 2–4 semanas)
+### Fase 4 — Escrow provider unificado (antes webhooks)
 
-**Meta:** URLs estables además de `?action=` (compat legacy).
-
-```
-POST   /v1/tasks
-GET    /v1/tasks/:id
-POST   /v1/tasks/:id/escrow/prepare-fund
-POST   /v1/tasks/:id/escrow/confirm-fund
-POST   /v1/deals
-...
-```
-
-Implementación: nuevo Edge `arcusx-api-v1` o rewrite en `router.ts` con path dispatch — **misma lógica de handlers**, distinto entrypoint.
-
-**DoD:** OpenAPI spec generada; SDK usa `/v1/` por defecto con fallback `?action=`.
+Ver PLAN_MAESTRO Fase 2c (T3-16…T3-18). REST `/v1/.../escrow/*` con TW @internal.
 
 ---
 
-### Fase 5 — Webhooks + observabilidad (2 semanas)
+### Fase 5 — Webhooks + observabilidad (2 semanas) _(era Fase 4 REST — movido a 2a)_
 
 | Evento | Payload mínimo |
 |--------|----------------|
@@ -417,11 +414,13 @@ Paralelo: marketplace y métricas OAuth no se detienen.
 
 ## 11. Próximas acciones (esta semana)
 
-1. [ ] Migración SQL `arcusx_partners` + `arcusx_partner_keys` (borrador en `supabase/migrations/`)
-2. [ ] `_shared/partner-api-keys.ts` + tests manuales con curl
-3. [ ] Implementar `packages/arcusx-sdk/src/modules/tasks.ts` (primer módulo)
-4. [ ] Ampliar `API_REFERENCE.md` con columnas Partner / User JWT / Response shape
-5. [ ] Decidir Fase 1b: ¿shadow users o solo Modo A en primer piloto?
+Ver [`CHECKLIST.md`](./CHECKLIST.md). Resumen:
+
+1. [ ] Aplicar migración `20260528140000_arcusx_partners.sql`
+2. [ ] `_shared/partner-api-keys.ts` + tests curl
+3. [ ] `packages/arcusx-sdk/src/http.ts` + `modules/public.ts`
+4. [ ] `handlers/rest-v1.ts` (paralelo)
+5. [ ] Generar key sandbox T3-06
 
 ---
 

@@ -1,0 +1,12 @@
+name = "arcusx-partner-api"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+
+# Tras deploy: ruta custom api.arcusx.pro en Cloudflare Dashboard
+# routes = [{ pattern = "api.arcusx.pro/*", zone_name = "arcusx.pro" }]
+
+[vars]
+# Origen Edge (sin trailing slash). Override por entorno en dashboard CF.
+SUPABASE_ARCUSX_API_ORIGIN = "https://atgsesbstjleabesclzs.supabase.co/functions/v1/arcusx-api"
+
+# SUPABASE_ANON_KEY → secret (wrangler secret put SUPABASE_ANON_KEY)

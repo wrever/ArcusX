@@ -10,8 +10,12 @@ import {
 import { useWallet } from '../hooks/useWallet';
 import { useResolveDispute, useSendTransaction, useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks';
 import { resolveDisputeTrustlessEscrow } from '../services/trustlessWorkEscrowService';
-import { USDC_ISSUER } from '../config/usdc';
-import { PLATFORM_WALLET } from '../config/trustlessWork';
+import { platformWallet } from '../config/trustlessWork';
+import { getUsdcIssuer } from '../config/usdc';
+import {
+  getActiveStellarNetwork,
+  stellarNetworkDisplayName,
+} from '../config/stellarDual';
 import {
   assertDisputePayoutsForDecision,
   allocateDisputeSplitAmounts,
@@ -251,13 +255,13 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
             escrow,
             taskFunderWallet,
             dbUserWallet: dbClientWallet,
-            platformWallet: PLATFORM_WALLET,
+            platformWallet: platformWallet(),
           });
           const workerPick = resolveWorkerPayoutWallet({
             escrow,
             proposalWorkerWallet,
             dbUserWallet: dbWorkerWallet,
-            platformWallet: PLATFORM_WALLET,
+            platformWallet: platformWallet(),
           });
 
           setPayoutWalletPreview({
@@ -983,7 +987,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
             proposalWorkerWallet,
             dbClientWallet,
             dbWorkerWallet,
-            platformWallet: PLATFORM_WALLET,
+            platformWallet: platformWallet(),
           });
         } catch {
           throw new Error(
@@ -1005,14 +1009,14 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
             throw new Error(
               t('admin.disputes.resolve.treasuryBlocked')
                 .replace('{{wallet}}', payoutTargets.client.wallet)
-                .replace('{{platform}}', PLATFORM_WALLET || payoutTargets.client.wallet),
+                .replace('{{platform}}', platformWallet() || payoutTargets.client.wallet),
             );
           }
           if (code === 'WORKER_TREASURY_BLOCKED') {
             throw new Error(
               t('admin.disputes.resolve.workerTreasuryBlocked')
                 .replace('{{wallet}}', payoutTargets.worker?.wallet ?? '—')
-                .replace('{{platform}}', PLATFORM_WALLET || '—'),
+                .replace('{{platform}}', platformWallet() || '—'),
             );
           }
           if (code === 'WORKER_WALLET_UNRESOLVED') {
@@ -1144,7 +1148,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
                 successMessage += `\n INFORMACIÓN IMPORTANTE:\n`;
                 successMessage += `   1.  El dinero YA está en tu wallet Stellar (confirmado en blockchain)\n`;
                 successMessage += `   2.  Balance actual en blockchain: ${verification.currentBalance?.toFixed(7) || clientAmount.toFixed(7)} USDC\n`;
-                successMessage += `   3.  Trustline correcto configurado: USDC:${USDC_ISSUER}\n`;
+                successMessage += `   3.  Trustline correcto configurado: USDC:${getUsdcIssuer()}\n`;
                 successMessage += `   4.  Si Freighter muestra un balance diferente (${verification.currentBalance ? (verification.currentBalance - clientAmount).toFixed(7) : 'N/A'} USDC menos):\n`;
                 successMessage += `      - Esto es un problema de sincronización de Freighter\n`;
                 successMessage += `      - El dinero ESTÁ en la blockchain, solo no se refleja en Freighter\n`;
@@ -1168,23 +1172,21 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
             //  MEJORA: Agregar advertencia si el cliente necesita configurar trustline
             if ((resolveResult as any).warning || (resolveResult as any).requiresTrustline) {
               successMessage += `\n\n ADVERTENCIA IMPORTANTE: ${(resolveResult as any).warning || 'El cliente puede necesitar configurar un trustline para USDC'}`;
+              const netLabel = stellarNetworkDisplayName(getActiveStellarNetwork());
               successMessage += `\n\nPROBLEMA DETECTADO:`;
-              successMessage += `\n   El cliente probablemente tiene un trustline de USDC de centre.io (Mainnet),`;
-              successMessage += `\n   pero la transacción usa USDC de Testnet con un issuer diferente.`;
-              successMessage += `\n\n SOLUCIÓN: El cliente debe configurar el trustline correcto para Testnet:`;
+              successMessage += `\n   El cliente puede tener un trustline de USDC con un issuer distinto al de ${netLabel}.`;
+              successMessage += `\n\n SOLUCIÓN: El cliente debe configurar el trustline correcto:`;
               successMessage += `\n   1. Abre Freighter y conecta tu wallet: ${clientWallet}`;
-              successMessage += `\n   2. Asegúrate de estar en la red TESTNET (no Mainnet)`;
+              successMessage += `\n   2. Asegúrate de estar en la red ${netLabel.toUpperCase()}`;
               successMessage += `\n   3. Configura un trustline para USDC con este issuer:`;
-              successMessage += `\n      ${USDC_ISSUER}`;
+              successMessage += `\n      ${getUsdcIssuer()}`;
               successMessage += `\n   4. Puedes usar Freighter o Stellar Laboratory para configurar el trustline`;
               successMessage += `\n   5. Una vez configurado, el dinero aparecerá en tu wallet`;
               successMessage += `\n\n Información del trustline requerido:`;
               successMessage += `\n   - Asset: USDC`;
-              successMessage += `\n   - Issuer: ${USDC_ISSUER}`;
-              successMessage += `\n   - Red: TESTNET (no Mainnet)`;
+              successMessage += `\n   - Issuer: ${getUsdcIssuer()}`;
+              successMessage += `\n   - Red: ${netLabel}`;
               successMessage += `\n   - Cliente: ${clientWallet}`;
-              successMessage += `\n\n NOTA: Si tienes un trustline de USDC de centre.io (Mainnet),`;
-              successMessage += `\n   necesitas configurar UNO NUEVO para Testnet con el issuer correcto.`;
             }
             
             setSuccess(successMessage);
@@ -1194,7 +1196,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
             let errorMessage = t('admin.disputes.error.resolve') + ': ' + resolveResult.error;
             if (resolveResult.error?.includes('trustline')) {
               errorMessage += `\n\n El cliente debe configurar un trustline para USDC antes de recibir el dinero.`;
-              errorMessage += `\n   Issuer de USDC: ${USDC_ISSUER}`;
+              errorMessage += `\n   Issuer de USDC: ${getUsdcIssuer()}`;
               errorMessage += `\n   Cliente: ${clientWallet}`;
             }
             setError(errorMessage);
@@ -1284,7 +1286,7 @@ const DisputeManagement: React.FC<DisputeManagementProps> = () => {
             let errorMessage = t('admin.disputes.error.resolve') + ': ' + resolveResult.error;
             if (resolveResult.error?.includes('trustline')) {
               errorMessage += `\n\n El trabajador debe configurar un trustline para USDC antes de recibir el dinero.`;
-              errorMessage += `\n   Issuer de USDC: ${USDC_ISSUER}`;
+              errorMessage += `\n   Issuer de USDC: ${getUsdcIssuer()}`;
             }
             setError(errorMessage);
           }

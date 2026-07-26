@@ -6,15 +6,14 @@ import {
   xBullModule
 } from '@creit.tech/stellar-wallets-kit';
 import { Networks } from '@stellar/stellar-sdk';
+import { getActiveStellarNetwork } from '../config/stellarDual';
 
 const walletNetwork = (): WalletNetwork => {
-  const net = import.meta.env.VITE_STELLAR_NETWORK?.trim().toLowerCase();
-  return net === 'mainnet' ? WalletNetwork.PUBLIC : WalletNetwork.TESTNET;
+  return getActiveStellarNetwork() === 'mainnet' ? WalletNetwork.PUBLIC : WalletNetwork.TESTNET;
 };
 
 const networkPassphrase = (): string => {
-  const net = import.meta.env.VITE_STELLAR_NETWORK?.trim().toLowerCase();
-  return net === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
+  return getActiveStellarNetwork() === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
 };
 
 interface WalletState {
@@ -39,6 +38,25 @@ export const useWallet = () => {
   });
 
   const [kit, setKit] = useState<StellarWalletsKit | null>(null);
+  const [networkEpoch, setNetworkEpoch] = useState(0);
+
+  useEffect(() => {
+    const onNetworkChange = () => {
+      localStorage.removeItem('stellar_wallet');
+      setWalletState({
+        isConnected: false,
+        address: null,
+        walletId: null,
+        balance: null,
+        loading: false,
+        error: null,
+        walletType: null,
+      });
+      setNetworkEpoch((n) => n + 1);
+    };
+    window.addEventListener('arcusx:network-changed', onNetworkChange);
+    return () => window.removeEventListener('arcusx:network-changed', onNetworkChange);
+  }, []);
 
   useEffect(() => {
     const initializeKit = async () => {
@@ -64,7 +82,7 @@ export const useWallet = () => {
     };
 
     initializeKit();
-  }, []);
+  }, [networkEpoch]);
 
 
   const connectWalletById = async (walletId: string) => {

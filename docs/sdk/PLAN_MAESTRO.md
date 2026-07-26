@@ -1,8 +1,10 @@
 # ArcusX SDK — Plan maestro (Work Execution Layer)
 
-**Versión:** 1.1 · **Fecha:** 2026-05-28  
+**Versión:** 1.2 · **Fecha:** 2026-05-28  
 **Audiencia:** equipo interno, integradores B2B, revisores InstaAwards  
 **North star:** `arcusx.pro` es el **cliente #1**. El producto es **infra de ejecución de trabajo** — API + `@arcusx/sdk` — con settlement USDC no custodial en Stellar.
+
+**Checklist ejecutable:** [`CHECKLIST.md`](./CHECKLIST.md) · **Fee model:** [`FEE_MODEL.md`](./FEE_MODEL.md)
 
 ---
 
@@ -39,7 +41,7 @@ Stellar + Trustless Work (firma en browser / wallet del usuario)
 | Oferta privada 1:1 | `finalize_private_offer`, `accept_private_offer`, `reject_private_offer`, `get_private_offers` | `PrivateOfferEscrowPopup`, `CreateTask` (modo privado) |
 | Deal por link | `create_deal`, `get_deal_by_token`, `accept_deal`, `prepare/finalize_deal_escrow`, `mark_deal_released` | `DealWizardPage`, `DealPublicPage`, `DealWorkspacePage` |
 
-**Fee:** 2.7% ArcusX + 0.3% TW = **3% al cliente** (`platform_fee` en BD). El SDK **nunca** recalcula comisión — solo consume `get_platform_fee` / quote Edge.
+**Fee:** 3.7% ArcusX + 0.3% TW = **~4% del fondeo** on-chain. UX bilateral: empleador +2% visible, trabajador neto = fondeo − 4%. El SDK **nunca** recalcula — solo consume `get_platform_fee` / `escrow/quote`. Ver [`FEE_MODEL.md`](./FEE_MODEL.md).
 
 **On-chain hoy:** Trustless Work en cliente (`trustlessWorkEscrowService.ts`). Edge valida `tx_hash` / `transaction_hash` en release. Soroban nativo vive en `docs/escrow-native/` — **fuera de v0.1 SDK**.
 
@@ -156,13 +158,24 @@ await ax.settlement.completeTask(taskId, { txHash });
 await ax.settlement.markDealReleased(dealId, { txHash });
 ```
 
+### 4.3 Módulos del cliente (getters)
+
+```typescript
+ax.public      // stats, fee, listado público
+ax.marketplace // tasks públicas + create private invite
+ax.private     // ciclo post-creación oferta 1:1
+ax.deals       // agreements / share token
+ax.escrow      // metadata + prepare (Fase 2c)
+ax.settlement  // complete_task, mark_deal_released
+```
+
 ### 4.4 Marca ArcusX, TW invisible (child panels)
 
 | Capa visible | Capa oculta |
 |--------------|-------------|
 | REST `/v1/.../escrow/*` | Trustless Work API + contrato escrow |
 | `ax.escrow.prepareFund()` | TW deploy/fund en `_shared/escrow-provider.ts` |
-| “ArcusX platform fee ~3%” | 2.7% ArcusX + 0.3% protocolo (un solo quote) |
+| “+2% empleador / neto trabajador” | 3.7% ArcusX + 0.3% protocolo (un solo quote) |
 | OpenAPI / SDK types | Sin imports `@trustless-work/*` en ejemplos partner |
 
 **Por qué cobramos:** el integrador no paga por “usar Stellar”. Paga por **infra lista** — REST, SDK, lifecycle, fee quote, `tx_hash`, disputas, `partner_id` — para embeber en child panels sin montar escrow ni leer docs de terceros.
@@ -250,10 +263,11 @@ Fuente de verdad detallada: [`API_REFERENCE.md`](./API_REFERENCE.md). Resumen po
 
 | Módulo | Métodos | Edge |
 |--------|---------|------|
-| `evidence` | `upload`, `get` | `upload_milestone_evidence`, `get_milestone_evidence` |
-| `disputes` | `create`, `list` | `create_dispute`, `get_user_disputes` |
+| `evidence` | `uploadMilestone`, `getMilestone`, `uploadDeal`, `getDeal` | `upload_milestone_evidence`, `get_milestone_evidence`, `upload_deal_evidence`, `get_deal_evidence` |
+| `disputes` | `create`, `list`, `getChat`, `getFiles`, `getTimeline` | `create_dispute`, `get_user_disputes`, `get_dispute_*` |
 | `identity` | `registerWallet`, `verifyWallet` | `register_wallet`, `verify_wallet` |
 | `ratings` | `create`, `summary` | `create_rating`, `get_user_rating_summary` |
+| `marketplace` | `checkCancellationAllowed` | `check_cancellation_allowed` |
 
 Mensajería (RPC Supabase directo) queda **out of band** en v0.1 — documentar en FAQ integrador.
 
@@ -398,21 +412,26 @@ Handlers legacy pueden devolver shape actual; SDK normaliza ambos en `http.ts`.
 | **5** Webhooks | 2 | `task.completed`, `deal.released` | Partner sandbox recibe POST |
 | **6** Mainnet + Soroban | gate | Provider switch | Checklist escrow-native verde |
 
-### Fase 0 — Spec (ahora)
+### Fase 0 — Spec (cerrada salvo fee copy)
 
 - [x] Plan maestro (este doc)
-- [ ] `API_REFERENCE.md` con módulos marketplace/private/deals/escrow/settlement
-- [ ] `TRANCHE3` y `instaawards-sdk/PLAN.md` apuntan aquí
-- [ ] Congelar nombres de métodos — no renombrar sin bump minor
+- [x] `API_REFERENCE.md` con módulos marketplace/private/deals/escrow/settlement
+- [x] `CHECKLIST.md` + `FEE_MODEL.md` + `openapi-v1.yaml` borrador
+- [x] `QUICKSTART.md` borrador
+- [x] `TRANCHE3` y `instaawards-sdk/PLAN.md` sincronizados
+- [x] `GLOBAL_INFRA_AUDIT.md` — gaps infra global
+- [x] Congelar nombres de métodos — no renombrar sin bump minor
 
 ### Fase 1 — Partner infra (P0, arrancar ya)
 
 | ID | Tarea |
 |----|-------|
-| T3-01 | Migración `arcusx_partners`, `arcusx_partner_keys`, `arcusx_partner_audit_log` |
+| T3-01 | Migración `arcusx_partners`, `arcusx_partner_keys`, `arcusx_partner_audit_log` | `supabase/migrations/20260528140000_arcusx_partners.sql` |
 | T3-02 | `_shared/partner-api-keys.ts` + rate limit |
 | T3-03 | `partner_id` + `external_id` en tasks/agreements + handlers create |
 | T3-06 | Generar `axk_test_…` sandbox (fuera de git) |
+| T3-19 | Documentar flujo OAuth integrador (`sync_supabase_user` → JWT) | `PARTNER_AUTH.md`, `QUICKSTART.md` |
+| T3-20 | `Idempotency-Key` en `http.ts` para POST idempotentes | `packages/arcusx-sdk/src/http.ts` |
 
 **DoD:** Partner sandbox crea tarea; fila tiene `partner_id`; marketplace sin regresiones.
 
@@ -558,9 +577,29 @@ Paralelo: identificar piloto #1 y emitir key sandbox.
 | [`API_REFERENCE.md`](./API_REFERENCE.md) | Métodos SDK ↔ REST / actions |
 | [`PARTNER_AUTH.md`](./PARTNER_AUTH.md) | Keys y límites |
 | [`INFRASTRUCTURE_ADAPTATION_PLAN.md`](./INFRASTRUCTURE_ADAPTATION_PLAN.md) | Fases técnicas largas |
+| [`CHECKLIST.md`](./CHECKLIST.md) | **Lista de trabajo ejecutable** — IDs, DoD, dependencias |
+| [`FEE_MODEL.md`](./FEE_MODEL.md) | Comisión bilateral + reglas SDK |
+| [`QUICKSTART.md`](./QUICKSTART.md) | Guía integrador |
+| [`openapi-v1.yaml`](./openapi-v1.yaml) | OpenAPI borrador |
+| [`GLOBAL_INFRA_AUDIT.md`](./GLOBAL_INFRA_AUDIT.md) | Auditoría camino a infra global |
 | [`REVENUE_STACK.md`](./REVENUE_STACK.md) | Take rate por tier |
 | [`ENDPOINTS.md`](../api/ENDPOINTS.md) | Lista completa Edge |
 | [`TRANCHE3_INFRA_SDK.md`](../sprints/TRANCHE3_INFRA_SDK.md) | DoD trimestre |
+
+---
+
+## 17. Camino a infra global
+
+Ver auditoría completa: [`GLOBAL_INFRA_AUDIT.md`](./GLOBAL_INFRA_AUDIT.md).
+
+| Etapa | Producto | DoD global |
+|-------|----------|------------|
+| **v0.1** (Tranche 3) | SDK 27 métodos + partners + REST | Primer integrador cierra escrow sin fork UI |
+| **v0.2** | Evidence, disputas, wallet, webhooks | Verificación + eventos para automatización |
+| **v1** | Agentic API (`/v1/jobs`) + Modo B M2M | DAOs, payroll, agentes IA |
+| **v2** | Soroban default + mainnet + multi-milestone | Settlement propio, escala GMV |
+
+**Tesis:** El marketplace es cliente #1. La infra global no requiere discovery — requiere **execution + settlement + verificación** empaquetados.
 
 ---
 

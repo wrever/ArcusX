@@ -1,6 +1,7 @@
 import { jsonError, jsonResponse, jsonSuccess } from '../../_shared/arcusx-cors.ts';
 import { insertArcusxNotification, notifyUsers } from '../../_shared/arcusx-notifications.ts';
 import { logDomainEvent } from '../../_shared/domain-events.ts';
+import { emitPartnerWebhook } from '../../_shared/partner-webhooks.ts';
 import type { ApiContext } from './types.ts';
 import { qpInt } from './types.ts';
 import { requireUser, requireAdmin } from './require.ts';
@@ -14,7 +15,36 @@ import {
   loadDisputeContext,
   loadDisputeContextByTaskId,
   loadDisputeContextByAgreementId,
+  type DisputeLoadedContext,
 } from '../../_shared/arcusx-dispute-helpers.ts';
+import type { AuthContext } from '../../_shared/arcusx-auth.ts';
+
+async function requireDisputeAccess(
+  ctx: ApiContext,
+  loaded: DisputeLoadedContext,
+): Promise<AuthContext> {
+  const auth = await requireUser(ctx);
+  const { data: user } = await auth.supabase
+    .from('arcusx_users')
+    .select('is_admin, role')
+    .eq('id', auth.userId)
+    .maybeSingle();
+  const isAdmin = user?.is_admin === true || user?.role === 'admin';
+  if (isAdmin) return auth;
+
+  const uid = auth.userId;
+  if (loaded.kind === 'task') {
+    const t = loaded.task;
+    const ok = Number(t.user_id) === uid || Number(t.accepted_applicant_id) === uid;
+    if (!ok) throw new Error('Forbidden');
+    return auth;
+  }
+  const d = loaded.deal;
+  const ok = Number(d.initiator_user_id) === uid ||
+    (d.counterparty_user_id != null && Number(d.counterparty_user_id) === uid);
+  if (!ok) throw new Error('Forbidden');
+  return auth;
+}
 
 async function resolveDisputeContext(supabase: ApiContext['supabase'], url: URL) {
   const disputeId = qpInt(url, 'dispute_id');
@@ -123,7 +153,7 @@ export async function createDispute(ctx: ApiContext): Promise<Response> {
 
   const { data: task } = await auth.supabase
     .from('arcusx_tasks')
-    .select('id, title, user_id, accepted_applicant_id, status, escrow_status, escrow_id')
+    .select('id, title, user_id, accepted_applicant_id, status, escrow_status, escrow_id, partner_id, external_id')
     .eq('id', taskId)
     .single();
 
@@ -188,6 +218,13 @@ export async function createDispute(ctx: ApiContext): Promise<Response> {
     event_type: 'dispute.opened',
     actor_user_id: auth.userId,
     payload: { task_id: taskId },
+  });
+
+  void emitPartnerWebhook(auth.supabase, task.partner_id as string | null, 'dispute.opened', {
+    dispute_id: data?.id,
+    task_id: taskId,
+    external_id: task.external_id ?? null,
+    reason,
   });
 
   return jsonSuccess(req, { dispute_id: data?.id });
@@ -281,9 +318,105 @@ export async function getUserDisputes(ctx: ApiContext): Promise<Response> {
   return jsonResponse(req, { success: true, disputes, count: disputes.length });
 }
 
+/** Todas las disputas del usuario (pending + resolved) — para embeds partner. */
+export async function listDisputes(ctx: ApiContext): Promise<Response> {
+  const { req } = ctx;
+  const auth = await requireUser(ctx);
+  const uid = auth.userId;
+
+  const [{ data: tasks }, { data: deals }] = await Promise.all([
+    auth.supabase
+      .from('arcusx_tasks')
+      .select('id, title, price, escrow_id, escrow_status, user_id, accepted_applicant_id')
+      .or(`user_id.eq.${uid},accepted_applicant_id.eq.${uid}`),
+    auth.supabase
+      .from('arcusx_agreements')
+      .select('id, title, amount_usdc, escrow_status, initiator_user_id, counterparty_user_id')
+      .or(`initiator_user_id.eq.${uid},counterparty_user_id.eq.${uid}`),
+  ]);
+
+  const taskIds = (tasks ?? []).map((t) => t.id);
+  const dealIds = (deals ?? []).map((d) => d.id);
+
+  const queries = [];
+  if (taskIds.length) {
+    queries.push(
+      auth.supabase
+        .from('arcusx_disputes')
+        .select('id, status, reason, resolution, resolved_at, created_at, created_by, task_id, agreement_id')
+        .in('task_id', taskIds),
+    );
+  }
+  if (dealIds.length) {
+    queries.push(
+      auth.supabase
+        .from('arcusx_disputes')
+        .select('id, status, reason, resolution, resolved_at, created_at, created_by, task_id, agreement_id')
+        .in('agreement_id', dealIds),
+    );
+  }
+
+  const rows: Array<Record<string, unknown>> = [];
+  for (const q of queries) {
+    const { data, error } = await q;
+    if (error) return jsonError(req, error.message, 500);
+    for (const row of data ?? []) rows.push(row as Record<string, unknown>);
+  }
+
+  const taskMap = new Map((tasks ?? []).map((t) => [t.id, t]));
+  const dealMap = new Map((deals ?? []).map((d) => [d.id, d]));
+
+  const disputes = rows.map((row) => {
+    const taskId = row.task_id != null ? Number(row.task_id) : null;
+    const agreementId = row.agreement_id ? String(row.agreement_id) : null;
+    let userRole: 'client' | 'worker' | 'initiator' | 'counterparty' | null = null;
+
+    if (taskId && taskMap.has(taskId)) {
+      const t = taskMap.get(taskId)!;
+      userRole = Number(t.user_id) === uid ? 'client' : 'worker';
+      return {
+        dispute_id: row.id,
+        status: row.status,
+        reason: row.reason,
+        resolution: row.resolution,
+        resolved_at: row.resolved_at,
+        created_at: row.created_at,
+        task_id: taskId,
+        task_title: t.title,
+        price: Number(t.price ?? 0),
+        escrow_id: t.escrow_id,
+        escrow_status: t.escrow_status,
+        user_role: userRole,
+        entry: 'marketplace',
+      };
+    }
+
+    if (agreementId && dealMap.has(agreementId)) {
+      const d = dealMap.get(agreementId)!;
+      userRole = Number(d.initiator_user_id) === uid ? 'initiator' : 'counterparty';
+      return {
+        dispute_id: row.id,
+        status: row.status,
+        reason: row.reason,
+        resolution: row.resolution,
+        resolved_at: row.resolved_at,
+        created_at: row.created_at,
+        agreement_id: agreementId,
+        deal_title: d.title,
+        amount_usdc: Number(d.amount_usdc ?? 0),
+        escrow_status: d.escrow_status,
+        user_role: userRole,
+        entry: 'deal',
+      };
+    }
+    return null;
+  }).filter(Boolean);
+
+  return jsonResponse(req, { success: true, disputes, count: disputes.length });
+}
+
 export async function getDisputeChat(ctx: ApiContext): Promise<Response> {
   const { req, url } = ctx;
-  await requireAdmin(ctx);
   const disputeId = qpInt(url, 'dispute_id');
   const taskId = qpInt(url, 'task_id');
   const agreementId = String(url.searchParams.get('agreement_id') ?? '').trim();
@@ -293,6 +426,11 @@ export async function getDisputeChat(ctx: ApiContext): Promise<Response> {
 
   const loaded = await resolveDisputeContext(ctx.supabase, url);
   if (!loaded) return jsonError(req, 'Disputa no encontrada', 404);
+  try {
+    await requireDisputeAccess(ctx, loaded);
+  } catch {
+    return jsonError(req, 'No autorizado', 403);
+  }
 
   const payload = loaded.kind === 'deal'
     ? await buildDealDisputeChatPayload(ctx.supabase, loaded.deal)
@@ -302,7 +440,6 @@ export async function getDisputeChat(ctx: ApiContext): Promise<Response> {
 
 export async function getDisputeFiles(ctx: ApiContext): Promise<Response> {
   const { req, url } = ctx;
-  await requireAdmin(ctx);
   const disputeId = qpInt(url, 'dispute_id');
   const taskId = qpInt(url, 'task_id');
   const agreementId = String(url.searchParams.get('agreement_id') ?? '').trim();
@@ -312,6 +449,11 @@ export async function getDisputeFiles(ctx: ApiContext): Promise<Response> {
 
   const loaded = await resolveDisputeContext(ctx.supabase, url);
   if (!loaded) return jsonError(req, 'Disputa no encontrada', 404);
+  try {
+    await requireDisputeAccess(ctx, loaded);
+  } catch {
+    return jsonError(req, 'No autorizado', 403);
+  }
 
   const { files, summary } = loaded.kind === 'deal'
     ? await buildDealDisputeFilesPayload(ctx.supabase, loaded.deal)
@@ -321,7 +463,6 @@ export async function getDisputeFiles(ctx: ApiContext): Promise<Response> {
 
 export async function getDisputeTimeline(ctx: ApiContext): Promise<Response> {
   const { req, url } = ctx;
-  await requireAdmin(ctx);
   const disputeId = qpInt(url, 'dispute_id');
   const taskId = qpInt(url, 'task_id');
   const agreementId = String(url.searchParams.get('agreement_id') ?? '').trim();
@@ -331,6 +472,11 @@ export async function getDisputeTimeline(ctx: ApiContext): Promise<Response> {
 
   const loaded = await resolveDisputeContext(ctx.supabase, url);
   if (!loaded) return jsonError(req, 'Disputa no encontrada', 404);
+  try {
+    await requireDisputeAccess(ctx, loaded);
+  } catch {
+    return jsonError(req, 'No autorizado', 403);
+  }
 
   const timeline = loaded.kind === 'deal'
     ? await buildDealDisputeTimelinePayload(ctx.supabase, loaded.dispute, loaded.deal)

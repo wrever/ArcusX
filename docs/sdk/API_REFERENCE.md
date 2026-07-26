@@ -33,6 +33,17 @@ Headers enviados por el SDK:
 | `apikey` | Siempre (Supabase anon) |
 | `x-arcusx-api-key` | Partner B2B |
 | `Authorization: Bearer …` | Acciones de usuario |
+| `Idempotency-Key` | POST idempotentes (recomendado) — ver § Idempotency |
+
+### Idempotency
+
+Edge soporta `Idempotency-Key` en: `create_task`, `create_deal`, `apply_task`, `select_proposal`, `create_escrow` (24h TTL).
+
+El SDK debe reenviar el header en `http.ts` (T3-20). Integradores globales **deben** usarlo en retries.
+
+```typescript
+await ax.marketplace.create(input, { idempotencyKey: 'crm-job-991-v1' });
+```
 
 ---
 
@@ -145,7 +156,7 @@ Metadata y pasos BD — **firma on-chain fuera del SDK** (v0.1).
 | Paso | Quién | Notas |
 |------|-------|-------|
 | Deploy escrow TW | Cliente (wallet) | `trustlessWorkEscrowService` en referencia |
-| Fund | Cliente | USDC + fee 3% |
+| Fund | Cliente | USDC + fee bilateral (ver FEE_MODEL) |
 | Release | Cliente approve + release | Devuelve `tx_hash` |
 
 Fase 3 infra añadirá `escrow.prepareFund()` / `confirmFund()` — misma interface SDK.
@@ -198,12 +209,17 @@ interface EscrowStatus {
 }
 
 interface FeeQuote {
-  workerAmount: number;
+  nominal: number;
+  workerNet: number;
   clientTotal: number;
-  platformFeeBps: number;
-  platformFeeAmount: number;
+  clientVisibleFee: number;
+  platformFeeRate: number;
+  fundAmount: number;
+  currency: 'USDC';
 }
 ```
+
+Ver [`FEE_MODEL.md`](./FEE_MODEL.md). `price` / `amount_usdc` en BD = valor nominal de referencia.
 
 ---
 
@@ -225,8 +241,8 @@ Códigos comunes Edge: `401` JWT inválido · `403` sin permiso · `400` validac
 
 | Módulo | Métodos | Edge |
 |--------|---------|------|
-| `evidence` | `upload`, `get` | `upload_milestone_evidence`, `get_milestone_evidence` |
-| `disputes` | `create`, `list` | `create_dispute`, `get_user_disputes` |
+| `evidence` | `uploadMilestone`, `getMilestone`, `uploadDeal`, `getDeal` | milestone + deal evidence |
+| `disputes` | `create`, `list`, `getChat`, `getFiles`, `getTimeline` | `create_dispute`, `get_user_disputes`, … |
 | `identity` | `registerWallet`, `verifyWallet` | `register_wallet`, `verify_wallet` |
 | `ratings` | `create`, `getSummary` | `create_rating`, `get_user_rating_summary` |
 

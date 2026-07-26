@@ -5,6 +5,12 @@ import {
   storeIdempotentResponse,
   wantsIdempotency,
 } from '../../_shared/idempotency.ts';
+import {
+  logPartnerAudit,
+  PartnerAuthError,
+  resolvePartnerFromRequest,
+} from '../../_shared/partner-api-keys.ts';
+import { resolveStellarNetwork } from '../../_shared/stellar-network.ts';
 import type { ApiHandler } from './types.ts';
 import { readJsonBody } from './types.ts';
 import * as auth from './auth.ts';
@@ -21,6 +27,9 @@ import * as evidence from './evidence.ts';
 import * as dealEvidence from './deal-evidence.ts';
 import * as kyc from './kyc.ts';
 import * as badges from './badges.ts';
+import * as escrowProvider from './escrow-provider.ts';
+import * as agentic from './agentic.ts';
+import * as apiKeys from './api-keys.ts';
 
 const ROUTES: Record<string, ApiHandler> = {
   sync_supabase_user: auth.syncSupabaseUser,
@@ -37,6 +46,7 @@ const ROUTES: Record<string, ApiHandler> = {
   get_completed_tasks_count: tasks.getCompletedTasksCount,
   get_landing_market_stats: tasks.getLandingMarketStats,
   get_platform_fee: tasks.getPlatformFee,
+  get_escrow_quote: tasks.getEscrowQuote,
   task_stats: tasks.taskStats,
 
   get_user_details: users.getUserDetails,
@@ -64,6 +74,7 @@ const ROUTES: Record<string, ApiHandler> = {
   confirm_escrow_signature: escrowExtra.confirmEscrowSignature,
 
   create_dispute: disputes.createDispute,
+  list_disputes: disputes.listDisputes,
   get_user_disputes: disputes.getUserDisputes,
   get_dispute_chat: disputes.getDisputeChat,
   get_dispute_files: disputes.getDisputeFiles,
@@ -105,7 +116,40 @@ const ROUTES: Record<string, ApiHandler> = {
   finalize_deal_escrow: deals.finalizeDealEscrow,
   complete_deal: deals.completeDeal,
   mark_deal_released: deals.markDealReleased,
+
+  prepare_escrow_deploy: escrowProvider.prepareEscrowDeploy,
+  confirm_escrow_deploy: escrowProvider.confirmEscrowDeploy,
+  prepare_escrow_fund: escrowProvider.prepareEscrowFund,
+  confirm_escrow_fund: escrowProvider.confirmEscrowFund,
+  prepare_escrow_release: escrowProvider.prepareEscrowRelease,
+  confirm_escrow_release: escrowProvider.confirmEscrowRelease,
+  list_webhook_deliveries: escrowProvider.listWebhookDeliveries,
   get_deal_evidence: dealEvidence.getDealEvidence,
+
+  create_job: agentic.createJob,
+  get_job: agentic.getJob,
+  list_jobs: agentic.listJobs,
+  create_subjob: agentic.createSubjob,
+  get_subjob: agentic.getSubjob,
+  subjob_escrow_quote: agentic.subjobEscrowQuote,
+  subjob_escrow_deploy_prepare: agentic.subjobEscrowDeployPrepare,
+  subjob_escrow_deploy_confirm: agentic.subjobEscrowDeployConfirm,
+  subjob_escrow_fund_prepare: agentic.subjobEscrowFundPrepare,
+  subjob_escrow_fund_confirm: agentic.subjobEscrowFundConfirm,
+  subjob_escrow_release_prepare: agentic.subjobEscrowReleasePrepare,
+  subjob_escrow_release_confirm: agentic.subjobEscrowReleaseConfirm,
+  attest_subjob: agentic.attestSubjob,
+  release_subjob_on_callback: agentic.releaseSubjobOnCallback,
+  list_subjobs_mine: agentic.listSubjobsMine,
+  subjob_mark_work_started: agentic.subjobMarkWorkStarted,
+  cancel_subjob: agentic.cancelSubjob,
+  cancel_job: agentic.cancelJob,
+  link_subjob_proposal: agentic.linkSubjobProposal,
+
+  get_api_keys_context: apiKeys.getApiKeysContext,
+  list_user_api_keys: apiKeys.listUserApiKeys,
+  create_user_api_key: apiKeys.createUserApiKey,
+  revoke_user_api_key: apiKeys.revokeUserApiKey,
 };
 
 const METHOD_OVERRIDES: Record<string, (ctx: Parameters<ApiHandler>[0]) => Promise<Response>> = {
@@ -152,6 +196,13 @@ export function resolveAction(url: URL, _req: Request): string {
   return '';
 }
 
+const API_KEY_ADMIN_ACTIONS = new Set([
+  'get_api_keys_context',
+  'list_user_api_keys',
+  'create_user_api_key',
+  'revoke_user_api_key',
+]);
+
 export async function dispatch(req: Request): Promise<Response> {
   const url = new URL(req.url);
   const action = resolveAction(url, req);
@@ -166,6 +217,24 @@ export async function dispatch(req: Request): Promise<Response> {
   }
 
   const auth = await authenticateRequest(req);
+  let partnerId: string | null = null;
+  let partnerSandbox = false;
+  const skipPartnerKey = API_KEY_ADMIN_ACTIONS.has(action);
+  try {
+    if (!skipPartnerKey) {
+      const partner = await resolvePartnerFromRequest(req, auth.supabase);
+      if (partner) {
+        partnerId = partner.partnerId;
+        partnerSandbox = partner.sandbox;
+      }
+    }
+  } catch (e) {
+    if (e instanceof PartnerAuthError) {
+      return jsonError(req, e.message, e.status, e.code);
+    }
+    throw e;
+  }
+
   const needsJson = req.method !== 'GET' && req.method !== 'HEAD' &&
     !(action === 'upload_avatar' && req.method === 'POST') &&
     !(action === 'upload_milestone_evidence' && req.method === 'POST') &&
@@ -183,7 +252,26 @@ export async function dispatch(req: Request): Promise<Response> {
     supabaseUserId: auth.supabaseUserId,
     jwt: auth.jwt,
     body,
+    partnerId,
+    partnerSandbox,
+    stellarNetwork: resolveStellarNetwork(req, body, action),
   };
+
+  if (partnerId && auth.userId) {
+    const bindingErr = await apiKeys.validatePartnerUserBinding(
+      auth.supabase,
+      partnerId,
+      auth.userId,
+    );
+    if (bindingErr) {
+      const msg = bindingErr === 'api_key_user_mismatch'
+        ? 'La API key no pertenece a esta cuenta'
+        : bindingErr === 'partner_suspended'
+          ? 'Cuenta de integración suspendida'
+          : 'Forbidden';
+      return jsonError(req, msg, 403, bindingErr);
+    }
+  }
 
   const idempotencyKey = req.headers.get('Idempotency-Key')?.trim() ??
     req.headers.get('idempotency-key')?.trim();
@@ -201,6 +289,14 @@ export async function dispatch(req: Request): Promise<Response> {
 
   try {
     const response = await handler(ctx);
+    if (partnerId && response.ok) {
+      void logPartnerAudit(auth.supabase, {
+        partnerId,
+        action,
+        requestId: req.headers.get('X-Request-Id') ?? undefined,
+        ip: req.headers.get('x-forwarded-for') ?? req.headers.get('cf-connecting-ip'),
+      });
+    }
     if (useIdempotency && idempotencyKey && response.ok) {
       try {
         const clone = response.clone();

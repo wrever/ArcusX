@@ -1,6 +1,7 @@
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 import { supabaseService } from './referral-db.ts';
 import { bearerToken, verifyArcusxJwt, type ArcusxJwtPayload } from './arcusx-jwt.ts';
+import { isPartnerApiKey } from './partner-api-keys.ts';
 
 export type AuthContext = {
   supabase: SupabaseClient;
@@ -69,6 +70,11 @@ export async function authenticateRequest(req: Request): Promise<{
     return { supabase, userId: null };
   }
 
+  // Bearer axk_* = partner API key (estilo Soroswap), no JWT de usuario
+  if (isPartnerApiKey(token)) {
+    return { supabase, userId: null };
+  }
+
   const jwt = await verifyArcusxJwt(token);
   if (jwt) {
     return { supabase, userId: jwt.userId, jwt };
@@ -118,5 +124,5 @@ export async function upsertUserLink(
     supabase_user_id: supabaseUserId,
     mysql_user_id: mysqlUserId,
     updated_at: new Date().toISOString(),
-  }, { onConflict: 'mysql_user_id' });
+  }, { onConflict: 'supabase_user_id' });
 }

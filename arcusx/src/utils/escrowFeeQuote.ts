@@ -14,12 +14,12 @@ export const TRUSTLESS_WORK_PROTOCOL_FEE = 0.003;
 
 const STROOPS_PER_USDC = 10_000_000;
 
-/** Normaliza fee devuelto por el indexer TW (3 → 0.03). */
+/** Normaliza fee devuelto por el indexer TW (3.7 → 0.037, 0.005 legacy → 0.005). */
 export function fromTrustlessWorkPlatformFee(apiValue: number): number {
   const n = Number(apiValue);
   if (!Number.isFinite(n) || n <= 0) return 0.037;
-  if (Math.abs(n - 0.03) < 0.0001) return 0.027;
-  return n >= 1 ? n / 100 : n;
+  if (n >= 1) return n / 100;
+  return n;
 }
 
 /** Convierte fee interno (0.03) al formato que espera la API TW (3). */

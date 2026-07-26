@@ -21,7 +21,7 @@ import {
 } from '../services/privateOfferEscrow';
 import { finalizePrivateOffer } from '../services/privateOfferService';
 import PrivateOfferEscrowPopup from './PrivateOfferEscrowPopup';
-import { USDC_ISSUER } from '../config/usdc';
+import { getUsdcIssuer } from '../config/usdc';
 import { quoteEscrowFundAmount } from '../utils/escrowFeeQuote';
 import { isValidStellarGAddress } from '../utils/stellarAddress';
 import { quoteBilateralFromNominal, CLIENT_VISIBLE_FEE_PERCENT, workerNetFromTaskPrice } from '../utils/bilateralFeeModel';
@@ -477,8 +477,8 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
       const result = await getEscrowByContractIds({
         contractIds: ids,
         validateOnChain: Array.isArray(contractIds)
-          ? false
-          : contractIds.validateOnChain ?? false,
+          ? true
+          : contractIds.validateOnChain ?? true,
       });
       return Array.isArray(result) ? result : (result as { escrows?: unknown[] })?.escrows ?? result ?? [];
     },
@@ -975,7 +975,7 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
                   deploy_transaction_hash: pendingPrivateTask.deployTxHash,
                   escrow_amount: amount,
                   platform_fee: platformFee,
-                  trustline_address: USDC_ISSUER,
+                  trustline_address: getUsdcIssuer(),
                   client_wallet_address: clientWallet,
                 });
                 return { success: true };

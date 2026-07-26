@@ -13,7 +13,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useWallet } from './useWallet';
 import soroswapService, { QuoteResponse } from '../services/soroswapService';
 import { Horizon } from '@stellar/stellar-sdk';
-import { USDC_ISSUER } from '../config/usdc';
+import { getUsdcIssuer } from '../config/usdc';
+import { horizonServerUrl } from '../utils/stellarNetwork';
 
 // ============================================================================
 // TYPES
@@ -43,8 +44,7 @@ export interface SwapState {
 // ============================================================================
 
 const getHorizonServer = () => {
-  const horizonUrl = 'https://horizon-testnet.stellar.org';
-  return new Horizon.Server(horizonUrl);
+  return new Horizon.Server(horizonServerUrl());
 };
 
 // ============================================================================
@@ -83,8 +83,8 @@ export const useSwap = () => {
 
     try {
       console.log('🔍 Obteniendo balances para dirección:', address);
-      const horizonUrl = 'https://horizon-testnet.stellar.org';
-      console.log('🌐 Usando Horizon testnet:', horizonUrl);
+      const horizonUrl = horizonServerUrl();
+      console.log('🌐 Usando Horizon:', horizonUrl);
       
       // Usar fetch directo como fallback si Server no funciona
       try {
@@ -110,7 +110,7 @@ export const useSwap = () => {
       const usdcBalance = account.balances.find((b: any) => 
         b.asset_type !== 'native' && 
         b.asset_code === 'USDC' && 
-        b.asset_issuer === USDC_ISSUER
+        b.asset_issuer === getUsdcIssuer()
       );
       console.log('💵 Balance USDC encontrado:', usdcBalance);
       
@@ -161,7 +161,7 @@ export const useSwap = () => {
         const usdcBalance = accountData.balances?.find((b: any) => 
           b.asset_type !== 'native' && 
           b.asset_code === 'USDC' && 
-          b.asset_issuer === USDC_ISSUER
+          b.asset_issuer === getUsdcIssuer()
         );
         
         let usdcAmount = 0;
@@ -421,6 +421,23 @@ export const useSwap = () => {
     const maxBalance = swapState.balances[swapState.fromToken];
     setSwapState(prev => ({ ...prev, fromAmount: maxBalance }));
   }, [swapState.fromToken, swapState.balances]);
+
+  useEffect(() => {
+    const onNetworkChange = () => {
+      setSwapState((prev) => ({
+        ...prev,
+        quote: null,
+        exchangeRate: null,
+        priceImpact: null,
+        fromAmount: '',
+        toAmount: '',
+        balances: { XLM: '0', USDC: '0' },
+      }));
+      if (address) fetchBalances();
+    };
+    window.addEventListener('arcusx:network-changed', onNetworkChange);
+    return () => window.removeEventListener('arcusx:network-changed', onNetworkChange);
+  }, [address, fetchBalances]);
 
   return {
     swapState,

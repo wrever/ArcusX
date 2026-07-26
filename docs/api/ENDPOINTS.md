@@ -1,5 +1,7 @@
 # ArcusX — API (Supabase Edge, producción)
 
+**SDK / REST v1 (integradores):** [`docs/sdk/README.md`](../sdk/README.md) · [`GLOBAL_INFRA_AUDIT.md`](../sdk/GLOBAL_INFRA_AUDIT.md)
+
 **Base URL (marketplace):**  
 `https://<project_ref>.supabase.co/functions/v1/arcusx-api?action=<nombre>`
 
@@ -10,7 +12,28 @@
 
 **Auth:** `Authorization: Bearer <JWT app>` (emitido por `sync_supabase_user`) + header `apikey: <VITE_SUPABASE_ANON_KEY>`.
 
-**On-chain (escrow):** Trustless Work **solo en el navegador** (`trustlessWorkEscrowService.ts`). Edge persiste estado y valida `tx_hash` / `transaction_hash` donde aplica.
+**On-chain (escrow):** Trustless Work **solo en el navegador** (`trustlessWorkEscrowService.ts`). Edge persiste estado y valida `tx_hash` / `transaction_hash` donde aplica. Integradores: ArcusX Escrow vía SDK `escrow/*` (TW @internal).
+
+**Platform fee (BD):** `0.037` (3.7% ArcusX) + 0.3% TW. UX bilateral: ver [`FEE_MODEL.md`](../sdk/FEE_MODEL.md).
+
+---
+
+## Superficie pública SDK v0.1 (27 métodos)
+
+Subset documentado para integradores B2B — no incluye admin, cron ni perfil/KYC (v0.2+).
+
+| Namespace | Actions cubiertas |
+|-----------|-------------------|
+| `public` | `get_landing_market_stats`, `get_platform_fee`, `get_tasks` |
+| `marketplace` | `create_task`, `get_task_details`, `get_user_tasks`, `apply_task`, `get_task_proposals`, `select_proposal`, `cancel_task` |
+| `private` | `get_private_offers`, `finalize_private_offer`, `accept_private_offer`, `reject_private_offer` |
+| `deals` | `create_deal`, `get_deal_by_token`, `get_deal_details`, `get_my_deals`, `accept_deal`, `complete_deal` |
+| `escrow` | `create_escrow`, `get_escrow_status`, `mark_work_started`, `prepare_deal_escrow`, `finalize_deal_escrow` |
+| `settlement` | `complete_task`, `mark_deal_released` |
+
+**Idempotency:** `create_task`, `create_deal`, `apply_task`, `select_proposal`, `create_escrow` — header `Idempotency-Key`.
+
+**Internal / v0.2+:** resto de actions en este doc (KYC, disputas, admin, cron).
 
 **Legacy PHP:** `backend_externo/` — no usar en producción; mantener solo referencia histórica.
 

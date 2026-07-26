@@ -244,9 +244,17 @@ async function main() {
       mysql_user_id: u.id,
       updated_at: new Date().toISOString(),
     }));
-    const { error } = await supabase.from('arcusx_user_link').upsert(links, { onConflict: 'mysql_user_id' });
+    const { error } = await supabase.from('arcusx_user_link').upsert(links, { onConflict: 'supabase_user_id' });
     if (error) console.warn('arcusx_user_link:', error.message);
     else console.log(`  arcusx_user_link: ${links.length} filas`);
+  }
+
+  const { error: seqErr } = await supabase.rpc('arcusx_sync_identity_sequences');
+  if (seqErr) {
+    console.warn('arcusx_sync_identity_sequences:', seqErr.message);
+    console.warn('Aplica migración 20260630140000_fix_arcusx_identity_sequences.sql en Supabase SQL Editor.');
+  } else {
+    console.log('  secuencias identity sincronizadas (arcusx_sync_identity_sequences)');
   }
 
   const { count: taskCount } = await supabase.from('arcusx_tasks').select('*', { count: 'exact', head: true });

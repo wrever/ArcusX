@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { FaTasks, FaSearch, FaEye, FaCheckCircle, FaExclamationTriangle, FaWallet, FaLink, FaTimesCircle, FaSpinner } from 'react-icons/fa';
 import { getAdminTasks, getAdminTaskDetails } from '../services/adminService';
+import { stellarExpertContractUrl } from '../utils/stellarNetwork';
 import { useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks';
 import { useI18n } from '../i18n/I18nProvider';
 import '../css/AdminPanel.css';
@@ -533,7 +534,7 @@ const TaskManagement: React.FC<TaskManagementProps> = ({ onUpdate: _onUpdate }) 
                             <label>Contract ID:</label>
                             <span>
                               <a 
-                                href={`https://stellar.expert/explorer/testnet/contract/${selectedTask.escrow_id}`}
+                                href={stellarExpertContractUrl(selectedTask.escrow_id)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 style={{ 
