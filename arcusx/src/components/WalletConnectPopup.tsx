@@ -9,6 +9,8 @@ interface WalletConnectPopupProps {
   onClose: () => void;
   onConnectFreighter: () => void;
   onConnectXBull: () => void;
+  onConnectPollar?: () => void;
+  pollarAvailable?: boolean;
 }
 
 const WalletConnectPopup: React.FC<WalletConnectPopupProps> = ({
@@ -16,6 +18,8 @@ const WalletConnectPopup: React.FC<WalletConnectPopupProps> = ({
   onClose,
   onConnectFreighter,
   onConnectXBull,
+  onConnectPollar,
+  pollarAvailable = false,
 }) => {
   const { t } = useI18n();
 
@@ -55,6 +59,7 @@ const WalletConnectPopup: React.FC<WalletConnectPopupProps> = ({
           <button
             className="wallet-option freighter-option"
             onClick={onConnectFreighter}
+            type="button"
           >
             <div className="wallet-icon freighter-icon">
               <FaBolt />
@@ -65,12 +70,26 @@ const WalletConnectPopup: React.FC<WalletConnectPopupProps> = ({
           <button
             className="wallet-option xbull-option"
             onClick={onConnectXBull}
+            type="button"
           >
             <div className="wallet-icon xbull-icon">
               <FaBolt />
             </div>
             <span className="wallet-name">{t('wallet.popup.option.xbull')}</span>
           </button>
+
+          {pollarAvailable && onConnectPollar ? (
+            <button
+              className="wallet-option pollar-option"
+              onClick={onConnectPollar}
+              type="button"
+            >
+              <div className="wallet-icon pollar-icon">
+                <FaBolt />
+              </div>
+              <span className="wallet-name">{t('wallet.popup.option.pollar')}</span>
+            </button>
+          ) : null}
         </div>
 
         <div className="wallet-divider">
@@ -83,6 +102,7 @@ const WalletConnectPopup: React.FC<WalletConnectPopupProps> = ({
             <button
               className="download-button freighter-download"
               onClick={() => window.open('https://www.freighter.app/', '_blank')}
+              type="button"
             >
               <FaDownload className="download-icon" />
               <span>{t('wallet.popup.download.freighter')}</span>
@@ -90,6 +110,7 @@ const WalletConnectPopup: React.FC<WalletConnectPopupProps> = ({
             <button
               className="download-button xbull-download"
               onClick={() => window.open('https://xbull.app/', '_blank')}
+              type="button"
             >
               <FaDownload className="download-icon" />
               <span>{t('wallet.popup.download.xbull')}</span>

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { TrustlessWorkConfig } from '@trustless-work/escrow';
 import { trustlessWorkApiKey, trustlessWorkEnv } from './config/trustlessWork';
 import { useStellarNetwork } from './hooks/useStellarNetwork';
+import { PollarAppProvider } from './components/PollarAppProvider';
 import Navbar from './components/Navbar';
 import EmpresasNavbar from './components/EmpresasNavbar';
 import { isEnterpriseLandingHost } from './config/enterpriseSite';
@@ -201,9 +202,11 @@ function App() {
 
   return (
     <TrustlessWorkProvider>
-    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <AppContent isLoading={isLoading} />
-      </Router>
+      <PollarAppProvider>
+        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <AppContent isLoading={isLoading} />
+        </Router>
+      </PollarAppProvider>
     </TrustlessWorkProvider>
   );
 }

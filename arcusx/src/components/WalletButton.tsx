@@ -1,7 +1,8 @@
-import React, { Suspense, useState } from 'react';
+import React, { Suspense, useCallback, useState } from 'react';
 import { FaWallet, FaSpinner } from 'react-icons/fa';
 import { useWallet } from '../hooks/useWallet';
 import WalletConnectPopup from './WalletConnectPopup';
+import PollarConnectPopup from './PollarConnectPopup';
 import { useI18n } from '../i18n/I18nProvider';
 
 const WalletButtonInner: React.FC = () => {
@@ -12,10 +13,13 @@ const WalletButtonInner: React.FC = () => {
     loading,
     connectFreighter,
     connectXBull,
-    disconnectWallet
+    completePollarConnect,
+    disconnectWallet,
+    pollarAvailable,
   } = useWallet();
-  
+
   const [showWalletPopup, setShowWalletPopup] = useState(false);
+  const [showPollarPopup, setShowPollarPopup] = useState(false);
 
   const formatAddress = (addr: string) => {
     if (addr && addr.length > 12) {
@@ -42,13 +46,27 @@ const WalletButtonInner: React.FC = () => {
     await connectXBull();
   };
 
+  const handleOpenPollar = () => {
+    setShowWalletPopup(false);
+    setShowPollarPopup(true);
+  };
+
+  const handlePollarConnected = useCallback(
+    (pollarAddress: string) => {
+      setShowPollarPopup(false);
+      completePollarConnect(pollarAddress);
+    },
+    [completePollarConnect],
+  );
+
   return (
     <>
       <div className="wallet-button-container">
-        <button 
+        <button
           className={`wallet-button ${isConnected ? 'connected' : 'disconnected'}`}
           onClick={handleClick}
           disabled={loading}
+          type="button"
         >
           {loading ? (
             <>
@@ -61,9 +79,7 @@ const WalletButtonInner: React.FC = () => {
               <span className="wallet-address">
                 {address ? formatAddress(address) : t('wallet.button.connected')}
               </span>
-              <span className="wallet-type-badge">
-                USDC
-              </span>
+              <span className="wallet-type-badge">USDC</span>
             </>
           ) : (
             <>
@@ -73,12 +89,20 @@ const WalletButtonInner: React.FC = () => {
           )}
         </button>
       </div>
-      
+
       <WalletConnectPopup
         isOpen={showWalletPopup}
         onClose={() => setShowWalletPopup(false)}
         onConnectFreighter={handleConnectFreighter}
         onConnectXBull={handleConnectXBull}
+        onConnectPollar={handleOpenPollar}
+        pollarAvailable={pollarAvailable}
+      />
+
+      <PollarConnectPopup
+        isOpen={showPollarPopup}
+        onClose={() => setShowPollarPopup(false)}
+        onConnected={handlePollarConnected}
       />
     </>
   );
@@ -87,14 +111,16 @@ const WalletButtonInner: React.FC = () => {
 const WalletButton: React.FC = () => {
   const { t } = useI18n();
   return (
-    <Suspense fallback={
-      <div className="wallet-button-container">
-        <button className="wallet-button" disabled>
-          <FaSpinner className="spinner" />
-          {t('wallet.button.loading')}
-        </button>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="wallet-button-container">
+          <button className="wallet-button" disabled type="button">
+            <FaSpinner className="spinner" />
+            {t('wallet.button.loading')}
+          </button>
+        </div>
+      }
+    >
       <WalletButtonInner />
     </Suspense>
   );

@@ -433,23 +433,45 @@ export const signWithWallet = async (
   kit: any,
   address: string
 ): Promise<string> => {
-  if (!kit || !address) {
-    throw new Error('Kit o dirección no disponible');
+  if (!address) {
+    throw new Error('Dirección de wallet no disponible');
   }
 
-  // Alinear Freighter / xBull (u otra del kit) con la sesión guardada; si no, el kit podría firmar con el módulo equivocado
-  if (typeof kit.setWallet === 'function' && typeof window !== 'undefined') {
+  let storedWalletId: string | undefined;
+  if (typeof window !== 'undefined') {
     try {
       const raw = localStorage.getItem('stellar_wallet');
       if (raw) {
         const w = JSON.parse(raw) as { address?: string; walletId?: string; connected?: boolean };
         if (w.connected && w.address === address && w.walletId) {
-          kit.setWallet(w.walletId);
+          storedWalletId = w.walletId;
         }
       }
     } catch {
       /* ignore JSON/localStorage */
     }
+  }
+
+  // Pollar (wallet embebida): firma via SDK, sin Stellar Wallets Kit
+  if (storedWalletId === 'pollar') {
+    const { signWithPollar } = await import('./pollarWallet');
+    try {
+      return await signWithPollar(unsignedXdr, address);
+    } catch (error: any) {
+      if (error.message?.includes('rejected') || error.message?.includes('denied') || error.code === 'USER_REJECTED') {
+        throw new Error('El usuario rechazó la firma de la transacción');
+      }
+      throw error;
+    }
+  }
+
+  if (!kit) {
+    throw new Error('Kit o dirección no disponible');
+  }
+
+  // Alinear Freighter / xBull (u otra del kit) con la sesión guardada; si no, el kit podría firmar con el módulo equivocado
+  if (typeof kit.setWallet === 'function' && storedWalletId && storedWalletId !== 'pollar') {
+    kit.setWallet(storedWalletId);
   }
 
   try {
