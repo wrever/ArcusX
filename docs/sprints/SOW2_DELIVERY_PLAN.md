@@ -1,168 +1,183 @@
-# ArcusX SOW 2 Delivery Plan — SDK Validation with SDF Award Scenario
+Instawards Statement of Work (SOW)
+30-Day Scoped Engagement
 
-**Document for technical reviewers.** It describes the scope of work for the second post-funding month: issues addressed, weekly deliverables, and verification criteria. The sprint focuses on improving the ArcusX SDK by using an SDF award-style scenario as the reviewer-facing validation flow built on top of ArcusX APIs and Stellar USDC escrow.
+1. Project & Team Information
 
-**Mainnet is not the delivery target for this SOW.** All verification is expected on Stellar Testnet with Trustless Work escrow, partner API keys, SDK examples, and reviewer-ready smoke tests. Mainnet readiness can be documented as a checklist, but not counted as a core deliverable.
+Project Name:  
+ArcusX 
+Builder / Team Name:  
+Bruno Miranda 
+Primary Contact (Name + Email):  
+[brunoandres205@gmail.com](mailto:brunoandres205@gmail.com) 
+Ambassador Chapter:  
+Chile 
+Ambassador Chapter Lead: 
+Bastian Koh 
+Date Submitted:  
+July 3, 2026 
+Suggested Sprint Start Date: 
+TBD
 
----
+1. Instawards Overview & Intent
 
-## 1. Executive Summary
+2.1 Instawards Purpose
+Make it significantly easier for developers to integrate Stellar-powered work and USDC escrow flows into their applications through @arcusx/sdk. In 30 days, ArcusX will provide a typed, documented, and production-ready TypeScript integration layer that hides internal API complexity and lets developers create work, attach evidence, manage escrow actions, and track payouts on Stellar Testnet.
+2.2 Why This Matters
+Developers should not need to understand ArcusX internal endpoints, Trustless Work implementation details, or raw Stellar transaction flows to add conditional USDC payments to their products. A complete SDK, predictable API behavior, practical examples, and a reference implementation will reduce integration time, prevent common errors, and make ArcusX infrastructure reusable across marketplaces, award programs, freelance platforms, and other applications built on Stellar.
+3. Problem Statement & Objective
+3.1 Problem Being Addressed
+What specific problem, gap, or blocker is this Instaward intended to solve?
+ArcusX already has a working marketplace flow on Stellar Testnet using Trustless Work USDC escrow. The current gap is not the core platform flow itself; the gap is that external developers still need knowledge of internal endpoints and payment implementation details to build on top of ArcusX. The TypeScript SDK, REST contract, examples, and documentation need to be completed and aligned so an external application can reliably create work objects, attach evidence, prepare escrow actions, track status, and execute a complete Testnet payout flow through a simple public interface.
+The current SDK and API surface also need clearer module coverage, typed errors, idempotency behavior, sandbox API key handling, bounded Trustless Work indexer reads, and runnable examples. Without this work, ArcusX can function as a platform, but other developers cannot integrate its Stellar-powered work execution and settlement capabilities quickly or confidently.
+3.2 Objective of This Instaward
+Within 30 days, ArcusX will deliver a production-ready TypeScript SDK and developer integration kit on Stellar Testnet. The @arcusx/sdk package will provide typed modules for public reads, marketplace/work objects, private offers, deals, escrow, evidence, ratings, and webhooks/callbacks, supported by practical documentation, runnable examples, and automated smoke verification.
+The sprint will also produce an award-style reference implementation that demonstrates the complete developer journey from work creation and evidence submission to winner selection, escrow funding, and USDC payout release on Testnet. This scenario is only a technical reference implementation; it does not imply that SDF, Stellar Development Foundation, or Instawards are partners, customers, or associated products of ArcusX.
+4. Scope of Work
+Deliverable 1
+Production-Ready TypeScript SDK
+Develop and release a production-ready @arcusx/sdk package that provides a stable, typed interface for integrating ArcusX into third-party applications. The SDK will abstract the underlying API complexity, expose marketplace, escrow, evidence, and payout functionality through a consistent developer experience, and include authentication, typed responses, error handling, and idempotent request support.
+Why this matters
+Developers can integrate ArcusX through a single, well-documented SDK instead of interacting directly with internal APIs, significantly reducing integration complexity and accelerating adoption across the Stellar ecosystem.
+Deliverable 2 
+Developer Experience & Reference Application
+Build a complete developer integration kit consisting of documentation, runnable examples, environment templates, and a reference application demonstrating the full lifecycle of creating work, submitting evidence, funding escrow, and releasing USDC payments on Stellar Testnet.
+Why this matters
+Providing real implementation examples dramatically lowers onboarding time and gives developers confidence that the SDK can be integrated into production applications with minimal effort.
+Deliverable 3 
+Stellar Testnet Validation & Release
+Validate the complete escrow lifecycle on Stellar Testnet and publish the first production-ready SDK release, including automated verification scripts, API documentation, quickstart guides, changelog, known limitations, and an end-to-end demonstration of the complete payment flow.
+Why this matters
+A fully tested SDK release provides developers with a reliable foundation for building applications that leverage programmable USDC escrow and conditional payments on Stellar.
+4.1 Out-of-Scope (Explicitly Not Included)
+Mainnet launch
+This SOW focuses on SDK readiness and Stellar Testnet verification only. Mainnet readiness can be documented as a checklist, but production mainnet launch is not a deliverable.
+Agent-to-agent payments / job-subjob settlement
+This is intentionally excluded because it is a larger future track and would exceed the 30-day scope.
+Python SDK or additional language SDKs
+Only the TypeScript @arcusx/sdk package is in scope.
+Full standalone award product launch
+The SDF award-style flow is a validation scenario for the SDK, not a customer-facing product, partnership, or associated SDF product.
+Native Soroban escrow replacement
+Trustless Work single-release USDC escrow remains the settlement provider for this sprint.
+Multi-milestone escrow
+Single-release escrow remains the stable baseline for SOW 2 verification.
+Large ArcusX marketplace UI redesign
+The existing ArcusX platform flow already works independently from the SDK. UI work is limited to the SDK playground, examples, and the award-style reference application.
 
-| Area | Scope for the month |
-| --- | --- |
-| **SDK Productization** | Reconcile SDK docs with the current `@arcusx/sdk` implementation; complete missing modules and examples so an external app can create, manage, and settle work through ArcusX. |
-| **SDF Award Validation Scenario** | Use an award-style flow as the validation scenario: campaigns/awards, submissions, winner selection, escrow quote, escrow funding, evidence, payout release, and status tracking through the SDK. |
-| **Partner API / Auth** | Harden partner API key usage, idempotency, JSON envelopes, partner attribution, limits, and auditability for SDK-based integrations. |
-| **Escrow and Stellar UX** | Keep Stellar operations on Testnet; ensure create/fund/approve/release flows are reliable, rate-limited, documented, and observable through SDK examples and playground flows. |
-| **SDK Examples / Playground** | Provide runnable SDK examples and a lightweight playground that prove the integration path without adding new agent-to-agent payment scope. |
-| **Documentation and Reviewer Pack** | Delivery plan, architecture document, SDK quickstart, API reference, smoke scripts, demo script, sandbox key instructions, and a concise verification checklist. |
+4.2 Deliverable-Aligned Budget Request
+Requested Budget: $4,500 USD
+Core Product Development (66%)
+The majority of the grant will be invested in the TypeScript SDK, stable backend API surface, escrow lifecycle integration, typed interfaces, and the developer tooling required to deliver a production-ready integration package.
+Product Design & User Experience (16%)
+Funding will support the developer experience of the SDK playground, reference application, examples, and documentation so the integration flow is clear, intuitive, and easy to adopt.
+Technology & Operational Infrastructure (18%)
+A portion of the budget will be allocated to the software, cloud services, development tools, and operational infrastructure required to efficiently develop, test, deploy, and maintain the platform throughout the grant period.
 
----
+1. 30-Day Execution Plan & Timeline
 
-## 2. Scope Principles
+5.1 Weekly Breakdown
+Week 1
+Planned Work
+Inventory the current @arcusx/sdk package, modules, examples, and REST coverage.
+Reconcile SDK README, docs, API reference, quickstart, and OpenAPI/REST notes with the actual implementation.
+Define the exact SOW 2 SDK surface: public, marketplace/work objects, private offers, deals, escrow, evidence, ratings, and webhooks/callback helpers where stable.
+Verify sandbox API key behavior on protected /v1 routes and invalid-key JSON errors.
+Document environment variables, setup requirements, and expected response envelope/error behavior.
+Expected Output
+The public SDK contract, authenticated client, typed errors, response envelopes, and module interfaces are implemented, tested, and ready to merge into the production SDK package.
+docs/sdk/README.md, docs/sdk/QUICKSTART.md, docs/sdk/API_REFERENCE.md, and the package README accurately describe the implemented public interface.
+The sandbox API key flow works end to end with valid and invalid credential handling.
+Week 2
+Planned Work
+Complete or refine SDK modules needed for the agreed SOW 2 surface.
+Implement the SDF award-style validation scenario using SDK calls instead of raw fetch calls.
+Map award/campaign, submission/evidence, winner selection, payout quote, and payout-ready state to SDK modules.
+Ensure SDK-created records carry sandbox/integration attribution and idempotency metadata where applicable.
+Add or update Node examples for the core SDK flow.
+Expected Output
+The marketplace/work, private offers, deals, evidence, and escrow quote modules are functional and ready to merge into the production SDK package.
+The award-style reference application runs through work creation, evidence submission, winner selection, and an escrow-ready payout state on Testnet using SDK calls only.
+Node.js examples run with documented environment variables and produce the expected typed outputs.
+Week 3
+Planned Work
+Add SDK-guided Testnet escrow examples for quote, prepare/confirm funding or deployment where applicable, escrow status reads, and payout release status.
+Ensure Trustless Work indexer reads are bounded and action-driven, avoiding render-loop or runaway polling behavior.
+Build or update the lightweight SDK playground for the award-style flow.
+Document webhook/callback verification story and provide HMAC/callback validation example where stable.
+Expand smoke scripts to cover public reads, sandbox auth, award/work creation, evidence, escrow quote/status, and clear error responses.
+Expected Output
+The SDK escrow lifecycle supports quote, transaction preparation, confirmation, funding, status synchronization, and payout release on Stellar Testnet.
+Bounded indexer reads, webhook/callback verification, and error handling are implemented, tested, and ready to merge.
+The SDK playground demonstrates the complete award/work, evidence, escrow, and payout-status flow.
+Week 4
+Planned Work
+Resolve issues discovered during Week 2 and Week 3 testing.
+Run fresh-clone verification for SDK examples, playground, and smoke scripts with documented env vars and sandbox key.
+Finalize quickstart, API reference, expected outputs, demo script or recording notes, endpoint/module status list, and known limitations.
+Document mainnet readiness checklist as future work only: wallets, USDC trustlines, keys, fee config, smoke amount, rollback plan, and risks.
+Assemble the final SDK release package, including examples, documentation, changelog, known limitations, smoke scripts, and the end-to-end demo.
+Expected Output
+The @arcusx/sdk release candidate builds successfully and all documented examples and smoke scripts pass on Stellar Testnet.
+The quickstart, API reference, changelog, examples, playground, known limitations, and end-to-end demo are complete and ready for release.
+The completed SDK release package is functional, documented, and ready to merge into production.
 
-| Principle | Decision |
-| --- | --- |
-| Primary objective | Improve ArcusX as an SDK/API product, not build a standalone award product. |
-| Completion target | Reach 100% coverage of the agreed SDK surface for this SOW: public, marketplace, private offers, deals, escrow, evidence, ratings, webhooks, examples, and smoke verification. |
-| Demo app role | The SDF award-style flow is a validation scenario that exposes SDK gaps and proves the integration story; it does not imply a partner or association relationship. |
-| Network | Stellar Testnet only for required verification. |
-| Mainnet | Out of scope for delivery; include checklist and risks only. |
-| Escrow model | Trustless Work single-release USDC escrow remains the payment primitive. |
-| Reviewer expectation | Reviewer must be able to run examples or smoke scripts with a sandbox key and see concrete API/SDK behavior. |
+1. Evidence of Completion
 
----
+6.1 Planned Evidence to Be Submitted
+Deliverable 1 
+ @arcusx/sdk Core TypeScript Package
+Evidence Type
+Repo + docs
+Description
+Repository access to the versioned SDK package, exported modules, generated types, package build output, API reference, and passing SDK tests/smoke checks.
+Deliverable 2 
+Developer Integration Kit and Award-Style Reference App
 
-## 3. Technical Issues Addressed
+Demo script / examples / playground
+Description
+Runnable Node.js examples and playground showing the award-style reference flow: create a work object, attach evidence, select a winner or assignee, compute an escrow quote, and reach payout-ready state using @arcusx/sdk.
+Deliverable 3 
+Testnet Escrow Lifecycle and SDK Release Package
 
-### 3.1 SDK Coverage and Documentation Drift
+Smoke scripts + Testnet evidence + SDK release package + changelog
+Description
+Testnet transaction hashes and escrow status evidence, passing smoke-script output, SDK documentation, changelog, and an end-to-end demo showing the complete escrow and payout lifecycle without excessive Trustless Work indexer polling.
+6.2 Evidence Verification Checklist
 
-| Issue | Location / context | Committed solution |
-| --- | --- | --- |
-| SDK docs lag behind implementation | `docs/sdk/*`, `packages/arcusx-sdk/*` | Reconcile version, module list, supported methods, examples, and quickstart so docs reflect the actual SDK. |
-| API surface unclear for integrators | `docs/sdk/API_REFERENCE.md`, `docs/sdk/openapi-v1.yaml` | Publish a reviewer-facing contract for public, marketplace, private, deals, escrow, evidence, ratings, and webhooks. |
-| SDK examples fragmented | `examples/sdk-node-*`, `examples/sdk-playground` | Standardize env vars, run instructions, expected outputs, and failure messages. |
-| Missing high-confidence smoke | `scripts/smoke-sdk.mjs` | Expand smoke beyond public endpoints: partner auth, create/list flows, escrow quote/prepare, and example health checks. |
+Deliverable
+Evidence Present
+Partial
+Missing
+Contracts Tested and Deployed
+☐
+☐
+☐
+Doctor & Patient Interface
+☐
+☐
+☐
+ End-to-End Integration & Demo
+☐
+☐
+☐
 
-### 3.2 SDF Award Scenario Gaps
+1. Next-Step Alignment
 
-| Issue | Location / context | Committed solution |
-| --- | --- | --- |
-| No reviewer-facing scenario exercising broad platform features | `docs/sprints/instaawards-sdk/*`, examples | Define award-style flows that consume SDK modules instead of calling raw ArcusX endpoints. |
-| Awards/submissions need work-execution semantics | SDK marketplace/deals/evidence modules | Model awards as work opportunities or deal-like records with evidence and conditional payout. |
-| Winner payout needs escrow path | SDK escrow + Trustless Work Testnet | Quote, prepare, fund, approve, and release USDC escrow through SDK-guided flows. |
-| Reviewer needs visible proof | `examples/sdk-playground`, demo script | Add a simple playground/demo path showing campaign → submission → winner → escrow → payout. |
-
-### 3.3 Partner API and Platform Reliability
-
-| Issue | Location / context | Committed solution |
-| --- | --- | --- |
-| Partner attribution must be consistent | Supabase Edge API, `partner_id`, SDK auth | Ensure SDK-created resources carry partner identity and idempotency metadata. |
-| Edge response shape must be integrator-friendly | REST `/v1`, JSON envelope | Standardize success/error format and document HTTP status codes. |
-| Rate-limit risk from Trustless Work indexer polling | Deal and escrow chain-state flows | Use stable refs, bounded polling, and cache/refresh actions rather than render-triggered loops. |
-| Secret exposure risk | SDK docs and examples | Keep Trustless Work API keys server-side or reviewer-local only; document sandbox keys without committing secrets. |
-
----
-
-## 4. Weekly Deliverables
-
-### Week 1 | SDK Contract, Docs Reconciliation, and Partner Baseline
-
-| Goal | Deliverable | Suggested verification |
-| --- | --- | --- |
-| 1 | SDK inventory: actual modules, methods, current version, examples, and REST coverage documented | `docs/sdk/API_REFERENCE.md`, `docs/sdk/README.md`, and package README agree with `packages/arcusx-sdk/src`. |
-| 2 | Partner auth and idempotency baseline documented and verified | Sandbox API key can call a protected `/v1` route; invalid key returns JSON 401/403. |
-| 3 | Award scenario spec written as SDK use cases | Document maps campaigns, submissions, evidence, winner selection, and payout to SDK modules. |
-
-**Week 1 definition of done:** A reviewer can understand what the SDK supports today, how an integration authenticates, and exactly which award-style flows will exercise the SDK.
-
-### Week 2 | Award Scenario Through SDK
-
-| Goal | Deliverable | Suggested verification |
-| --- | --- | --- |
-| 1 | Award scenario uses SDK for core work objects | Demo script or example creates/list work entries or award opportunities through `@arcusx/sdk`, not raw fetch calls. |
-| 2 | Submission and evidence flow through SDK | Evidence/submission metadata is attached and retrievable with partner attribution. |
-| 3 | Winner selection creates escrow-ready payout state | SDK can compute payout quote and produce the next escrow action for the winner. |
-
-**Week 2 definition of done:** The award-style flow can run an end-to-end non-mainnet scenario up to “winner selected and escrow quote ready” using the SDK.
-
-### Week 3 | Escrow, SDK Playground, and Webhook/Callback Proof
-
-| Goal | Deliverable | Suggested verification |
-| --- | --- | --- |
-| 1 | Testnet escrow flow works from SDK-guided examples | Quote → prepare deploy/fund → confirm tx hash → status read succeeds with bounded indexer calls. |
-| 2 | SDK playground covers the award-style flow | Playground or Node script demonstrates award/work creation, evidence, winner selection, escrow quote, and payout status. |
-| 3 | Webhook/callback story is documented and smoke-tested | HMAC/callback example validates payload and records status without exposing secrets. |
-
-**Week 3 definition of done:** The SDK demonstrates the differentiated ArcusX value: external apps can create work, attach evidence, and settle conditional Stellar USDC payouts through ArcusX.
-
-### Week 4 | QA, Reviewer Pack, and Testnet Demo Close
-
-| Goal | Deliverable | Suggested verification |
-| --- | --- | --- |
-| 1 | Reviewer smoke scripts and quickstarts are stable | Fresh clone + env vars + sandbox key can run documented SDK examples on Testnet. |
-| 2 | Award demo package is ready | Demo script or recording: create award → submit evidence → select winner → fund escrow → release payout. |
-| 3 | Mainnet readiness documented, not delivered | Checklist lists wallets, USDC trustlines, keys, fee config, smoke amount, rollback plan, and known risks. |
-
-**Week 4 definition of done:** A technical reviewer can verify the SDK integration story without relying on private context or manual explanation.
-
----
-
-## 5. Success Criteria for the Month
-
-- **SDK:** Documentation, package README, examples, and current code agree on modules, methods, version, and env vars.
-- **Award scenario:** At least one end-to-end Testnet demo uses the SDK as the integration layer.
-- **Partner API:** Sandbox key flow is documented and protected routes reject invalid credentials with clear JSON errors.
-- **Escrow:** Testnet USDC escrow path is demonstrable through SDK-guided flows without runaway indexer requests.
-- **SDK examples:** Runnable examples prove partner auth, award-style work/evidence, escrow quote, and payout release status.
-- **Reviewer pack:** Delivery plan, architecture, quickstart, API reference, smoke commands, expected outputs, and demo script are included.
-
----
-
-## 6. Out of Scope
-
-| Area | Reason |
-| --- | --- |
-| Mainnet launch | This SOW focuses on SDK/product readiness and Testnet verification. |
-| Native Soroban escrow replacement | Trustless Work remains the escrow provider for this sprint. |
-| Python SDK | TypeScript SDK is the package in scope. |
-| Full award product launch | The SDF award-style flow is a validation scenario, not a partner relationship, associated product, or final customer-facing product deliverable. |
-| Multi-milestone escrow | Single-release escrow remains the stable baseline. |
-| Agent-to-agent payments / job-subjob settlement | Too large for this month; this SOW focuses on SDK readiness and the award-style validation flow. |
-| Large UI redesign | Only SDK/playground/demo UI needed for reviewer verification is in scope. |
-
----
-
-## 7. Reviewer Checklist
-
-| Check | Expected result |
-| --- | --- |
-| Install SDK | `npm install` succeeds in SDK examples. |
-| Public read smoke | Public endpoints return valid JSON envelope. |
-| Partner auth smoke | Valid sandbox key passes; invalid key fails with JSON 401/403. |
-| Award flow | Campaign/award, submission/evidence, winner, and payout state are created through SDK calls. |
-| Escrow flow | Testnet quote and escrow steps produce expected tx hashes/status without excessive polling. |
-| SDK examples | Node/playground examples demonstrate the integration path without agent-to-agent payment scope. |
-| Documentation | Delivery plan, architecture, quickstart, API reference, and demo script are aligned. |
-
----
-
-## 8. Evidence Package
-
-The end-of-month reviewer package should include:
-
-- `docs/sprints/SOW2_DELIVERY_PLAN.md`
-- `docs/sprints/SOW2_ARCHITECTURE.md`
-- Updated `docs/sdk/README.md`
-- Updated `docs/sdk/QUICKSTART.md`
-- Updated `docs/sdk/API_REFERENCE.md`
-- Updated `docs/sdk/openapi-v1.yaml` if REST contract changes
-- SDK examples that cover marketplace/private/deals/escrow and the award-style flow
-- `examples/sdk-playground`
-- `scripts/smoke-sdk.mjs`
-- Demo script or recording notes for the award-style SDK flow
-
----
-
-**Version:** 0.2  
-**Last updated:** July 2026
+7.1 Anticipated Next Step After Completion
+After this Instaward, the most likely next step is:
+☐ Apply to SCF Build Award
+☐ Continue development independently
+☑ Apply for a follow-on Instaward (if eligible)
+☐ Seek other ecosystem support
+☐ Other:
+8. Instawards Constraints Acknowledgement
+By submitting this SOW, the Builder acknowledges:
+☑ This scope will be completed within 30 days or less.
+☑ Instawards support execution, not open-ended exploration.
+☑ A project may receive no more than two follow-on Instawards.
+☑ Each Instaward is capped at $5,000.
+☑ Total Instawards funding may not exceed $15,000.
+Contact
+Email: [brunoandres205@gmail.com](mailto:brunoandres205@gmail.com), 
+[https://x.com/Brunixsoo](https://x.com/Brunixsoo)
+Telegram: @AwderS

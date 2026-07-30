@@ -1,45 +1,61 @@
-# ArcusX SDK — API reference (v0.1)
+# ArcusX SDK — API reference
 
-**Contrato congelado** — ver [`PLAN_MAESTRO.md`](./PLAN_MAESTRO.md).  
-**Fuente de verdad Edge:** [`ENDPOINTS.md`](../api/ENDPOINTS.md).
+**Paquete:** `@arcusx/sdk` **v0.4.5** · **SOW 2 Semana 1**  
+**Fuente Edge:** [`ENDPOINTS.md`](../api/ENDPOINTS.md) · **REST:** [`REST_V1.md`](./REST_V1.md) · **Auth:** [`PARTNER_AUTH.md`](./PARTNER_AUTH.md)
 
-**Estado implementación:** spec ✅ · código SDK ☐ (Fase 2)
+**Estado:** contrato público implementado en `packages/arcusx-sdk/` (build `npm run build`).
 
 ---
 
 ## Client config
 
 ```typescript
-import { ArcusXClient } from '@arcusx/sdk';
+import { ArcusXClient, ArcusXApiError } from '@arcusx/sdk';
 
 const ax = new ArcusXClient({
-  baseUrl: 'https://<project>.supabase.co/functions/v1/arcusx-api',
-  apiKey: 'axk_test_…',
-  supabaseAnonKey: '<anon>',
-  bearerToken: '<app_jwt>',
-  network: 'testnet',
-  useLegacyActions: false,  // default: REST /v1/ (ver REST_V1.md)
+  apiKey: 'axk_test_…',           // requerido si no hay bearerToken
+  // baseUrl: 'https://api.arcusx.pro',  // default (partner gateway)
+  bearerToken: '<app_jwt>',       // flujos user-scoped
+  network: 'testnet',             // header x-arcusx-network
+  useLegacyActions: false,        // default: REST /v1/
+  // supabaseAnonKey: '…',        // solo Edge directo (interno)
 });
 ```
 
-El SDK resuelve rutas como `POST /v1/tasks`. Legacy `?action=` solo con `useLegacyActions: true`.
+Default transport: **REST `/v1/`**. Legacy `?action=` solo con `useLegacyActions: true`.
 
-**Escrow:** métodos `escrow.quote`, `prepareFund`, `confirmFund` — marca ArcusX; Trustless Work no aparece en tipos públicos ni ejemplos partner. Ver [`REST_V1.md`](./REST_V1.md).
-
-Headers enviados por el SDK:
+### Headers que envía el SDK
 
 | Header | Cuándo |
 |--------|--------|
-| `apikey` | Siempre (Supabase anon) |
-| `x-arcusx-api-key` | Partner B2B |
-| `Authorization: Bearer …` | Acciones de usuario |
-| `Idempotency-Key` | POST idempotentes (recomendado) — ver § Idempotency |
+| `Authorization: Bearer axk_…` | Partner server (solo `apiKey`) |
+| `Authorization: Bearer <JWT>` | Con `bearerToken` |
+| `x-arcusx-api-key` | Cuando hay JWT **y** `apiKey` |
+| `apikey` | Solo si se pasa `supabaseAnonKey` (interno) |
+| `x-arcusx-network` | Si `network` está set |
+| `Idempotency-Key` | Via `opts.idempotencyKey` en POST |
+
+### Envelope de respuesta
+
+Éxito:
+
+```json
+{ "success": true, "data": { … }, "meta": { "request_id": "…", "api_version": "v1" } }
+```
+
+Error (REST `/v1/`):
+
+```json
+{
+  "success": false,
+  "error": { "code": "invalid_api_key", "message": "…" },
+  "meta": { "request_id": "…", "api_version": "v1" }
+}
+```
+
+El cliente lanza `ArcusXApiError` con `status`, `code`, `requestId?`, `raw?`.
 
 ### Idempotency
-
-Edge soporta `Idempotency-Key` en: `create_task`, `create_deal`, `apply_task`, `select_proposal`, `create_escrow` (24h TTL).
-
-El SDK debe reenviar el header en `http.ts` (T3-20). Integradores globales **deben** usarlo en retries.
 
 ```typescript
 await ax.marketplace.create(input, { idempotencyKey: 'crm-job-991-v1' });
@@ -51,217 +67,159 @@ await ax.marketplace.create(input, { idempotencyKey: 'crm-job-991-v1' });
 
 | Símbolo | Significado |
 |---------|-------------|
-| — | Público (solo `apikey`) |
+| — / P | Público o partner key (gateway) |
 | P | Partner API key |
-| U | User JWT (`bearerToken`) |
-| P+U | Ambos (modo embed v0.1) |
+| U | User JWT |
+| P+U | Partner key + user JWT |
 
 ---
 
-## `client.public`
+## Superficie SOW 2 (Semana 1)
 
-| SDK method | Edge action | Auth |
-|------------|-------------|------|
-| `getMarketStats()` | `get_landing_market_stats` | — / P |
-| `getPlatformFee()` | `get_platform_fee` | — / P |
-| `getTasks(query?)` | `get_tasks` | — / P |
+Namespaces oficiales para el Instaward:
 
----
+| Namespace | Rol |
+|-----------|-----|
+| `public` | Lecturas de mercado / fee |
+| `marketplace` | Work objects (tasks) |
+| `private` | Ofertas privadas |
+| `deals` | Links de pago |
+| `escrow` | Quote + ciclo escrow |
+| `evidence` | Evidencia milestone/deal |
+| `ratings` | Ratings |
+| `webhooks` | Deliveries + verify HMAC |
+| `settlement` | Completar task / mark deal released |
 
-## `client.marketplace`
-
-Flujo: listing abierto → propuestas → selección → escrow.
-
-| SDK method | Edge action | Auth |
-|------------|-------------|------|
-| `create(input)` | `create_task` | P+U |
-| `get(taskId)` | `get_task_details` | P+U |
-| `listMine()` | `get_user_tasks` | U |
-| `apply(taskId, body)` | `apply_task` | U |
-| `getProposals(taskId)` | `get_task_proposals` | U |
-| `selectProposal(taskId, proposalId)` | `select_proposal` | U |
-| `cancel(taskId, opts?)` | `cancel_task` | U |
-
-### Crear oferta privada (entrada híbrida)
-
-`marketplace.create()` acepta campos de oferta privada:
-
-```typescript
-await ax.marketplace.create({
-  title: '…',
-  price: 100,
-  currency: 'USDC',
-  category: 'development',
-  isPrivateInvite: true,
-  invitedUserId: 42,
-  externalId: 'my-crm-job-991',  // cuando exista partner_id
-});
-```
-
-El ciclo post-creación (fondeo sin propuestas) vive en `client.private`.
+También existen en el paquete (no son el foco Semana 1 docs): `disputes`, `trust`, `agent` (agent-to-agent está **fuera** del SOW 2).
 
 ---
 
-## `client.private`
+## `ax.public`
 
-Flujo: cliente invita a un freelancer conocido → fondeo directo.
-
-| SDK method | Edge action | Auth |
-|------------|-------------|------|
-| `list()` | `get_private_offers` | U |
-| `finalize(taskId, body)` | `finalize_private_offer` | P+U |
-| `accept(taskId)` | `accept_private_offer` | U |
-| `reject(taskId, reason?)` | `reject_private_offer` | U |
-
-**Secuencia típica integrador:**
-
-1. `marketplace.create({ isPrivateInvite: true, invitedUserId })`
-2. On-chain fund (WalletAdapter / TW en browser)
-3. `private.finalize(taskId, { contractId, … })`
-4. Trabajo en `supervise` equivalente → `settlement.completeTask`
+| Método | REST (aprox.) | Auth |
+|--------|---------------|------|
+| `getMarketStats()` | `GET /v1/public/market-stats` | — / P |
+| `getPlatformFee()` | `GET /v1/public/platform-fee` | — / P |
+| `getTasks(query?)` | `GET /v1/public/tasks` | — / P |
 
 ---
 
-## `client.deals`
+## `ax.marketplace`
 
-Flujo: acuerdo comercial con link compartible (`share_token`).
+| Método | Auth |
+|--------|------|
+| `create(input)` | P+U |
+| `get(taskId)` | P+U |
+| `listMine()` | U |
+| `apply(taskId, body)` | U |
+| `getProposals(taskId)` | P+U |
+| `selectProposal(taskId, proposalId)` | P+U |
+| `cancel(taskId)` | P+U |
 
-| SDK method | Edge action | Auth |
-|------------|-------------|------|
-| `create(input)` | `create_deal` | P+U |
-| `getByToken(token)` | `get_deal_by_token` | — / U |
-| `get(id)` | `get_deal_details` | P+U |
-| `list()` | `get_my_deals` | U |
-| `accept(id)` | `accept_deal` | U |
-| `complete(id)` | `complete_deal` | U |
-
-Plantillas deal (`template`: `coaching`, `auto`, `rental`, …): ver `docs/agreement-deals/TEMPLATES_CATALOG.md`.
-
----
-
-## `client.escrow`
-
-Metadata y pasos BD — **firma on-chain fuera del SDK** (v0.1).
-
-| SDK method | Edge action | Auth | Flujo |
-|------------|-------------|------|-------|
-| `createForTask(taskId, proposalId)` | `create_escrow` | U | Marketplace |
-| `status(taskId)` | `get_escrow_status` | U | Ambos |
-| `markWorkStarted(taskId)` | `mark_work_started` | U | Marketplace |
-| `prepareDealEscrow(dealId, body)` | `prepare_deal_escrow` | U | Deals |
-| `finalizeDealEscrow(dealId, body)` | `finalize_deal_escrow` | U | Deals |
-
-### On-chain (integrador, no SDK core v0.1)
-
-| Paso | Quién | Notas |
-|------|-------|-------|
-| Deploy escrow TW | Cliente (wallet) | `trustlessWorkEscrowService` en referencia |
-| Fund | Cliente | USDC + fee bilateral (ver FEE_MODEL) |
-| Release | Cliente approve + release | Devuelve `tx_hash` |
-
-Fase 3 infra añadirá `escrow.prepareFund()` / `confirmFund()` — misma interface SDK.
+Inputs usan **snake_case** (`is_private_invite`, `wallet_address`, …).
 
 ---
 
-## `client.settlement`
+## `ax.private`
 
-Persistir cierre on-chain en BD.
-
-| SDK method | Edge action | Auth | Requiere |
-|------------|-------------|------|----------|
-| `completeTask(taskId, { txHash, … })` | `complete_task` | U | `tx_hash` post-release TW |
-| `markDealReleased(dealId, { txHash })` | `mark_deal_released` | U | `transaction_hash` |
-
----
-
-## Tipos principales (`types.ts`)
-
-```typescript
-type WorkEntry = 'marketplace' | 'private' | 'deal';
-type Network = 'testnet' | 'mainnet';
-
-interface Task {
-  id: number;
-  title: string;
-  price: number;
-  currency: 'USDC';
-  status: string;
-  isPrivateInvite?: boolean;
-  invitedUserId?: number;
-  partnerId?: string;
-  externalId?: string;
-}
-
-interface Deal {
-  id: string;
-  shareToken: string;
-  template: string;
-  status: string;
-  partnerId?: string;
-  externalId?: string;
-}
-
-interface EscrowStatus {
-  taskId: number;
-  escrowStatus: string;
-  contractId?: string;
-  milestoneIndex?: number;
-}
-
-interface FeeQuote {
-  nominal: number;
-  workerNet: number;
-  clientTotal: number;
-  clientVisibleFee: number;
-  platformFeeRate: number;
-  fundAmount: number;
-  currency: 'USDC';
-}
-```
-
-Ver [`FEE_MODEL.md`](./FEE_MODEL.md). `price` / `amount_usdc` en BD = valor nominal de referencia.
+| Método | Auth |
+|--------|------|
+| `list()` | U |
+| `finalize(taskId, body)` | P+U |
+| `accept(taskId)` | U |
+| `reject(taskId, reason?)` | U |
 
 ---
 
-## Errores
+## `ax.deals`
 
-```typescript
-class ArcusXApiError extends Error {
-  status: number;       // HTTP
-  code: string;         // ej. invalid_or_missing_token
-  requestId?: string;
-}
-```
-
-Códigos comunes Edge: `401` JWT inválido · `403` sin permiso · `400` validación · `410` deprecado · `501` action desconocido.
-
----
-
-## v0.2 (planificado, no implementado)
-
-| Módulo | Métodos | Edge |
-|--------|---------|------|
-| `evidence` | `uploadMilestone`, `getMilestone`, `uploadDeal`, `getDeal` | milestone + deal evidence |
-| `disputes` | `create`, `list`, `getChat`, `getFiles`, `getTimeline` | `create_dispute`, `get_user_disputes`, … |
-| `identity` | `registerWallet`, `verifyWallet` | `register_wallet`, `verify_wallet` |
-| `ratings` | `create`, `getSummary` | `create_rating`, `get_user_rating_summary` |
+| Método | Auth |
+|--------|------|
+| `create(input)` → `{ agreement, deal_token, deal_url_path }` | P+U |
+| `getByToken(token)` | — / P / U |
+| `get(dealId)` | P+U |
+| `list()` | U |
+| `accept(dealToken, walletAddress)` | U |
+| `complete(dealId)` | U |
 
 ---
 
-## Conteo v0.1
+## `ax.escrow`
 
-| Módulo | Métodos |
-|--------|---------|
-| public | 3 |
-| marketplace | 7 |
-| private | 4 |
-| deals | 6 |
-| escrow | 5 |
-| settlement | 2 |
-| **Total** | **27** |
+| Método | Notas |
+|--------|-------|
+| `quote(nominalUsdc)` | Fee quote (no recalcular en cliente) |
+| `createForTask(taskId, proposalId)` | Metadata BD |
+| `status(taskId, escrowId?)` | |
+| `markWorkStarted(taskId)` | |
+| `prepareDeploy` / `confirmDeploy` | XDR → sign → confirm |
+| `prepareFund` / `confirmFund` | |
+| `prepareRelease` / `confirmRelease` | |
+| `prepareDealEscrow` / `finalizeDealEscrow` | Deals |
 
-(+ `ArcusXClient` config = superficie SDK v0.1 completa)
+Trustless Work no se expone como dependencia del integrador.
 
 ---
 
-*Actualizar solo con bump de versión en `PLAN_MAESTRO.md`.*
+## `ax.settlement`
+
+| Método | Auth |
+|--------|------|
+| `completeTask(taskId, { tx_hash })` | P+U |
+| `markDealReleased(dealId, { tx_hash })` | P+U |
+
+---
+
+## `ax.evidence`
+
+| Método |
+|--------|
+| `getMilestone(taskId, …)` |
+| `getDeal(dealId)` |
+| `uploadMilestone(taskId, formData)` |
+| `uploadDeal(dealId, formData)` |
+
+---
+
+## `ax.ratings`
+
+| Método |
+|--------|
+| `create(input)` |
+| `getUserSummary(userId)` |
+
+---
+
+## `ax.webhooks`
+
+| Método | Notas |
+|--------|-------|
+| `listDeliveries()` | HTTP |
+| `verifySignature(rawBody, signatureHeader, secret)` | HMAC local (sin round-trip) |
+
+---
+
+## Auth negativa (sandbox)
+
+| Caso | HTTP | `error.code` |
+|------|------|--------------|
+| Sin `Authorization` / sin `axk_` | 401 | `missing_api_key` |
+| Key inválida o revocada | 401 | `invalid_api_key` |
+| Key válida | 200 | envelope `success: true` + `data` |
+
+Scripts: `scripts/smoke-sdk.mjs`, `scripts/demo-week1-sdk.mjs`.
+
+---
+
+## Wallet
+
+`WalletAdapter` en `packages/arcusx-sdk/src/wallet/adapter.ts` — la firma on-chain queda en la app del integrador.
+
+---
+
+## Examples
+
+- `examples/sdk-node-marketplace/`
+- `examples/sdk-node-private/`
+- `examples/sdk-node-deal/`
+- `examples/sdk-playground/`

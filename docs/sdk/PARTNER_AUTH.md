@@ -1,97 +1,93 @@
 # ArcusX SDK — Partner authentication
 
-**Plan maestro:** [`PLAN_MAESTRO.md`](./PLAN_MAESTRO.md) · **Checklist:** [`CHECKLIST.md`](./CHECKLIST.md) · **Estado:** Spec ✅ — implementación Fase 1 (T3-01 → T3-02).
+**SOW 2 Semana 1** · Quickstart: [`QUICKSTART.md`](./QUICKSTART.md) · API: [`API_REFERENCE.md`](./API_REFERENCE.md)
 
 ## Modes
 
-| Mode | Headers | When |
-|------|---------|------|
-| **Partner (server)** | `x-arcusx-api-key: axk_live_…` or `axk_test_…` | B2B integrator backend |
-| **End user** | `Authorization: Bearer <app_jwt>` + `apikey: <supabase_anon>` | User delegated actions after OAuth |
+| Mode | Cómo autentica el SDK | When |
+|------|----------------------|------|
+| **Partner (server)** | `Authorization: Bearer axk_test_…` / `axk_live_…` | Backend B2B (default) |
+| **Partner + end user** | `Authorization: Bearer <app_jwt>` + `x-arcusx-api-key: axk_…` | Acciones del usuario tras OAuth |
+| **Gateway alt** | Header `x-arcusx-api-key` (aceptado por `api.arcusx.pro`) | Compat |
 
-**v0.1:** Modo A (embed + OAuth) only. Modo B (server-only sin JWT) = v0.2.
-
-## Integrator OAuth flow (T3-19 — required for user-scoped SDK calls)
-
-Most SDK methods need **both** partner key and user JWT:
-
-```
-1. End user signs in via Supabase OAuth (Google/GitHub) on partner app
-   — partner may redirect to arcusx OAuth or embed Supabase Auth with same project
-2. POST sync_supabase_user (Edge) with Supabase session
-   → returns app JWT (same as arcusx.pro)
-3. SDK calls use:
-   x-arcusx-api-key: axk_test_…
-   Authorization: Bearer <app_jwt>
-   apikey: <supabase_anon>
-```
-
-**Actions that work without user JWT (public):** `get_landing_market_stats`, `get_platform_fee`, `get_tasks`, `get_deal_by_token` (guest preview).
-
-**Dogfood reference:** `arcusx/src/services/authService.ts` → `sync_supabase_user`.
+Partners **no** necesitan `SUPABASE_ANON_KEY` contra `https://api.arcusx.pro`.
 
 ## Key format
 
-- Prefix: `axk_test_` (sandbox) / `axk_live_` (production)
-- Store only `key_hash` (SHA-256) in `arcusx_partner_keys`
-- Rotate via admin; never commit keys
+- Sandbox: `axk_test_…`
+- Production: `axk_live_…`
+- Solo se almacena `key_hash` (SHA-256) en `arcusx_partner_keys`
+- Nunca commitear keys
 
-## Migration (T3-01)
+## Crear keys
 
-Archivo: `supabase/migrations/20260528140000_arcusx_partners.sql`
+- Dashboard ArcusX → Developer / API keys (JWT usuario), o
+- Equipo ArcusX entrega `axk_test_…` out-of-band para revisores Instawards
 
-Tablas:
+Migraciones: `supabase/migrations/20260528140000_arcusx_partners.sql`, `20260630120000_user_api_keys.sql`, …
 
-- `arcusx_partners` — tenant (name, slug, sandbox, `platform_fee_override`, status)
-- `arcusx_partner_keys` — `key_hash`, rate_limit, revoked_at
-- `arcusx_partner_audit_log` — action, resource_type, request_id
+## Gateway
 
-Columnas en recursos:
+| Item | Valor |
+|------|-------|
+| Base URL default SDK | `https://api.arcusx.pro` |
+| Edge function | `arcusx-partner-api` → proxy a `arcusx-api/v1/…` |
 
-- `arcusx_tasks.partner_id`, `external_id`
-- `arcusx_agreements.partner_id`, `external_id`
-- `UNIQUE (partner_id, external_id)` where external_id IS NOT NULL
+Sin key:
 
-**No confundir** con `referral_partners` (embajadores).
+```json
+{
+  "success": false,
+  "error": {
+    "code": "missing_api_key",
+    "message": "Incluye Authorization: Bearer axk_test_… o axk_live_…"
+  }
+}
+```
 
-## Rate limits (draft)
+Key inválida / revocada:
+
+```json
+{
+  "success": false,
+  "error": { "code": "invalid_api_key", "message": "…" },
+  "meta": { "request_id": "…", "api_version": "v1" }
+}
+```
+
+HTTP status: **401** (o **429** `rate_limit_exceeded`).
+
+## User OAuth (flujos user-scoped)
+
+1. Usuario inicia sesión (Supabase OAuth) en la app del partner / ArcusX
+2. `sync_supabase_user` → JWT de app
+3. SDK:
+
+```typescript
+new ArcusXClient({
+  apiKey: 'axk_test_…',
+  bearerToken: appJwt,
+  network: 'testnet',
+});
+```
+
+**Público sin JWT:** `getMarketStats`, `getPlatformFee`, `getTasks`, `getByToken` (preview).
+
+## Rate limits
 
 | Tier | Limit |
 |------|-------|
-| Sandbox | 60 req/min |
-| Production | 600 req/min |
+| Sandbox | ~60 req/min |
+| Production | ~600 req/min |
 
-MVP: in-memory por key; documentar limitación en PR T3-02.
+Implementación actual: in-memory por key en Edge (`partner-api-keys.ts`).
 
-## Edge validation (T3-02)
+## Acceptance (Semana 1)
 
-| Archivo | Rol |
-|---------|-----|
-| `_shared/partner-api-keys.ts` | SHA-256 lookup, rate limit, `ctx.partnerId` |
-| `_shared/partner-context.ts` | Scoping lecturas por tenant |
-
-Integrar en `router.ts` **antes** del handler.
-
-### Rutas partner-first (opt-in MVP)
-
-| Action / REST | API key | User JWT |
-|---------------|---------|----------|
-| `get_landing_market_stats` | opcional | — |
-| `get_platform_fee` | opcional | — |
-| `get_tasks` | sí (filtro futuro) | — |
-| `create_task` / POST `/v1/tasks` | sí | sí |
-| `create_deal` / POST `/v1/deals` | sí | sí |
-| `get_task_details` | sí | sí |
-| `get_deal_details` | sí | sí |
-| `finalize_private_offer` | sí | sí |
-
-## Reviewer sandbox
-
-InstaAwards reviewer receives `axk_test_…` out-of-band (T3-06); rotate after program.
-
-## Acceptance (Fase 1 DoD)
-
-- [ ] Migración aplicada en testnet
-- [ ] Key sandbox generada (fuera de git)
-- [ ] `curl POST /v1/tasks` con key + JWT → `partner_id` en BD
-- [ ] Marketplace sin key sigue creando tasks (`partner_id` null)
+- [x] Partner keys + gateway en producción (`https://api.arcusx.pro`)
+- [x] SDK envía Bearer `axk_…` por defecto
+- [x] Envelope JSON de éxito/error tipado en `/v1/`
+- [x] Smoke: key **válida** → lecturas públicas vía gateway
+- [x] Smoke: key ausente → `missing_api_key`; inválida → `invalid_api_key`
+- [x] Demo walkthrough: `scripts/demo-week1-sdk.mjs`
+- [ ] Reviewer sandbox key rotada al cierre del programa
