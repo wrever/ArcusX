@@ -273,6 +273,163 @@ paths:
       responses:
         '200':
           description: OK
+  /jobs:
+    get:
+      summary: List jobs owned by partner/user
+      operationId: listJobs
+      tags: [Agentic]
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Create agentic job (orchestrator root)
+      operationId: createJob
+      tags: [Agentic]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateJobRequest'
+      responses:
+        '200':
+          description: Created (envelope data.job_id)
+  /jobs/{jobId}:
+    get:
+      summary: Get job + subjobs
+      operationId: getJob
+      tags: [Agentic]
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: OK
+  /jobs/{jobId}/cancel:
+    post:
+      summary: Cancel job
+      operationId: cancelJob
+      tags: [Agentic]
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: OK
+  /jobs/{jobId}/subjobs:
+    post:
+      summary: Create subjob (executor work unit + marketplace task bridge)
+      operationId: createSubjob
+      tags: [Agentic]
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSubjobRequest'
+      responses:
+        '200':
+          description: OK
+  /subjobs/{subjobId}:
+    get:
+      summary: Get subjob
+      operationId: getSubjob
+      tags: [Agentic]
+      parameters:
+        - $ref: '#/components/parameters/SubjobId'
+      responses:
+        '200':
+          description: OK
+  /subjobs/{subjobId}/escrow/quote:
+    get:
+      summary: Escrow quote for subjob payout
+      operationId: quoteSubjobEscrow
+      tags: [Agentic]
+      parameters:
+        - $ref: '#/components/parameters/SubjobId'
+      responses:
+        '200':
+          description: OK
+  /subjobs/{subjobId}/escrow/deploy/prepare:
+    post:
+      summary: Prepare Trustless Work deploy XDR
+      operationId: prepareSubjobDeploy
+      tags: [Agentic]
+      parameters:
+        - $ref: '#/components/parameters/SubjobId'
+      responses:
+        '200':
+          description: OK
+  /subjobs/{subjobId}/escrow/deploy/confirm:
+    post:
+      summary: Confirm deploy
+      operationId: confirmSubjobDeploy
+      tags: [Agentic]
+      parameters:
+        - $ref: '#/components/parameters/SubjobId'
+      responses:
+        '200':
+          description: OK
+  /subjobs/{subjobId}/escrow/fund/prepare:
+    post:
+      summary: Prepare fund XDR
+      operationId: prepareSubjobFund
+      tags: [Agentic]
+      parameters:
+        - $ref: '#/components/parameters/SubjobId'
+      responses:
+        '200':
+          description: OK
+  /subjobs/{subjobId}/escrow/fund/confirm:
+    post:
+      summary: Confirm fund
+      operationId: confirmSubjobFund
+      tags: [Agentic]
+      parameters:
+        - $ref: '#/components/parameters/SubjobId'
+      responses:
+        '200':
+          description: OK
+  /subjobs/{subjobId}/escrow/release/prepare:
+    post:
+      summary: Prepare release XDR
+      operationId: prepareSubjobRelease
+      tags: [Agentic]
+      parameters:
+        - $ref: '#/components/parameters/SubjobId'
+      responses:
+        '200':
+          description: OK
+  /subjobs/{subjobId}/escrow/release/confirm:
+    post:
+      summary: Confirm release
+      operationId: confirmSubjobRelease
+      tags: [Agentic]
+      parameters:
+        - $ref: '#/components/parameters/SubjobId'
+      responses:
+        '200':
+          description: OK
+  /subjobs/{subjobId}/attest:
+    post:
+      summary: Attest completion (callback / webhook_attestation policies)
+      operationId: attestSubjob
+      tags: [Agentic]
+      parameters:
+        - $ref: '#/components/parameters/SubjobId'
+      responses:
+        '200':
+          description: OK
+  /subjobs/{subjobId}/release-on-callback:
+    post:
+      summary: Release after approved callback attestation
+      operationId: releaseSubjobOnCallback
+      tags: [Agentic]
+      parameters:
+        - $ref: '#/components/parameters/SubjobId'
+      responses:
+        '200':
+          description: OK
 components:
   securitySchemes:
     supabaseAnon:
@@ -295,6 +452,16 @@ components:
     dealId:
       in: path
       name: dealId
+      required: true
+      schema: { type: string, format: uuid }
+    JobId:
+      name: jobId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    SubjobId:
+      name: subjobId
+      in: path
       required: true
       schema: { type: string, format: uuid }
   schemas:
@@ -358,3 +525,26 @@ components:
         platformFeeRate: { type: number }
         fundAmount: { type: number }
         currency: { type: string, enum: [USDC] }
+    CreateJobRequest:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string }
+        description: { type: string }
+        payer_wallet: { type: string, description: Stellar G… }
+        external_ref: { type: string }
+        metadata: { type: object }
+    CreateSubjobRequest:
+      type: object
+      required: [worker_amount]
+      properties:
+        title: { type: string }
+        worker_amount: { type: number }
+        executor_type: { type: string, enum: [human, agent, service] }
+        executor_wallet: { type: string }
+        executor_user_id: { type: integer }
+        completion_condition:
+          type: string
+          enum: [manual_approve, webhook_attestation, api_callback]
+        external_ref: { type: string }
+        verification_policy: { type: object }

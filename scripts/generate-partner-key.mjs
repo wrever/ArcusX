@@ -4,7 +4,7 @@
  *
  * Uso:
  *   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node scripts/generate-partner-key.mjs \
- *     --slug acme --name "Acme Corp" --sandbox
+ *     --slug acme --name "Acme Corp" --sandbox --owner-user-id 3
  *
  * La key en texto plano se imprime UNA vez; guárdala como ARCUSX_API_KEY.
  */
@@ -18,6 +18,7 @@ const { values } = parseArgs({
     sandbox: { type: 'boolean', default: true },
     label: { type: 'string', default: 'default' },
     'rate-limit': { type: 'string', default: '60' },
+    'owner-user-id': { type: 'string' },
   },
 });
 
@@ -70,9 +71,21 @@ if (Array.isArray(existing) && existing[0]?.id) {
     slug: values.slug,
     sandbox: values.sandbox,
     status: 'active',
+    ...(values['owner-user-id']
+      ? { owner_user_id: Number(values['owner-user-id']) }
+      : {}),
   });
   partnerId = created[0].id;
   console.log(`Partner creado: ${values.slug} (${partnerId})`);
+}
+
+if (values['owner-user-id'] && partnerId) {
+  await rest(
+    `arcusx_partners?id=eq.${partnerId}`,
+    'PATCH',
+    { owner_user_id: Number(values['owner-user-id']) },
+  );
+  console.log(`owner_user_id → ${values['owner-user-id']}`);
 }
 
 await rest('arcusx_partner_keys', 'POST', {

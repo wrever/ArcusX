@@ -1,4 +1,4 @@
-import type { PollarClient, AuthState } from '@pollar/core';
+import type { PollarClient, AuthState, SwapQuote, WalletBalanceContent } from '@pollar/core';
 import { POLLAR_WALLET_ID, isPollarEnabled } from '../config/pollar';
 
 type PollarClientGetter = () => PollarClient;
@@ -275,4 +275,102 @@ export async function signWithPollar(unsignedXdr: string, expectedAddress: strin
     throw new Error(msg);
   }
   return outcome.signedXdr;
+}
+
+export type PollarAssetBalance = {
+  code: string;
+  issuer?: string;
+  balance: string;
+  available: string;
+  type?: string;
+};
+
+function stellarOnlyBalances(content: WalletBalanceContent): PollarAssetBalance[] {
+  return (content.balances ?? [])
+    .filter((b) => !b.chain || b.chain === 'STELLAR')
+    .map((b) => ({
+      code: b.code || (b.type === 'native' ? 'XLM' : 'UNKNOWN'),
+      issuer: b.issuer,
+      balance: b.balance ?? '0',
+      available: b.available ?? b.balance ?? '0',
+      type: b.type,
+    }));
+}
+
+/** Lee balances de la wallet embebida Pollar (sesión autenticada). */
+export async function fetchPollarBalances(): Promise<PollarAssetBalance[]> {
+  const client = requireClient();
+  if (client.getAuthState().step !== 'authenticated') {
+    throw new Error('Sesión Pollar no autenticada.');
+  }
+  await client.refreshBalance();
+  const state = client.getWalletBalanceState();
+  if (state.step === 'error') throw new Error(state.message || 'Error al leer balances Pollar.');
+  if (state.step !== 'loaded') return [];
+  return stellarOnlyBalances(state.data);
+}
+
+export function subscribePollarBalanceState(
+  cb: (balances: PollarAssetBalance[] | null, error?: string) => void,
+): () => void {
+  const client = getPollarClientOrNull();
+  if (!client) {
+    cb(null, 'Pollar no inicializado');
+    return () => undefined;
+  }
+  return client.onWalletBalanceStateChange((state) => {
+    if (state.step === 'loaded') cb(stellarOnlyBalances(state.data));
+    else if (state.step === 'error') cb(null, state.message);
+    else if (state.step === 'loading') cb(null);
+  });
+}
+
+type PollarSwapAsset =
+  | { type: 'native' }
+  | { type: 'credit_alphanum4'; code: string; issuer: string };
+
+function toPollarAsset(token: 'XLM' | 'USDC', usdcIssuer: string): PollarSwapAsset {
+  if (token === 'XLM') return { type: 'native' };
+  return { type: 'credit_alphanum4', code: 'USDC', issuer: usdcIssuer };
+}
+
+export async function isPollarSwapEnabled(): Promise<boolean> {
+  try {
+    const client = requireClient();
+    const venues = await client.getSwapConfig();
+    return Array.isArray(venues) && venues.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+export async function quotePollarSwap(opts: {
+  from: 'XLM' | 'USDC';
+  to: 'XLM' | 'USDC';
+  amount: string;
+  usdcIssuer: string;
+  slippageBps?: number;
+}): Promise<SwapQuote> {
+  const client = requireClient();
+  const quotes = await client.getSwapQuote({
+    sellAsset: toPollarAsset(opts.from, opts.usdcIssuer),
+    buyAsset: toPollarAsset(opts.to, opts.usdcIssuer),
+    amount: opts.amount,
+    provider: 'auto',
+    slippageBps: opts.slippageBps ?? 150,
+  });
+  if (!quotes?.length) {
+    throw new Error('Sin ruta de swap en Pollar para este par.');
+  }
+  return quotes[0];
+}
+
+export async function executePollarSwap(quote: SwapQuote): Promise<{ txHash?: string }> {
+  const client = requireClient();
+  client.resetTransactionState();
+  const outcome = await client.swap(quote, { autoTrustline: true });
+  if (outcome.status === 'error') {
+    throw new Error(outcome.message || outcome.details || 'Error al ejecutar swap Pollar.');
+  }
+  return { txHash: outcome.hash };
 }

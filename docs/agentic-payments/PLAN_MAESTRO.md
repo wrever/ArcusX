@@ -64,10 +64,10 @@ Plan ejecutable alineado con escrow nativo y el roadmap Supabase del repo.
 
 | Hito | Criterio |
 |------|----------|
-| M1.1 | API key emitida desde admin interno |
-| M1.2 | E2E testnet: crear job → fund → complete → release |
-| M1.3 | Postman collection / OpenAPI publicado |
-| M1.4 | 1 integrador piloto (interno o design partner) |
+| M1.1 | API key emitida desde admin interno | ✅ |
+| M1.2 | E2E off-chain job→subjob→quote (+ on-chain manual) | ✅ off-chain / ⬜ CI on-chain |
+| M1.3 | OpenAPI / smoke publicado | ✅ `openapi-v1.yaml` + `smoke-agentic.mjs` |
+| M1.4 | 1 integrador piloto (interno o design partner) | ⬜ |
 
 **Duración estimada:** 4–6 semanas tras gate escrow.
 

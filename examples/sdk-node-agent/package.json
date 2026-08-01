@@ -7,7 +7,8 @@
     "callback": "node callback-flow.mjs",
     "pay": "node pay-subjob.mjs",
     "validate": "node validate-flow.mjs",
-    "open": "node open-marketplace-flow.mjs"
+    "open": "node open-marketplace-flow.mjs",
+    "orchestrate": "node orchestrator-thin.mjs"
   },
   "dependencies": {
     "@arcusx/sdk": "file:../../packages/arcusx-sdk",

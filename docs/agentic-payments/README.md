@@ -16,6 +16,7 @@
 
 | Archivo | Contenido |
 |---------|-----------|
+| **[AGENTIC_WEEK1.md](./AGENTIC_WEEK1.md)** | Evidencia Fase 1 / Week 1 (smoke + demo) |
 | **[VISION.md](./VISION.md)** | Problema, oportunidad, pitch YC, competencia, moat |
 | **[PLAN_MAESTRO.md](./PLAN_MAESTRO.md)** | Fases 0→4, hitos, dependencias, métricas |
 | **[ARCHITECTURE.md](./ARCHITECTURE.md)** | Capas, flujos, modelo de datos, integración escrow |
@@ -60,13 +61,13 @@ Acuerdos modulares por plantilla + link de pago (sin marketplace): [../agreement
 
 | Fase | Estado |
 |------|--------|
-| **0 — Planificación** | **En curso** (esta carpeta) |
-| 1 — API MVP | No iniciada |
-| 2 — Plataforma agéntica | No iniciada |
-| 3 — Verificación automática | No iniciada |
+| **0 — Planificación** | Cerrada (D1/D3 + docs) |
+| **1 — API MVP** | **✅ Week 1 off-chain** — ver [`AGENTIC_WEEK1.md`](./AGENTIC_WEEK1.md) |
+| **2 — Plataforma agéntica** | En curso (jobs/subjobs + SDK `agent` live; webhooks E2E pendiente) |
+| 3 — Verificación automática | Parcial (attest/callback handlers) |
 | 4 — Escala y estándares | No iniciada |
 
-⛔ **No implementar código de producto en esta carpeta** salvo specs, OpenAPI borrador o scripts de diseño. El código vive en **`supabase/functions/`** + migraciones Postgres cuando el backend esté completo en Supabase (sin gateway PHP permanente).
+Código producto: **`supabase/functions/`** + **`packages/arcusx-sdk`** + **`examples/sdk-node-agent/`**.
 
 ---
 

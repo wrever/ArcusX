@@ -257,5 +257,6 @@ export const useWallet = () => {
     signTransaction,
     kit,
     pollarAvailable: isPollarEnabled(),
+    isPollar: isPollarWalletId(walletState.walletId),
   };
 };

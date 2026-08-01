@@ -17,7 +17,9 @@
     "build": "tsc -p tsconfig.json",
     "smoke": "npm run build && node ../../scripts/smoke-sdk.mjs",
     "smoke:strict": "npm run build && SMOKE_STRICT=1 node ../../scripts/smoke-sdk.mjs",
+    "smoke:agentic": "npm run build && node ../../scripts/smoke-agentic.mjs",
     "demo:week1": "npm run build && node ../../scripts/demo-week1-sdk.mjs",
+    "demo:agentic": "npm run build && node ../../scripts/demo-agentic-week1.mjs",
     "prepublishOnly": "npm run build"
   },
   "keywords": ["arcusx", "stellar", "usdc", "escrow", "freelance"],

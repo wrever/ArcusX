@@ -1,15 +1,19 @@
-import React, { Suspense, useCallback, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { FaWallet, FaSpinner } from 'react-icons/fa';
 import { useWallet } from '../hooks/useWallet';
 import WalletConnectPopup from './WalletConnectPopup';
 import PollarConnectPopup from './PollarConnectPopup';
+import PollarWalletPanel from './PollarWalletPanel';
 import { useI18n } from '../i18n/I18nProvider';
+import { isPollarWalletId } from '../services/pollarWallet';
+import '../css/PollarWalletPanel.css';
 
 const WalletButtonInner: React.FC = () => {
   const { t } = useI18n();
   const {
     isConnected,
     address,
+    walletId,
     loading,
     connectFreighter,
     connectXBull,
@@ -18,8 +22,11 @@ const WalletButtonInner: React.FC = () => {
     pollarAvailable,
   } = useWallet();
 
+  const isPollar = isPollarWalletId(walletId);
   const [showWalletPopup, setShowWalletPopup] = useState(false);
   const [showPollarPopup, setShowPollarPopup] = useState(false);
+  const [showPollarPanel, setShowPollarPanel] = useState(false);
+  const rowRef = useRef<HTMLDivElement>(null);
 
   const formatAddress = (addr: string) => {
     if (addr && addr.length > 12) {
@@ -28,12 +35,31 @@ const WalletButtonInner: React.FC = () => {
     return addr || '';
   };
 
+  useEffect(() => {
+    if (!isPollar || !isConnected) setShowPollarPanel(false);
+  }, [isPollar, isConnected]);
+
+  useEffect(() => {
+    if (!showPollarPanel) return;
+    const onDown = (e: MouseEvent) => {
+      if (rowRef.current && !rowRef.current.contains(e.target as Node)) {
+        setShowPollarPanel(false);
+      }
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [showPollarPanel]);
+
   const handleClick = () => {
-    if (isConnected) {
-      disconnectWallet();
-    } else {
+    if (!isConnected) {
       setShowWalletPopup(true);
+      return;
     }
+    if (isPollar) {
+      setShowPollarPanel((v) => !v);
+      return;
+    }
+    disconnectWallet();
   };
 
   const handleConnectFreighter = async () => {
@@ -59,14 +85,20 @@ const WalletButtonInner: React.FC = () => {
     [completePollarConnect],
   );
 
+  const handlePollarDisconnect = () => {
+    setShowPollarPanel(false);
+    disconnectWallet();
+  };
+
   return (
     <>
-      <div className="wallet-button-container">
+      <div className="wallet-button-container wallet-button-row" ref={rowRef}>
         <button
-          className={`wallet-button ${isConnected ? 'connected' : 'disconnected'}`}
+          className={`wallet-button ${isConnected ? 'connected' : 'disconnected'}${isPollar ? ' pollar-connected' : ''}`}
           onClick={handleClick}
           disabled={loading}
           type="button"
+          aria-expanded={isPollar ? showPollarPanel : undefined}
         >
           {loading ? (
             <>
@@ -79,7 +111,9 @@ const WalletButtonInner: React.FC = () => {
               <span className="wallet-address">
                 {address ? formatAddress(address) : t('wallet.button.connected')}
               </span>
-              <span className="wallet-type-badge">USDC</span>
+              <span className={`wallet-type-badge${isPollar ? ' pollar' : ''}`}>
+                {isPollar ? 'Pollar' : 'USDC'}
+              </span>
             </>
           ) : (
             <>
@@ -88,6 +122,15 @@ const WalletButtonInner: React.FC = () => {
             </>
           )}
         </button>
+
+        {isPollar && isConnected && address ? (
+          <PollarWalletPanel
+            open={showPollarPanel}
+            address={address}
+            onClose={() => setShowPollarPanel(false)}
+            onDisconnect={handlePollarDisconnect}
+          />
+        ) : null}
       </div>
 
       <WalletConnectPopup
