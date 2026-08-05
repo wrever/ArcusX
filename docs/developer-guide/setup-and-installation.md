@@ -1,272 +1,96 @@
-# Setup and Installation
+# Setup and installation
 
-This guide will help you set up your development environment to work with ArcusX.
+How to work against the **ArcusX public API** and `@arcusx/sdk`. For contributing to the open monorepo, clone [github.com/wrever/ArcusX](https://github.com/wrever/ArcusX).
 
 ## Prerequisites
 
-### Required Software
+- Node.js **≥ 18**
+- A Stellar wallet for signing (Freighter, xBull, or Pollar embedded)
+- Sandbox API key `axk_test_…` (Dashboard → Developer / API keys)
 
-- **Node.js**: Version 18 or higher
-- **npm**: Comes with Node.js, or install separately
-- **PHP**: Version 7.4 or higher
-- **Composer**: PHP dependency manager
-- **MySQL/MariaDB**: Database server
-- **Git**: Version control
-
-### Recommended Tools
-
-- **Code Editor**: VS Code, WebStorm, or similar
-- **Postman/Insomnia**: API testing
-- **MySQL Workbench**: Database management
-- **Browser Extensions**: Freighter wallet for Stellar
-
-## Repository Setup
-
-### Clone the Repository
+## Integrator project (recommended)
 
 ```bash
-git clone https://github.com/yourusername/arcusx.git
-cd arcusx
+mkdir my-arcusx-app && cd my-arcusx-app
+npm init -y
+npm install @arcusx/sdk
 ```
 
-### Project Structure
-
-```
-ArcusX/
-├── arcusx/                    # Frontend (React + TypeScript)
-│   ├── src/
-│   │   ├── components/        # React components
-│   │   ├── services/          # API services
-│   │   ├── hooks/             # Custom React hooks
-│   │   ├── config/            # Configuration files
-│   │   └── ...
-│   └── package.json
-├── backend_externo/           # Backend (PHP)
-│   ├── *.php                  # API endpoints
-│   ├── config.php             # Database and JWT config
-│   └── composer.json          # PHP dependencies
-└── docs/                      # Documentation
-```
-
-## Frontend Setup
-
-### Install Dependencies
+### Environment
 
 ```bash
-cd arcusx
+# Required
+ARCUSX_API_KEY=axk_test_…
+
+# Optional — default https://api.arcusx.pro
+# ARCUSX_API_URL=https://api.arcusx.pro
+
+# User-scoped actions (marketplace create, etc.)
+# ARCUSX_USER_JWT=…
+```
+
+Partners using `https://api.arcusx.pro` do **not** need Supabase anon keys.
+
+### First call
+
+```ts
+import { ArcusXClient } from '@arcusx/sdk';
+
+const ax = new ArcusXClient({
+  apiKey: process.env.ARCUSX_API_KEY!,
+  network: 'testnet',
+});
+
+const fee = await ax.public.getPlatformFee();
+console.log(fee);
+```
+
+See [SDK Quickstart](/sdk/QUICKSTART).
+
+## Escrow / wallets
+
+On-chain steps (deploy, fund, release) return **unsigned XDR**. Your app signs with the user’s wallet and confirms via the SDK (`escrow.confirm*` / settlement helpers).
+
+ArcusX Escrow is part of the platform API — you do not install a separate escrow vendor SDK.
+
+## Monorepo (optional)
+
+```bash
+git clone https://github.com/wrever/ArcusX.git
+cd ArcusX/arcusx
 npm install
-```
-
-### Environment Variables
-
-Create a `.env` file in the `arcusx/` directory:
-
-```env
-# API Configuration
-VITE_API_URL=http://arcusx.pro/api
-
-# Supabase Configuration (for OAuth)
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-
-# Stellar Network
-VITE_STELLAR_NETWORK=testnet
-
-# Trustless Work Configuration
-VITE_TRUSTLESS_WORK_API_KEY=your_api_key
-VITE_TRUSTLESS_WORK_BASE_URL=development
-VITE_PLATFORM_WALLET=your_platform_wallet_address
-VITE_ADMIN_WALLET=your_admin_wallet_address
-
-# USDC Configuration
-VITE_USDC_ISSUER=GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN
-```
-
-### Start Development Server
-
-```bash
+cp .env.example .env   # fill VITE_SUPABASE_* , wallets, network
 npm run dev
 ```
 
-The frontend will be available at `http://localhost:5173` (default Vite port).
-
-### Build for Production
+Docs site:
 
 ```bash
-npm run build
+cd docs
+npm install
+npm run dev
 ```
 
-## Backend Setup
+## Networks
 
-### Install PHP Dependencies
+| Network | Use |
+|---------|-----|
+| `testnet` | Sandbox / Instawards / development |
+| `mainnet` | Production USDC (after checklist) |
 
-```bash
-cd backend_externo
-composer install
-```
-
-### Database Configuration
-
-1. Create a MySQL database:
-
-```sql
-CREATE DATABASE arcusxon_users CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
-
-2. Update `backend_externo/config.php`:
-
-```php
-$db_config = [
-    'host' => 'localhost',
-    'user' => 'your_database_user',
-    'password' => 'your_database_password',
-    'database' => 'arcusxon_users'
-];
-
-$jwt_secret = "your_secure_jwt_secret_key_here";
-```
-
-### Database Schema
-
-Import the database schema. The schema includes tables for:
-
-- `users`: User accounts and authentication
-- `tasks`: Task listings and details
-- `applications`: Worker proposals
-- `messages`: User communications
-- `disputes`: Dispute records
-- `ratings`: User ratings and reviews
-- And more...
-
-### Configure PHP Server
-
-#### Using PHP Built-in Server (Development)
-
-```bash
-cd backend_externo
-php -S localhost:8000
-```
-
-#### Using Apache/Nginx (Production)
-
-Configure your web server to serve the `backend_externo/` directory. Ensure `.htaccess` is configured for proper routing and CORS headers.
-
-### CORS Configuration
-
-CORS is handled in `.htaccess` for Apache. For Nginx, configure CORS headers in your server configuration.
-
-## Stellar Wallet Setup
-
-### Install Freighter Wallet
-
-1. Install Freighter browser extension from https://www.freighter.app/
-2. Create or import a wallet
-3. Switch to Testnet for development
-4. Fund your test wallet with testnet USDC (use Stellar Testnet faucet)
-
-### Get Testnet USDC
-
-1. Use Stellar Testnet Friendbot to get XLM: https://friendbot.stellar.org/
-2. Use Stellar Testnet DEX or testnet faucets to get USDC
-
-## Trustless Work Setup
-
-### Get API Key
-
-1. Visit Trustless Work documentation: https://docs.trustlesswork.com/
-2. Request an API key for development
-3. Add the API key to your `.env` file
-
-### Configure Wallets
-
-You need two Stellar wallets:
-
-1. **Platform Wallet**: Receives platform commissions
-2. **Admin Wallet**: Acts as dispute resolver in escrow contracts
-
-Both wallets should be funded and configured in your environment variables.
-
-## Verification
-
-### Test Frontend
-
-1. Start the frontend: `npm run dev`
-2. Visit `http://localhost:5173`
-3. Verify the application loads correctly
-
-### Test Backend
-
-1. Start the backend server
-2. Test an endpoint:
-
-```bash
-curl http://localhost:8000/api/auth/get_platform_fee.php
-```
-
-### Test Database Connection
-
-Create a simple test script to verify database connectivity.
-
-## Development Workflow
-
-### Local Development
-
-1. Start database server
-2. Start backend server (PHP)
-3. Start frontend dev server (Vite)
-4. Use Freighter wallet connected to Testnet
-5. Test features locally
-
-### Code Organization
-
-- **Frontend**: React components in `src/components/`
-- **Services**: API services in `src/services/`
-- **Backend**: API endpoints in `backend_externo/`
-- **Configuration**: Config files in `src/config/`
-
-### Testing
-
-- Test on Stellar Testnet first
-- Use test wallets with testnet USDC
-- Verify all transactions before Mainnet
-- Test error scenarios and edge cases
+Set `network: 'testnet' | 'mainnet'` on the SDK client (`x-arcusx-network`).
 
 ## Troubleshooting
 
-### Common Issues
+| Issue | Check |
+|-------|--------|
+| `401 missing_api_key` | Send `Authorization: Bearer axk_test_…` to the gateway |
+| `401 invalid_api_key` | Key revoked / wrong network prefix (`axk_test_` vs `axk_live_`) |
+| Sign failures | Wallet network matches ArcusX network; address is `G…` |
+| Escrow prepare 502 | Task must be deployed first; amounts and wallets valid |
 
-**Port Already in Use**
-```bash
-# Change Vite port
-npm run dev -- --port 3000
-```
+## Next
 
-**Database Connection Failed**
-- Verify database credentials in `config.php`
-- Ensure MySQL service is running
-- Check database user permissions
-
-**CORS Errors**
-- Verify CORS headers in `.htaccess`
-- Check API URL configuration
-- Ensure backend server is running
-
-**Wallet Connection Issues**
-- Verify Freighter is installed and unlocked
-- Check network (Testnet vs Mainnet)
-- Ensure wallet is funded
-
-**Trustless Work API Errors**
-- Verify API key is correct
-- Check network configuration
-- Review Trustless Work documentation
-
-## Next Steps
-
-- Read [API Integration Guide](api-integration.md)
-- Review [API Reference](../api-reference/overview.md)
-- Explore [Stellar Integration](../stellar-network/overview.md)
-- Study [Architecture Documentation](../architecture/system-overview.md)
-
-Your development environment is now ready!
-
+- [Partner auth](/sdk/PARTNER_AUTH)  
+- [API reference](/sdk/API_REFERENCE)  
+- [Smart escrow](/getting-started/smart-escrow-contracts)  

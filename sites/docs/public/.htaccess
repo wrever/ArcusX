@@ -1,0 +1,21 @@
+# RewriteEngine On
+# VitePress emits real HTML files with cleanUrls; this covers missing trailing paths.
+
+RewriteEngine On
+RewriteBase /
+
+# Don't rewrite real files/dirs
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Try .html then directory index
+RewriteCond %{REQUEST_FILENAME}.html -f
+RewriteRule ^(.*)$ $1.html [L]
+
+RewriteRule ^ index.html [L]
+
+# Security / caching basics
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+</IfModule>

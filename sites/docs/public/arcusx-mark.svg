@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none" role="img" aria-label="ArcusX">
+  <defs>
+    <linearGradient id="ax" x1="16" y1="8" x2="112" y2="120" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#10dd88"/>
+      <stop offset="1" stop-color="#065c36"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="#071a12"/>
+  <path d="M28 92 L64 28 L100 92 H82 L64 58 L46 92 H28Z" fill="url(#ax)"/>
+  <path d="M48 78 H80" stroke="#10dd88" stroke-width="6" stroke-linecap="round"/>
+</svg>

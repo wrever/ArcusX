@@ -1,7 +1,7 @@
 import { clientFeePercents } from '../utils/escrowFeeDisplay';
 import { useI18n } from '../i18n/I18nProvider';
 
-import { CLIENT_VISIBLE_FEE_RATE } from '../utils/bilateralFeeModel';
+import { TOTAL_ONCHAIN_FEE_RATE } from '../utils/bilateralFeeModel';
 
 type EscrowFeeBreakdownProps = {
   platformFee: number;
@@ -10,8 +10,11 @@ type EscrowFeeBreakdownProps = {
   protocolUsdc?: string;
   className?: string;
   layout?: 'stack' | 'escrow-rows' | 'flex-rows';
-  /** employer-bilateral: solo +2% visible al empleador */
-  variant?: 'default' | 'employer-bilateral';
+  /**
+   * worker-fee / employer-bilateral: muestra 2% total deducido del trabajador
+   * (sin surcharge al empleador).
+   */
+  variant?: 'default' | 'employer-bilateral' | 'worker-fee';
 };
 
 const EscrowFeeBreakdown = ({
@@ -25,9 +28,9 @@ const EscrowFeeBreakdown = ({
 }: EscrowFeeBreakdownProps) => {
   const { t } = useI18n();
 
-  if (variant === 'employer-bilateral') {
-    const pct = String(Math.round(CLIENT_VISIBLE_FEE_RATE * 100));
-    const label = t('fees.employer.label').replace('{{p}}', pct);
+  if (variant === 'employer-bilateral' || variant === 'worker-fee') {
+    const pct = String(Math.round(TOTAL_ONCHAIN_FEE_RATE * 100));
+    const label = t('fees.worker.label').replace('{{p}}', pct);
     if (layout === 'escrow-rows') {
       return (
         <div className={className}>

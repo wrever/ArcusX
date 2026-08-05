@@ -97,7 +97,7 @@ Critical escrow rules (documented in the service file header):
 | File | Purpose |
 |------|---------|
 | `config/arcusxApi.ts` | URLs Edge: `arcusx-api` / `arcusx-admin` (requiere `VITE_SUPABASE_URL`) |
-| `config/trustlessWork.ts` | Trustless Work API key, env, platform/admin wallets, `PLATFORM_FEE_BPS = 3.0` (3% en el flujo de escrow) |
+| `config/trustlessWork.ts` | Escrow API key, env, platform/admin wallets, `PLATFORM_FEE_BPS = 1.7` (1.7% ArcusX; 2% total al trabajador) |
 | `config/commission.ts` | `DEFAULT_COMMISSION_RATE = 0.03`; preferir fee desde `system_config.platform_fee` / API |
 | `config/supabase.ts` | Supabase client (graceful no-op if unconfigured) |
 | `config/usdc.ts` | USDC issuer address |
@@ -121,7 +121,7 @@ API routes live under `CertiX/src/app/api/`: `certificate/upload`, `certificate/
 
 ## Platform Fee
 
-The platform fee is **3%** (`PLATFORM_FEE_BPS = 3.0` in `config/trustlessWork.ts`; `DEFAULT_COMMISSION_RATE = 0.03` in `config/commission.ts`). Defaults en PHP (`get_platform_fee.php`, etc.) usan **0.03** como decimal. La comisión la asume el **cliente** en el flujo de escrow; el trabajador recibe el monto acordado. Cualquier referencia en UI o docs a 0.5%, 1.5% CertiX o 0.3% está desactualizada.
+The platform fee is **2% total**, deducted from the **worker** on escrow release (`PLATFORM_FEE_BPS = 1.7` ArcusX share + 0.3% on-chain operation; `DEFAULT_COMMISSION_RATE = 0.017`). The **employer funds the posted amount with no platform surcharge**. Workers receive ~98% of the funded USDC. Any docs referring to 0.5%, 3% client-paid, or employer +2% bilateral UX are outdated.
 
 ## Switching from Testnet to Mainnet
 

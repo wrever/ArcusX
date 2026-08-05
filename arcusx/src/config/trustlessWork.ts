@@ -30,8 +30,8 @@ export function adminWallet(network: StellarNetworkId = getActiveStellarNetwork(
   return adminWalletForNetwork(network);
 }
 
-/** Platform fee ArcusX: 3.7% decimal (0.037). API TW recibe 3.7 (+ 0.3% protocolo TW = 4% total fondeo). */
-export const PLATFORM_FEE_BPS = 3.7;
+/** Platform fee ArcusX: 1.7% (API 1.7). + 0.3% operación on-chain = 2% total al trabajador. */
+export const PLATFORM_FEE_BPS = 1.7;
 
 if (import.meta.env.DEV) {
   if (!trustlessWorkApiKey()) {

@@ -309,7 +309,7 @@ const DealPublicPage = ({ mode = 'preview', embedded = false, dealToken }: DealP
                 <EscrowFeeBreakdown
                   platformFee={feeRate}
                   layout="flex-rows"
-                  totalUsdc={bilateral.clientVisibleFee.toFixed(2)}
+                  totalUsdc={bilateral.totalCommission.toFixed(2)}
                   variant="employer-bilateral"
                   className="deals-fee-breakdown"
                 />

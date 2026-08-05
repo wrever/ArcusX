@@ -1,0 +1,181 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --vp-c-brand-1: #0ab86a;
+  --vp-c-brand-2: #10dd88;
+  --vp-c-brand-3: #087a48;
+  --vp-c-brand-soft: rgba(16, 221, 136, 0.14);
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(120deg, #3aeba0 0%, #0ab86a 45%, #065c36 100%);
+  --vp-button-brand-bg: #0ab86a;
+  --vp-button-brand-hover-bg: #087a48;
+  --vp-button-brand-active-bg: #065c36;
+  --vp-button-brand-border: transparent;
+  --vp-font-family-base: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  --vp-font-family-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --ax-ink: #0c1f16;
+  --ax-muted: #4a6356;
+  --ax-surface: #f4faf6;
+  --ax-glow: radial-gradient(ellipse 80% 60% at 70% -10%, rgba(16, 221, 136, 0.22), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 10% 20%, rgba(10, 184, 106, 0.12), transparent 50%),
+    linear-gradient(180deg, #eef8f2 0%, #f7fbf8 40%, #ffffff 100%);
+}
+
+.dark {
+  --vp-c-brand-1: #10dd88;
+  --vp-c-brand-2: #3aeba0;
+  --vp-c-brand-3: #0ab86a;
+  --vp-c-brand-soft: rgba(16, 221, 136, 0.16);
+  --ax-ink: #e8f5ee;
+  --ax-muted: #9bb5a6;
+  --ax-surface: #0d1a14;
+  --ax-glow: radial-gradient(ellipse 70% 50% at 80% -5%, rgba(16, 221, 136, 0.18), transparent 50%),
+    radial-gradient(ellipse 40% 35% at 0% 30%, rgba(10, 184, 106, 0.1), transparent 45%),
+    linear-gradient(180deg, #07140e 0%, #0a1610 50%, #0b1210 100%);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+.VPNavBarTitle .title {
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.VPNavBar .logo {
+  height: 28px;
+  width: 28px;
+  border-radius: 7px;
+}
+
+.VPSidebarItem.level-0 > .item .text {
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+/* Home hero atmosphere */
+.VPHome {
+  background: var(--ax-glow);
+}
+
+.VPHero .name {
+  font-weight: 750;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.VPHero .text {
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--ax-ink);
+}
+
+.VPHero .tagline {
+  max-width: 36rem;
+  color: var(--ax-muted);
+  font-size: 1.05rem;
+  line-height: 1.55;
+}
+
+.VPHero .image-src {
+  max-width: 220px;
+  filter: drop-shadow(0 18px 40px rgba(10, 184, 106, 0.28));
+  animation: ax-float 5.5s ease-in-out infinite;
+}
+
+@keyframes ax-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.VPFeature {
+  border: 1px solid rgba(10, 184, 106, 0.12) !important;
+  background: color-mix(in srgb, var(--vp-c-bg) 88%, #0ab86a 4%) !important;
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.VPFeature:hover {
+  transform: translateY(-3px);
+  border-color: rgba(10, 184, 106, 0.35) !important;
+  box-shadow: 0 12px 32px rgba(8, 122, 72, 0.1);
+}
+
+.VPFeature .title {
+  letter-spacing: -0.02em;
+}
+
+.ax-home-band {
+  margin: 3.5rem auto 1rem;
+  max-width: 920px;
+  padding: 2.25rem 1.75rem;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(10, 184, 106, 0.1), rgba(6, 92, 54, 0.04));
+  border: 1px solid rgba(10, 184, 106, 0.18);
+  animation: ax-fade-up 0.7s ease both;
+}
+
+.ax-home-band h2 {
+  margin-top: 0;
+  letter-spacing: -0.03em;
+  border: none;
+  font-size: 1.55rem;
+}
+
+.ax-home-band p {
+  color: var(--ax-muted);
+  max-width: 40rem;
+  line-height: 1.6;
+}
+
+.ax-home-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+@keyframes ax-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Content pages */
+.VPDoc h1 {
+  letter-spacing: -0.03em;
+}
+
+.VPDoc table {
+  font-size: 0.92rem;
+}
+
+.VPDoc a {
+  font-weight: 500;
+}
+
+.VPLocalSearchBox .result .title {
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .VPHero .image-src {
+    max-width: 140px;
+    animation: none;
+  }
+
+  .ax-home-band {
+    padding: 1.5rem 1.15rem;
+    border-radius: 14px;
+  }
+}

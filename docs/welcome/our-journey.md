@@ -1,118 +1,55 @@
 # Our Journey
 
-ArcusX was born from the need to create a fairer, more efficient, and accessible freelancing platform. Our journey reflects a constant commitment to technological innovation and improving the experience for both clients and workers. 🌴
+ArcusX started from a simple goal: a fairer, faster freelancing rail — lower fees, seconds-level payouts, and global access on Stellar.
 
 ## Origins
 
-ArcusX was born in 2024 as an experimental idea. By late 2025, it had evolved into a clear idea and vision of what we wanted to build, shaped by our experiences in the Stellar ecosystem and in building products for the community. We spent a long time refining the concept to ensure its success before starting official development.
-The project is built on the vision of leveraging blockchain technology to solve fundamental problems in the traditional freelancing market. We identified three main issues:
+Work began as an experiment in 2024 and crystallized through late 2025 around three problems in traditional freelancing:
 
-1. Excessively high commissions that significantly reduced workers' income
-2. Slow payments and bureaucratic processes that created friction
-3. Geographical and banking restrictions that limited global access
+1. High commissions that cut into worker income  
+2. Slow payouts and heavy process friction  
+3. Banking / geography barriers that block global talent  
 
-## Technology Choice
+## Why Stellar
 
-After evaluating multiple blockchains, we selected Stellar for its unique characteristics:
+We chose Stellar for:
 
-- Fast confirmations of 3 to 5 seconds
-- Minimal transaction costs
-- Stable and proven infrastructure
-- Focus on payments and remittances
-- Supported by the Stellar Development Foundation
+- 3–5 second confirmations  
+- Minimal network fees  
+- Mature payments / remittance focus  
+- USDC rails and Soroban smart contracts  
 
-The integration with Trustless Work allowed us to implement a robust and secure escrow system without needing to develop smart contracts from scratch.
+On top of that network we built **ArcusX Escrow** — conditional USDC settlement that clients and partners use through the app and `@arcusx/sdk`.
 
-## Development and Evolution
+## Evolution
 
-### Phase 1: Foundation
+### Foundation
 
-During the initial phase, we established the basic infrastructure:
-- Authentication system with email/password and OAuth
-- Task creation and management
-- Proposal and application system
-- Basic integration with Stellar wallets
+Auth (OAuth), tasks, proposals, and Stellar wallet connect.
 
-### Phase 2: Escrow System
+### Escrow
 
-The second phase focused on implementing the escrow system:
-- Migration from multisig to Trustless Work smart contracts
-- Complete escrow lifecycle implementation
-- Milestone and approval system
-- Automated fund release
+Full lifecycle: deploy, fund, deliver, approve, release — plus platform fee on the client side (~3%).
 
-### Phase 3: Protection and Resolution
+### Protection
 
-The third phase introduced protection mechanisms:
-- Complete dispute resolution system
-- Administrative panel for conflict management
-- Bidirectional cancellation and refund system
-- Security validations to protect both parties
+Disputes, admin resolution, cancellations / refunds under clear rules.
 
-### Phase 4: Optimization
+### Platform layer
 
-The current phase focuses on optimization and continuous improvement:
-- Cache and debouncing system to reduce server load
-- Optimization of polling intervals
-- User experience improvements
-- Complete and updated documentation
+Partner API (`api.arcusx.pro`), TypeScript SDK, agentic payment primitives, and this documentation site.
 
-## Core Values
+## Values
 
-Throughout our development, we maintain clear values that guide our decisions:
+- **Non-custodial keys** — users sign; ArcusX does not hold private keys  
+- **Transparency** — settlements are ledger-visible  
+- **Fairness** — escrow + disputes protect both sides  
+- **One rail for builders** — integrate ArcusX, not a pile of vendors  
 
-### Decentralization
+## Today
 
-We believe in decentralization not just as technology, but as a principle. Users maintain complete control over their funds, and the platform cannot intervene in transactions once they are initiated.
+Testnet marketplace and SDK are live for builders and Instawards-style partners. Mainnet follows audits and production checklist.
 
-### Transparency
+## Next
 
-All financial operations are visible on the blockchain. There are no hidden fees, opaque processes, or conditions that are not clearly established.
-
-### Fairness
-
-The escrow system protects both clients and workers. Dispute mechanisms ensure conflicts are resolved fairly and objectively.
-
-### Efficiency
-
-We constantly seek ways to reduce friction, costs, and times. Each feature is evaluated in terms of real value for users.
-
-### Global Accessibility
-
-Our platform is designed to be accessible to anyone, regardless of geographical location, banking situation, or technical level.
-
-## Current Status
-
-ArcusX currently operates on Stellar Testnet with all main functionalities implemented and working. The system is optimized and ready for Mainnet migration once the audit process and exhaustive testing are completed.
-
-Completed functionalities include:
-
-- Complete authentication (Email/Password + OAuth)
-- Task creation and management
-- Proposal and selection system
-- Complete Trustless Work integration
-- Complete escrow system (creation, funding, approval, release)
-- Dispute resolution with administrative panel
-- Cancellation and refund system
-- Real-time messaging
-- Complete administration panel
-- Performance optimizations
-
-## Future Vision
-
-Our journey continues with clear plans for the future:
-
-- Migration to Stellar Mainnet
-- Rating and review system
-- Advanced analytics dashboard
-- Support for multiple Stellar assets
-- Referral system
-- Mobile application
-- Expansion of security features
-
-## Commitment to the Community
-
-ArcusX is built for the community and with the community. We value user feedback and use their suggestions to continuously improve the platform. We believe in open source and transparency in development.
-
-Our journey is a work in progress, and we are committed to continue improving and evolving to better serve our community of clients and workers.
-
+Mainnet, ratings, richer partner tooling, and broader agent / enterprise flows — see the [roadmap](/community/roadmap).

@@ -3,6 +3,7 @@ node_modules/
 
 # Build / deploy artifacts
 dist/
+sites/docs/.vitepress-cache/
 *.zip
 Archivo.zip
 *.tar.gz

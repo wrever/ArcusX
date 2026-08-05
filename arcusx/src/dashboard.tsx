@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { FaUser, FaTasks, FaWallet, FaChartLine, FaBell, FaCog, FaSignOutAlt, FaPlus, FaTimes, FaExclamationTriangle, FaUsers, FaCheckCircle, FaGlobe, FaLock, FaStar, FaGraduationCap, FaExchangeAlt, FaQuestionCircle, FaEnvelope, FaHandshake, FaUserShield } from 'react-icons/fa';
+import { FaUser, FaTasks, FaWallet, FaChartLine, FaBell, FaCog, FaSignOutAlt, FaPlus, FaTimes, FaExclamationTriangle, FaUsers, FaCheckCircle, FaGlobe, FaLock, FaStar, FaGraduationCap, FaExchangeAlt, FaQuestionCircle, FaEnvelope, FaHandshake, FaUserShield, FaExternalLinkAlt } from 'react-icons/fa';
 import ThemeToggle from './components/ThemeToggle';
 import LanguageFab from './components/LanguageFab';
 import { FiMenu } from 'react-icons/fi';
@@ -69,6 +69,7 @@ import './css/SettingsVerificationSection.css';
 import './css/SettingsDeveloperPromo.css';
 import './css/SettingsBadgesCatalog.css';
 import { formatWorkerNetDisplay } from './utils/bilateralFeeModel';
+import { loadExternalJobs, filterExternalJobs, EXTERNAL_ROLE_CHIPS, type ExternalJob, type ExternalRole } from './services/externalJobsService';
 import TaskCreatorLine from './components/TaskCreatorLine';
 import {
   buildDashboardSearchParams,
@@ -123,6 +124,8 @@ interface TaskData {
   escrow_completed_at?: string | null;
   escrow_release_tx_hash?: string | null;
   completed_at?: string | null;
+  /** Red del escrow ArcusX — badge testnet | mainnet */
+  stellar_network?: 'testnet' | 'mainnet' | string;
 }
 
 function normalizeTaskForDisplay(task: TaskData): TaskData {
@@ -161,7 +164,7 @@ const Dashboard = () => {
   );
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [difficultyFilter, setDifficultyFilter] = useState('all');
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 500); // Debounce de 500ms
   const [minPrice, setMinPrice] = useState('');
@@ -169,6 +172,12 @@ const Dashboard = () => {
   const [sortBy, setSortBy] = useState('date_desc');
   const [fetchedTasks, setFetchedTasks] = useState<TaskData[]>([]); // Estado para las tareas de la API
   const [loadingTasks, setLoadingTasks] = useState(true); // Estado de carga para las tareas
+  const [externalJobs, setExternalJobs] = useState<ExternalJob[]>([]);
+  const [loadingExternalJobs, setLoadingExternalJobs] = useState(false);
+  /** all | platform | external — chips estilo job boards */
+  const [boardOrigin, setBoardOrigin] = useState<'all' | 'platform' | 'external'>('all');
+  const [remoteOnly, setRemoteOnly] = useState(false);
+  const [roleChip, setRoleChip] = useState<ExternalRole | 'all'>('all');
   const [tasksError, setTasksError] = useState<string>(''); // Estado de error al cargar tareas
   
   // Nuevo estado para las tareas del usuario
@@ -357,6 +366,16 @@ const Dashboard = () => {
   
   // Las tareas ya vienen filtradas del backend, solo excluir asignadas
   const filteredTasks = fetchedTasks.filter(task => task.status !== 'assigned');
+  const visiblePlatformTasks =
+    boardOrigin === 'external' ? [] : filteredTasks;
+  const visibleExternalJobs =
+    boardOrigin === 'platform'
+      ? []
+      : filterExternalJobs(externalJobs, {
+          role: roleChip,
+          remoteOnly,
+          search: debouncedSearchQuery,
+        });
   
   // --- Lógica para obtener ganancias totales al cargar el dashboard --- //
   useEffect(() => {
@@ -455,7 +474,20 @@ const Dashboard = () => {
         }
       };
 
+      const fetchExternal = async () => {
+        setLoadingExternalJobs(true);
+        try {
+          const jobs = await loadExternalJobs(debouncedSearchQuery);
+          setExternalJobs(jobs);
+        } catch {
+          setExternalJobs([]);
+        } finally {
+          setLoadingExternalJobs(false);
+        }
+      };
+
       fetchTasks();
+      fetchExternal();
     }
   }, [activeTab, debouncedSearchQuery, minPrice, maxPrice, categoryFilter, difficultyFilter, sortBy]); // Ejecutar cuando cambien los filtros (usando debouncedSearchQuery)
   // -------------------------------------------- //
@@ -1319,156 +1351,249 @@ const Dashboard = () => {
                 </button>
               </div>
 
-              {/* Barra de búsqueda */}
-              <div className="search-bar">
-                <input
-                  type="text"
-                  className="search-input"
-                  placeholder={t('dashboard.tasks.search.placeholder')}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    style={{
-                      padding: '0.75rem 1rem',
-                      backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                      border: '1px solid rgba(239, 68, 68, 0.4)',
-                      borderRadius: '8px',
-                      color: '#ef4444',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {t('dashboard.tasks.search.clear')}
-                  </button>
-                )}
-              </div>
-
-              <div className={`filters-wrapper ${showFilters ? 'active' : ''}`}>
-                <div className="filter-container">
-                  <select
-                    className="filter-select"
-                    value={categoryFilter}
-                    onChange={(e) => setCategoryFilter(e.target.value)}
-                  >
-                    <option value="all">{t('dashboard.tasks.filter.categories.all')}</option>
-                    <option value="desarrollo">{t('dashboard.tasks.category.development')}</option>
-                    <option value="diseño">{t('dashboard.tasks.category.design')}</option>
-                    <option value="marketing">{t('dashboard.tasks.category.marketing')}</option>
-                    <option value="blockchain">{t('dashboard.tasks.category.blockchain')}</option>
-                    <option value="contenido">{t('dashboard.tasks.category.content')}</option>
-                  </select>
-
-                  <select
-                    className="filter-select"
-                    value={difficultyFilter}
-                    onChange={(e) => setDifficultyFilter(e.target.value)}
-                  >
-                    <option value="all">{t('dashboard.tasks.filter.difficulty.all')}</option>
-                    <option value="fácil">{t('dashboard.tasks.difficulty.easy')}</option>
-                    <option value="intermedio">{t('dashboard.tasks.difficulty.medium')}</option>
-                    <option value="difícil">{t('dashboard.tasks.difficulty.hard')}</option>
-                  </select>
-
-                  <input
-                    type="number"
-                    placeholder={t('dashboard.tasks.filter.price.min')}
-                    value={minPrice}
-                    onChange={(e) => setMinPrice(e.target.value)}
-                    min="0"
-                    step="0.01"
-                    className="filter-price-input"
-                  />
-
-                  <input
-                    type="number"
-                    placeholder={t('dashboard.tasks.filter.price.max')}
-                    value={maxPrice}
-                    onChange={(e) => setMaxPrice(e.target.value)}
-                    min="0"
-                    step="0.01"
-                    className="filter-price-input"
-                  />
-
-                  <select
-                    className="filter-select"
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                  >
-                    <option value="date_desc">{t('dashboard.tasks.filter.sort.recent')}</option>
-                    <option value="date_asc">{t('dashboard.tasks.filter.sort.oldest')}</option>
-                    <option value="price_asc">{t('dashboard.tasks.filter.sort.price.asc')}</option>
-                    <option value="price_desc">{t('dashboard.tasks.filter.sort.price.desc')}</option>
-                    <option value="popularity">{t('dashboard.tasks.filter.sort.popular')}</option>
-                  </select>
-                </div>
-                
-                {/* Badges de filtros activos */}
-                {(searchQuery || minPrice || maxPrice || categoryFilter !== 'all' || difficultyFilter !== 'all') && (
-                  <div className="dashboard-filter-active">
-                    <span className="dashboard-muted-text">{t('dashboard.tasks.filter.active')}</span>
+              <div className="jobs-board">
+                <div className="jobs-board-search">
+                  <div className="search-bar">
+                    <input
+                      type="text"
+                      className="search-input"
+                      placeholder={t('dashboard.tasks.search.placeholder')}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                     {searchQuery && (
-                      <span className="dashboard-filter-chip">
-                        Búsqueda: {searchQuery}
-                      </span>
+                      <button
+                        type="button"
+                        className="jobs-search-clear"
+                        onClick={() => setSearchQuery('')}
+                        aria-label={t('dashboard.tasks.search.clear')}
+                      >
+                        <FaTimes />
+                      </button>
                     )}
-                    {minPrice && (
-                      <span className="dashboard-filter-chip">
-                        Min: {minPrice} USDC
-                      </span>
-                    )}
-                    {maxPrice && (
-                      <span className="dashboard-filter-chip">
-                        Max: {maxPrice} USDC
-                      </span>
-                    )}
-                    {categoryFilter !== 'all' && (
-                      <span className="dashboard-filter-chip">
-                        {categoryFilter}
-                      </span>
-                    )}
-                    {difficultyFilter !== 'all' && (
-                      <span className="dashboard-filter-chip">
-                        {difficultyFilter}
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      className="dashboard-filter-clear"
-                      onClick={() => {
-                        setSearchQuery('');
-                        setMinPrice('');
-                        setMaxPrice('');
-                        setCategoryFilter('all');
-                        setDifficultyFilter('all');
-                        setSortBy('date_desc');
-                      }}
+                  </div>
+                  <button
+                    type="button"
+                    className={`jobs-remote-toggle${remoteOnly ? ' active' : ''}`}
+                    onClick={() => setRemoteOnly((v) => !v)}
+                    aria-pressed={remoteOnly}
+                  >
+                    <FaGlobe aria-hidden />
+                    <span>{t('dashboard.jobs.filter.remoteOnly')}</span>
+                    <span className="jobs-remote-switch" aria-hidden>
+                      <span className="jobs-remote-knob" />
+                    </span>
+                  </button>
+                </div>
+
+                <div className={`filters-wrapper jobs-filters-panel ${showFilters ? 'active' : ''}`}>
+                  <div className="filter-container jobs-filter-container">
+                    <div className="jobs-chip-row jobs-chip-row-origin" role="group" aria-label={t('dashboard.jobs.filter.origin')}>
+                      {(
+                        [
+                          { id: 'all' as const, label: t('dashboard.jobs.origin.all') },
+                          { id: 'platform' as const, label: t('dashboard.jobs.origin.platform') },
+                          { id: 'external' as const, label: t('dashboard.jobs.origin.external') },
+                        ]
+                      ).map((chip) => (
+                        <button
+                          key={chip.id}
+                          type="button"
+                          className={`jobs-chip${boardOrigin === chip.id ? ' active' : ''}`}
+                          onClick={() => setBoardOrigin(chip.id)}
+                        >
+                          {chip.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="jobs-chip-row jobs-chip-row-roles" role="group" aria-label={t('dashboard.jobs.filter.roles')}>
+                      {EXTERNAL_ROLE_CHIPS.map((chip) => (
+                        <button
+                          key={chip.id}
+                          type="button"
+                          className={`jobs-chip jobs-chip-role${roleChip === chip.id ? ' active' : ''}`}
+                          onClick={() => setRoleChip(chip.id)}
+                        >
+                          {t(chip.labelKey)}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="jobs-filter-selects">
+                      <select
+                        className="filter-select"
+                        value={categoryFilter}
+                        onChange={(e) => setCategoryFilter(e.target.value)}
+                      >
+                        <option value="all">{t('dashboard.tasks.filter.categories.all')}</option>
+                        <option value="desarrollo">{t('dashboard.tasks.category.development')}</option>
+                        <option value="diseño">{t('dashboard.tasks.category.design')}</option>
+                        <option value="marketing">{t('dashboard.tasks.category.marketing')}</option>
+                        <option value="blockchain">{t('dashboard.tasks.category.blockchain')}</option>
+                        <option value="contenido">{t('dashboard.tasks.category.content')}</option>
+                      </select>
+
+                      <select
+                        className="filter-select"
+                        value={difficultyFilter}
+                        onChange={(e) => setDifficultyFilter(e.target.value)}
+                      >
+                        <option value="all">{t('dashboard.tasks.filter.difficulty.all')}</option>
+                        <option value="fácil">{t('dashboard.tasks.difficulty.easy')}</option>
+                        <option value="intermedio">{t('dashboard.tasks.difficulty.medium')}</option>
+                        <option value="difícil">{t('dashboard.tasks.difficulty.hard')}</option>
+                      </select>
+
+                      <input
+                        type="number"
+                        placeholder={t('dashboard.tasks.filter.price.min')}
+                        value={minPrice}
+                        onChange={(e) => setMinPrice(e.target.value)}
+                        min="0"
+                        step="0.01"
+                        className="filter-price-input"
+                      />
+
+                      <input
+                        type="number"
+                        placeholder={t('dashboard.tasks.filter.price.max')}
+                        value={maxPrice}
+                        onChange={(e) => setMaxPrice(e.target.value)}
+                        min="0"
+                        step="0.01"
+                        className="filter-price-input"
+                      />
+
+                      <select
+                        className="filter-select"
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                      >
+                        <option value="date_desc">{t('dashboard.tasks.filter.sort.recent')}</option>
+                        <option value="date_asc">{t('dashboard.tasks.filter.sort.oldest')}</option>
+                        <option value="price_asc">{t('dashboard.tasks.filter.sort.price.asc')}</option>
+                        <option value="price_desc">{t('dashboard.tasks.filter.sort.price.desc')}</option>
+                        <option value="popularity">{t('dashboard.tasks.filter.sort.popular')}</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {(searchQuery || minPrice || maxPrice || categoryFilter !== 'all' || difficultyFilter !== 'all' || boardOrigin !== 'all' || remoteOnly || roleChip !== 'all') && (
+                    <div className="dashboard-filter-active">
+                      <span className="dashboard-muted-text">{t('dashboard.tasks.filter.active')}</span>
+                      {searchQuery && (
+                        <button type="button" className="dashboard-filter-chip" onClick={() => setSearchQuery('')}>
+                          {searchQuery}
+                          <FaTimes className="dashboard-filter-chip-x" aria-hidden />
+                        </button>
+                      )}
+                      {minPrice && (
+                        <button type="button" className="dashboard-filter-chip" onClick={() => setMinPrice('')}>
+                          Min: {minPrice} USDC
+                          <FaTimes className="dashboard-filter-chip-x" aria-hidden />
+                        </button>
+                      )}
+                      {maxPrice && (
+                        <button type="button" className="dashboard-filter-chip" onClick={() => setMaxPrice('')}>
+                          Max: {maxPrice} USDC
+                          <FaTimes className="dashboard-filter-chip-x" aria-hidden />
+                        </button>
+                      )}
+                      {categoryFilter !== 'all' && (
+                        <button type="button" className="dashboard-filter-chip" onClick={() => setCategoryFilter('all')}>
+                          {categoryFilter}
+                          <FaTimes className="dashboard-filter-chip-x" aria-hidden />
+                        </button>
+                      )}
+                      {difficultyFilter !== 'all' && (
+                        <button type="button" className="dashboard-filter-chip" onClick={() => setDifficultyFilter('all')}>
+                          {difficultyFilter}
+                          <FaTimes className="dashboard-filter-chip-x" aria-hidden />
+                        </button>
+                      )}
+                      {boardOrigin !== 'all' && (
+                        <button type="button" className="dashboard-filter-chip" onClick={() => setBoardOrigin('all')}>
+                          {boardOrigin === 'platform'
+                            ? t('dashboard.jobs.origin.platform')
+                            : t('dashboard.jobs.origin.external')}
+                          <FaTimes className="dashboard-filter-chip-x" aria-hidden />
+                        </button>
+                      )}
+                      {remoteOnly && (
+                        <button type="button" className="dashboard-filter-chip" onClick={() => setRemoteOnly(false)}>
+                          {t('dashboard.jobs.filter.remoteOnly')}
+                          <FaTimes className="dashboard-filter-chip-x" aria-hidden />
+                        </button>
+                      )}
+                      {roleChip !== 'all' && (
+                        <button
+                          type="button"
+                          className="dashboard-filter-chip"
+                          onClick={() => setRoleChip('all')}
+                        >
+                          {t(EXTERNAL_ROLE_CHIPS.find((c) => c.id === roleChip)?.labelKey || 'dashboard.jobs.chip.allRoles')}
+                          <FaTimes className="dashboard-filter-chip-x" aria-hidden />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="dashboard-filter-clear"
+                        onClick={() => {
+                          setSearchQuery('');
+                          setMinPrice('');
+                          setMaxPrice('');
+                          setCategoryFilter('all');
+                          setDifficultyFilter('all');
+                          setSortBy('date_desc');
+                          setBoardOrigin('all');
+                          setRemoteOnly(false);
+                          setRoleChip('all');
+                        }}
                       >
                         {t('dashboard.tasks.filter.clear.all')}
                       </button>
+                    </div>
+                  )}
+
+                  <div className="dashboard-results-count">
+                    {visiblePlatformTasks.length + visibleExternalJobs.length}{' '}
+                    {visiblePlatformTasks.length + visibleExternalJobs.length === 1
+                      ? t('dashboard.tasks.results.single')
+                      : t('dashboard.tasks.results.multiple')}
+                    {visibleExternalJobs.length > 0 && (
+                      <span className="dashboard-results-external-hint">
+                        {' '}
+                        · {visibleExternalJobs.length} {t('dashboard.tasks.external.count')}
+                      </span>
+                    )}
                   </div>
-                )}
-                
-                {/* Contador de resultados */}
-                <div className="dashboard-results-count">
-                  {filteredTasks.length} {filteredTasks.length === 1 ? t('dashboard.tasks.results.single') : t('dashboard.tasks.results.multiple')}
                 </div>
               </div>
               
               <div className="tasks-grid">
                 {loadingTasks && <p>{t('dashboard.tasks.loading')}</p>}
                 {tasksError && <p className="error-message">{tasksError}</p>}
-                {!loadingTasks && !tasksError && filteredTasks.length === 0 && (
+                {!loadingTasks && !tasksError && visiblePlatformTasks.length === 0 && visibleExternalJobs.length === 0 && !loadingExternalJobs && (
                   <p>{t('dashboard.tasks.empty')}</p>
                 )}
-                {!loadingTasks && !tasksError && filteredTasks.map(task => (
+                {!loadingTasks && !tasksError && visiblePlatformTasks.map(task => {
+                  const networkBadge =
+                    task.stellar_network === 'mainnet' ? 'mainnet' : 'testnet';
+                  return (
                   <div key={task.id} className="task-card">
                     <div className="task-header">
                       <h3>{task.title}</h3>
-                      <span className={`task-difficulty ${task.difficulty.toLowerCase()}`}>
-                        {task.difficulty}
-                      </span>
+                      <div className="task-header-badges">
+                        <span className={`task-origin-badge ${networkBadge}`}>
+                          {networkBadge === 'mainnet'
+                            ? t('dashboard.tasks.badge.mainnet')
+                            : t('dashboard.tasks.badge.testnet')}
+                        </span>
+                        <span className={`task-difficulty ${task.difficulty.toLowerCase()}`}>
+                          {task.difficulty}
+                        </span>
+                      </div>
                     </div>
                     <p className="task-description">{task.subtitle}</p>
                     <div className="task-details">
@@ -1501,6 +1626,70 @@ const Dashboard = () => {
                     <button className="task-button" onClick={() => handleApplyTaskClick(task.id)}>
                       {t('dashboard.tasks.apply')}
                     </button>
+                  </div>
+                  );
+                })}
+
+                {!loadingTasks && visibleExternalJobs.length > 0 && (
+                  <div className="external-jobs-divider" role="separator">
+                    <span>{t('dashboard.tasks.external.section')}</span>
+                  </div>
+                )}
+                {loadingExternalJobs && visiblePlatformTasks.length > 0 && (
+                  <p className="external-jobs-loading">{t('dashboard.tasks.external.loading')}</p>
+                )}
+                {!loadingExternalJobs && visibleExternalJobs.map((job) => (
+                  <div key={job.id} className="task-card task-card-external">
+                    <div className="task-header">
+                      <h3>{job.title}</h3>
+                      <div className="task-header-badges">
+                        <span className="task-origin-badge externa">
+                          {t('dashboard.tasks.badge.external')}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="task-description">
+                      {job.excerpt || job.company || t('dashboard.tasks.external.fallbackDesc')}
+                    </p>
+                    <div className="task-details">
+                      <div className="task-detail">
+                        <span className="task-detail-label">{t('dashboard.tasks.external.company')}</span>
+                        <span className="task-detail-value">{job.company || '—'}</span>
+                      </div>
+                      <div className="task-detail">
+                        <span className="task-detail-label">{t('dashboard.tasks.external.location')}</span>
+                        <span className="task-detail-value">
+                          {job.salary_text
+                            ? `${job.location || 'Remote'} · ${job.salary_text}`
+                            : (job.location || 'Remote')}
+                        </span>
+                      </div>
+                    </div>
+                    {job.tags.length > 0 && (
+                      <div className="external-job-tags">
+                        {job.tags.slice(0, 4).map((tag) => (
+                          <span key={tag} className="external-job-tag">{tag}</span>
+                        ))}
+                      </div>
+                    )}
+                    <a
+                      className="task-button task-button-external"
+                      href={job.apply_url}
+                      target="_blank"
+                      rel={
+                        job.source === 'web3career' || /web3\.career/i.test(job.apply_url)
+                          ? 'noopener'
+                          : 'noopener noreferrer'
+                      }
+                    >
+                      {t('dashboard.tasks.external.apply')}{' '}
+                      <FaExternalLinkAlt style={{ marginLeft: 6, fontSize: 12 }} />
+                    </a>
+                    {(job.source === 'web3career' || /web3\.career/i.test(job.apply_url)) && (
+                      <p className="external-job-source">
+                        {t('dashboard.tasks.external.source.web3career')}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>

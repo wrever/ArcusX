@@ -12,7 +12,7 @@ Students can use ArcusX to earn income while studying, working on flexible micro
 
 ### Freelancers Expanding Opportunities
 
-Experienced freelancers can access global opportunities without geographical restrictions. The low commission rate (0.5%) means they keep more of their earnings compared to traditional platforms.
+Experienced freelancers can access global opportunities without geographical restrictions. Platform fee is only 2% from the worker — far below typical 10–20% take-rates — and employers are not charged a platform fee to post.
 
 **Example**: A graphic designer in Latin America works with clients globally, receiving payments instantly in USDC without dealing with currency conversion fees or bank transfer delays.
 
@@ -143,7 +143,7 @@ Workers receive payments in 3-5 seconds after client approval, enabling immediat
 
 ### Low-Cost Transactions
 
-The 0.5% commission means more money goes to workers and less to intermediaries, making small tasks economically viable.
+Because the fee is only 2% from the worker and employers fund the posted amount, small tasks remain economically viable.
 
 **Use Case**: A client posts a $50 task. On traditional platforms, worker receives $40-45 after fees. On ArcusX, worker receives $49.75, making small tasks worthwhile.
 

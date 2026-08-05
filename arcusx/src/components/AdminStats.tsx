@@ -545,7 +545,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
               <h4>Comisiones Totales</h4>
               <p className="revenue-value">{formatCurrency(stats?.totalFees || 0)}</p>
               <p className="revenue-description">
-                {stats?.platformFee ? `${stats.platformFee}%` : '3.7%'} del volumen total
+                {stats?.platformFee ? `${stats.platformFee}%` : '1.7%'} del volumen total
               </p>
               {(stats?.feesThisWeek || stats?.feesThisMonth) && (
                 <div className="revenue-trend">

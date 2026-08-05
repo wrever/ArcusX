@@ -6,12 +6,12 @@ Common questions and answers about ArcusX platform, features, and usage. ❓
 
 ### What is ArcusX?
 
-ArcusX is a decentralized freelancing platform built on the Stellar blockchain that connects clients with workers through secure escrow smart contracts. We offer competitive fees (3% platform fee on escrow to the client), instant payments, and global access to freelance opportunities.
+ArcusX is a decentralized freelancing platform built on the Stellar blockchain that connects clients with workers through secure escrow smart contracts. We offer competitive fees (2% from the worker on release; employers fund the posted amount), instant payments, and global access to freelance opportunities.
 
 ### How is ArcusX different from traditional freelancing platforms?
 
 ArcusX differs in several key ways:
-- Much lower commission structure than traditional platforms (workers receive 100% of agreed pay; client pays ~3% platform fee on escrow)
+- Much lower commission than traditional platforms (2% from worker; employer funds the posted amount with no platform surcharge)
 - Instant payments (3-5 seconds vs days/weeks)
 - No geographical restrictions
 - Complete transparency (all transactions on blockchain)
@@ -24,7 +24,7 @@ ArcusX is accessible globally to anyone with internet access. There are no geogr
 
 ### What blockchain does ArcusX use?
 
-ArcusX uses the Stellar blockchain, which offers fast transactions (3-5 second confirmation), low fees, and high reliability. We use Trustless Work smart contracts for escrow management.
+ArcusX uses the Stellar blockchain, which offers fast transactions (3-5 second confirmation), low fees, and high reliability. Escrow and payouts use ArcusX Escrow (USDC on Stellar).
 
 ### Is ArcusX safe?
 
@@ -93,7 +93,7 @@ You receive payment after:
 
 ### How much commission does ArcusX charge?
 
-ArcusX charges a 3% platform commission to the client when escrow is created. If the task pays 100 USDC to the worker, the worker receives 100 USDC and the client pays the agreed worker amount plus that commission (e.g. 103 USDC total before network fees, depending on rounding).
+ArcusX charges a 2% total fee deducted from the worker on release. If the task is 100 USDC, the employer funds 100 USDC and the worker receives ~98 USDC.
 
 ### Can I cancel a task after accepting?
 
@@ -130,10 +130,10 @@ No, creating an account and applying to tasks is completely free. You only pay t
 
 When you select a worker:
 1. An escrow smart contract is created
-2. You fund the escrow with the total amount (worker payment + commission)
+2. You fund the escrow with the posted task amount (no platform surcharge)
 3. Funds are held securely in the contract
 4. When work is approved, funds are automatically released
-5. Worker receives payment, platform receives commission
+5. Worker receives ~98%; platform receives the 2% fee
 
 ### Can I cancel a task?
 
@@ -154,7 +154,7 @@ You can:
 
 Posting tasks is free. You only pay:
 - The agreed payment to the worker
-- 3% platform commission (paid by the client; added to worker payment in escrow)
+- No platform fee for posting/funding — the 2% fee is taken from the worker on release
 - Minimal Stellar transaction fees
 
 ### How long does payment take?
@@ -169,12 +169,12 @@ ArcusX uses USDC (USD Coin) on the Stellar blockchain. USDC is a stablecoin pegg
 
 ### How much is the platform commission?
 
-ArcusX charges a 3% platform commission on escrow to the client. This is significantly lower than typical freelancer-side fees on traditional platforms (often 10-20%).
+ArcusX charges a 2% total fee from the worker on escrow release. Employers are not charged a platform fee to post or fund. This is far below typical 10–20% freelancer take-rates.
 
 ### Are there any hidden fees?
 
 No, there are no hidden fees. The only costs are:
-- Platform commission (3%, clearly shown)
+- Platform commission (2% from worker, clearly shown)
 - Stellar network transaction fees (minimal, less than $0.01)
 
 ### How are payments processed?
@@ -182,7 +182,7 @@ No, there are no hidden fees. The only costs are:
 Payments are processed automatically through Stellar smart contracts:
 1. Client approves work
 2. Client releases funds
-3. Smart contract distributes funds (worker payment + platform commission)
+3. Smart contract distributes funds (worker ~98% + platform ~2%)
 4. Transaction confirms in 3-5 seconds
 5. Funds appear in wallets
 
@@ -216,11 +216,11 @@ If you lose access to your wallet and don't have your backup, you cannot recover
 
 ### How does the escrow smart contract work?
 
-Escrow contracts are deployed on Stellar using Trustless Work:
+Escrow contracts are deployed on Stellar via ArcusX Escrow:
 - Funds are locked in the contract
-- Contract executes automatically when conditions are met
-- Platform cannot access or modify contract funds
-- All operations are transparent and verifiable on blockchain
+- Contract executes when approval / dispute rules are met
+- Platform cannot move funds outside those rules
+- Operations are transparent and verifiable on the ledger
 
 ### Can the platform freeze or seize my funds?
 

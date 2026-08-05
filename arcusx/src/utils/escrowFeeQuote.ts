@@ -1,31 +1,32 @@
 /**
- * Helpers para Trustless Work escrow (single-release).
+ * Helpers para escrow single-release (Stellar).
  *
- * Modelo on-chain: 4 % del fondeo
- *   - ArcusX (platformFee en API): 3.7 % → treasury (platformAddress)
- *   - Trustless Work (protocolo, fijo): 0.3 % → cobrado on-chain al liberar
+ * Modelo on-chain: 2 % del fondeo (al trabajador)
+ *   - ArcusX (platformFee en API): 1.7 % → treasury
+ *   - Costo de operación on-chain: 0.3 % fijo al liberar
  *
- * UX bilateral: nominal $20 → fondeo ~$20.40, trabajador neto $19.60.
- * TW API: `platformFee` es % visible (3.7), NO decimal 0.037.
+ * UX: nominal $100 → empleador fondea $100, trabajador ~$98.
+ * API externa: `platformFee` es % visible (1.7), NO decimal 0.017.
  */
 
-/** Comisión fija del protocolo Trustless Work al liberar (testnet y mainnet). */
+/** Comisión fija de operación on-chain al liberar. */
 export const TRUSTLESS_WORK_PROTOCOL_FEE = 0.003;
 
 const STROOPS_PER_USDC = 10_000_000;
+const DEFAULT_PLATFORM_FEE = 0.017;
 
-/** Normaliza fee devuelto por el indexer TW (3.7 → 0.037, 0.005 legacy → 0.005). */
+/** Normaliza fee del indexer (1.7 → 0.017). */
 export function fromTrustlessWorkPlatformFee(apiValue: number): number {
   const n = Number(apiValue);
-  if (!Number.isFinite(n) || n <= 0) return 0.037;
+  if (!Number.isFinite(n) || n <= 0) return DEFAULT_PLATFORM_FEE;
   if (n >= 1) return n / 100;
   return n;
 }
 
-/** Convierte fee interno (0.03) al formato que espera la API TW (3). */
+/** Convierte fee interno (0.017) al formato % de la API (1.7). */
 export function toTrustlessWorkPlatformFee(platformFeeDecimal: number): number {
   const n = Number(platformFeeDecimal);
-  if (!Number.isFinite(n) || n <= 0) return 3.7;
+  if (!Number.isFinite(n) || n <= 0) return 1.7;
   if (n >= 1) return n;
   return Math.round(n * 10000) / 100;
 }
@@ -100,15 +101,55 @@ export function quoteEscrowCommission(
   platformCommission: number;
   protocolCommission: number;
   totalCommission: number;
+  workerAmount: number;
 } {
   const fundAmount = quoteEscrowFundAmount(workerAmount, platformFeeDecimal);
   const fundStroops = Math.round(fundAmount * STROOPS_PER_USDC);
-  const { platformStroops, protocolStroops } = simulateReleaseStroops(
+  const { platformStroops, protocolStroops, workerStroops } = simulateReleaseStroops(
     fundStroops,
     platformFeeDecimal,
   );
   return {
     fundAmount,
+    workerAmount: workerStroops / STROOPS_PER_USDC,
+    platformCommission: platformStroops / STROOPS_PER_USDC,
+    protocolCommission: protocolStroops / STROOPS_PER_USDC,
+    totalCommission: (platformStroops + protocolStroops) / STROOPS_PER_USDC,
+  };
+}
+
+/**
+ * Quote desde el monto que fondea el empleador (= precio de la tarea).
+ * El trabajador recibe el residual tras fees on-chain (~98 %).
+ */
+export function quoteEscrowFromFundAmount(
+  fundAmount: number,
+  platformFeeDecimal: number,
+): {
+  fundAmount: number;
+  workerAmount: number;
+  platformCommission: number;
+  protocolCommission: number;
+  totalCommission: number;
+} {
+  const fund = Number(fundAmount);
+  const platform = Number(platformFeeDecimal);
+  if (!Number.isFinite(fund) || fund <= 0) {
+    throw new Error('fundAmount inválido');
+  }
+  const totalRate = platform + TRUSTLESS_WORK_PROTOCOL_FEE;
+  if (!Number.isFinite(platform) || platform < 0 || totalRate >= 1) {
+    throw new Error('platformFeeDecimal inválido');
+  }
+
+  const fundStroops = Math.round(fund * STROOPS_PER_USDC);
+  const { platformStroops, protocolStroops, workerStroops } = simulateReleaseStroops(
+    fundStroops,
+    platform,
+  );
+  return {
+    fundAmount: fundStroops / STROOPS_PER_USDC,
+    workerAmount: workerStroops / STROOPS_PER_USDC,
     platformCommission: platformStroops / STROOPS_PER_USDC,
     protocolCommission: protocolStroops / STROOPS_PER_USDC,
     totalCommission: (platformStroops + protocolStroops) / STROOPS_PER_USDC,

@@ -1125,6 +1125,280 @@ input[type="search"]::placeholder {
   flex-shrink: 0;
 }
 
+.task-header-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+/* Job board filters — panel unificado (origen + roles + selects) */
+.jobs-board {
+  margin-bottom: 1.25rem;
+}
+
+.jobs-board-search {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: stretch;
+  margin-bottom: 0.85rem;
+}
+
+.jobs-board-search .search-bar {
+  flex: 1 1 220px;
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+.jobs-search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  padding: 0;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 8px;
+  color: #ef4444;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.jobs-remote-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted, #9bb5a6);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.jobs-remote-toggle:hover {
+  border-color: rgba(16, 221, 136, 0.35);
+  color: #e8f5ef;
+}
+
+.jobs-remote-toggle.active {
+  background: rgba(16, 221, 136, 0.12);
+  border-color: rgba(16, 221, 136, 0.45);
+  color: #10dd88;
+}
+
+.jobs-remote-switch {
+  position: relative;
+  width: 2.1rem;
+  height: 1.15rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.jobs-remote-toggle.active .jobs-remote-switch {
+  background: rgba(16, 221, 136, 0.45);
+  border-color: rgba(16, 221, 136, 0.55);
+}
+
+.jobs-remote-knob {
+  position: absolute;
+  top: 1px;
+  left: 2px;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 50%;
+  background: #e8f5ef;
+  transition: transform 0.15s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.jobs-remote-toggle.active .jobs-remote-knob {
+  transform: translateX(0.85rem);
+  background: #fff;
+}
+
+.jobs-filter-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.jobs-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.jobs-chip-row-roles {
+  padding-top: 0.15rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.jobs-filter-selects {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  padding-top: 0.15rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.jobs-chip {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted, #9bb5a6);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.38rem 0.8rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.jobs-chip:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #e8f5ef;
+}
+
+.jobs-chip.active {
+  background: rgba(16, 221, 136, 0.16);
+  border-color: rgba(16, 221, 136, 0.45);
+  color: #10dd88;
+}
+
+.jobs-chip-role {
+  border-radius: 8px;
+}
+
+.dashboard-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.55rem 0.25rem 0.75rem;
+  border-radius: 50px;
+  font-size: 0.85rem;
+  background: rgba(16, 221, 136, 0.15);
+  border: 1px solid rgba(16, 221, 136, 0.35);
+  color: var(--primary-blue, #10dd88);
+  cursor: pointer;
+  font: inherit;
+}
+
+.dashboard-filter-chip:hover {
+  border-color: rgba(16, 221, 136, 0.55);
+}
+
+.dashboard-filter-chip-x {
+  font-size: 0.65rem;
+  opacity: 0.85;
+}
+
+.task-origin-badge {
+  font-size: 0.68rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 50px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.task-origin-badge.testnet {
+  background: rgba(56, 189, 248, 0.18);
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+
+.task-origin-badge.mainnet {
+  background: rgba(16, 221, 136, 0.16);
+  color: #10dd88;
+  border: 1px solid rgba(16, 221, 136, 0.4);
+}
+
+.task-origin-badge.externa {
+  background: rgba(251, 191, 36, 0.14);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+}
+
+.task-card-external {
+  border-style: dashed;
+  border-color: rgba(251, 191, 36, 0.28);
+}
+
+.external-jobs-divider {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0.5rem 0 0.25rem;
+  color: var(--text-muted, #8aa396);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.external-jobs-divider::before,
+.external-jobs-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(251, 191, 36, 0.28);
+}
+
+.external-jobs-loading {
+  grid-column: 1 / -1;
+  opacity: 0.7;
+  font-size: 0.9rem;
+}
+
+.external-job-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.35rem 0 0.75rem;
+}
+
+.external-job-tag {
+  font-size: 0.68rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted, #9bb5a6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.task-button-external {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.external-job-source {
+  margin: 0.45rem 0 0;
+  font-size: 0.72rem;
+  color: var(--text-muted, #8aa396);
+  opacity: 0.85;
+}
+
+.dashboard-results-external-hint {
+  opacity: 0.75;
+  font-weight: 500;
+}
+
 .task-difficulty.fácil {
   background-color: #4CAF50;
   color: #fff;
@@ -4476,15 +4750,6 @@ input[type="search"]::placeholder {
 .dashboard-muted-text {
   color: var(--text-secondary);
   font-size: 0.9rem;
-}
-
-.dashboard-filter-chip {
-  padding: 0.25rem 0.75rem;
-  border-radius: 50px;
-  font-size: 0.85rem;
-  background: rgba(16, 221, 136, 0.15);
-  border: 1px solid rgba(16, 221, 136, 0.35);
-  color: var(--primary-blue);
 }
 
 .dashboard-filter-clear {

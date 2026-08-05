@@ -14,7 +14,7 @@ interface FeeManagementProps {
 
 const FeeManagement: React.FC<FeeManagementProps> = ({ onUpdate }) => {
   const [config, setConfig] = useState<FeeConfig>({
-    platformFeeBps: 370, // 3.7% ArcusX (+ 0.3% TW = 4% total)
+    platformFeeBps: 170, // 1.7% ArcusX (+ 0.3% op = 2% al trabajador)
     referralFeeBps: 100, // 1%
     treasury: ''
   });

@@ -33,7 +33,7 @@ export async function getTasks(ctx: ApiContext): Promise<Response> {
     .from('arcusx_tasks')
     .select(`
       id, title, subtitle, description, price, currency, difficulty, category,
-      created_at, status, user_id,
+      created_at, status, user_id, stellar_network,
       arcusx_users!arcusx_tasks_user_id_fkey (
         id, username, average_rating, total_ratings
       )
@@ -98,6 +98,7 @@ export async function getTasks(ctx: ApiContext): Promise<Response> {
       creator_total_ratings: u?.total_ratings ?? null,
       created_at: row.created_at,
       status: row.status,
+      stellar_network: row.stellar_network === 'mainnet' ? 'mainnet' : 'testnet',
       proposal_count: 0,
     };
   });

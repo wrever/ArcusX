@@ -3,8 +3,8 @@ info:
   title: ArcusX Work Execution API
   version: 1.0.0
   description: |
-    REST v1 sobre arcusx-api (Supabase Edge). Alias de handlers existentes.
-    Trustless Work no aparece en esta spec — solo ArcusX Escrow / USDC settlement.
+    REST v1 on arcusx-api (Supabase Edge / api.arcusx.pro).
+    Public surface: ArcusX Escrow and USDC settlement on Stellar.
   contact:
     name: ArcusX
 servers:
@@ -352,7 +352,7 @@ paths:
           description: OK
   /subjobs/{subjobId}/escrow/deploy/prepare:
     post:
-      summary: Prepare Trustless Work deploy XDR
+      summary: Prepare escrow deploy XDR
       operationId: prepareSubjobDeploy
       tags: [Agentic]
       parameters:

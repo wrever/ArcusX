@@ -30,6 +30,7 @@ import * as badges from './badges.ts';
 import * as escrowProvider from './escrow-provider.ts';
 import * as agentic from './agentic.ts';
 import * as apiKeys from './api-keys.ts';
+import * as externalJobs from './external-jobs.ts';
 
 const ROUTES: Record<string, ApiHandler> = {
   sync_supabase_user: auth.syncSupabaseUser,
@@ -37,6 +38,8 @@ const ROUTES: Record<string, ApiHandler> = {
   verify_wallet: auth.verifyWallet,
 
   get_tasks: tasks.getTasks,
+  get_external_jobs: externalJobs.listExternalJobs,
+  sync_external_jobs: externalJobs.syncExternalJobs,
   get_task_details: tasks.getTaskDetails,
   create_task: tasks.createTask,
   get_task_proposals: tasks.getTaskProposals,

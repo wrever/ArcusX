@@ -1,36 +1,43 @@
 /**
- * Modelo bilateral de comisión (UX):
- * - Empleador ve +2% al fondear (nominal × 1.02 → ej. $20.40)
- * - Trabajador ve neto = total fondeado − 4% (ej. $20.40 × 0.96 ≈ $19.58)
- * - On-chain: hito = workerNet; ArcusX 3.7% + TW 0.3% = 4% del fondeo
+ * Modelo de comisión:
+ * - Empleador fondea el nominal (sin +%)
+ * - Trabajador recibe ~98 % del fondeo (−2 % total)
+ * - On-chain: ArcusX 1.7 % + 0.3 % operación = 2 % del fondeo
  */
 
 import { STANDARD_PLATFORM_FEE_RATE } from '../config/platformFee';
-import { quoteEscrowCommission } from './escrowFeeQuote';
+import { quoteEscrowFromFundAmount } from './escrowFeeQuote';
 
-export const CLIENT_VISIBLE_FEE_RATE = 0.02;
-/** Fee total on-chain (3.7% ArcusX + 0.3% TW) sobre el monto fondeado */
-export const TOTAL_ONCHAIN_FEE_RATE = 0.04;
+/** Empleador: sin surcharge sobre el precio de la tarea */
+export const CLIENT_VISIBLE_FEE_RATE = 0;
+/** Fee total on-chain deducido del fondeo (va contra el trabajador) */
+export const TOTAL_ONCHAIN_FEE_RATE = 0.02;
 export const ARCUSX_PLATFORM_FEE_RATE = STANDARD_PLATFORM_FEE_RATE;
 
-export const CLIENT_VISIBLE_FEE_PERCENT = '2';
-/** Para copy: el trabajador pierde 4% del total que fondea el empleador */
-export const WORKER_NET_FEE_PERCENT = '4';
+export const CLIENT_VISIBLE_FEE_PERCENT = '0';
+export const WORKER_FEE_PERCENT = '2';
+/** @deprecated use WORKER_FEE_PERCENT */
+export const WORKER_NET_FEE_PERCENT = WORKER_FEE_PERCENT;
 
 export function nominalToClientTotal(nominal: number): number {
   if (!Number.isFinite(nominal) || nominal <= 0) return 0;
-  return parseFloat((nominal * (1 + CLIENT_VISIBLE_FEE_RATE)).toFixed(7));
+  return parseFloat(nominal.toFixed(7));
 }
 
 export function nominalToWorkerNet(nominal: number): number {
   if (!Number.isFinite(nominal) || nominal <= 0) return 0;
-  const clientTotal = nominalToClientTotal(nominal);
-  return parseFloat((clientTotal * (1 - TOTAL_ONCHAIN_FEE_RATE)).toFixed(7));
+  return parseFloat((nominal * (1 - TOTAL_ONCHAIN_FEE_RATE)).toFixed(7));
 }
 
-export function clientVisibleFeeAmount(nominal: number): number {
+/** Surcharge al empleador (siempre 0 en este modelo) */
+export function clientVisibleFeeAmount(_nominal: number): number {
+  return 0;
+}
+
+/** Comisión total deducida del fondeo (2 %) */
+export function workerFeeAmount(nominal: number): number {
   if (!Number.isFinite(nominal) || nominal <= 0) return 0;
-  return parseFloat((nominal * CLIENT_VISIBLE_FEE_RATE).toFixed(7));
+  return parseFloat((nominal * TOTAL_ONCHAIN_FEE_RATE).toFixed(7));
 }
 
 export function formatWorkerNetDisplay(price: string | number): string {
@@ -43,13 +50,14 @@ export function quoteBilateralFromNominal(
   nominal: number,
   platformFee = ARCUSX_PLATFORM_FEE_RATE,
 ) {
-  const workerNet = nominalToWorkerNet(nominal);
-  const escrow = quoteEscrowCommission(workerNet, platformFee);
+  const fund = nominalToClientTotal(nominal);
+  const escrow = quoteEscrowFromFundAmount(fund, platformFee);
   return {
-    nominal,
-    workerNet,
-    clientTotal: nominalToClientTotal(nominal),
-    clientVisibleFee: clientVisibleFeeAmount(nominal),
+    nominal: fund,
+    workerNet: escrow.workerAmount,
+    clientTotal: escrow.fundAmount,
+    clientVisibleFee: 0,
+    workerFee: escrow.totalCommission,
     fundAmount: escrow.fundAmount,
     platformCommission: escrow.platformCommission,
     protocolCommission: escrow.protocolCommission,
@@ -58,7 +66,7 @@ export function quoteBilateralFromNominal(
   };
 }
 
-/** task.price / deal.amount_usdc en BD = valor nominal de referencia */
+/** task.price / deal.amount_usdc en BD = lo que fondea el empleador */
 export function workerNetFromTaskPrice(price: string | number): number {
   return nominalToWorkerNet(parseFloat(String(price)));
 }

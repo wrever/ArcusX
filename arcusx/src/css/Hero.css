@@ -377,6 +377,16 @@
   box-shadow: var(--shadow-lg);
 }
 
+:root[data-theme="light"] .hero-carousel-badge-platform {
+  background: rgba(10, 184, 106, 0.12);
+  color: #087a48;
+  border-color: rgba(10, 184, 106, 0.35);
+}
+:root[data-theme="light"] .hero-carousel-badge-external {
+  background: rgba(217, 119, 6, 0.12);
+  color: #b45309;
+  border-color: rgba(217, 119, 6, 0.35);
+}
 :root[data-theme="light"] .hero-carousel-loading {
   color: var(--text-secondary);
 }
@@ -748,6 +758,38 @@
   color: var(--text-primary);
   margin-bottom: 0.5rem;
   line-height: 1.35;
+}
+
+.hero-carousel-badge {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  margin-bottom: 0.45rem;
+}
+
+.hero-carousel-badge-platform {
+  background: rgba(16, 221, 136, 0.14);
+  color: #10dd88;
+  border: 1px solid rgba(16, 221, 136, 0.35);
+}
+
+.hero-carousel-badge-external {
+  background: rgba(251, 191, 36, 0.14);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.35);
+}
+
+.hero-carousel-card-external {
+  border-style: dashed;
+}
+
+a.hero-carousel-card-apply {
+  text-decoration: none;
 }
 
 .hero-carousel-card-meta {

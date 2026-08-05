@@ -12,6 +12,7 @@ import { normalizeDisplayText } from '../utils/utf8Mojibake';
 import '../css/Hero.css';
 import { useI18n } from '../i18n/I18nProvider';
 import { formatWorkerNetDisplay } from '../utils/bilateralFeeModel';
+import { loadExternalJobs, type ExternalJob } from '../services/externalJobsService';
 import Footer from './Footer';
 import SEO from './SEO';
 import TaskCreatorLine from './TaskCreatorLine';
@@ -69,6 +70,25 @@ interface TaskResult {
   proposal_count?: number;
 }
 
+type CarouselSlide =
+  | { kind: 'platform'; key: string; task: TaskResult }
+  | { kind: 'external'; key: string; job: ExternalJob };
+
+/** Alterna 1 ArcusX + 1 externa (estilo board mixto). */
+function interleaveCarousel(platform: TaskResult[], external: ExternalJob[]): CarouselSlide[] {
+  const out: CarouselSlide[] = [];
+  const n = Math.max(platform.length, external.length);
+  for (let i = 0; i < n; i++) {
+    if (i < platform.length) {
+      out.push({ kind: 'platform', key: `p-${platform[i].id}`, task: platform[i] });
+    }
+    if (i < external.length) {
+      out.push({ kind: 'external', key: `e-${external[i].id}`, job: external[i] });
+    }
+  }
+  return out.slice(0, 16);
+}
+
 /** Hero landing: <10 valor exacto; ≥10 prefijo + y piso a decenas (199 → +190). */
 function formatHeroLandingCount(n: number): string {
   const v = Math.max(0, Math.floor(Number(n) || 0));
@@ -97,7 +117,7 @@ const Hero = () => {
   const searchRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const carouselTrackRef = useRef<HTMLDivElement>(null);
-  const [carouselTasks, setCarouselTasks] = useState<TaskResult[]>([]);
+  const [carouselSlides, setCarouselSlides] = useState<CarouselSlide[]>([]);
   const [loadingCarousel, setLoadingCarousel] = useState(true);
   const [landingFreelancers, setLandingFreelancers] = useState<Freelancer[]>([]);
   const [loadingLandingFreelancers, setLoadingLandingFreelancers] = useState(true);
@@ -109,8 +129,8 @@ const Hero = () => {
 
   // Carrusel infinito: muchas copias de la lista para sensación de “millones de opciones”; el scroll avanza y al pasar un bloque se reubica sin que se note
   const REPEAT_COPIES = 8;
-  const infiniteCarouselTasks = carouselTasks.length > 0
-    ? Array.from({ length: REPEAT_COPIES }, () => carouselTasks).flat()
+  const infiniteCarouselSlides = carouselSlides.length > 0
+    ? Array.from({ length: REPEAT_COPIES }, () => carouselSlides).flat()
     : [];
   const infiniteLandingFreelancers = landingFreelancers.length > 0
     ? Array.from({ length: REPEAT_COPIES }, () => landingFreelancers).flat()
@@ -126,12 +146,18 @@ const Hero = () => {
     const fetchCarouselTasks = async () => {
       setLoadingCarousel(true);
       try {
-        const url = arcusxApiUrl('get_tasks', { sort_by: 'date_desc' });
-        const response = await axios.get(url);
-        const data = Array.isArray(response.data) ? response.data : (response.data?.tasks ?? []);
-        setCarouselTasks(Array.isArray(data) ? data.slice(0, 12) : []);
+        const [tasksRes, external] = await Promise.all([
+          axios.get(arcusxApiUrl('get_tasks', { sort_by: 'date_desc' })),
+          loadExternalJobs().catch(() => [] as ExternalJob[]),
+        ]);
+        const data = Array.isArray(tasksRes.data)
+          ? tasksRes.data
+          : (tasksRes.data?.tasks ?? []);
+        const platform = (Array.isArray(data) ? data : []).slice(0, 8) as TaskResult[];
+        const externals = (external || []).slice(0, 8);
+        setCarouselSlides(interleaveCarousel(platform, externals));
       } catch {
-        setCarouselTasks([]);
+        setCarouselSlides([]);
       } finally {
         setLoadingCarousel(false);
       }
@@ -329,7 +355,7 @@ const Hero = () => {
   // Movimiento automático continuo; se reinicia cuando el carrusel se muestra de nuevo (p. ej. al borrar la búsqueda)
   const showCarousel = searchQuery.trim().length < 2;
   useEffect(() => {
-    if (!showCarousel || carouselTasks.length === 0) return;
+    if (!showCarousel || carouselSlides.length === 0) return;
     const viewport = carouselRef.current;
     const track = carouselTrackRef.current;
     if (!viewport || !track) return;
@@ -354,7 +380,7 @@ const Hero = () => {
     return () => {
       if (autoScrollRef.current != null) cancelAnimationFrame(autoScrollRef.current);
     };
-  }, [carouselTasks.length, showCarousel]);
+  }, [carouselSlides.length, showCarousel]);
 
   useEffect(() => {
     if (landingFreelancers.length === 0) return;
@@ -433,7 +459,7 @@ const Hero = () => {
     name: 'Trabajos Online en Stellar Blockchain',
     provider: { '@type': 'Organization', name: 'ArcusX' },
     description: 'Plataforma de trabajos online en Stellar con escrow seguro y pagos en USDC.',
-    offers: { '@type': 'Offer', price: '3', priceCurrency: 'USD', description: 'Comisión 3% al cliente en escrow por transacción' }
+    offers: { '@type': 'Offer', price: '2', priceCurrency: 'USD', description: 'Comisión 2% al trabajador en escrow por transacción' }
   };
   const productSchema = {
     '@context': 'https://schema.org',
@@ -588,7 +614,7 @@ const Hero = () => {
                 <div className="hero-carousel-wrap">
                   {loadingCarousel ? (
                     <p className="hero-carousel-loading">{t('hero.carousel.loading')}</p>
-                  ) : carouselTasks.length === 0 ? (
+                  ) : carouselSlides.length === 0 ? (
                     <p className="hero-carousel-empty">{t('hero.carousel.empty')}</p>
                   ) : (
                     <div className="hero-carousel-nav-wrap">
@@ -597,48 +623,86 @@ const Hero = () => {
                       </button>
                       <div className="hero-carousel-viewport" ref={carouselRef}>
                         <div className="hero-carousel-track" ref={carouselTrackRef}>
-                          {infiniteCarouselTasks.map((task, idx) => (
-                            <article key={`${task.id}-${idx}`} className="hero-carousel-card">
-                              <h3 className="hero-carousel-card-title">{task.title}</h3>
-                              {(task.category || task.difficulty) && (
+                          {infiniteCarouselSlides.map((slide, idx) =>
+                            slide.kind === 'platform' ? (
+                            <article key={`${slide.key}-${idx}`} className="hero-carousel-card">
+                              <span className="hero-carousel-badge hero-carousel-badge-platform">
+                                {t('dashboard.jobs.origin.platform')}
+                              </span>
+                              <h3 className="hero-carousel-card-title">{slide.task.title}</h3>
+                              {(slide.task.category || slide.task.difficulty) && (
                                 <span className="hero-carousel-card-meta">
-                                  {[task.category, task.difficulty].filter(Boolean).join(' · ')}
+                                  {[slide.task.category, slide.task.difficulty].filter(Boolean).join(' · ')}
                                 </span>
                               )}
-                              {task.description && (
+                              {slide.task.description && (
                                 <p className="hero-carousel-card-desc">
-                                  {task.description.slice(0, 120)}{task.description.length > 120 ? '…' : ''}
+                                  {slide.task.description.slice(0, 120)}{slide.task.description.length > 120 ? '…' : ''}
                                 </p>
                               )}
-                              {(task.creator_display_name || task.creator_username) && (
+                              {(slide.task.creator_display_name || slide.task.creator_username) && (
                                 <div className="hero-carousel-card-creator">
                                   <span className="hero-carousel-card-creator-label">
                                     {t('hero.carousel.creator')}
                                   </span>
                                   <TaskCreatorLine
                                     displayName={
-                                      task.creator_display_name?.trim() ||
-                                      task.creator_username?.trim() ||
+                                      slide.task.creator_display_name?.trim() ||
+                                      slide.task.creator_username?.trim() ||
                                       ''
                                     }
-                                    username={task.creator_username}
-                                    creatorId={task.creator_id}
-                                    verifiedEnterprise={Boolean(task.creator_verified_enterprise)}
-                                    verifiedIndividual={Boolean(task.creator_verified_individual)}
-                                    linkToProfile={Boolean(task.creator_id)}
+                                    username={slide.task.creator_username}
+                                    creatorId={slide.task.creator_id}
+                                    verifiedEnterprise={Boolean(slide.task.creator_verified_enterprise)}
+                                    verifiedIndividual={Boolean(slide.task.creator_verified_individual)}
+                                    linkToProfile={Boolean(slide.task.creator_id)}
                                   />
               </div>
                               )}
                               <div className="hero-carousel-card-footer">
                                 <span className="hero-carousel-card-price">
-                                  {task.price && formatWorkerNetDisplay(task.price)} {task.currency || 'USDC'}
+                                  {slide.task.price && formatWorkerNetDisplay(slide.task.price)} {slide.task.currency || 'USDC'}
                                 </span>
-                                <button type="button" className="hero-carousel-card-apply" onClick={() => handleApplyClick(task.id)}>
+                                <button type="button" className="hero-carousel-card-apply" onClick={() => handleApplyClick(slide.task.id)}>
                                   {t('hero.search.apply')} <FaArrowRight />
                                 </button>
               </div>
                             </article>
-                          ))}
+                            ) : (
+                            <article key={`${slide.key}-${idx}`} className="hero-carousel-card hero-carousel-card-external">
+                              <span className="hero-carousel-badge hero-carousel-badge-external">
+                                {t('dashboard.tasks.badge.external')}
+                              </span>
+                              <h3 className="hero-carousel-card-title">{slide.job.title}</h3>
+                              <span className="hero-carousel-card-meta">
+                                {[slide.job.company, slide.job.location || 'Remote'].filter(Boolean).join(' · ')}
+                              </span>
+                              {(slide.job.excerpt || slide.job.company) && (
+                                <p className="hero-carousel-card-desc">
+                                  {(slide.job.excerpt || '').slice(0, 120)}
+                                  {(slide.job.excerpt || '').length > 120 ? '…' : ''}
+                                </p>
+                              )}
+                              <div className="hero-carousel-card-footer">
+                                <span className="hero-carousel-card-price">
+                                  {slide.job.salary_text || t('dashboard.jobs.origin.external')}
+                                </span>
+                                <a
+                                  className="hero-carousel-card-apply"
+                                  href={slide.job.apply_url}
+                                  target="_blank"
+                                  rel={
+                                    slide.job.source === 'web3career' || /web3\.career/i.test(slide.job.apply_url)
+                                      ? 'noopener'
+                                      : 'noopener noreferrer'
+                                  }
+                                >
+                                  {t('dashboard.tasks.external.apply')} <FaArrowRight />
+                                </a>
+                              </div>
+                            </article>
+                            ),
+                          )}
               </div>
             </div>
                       <button type="button" className="hero-carousel-btn hero-carousel-btn-next" onClick={() => scrollCarousel('right')} aria-label={t('hero.carousel.next')}>

@@ -1,20 +1,17 @@
-# ArcusX — API (Supabase Edge, producción)
+# ArcusX — API (Edge + partner gateway)
 
-**SDK / REST v1 (integradores):** [`docs/sdk/README.md`](../sdk/README.md) · [`GLOBAL_INFRA_AUDIT.md`](../sdk/GLOBAL_INFRA_AUDIT.md)
+**SDK / REST v1:** [SDK overview](/sdk/) · [Quickstart](/sdk/QUICKSTART) · [OpenAPI](/sdk/openapi-v1.yaml) (repo)
 
-**Base URL (marketplace):**  
-`https://<project_ref>.supabase.co/functions/v1/arcusx-api?action=<nombre>`
+**Partner base URL:** `https://api.arcusx.pro/v1/...`  
+**Auth:** `Authorization: Bearer axk_test_…` (or user JWT + `x-arcusx-api-key`)
 
-**Admin:**  
-`https://<project_ref>.supabase.co/functions/v1/arcusx-admin?action=<nombre>`
+**Direct Edge (internal / advanced):**  
+`https://<project_ref>.supabase.co/functions/v1/arcusx-api?action=<nombre>`  
+(+ `apikey` Supabase anon when calling Edge directly)
 
-**Cliente:** `arcusxApiUrl('action')` / `arcusxAdminUrl('action')` en `arcusx/src/config/arcusxApi.ts`.
+**On-chain:** ArcusX Escrow — prepare/confirm via API; wallet signs XDR. Integrators use SDK `escrow/*` only.
 
-**Auth:** `Authorization: Bearer <JWT app>` (emitido por `sync_supabase_user`) + header `apikey: <VITE_SUPABASE_ANON_KEY>`.
-
-**On-chain (escrow):** Trustless Work **solo en el navegador** (`trustlessWorkEscrowService.ts`). Edge persiste estado y valida `tx_hash` / `transaction_hash` donde aplica. Integradores: ArcusX Escrow vía SDK `escrow/*` (TW @internal).
-
-**Platform fee (BD):** `0.037` (3.7% ArcusX) + 0.3% TW. UX bilateral: ver [`FEE_MODEL.md`](../sdk/FEE_MODEL.md).
+**Platform fee:** see [Fee model](/sdk/FEE_MODEL) (2% from worker on escrow).
 
 ---
 
@@ -93,7 +90,7 @@ Admin login: `arcusx-admin` → `admin_login`.
 
 ---
 
-## Escrow marketplace (Trustless Work + Edge)
+## Escrow marketplace (ArcusX Escrow + Edge)
 
 | action | Método | Usado por | Notas |
 |--------|--------|-----------|-------|
@@ -109,7 +106,7 @@ Admin login: `arcusx-admin` → `admin_login`.
 | `submit_complete_transaction` | POST | — | **410** |
 | `confirm_escrow_signature` | * | — | **410** |
 
-**Flujo TW (tarea):** deploy/fund → trabajador `mark_work_started` (auto al abrir supervisión) → entrega (`complete_task` worker) → cliente approve + release → `complete_task` + `tx_hash`.
+**Flujo escrow (tarea):** deploy/fund → trabajador `mark_work_started` (auto al abrir supervisión) → entrega (`complete_task` worker) → cliente approve + release → `complete_task` + `tx_hash`.
 
 **Cancelación:** `startDispute` (cliente) → admin `resolveDispute` → `cancel_task` con `tx_hash`.
 
@@ -127,7 +124,7 @@ Admin login: `arcusx-admin` → `admin_login`.
 | `prepare_deal_escrow` | POST | Tras deploy (commerce) |
 | `finalize_deal_escrow` | POST | Tras fund |
 | `complete_deal` | POST | `funded` → `active` |
-| `mark_deal_released` | POST | Tras release TW — **`transaction_hash` obligatorio** |
+| `mark_deal_released` | POST | Tras release on-chain — **`transaction_hash` obligatorio** |
 
 ---
 
@@ -140,7 +137,7 @@ Admin login: `arcusx-admin` → `admin_login`.
 | `get_dispute_chat` | GET | Admin / disputa |
 | `get_dispute_files` | GET | Disputa |
 | `get_dispute_timeline` | GET | Disputa |
-| `admin_release_dispute_funds` | POST | Admin (metadata post-resolve TW) |
+| `admin_release_dispute_funds` | POST | Admin (metadata post-resolve on-chain) |
 | `create_rating` | POST | `ratingService.ts` |
 | `get_ratings` | GET | Ratings |
 | `get_user_rating_summary` | GET | Perfil |

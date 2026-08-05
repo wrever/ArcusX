@@ -24,7 +24,7 @@ import PrivateOfferEscrowPopup from './PrivateOfferEscrowPopup';
 import { getUsdcIssuer } from '../config/usdc';
 import { quoteEscrowFundAmount } from '../utils/escrowFeeQuote';
 import { isValidStellarGAddress } from '../utils/stellarAddress';
-import { quoteBilateralFromNominal, CLIENT_VISIBLE_FEE_PERCENT, workerNetFromTaskPrice } from '../utils/bilateralFeeModel';
+import { quoteBilateralFromNominal, WORKER_FEE_PERCENT, workerNetFromTaskPrice } from '../utils/bilateralFeeModel';
 import EscrowFeeBreakdown from './EscrowFeeBreakdown';
 
 interface UserLimits {
@@ -106,8 +106,8 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
   const [workerAmount, setWorkerAmount] = useState<string>('');
   const [commissionAmount, setCommissionAmount] = useState<string>('');
   const [totalAmount, setTotalAmount] = useState<string>('');
-  const [platformFee, setPlatformFee] = useState<number>(0.037);
-  const [totalClientFeePercent, setTotalClientFeePercent] = useState<string>(CLIENT_VISIBLE_FEE_PERCENT);
+  const [platformFee, setPlatformFee] = useState<number>(0.017);
+  const [totalClientFeePercent, setTotalClientFeePercent] = useState<string>(WORKER_FEE_PERCENT);
   
   // Estados para el popup
   const [showPopup, setShowPopup] = useState(false);
@@ -215,7 +215,7 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
     try {
       const fee = await getPlatformFee();
       setPlatformFee(fee);
-      setTotalClientFeePercent(CLIENT_VISIBLE_FEE_PERCENT);
+      setTotalClientFeePercent(WORKER_FEE_PERCENT);
     } catch (error) {
       // Mantener valores por defecto si falla
     }
@@ -229,7 +229,7 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
         const q = quoteBilateralFromNominal(workerAmountValue, platformFee);
 
         setWorkerAmount(q.workerNet.toFixed(2));
-        setCommissionAmount(q.clientVisibleFee.toFixed(2));
+        setCommissionAmount(q.totalCommission.toFixed(2));
         setTotalAmount(q.clientTotal.toFixed(2));
       } else {
         setWorkerAmount('');

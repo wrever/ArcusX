@@ -157,7 +157,7 @@ Inputs usan **snake_case** (`is_private_invite`, `wallet_address`, …).
 | `prepareRelease` / `confirmRelease` | |
 | `prepareDealEscrow` / `finalizeDealEscrow` | Deals |
 
-Trustless Work no se expone como dependencia del integrador.
+Escrow settlement is ArcusX-only for integrators — no separate escrow vendor SDK.
 
 ---
 

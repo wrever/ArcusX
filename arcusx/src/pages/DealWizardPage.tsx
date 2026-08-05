@@ -55,7 +55,7 @@ const DealWizardPage = () => {
   const bilateral = nominal > 0 ? quoteBilateralFromNominal(nominal, platformFee) : null;
   const beneficiaryNet = bilateral?.workerNet ?? 0;
   const clientTotal = bilateral?.clientTotal ?? 0;
-  const feeAmount = bilateral?.clientVisibleFee ?? 0;
+  const feeAmount = bilateral?.totalCommission ?? 0;
 
   const handleCreate = async () => {
     setError('');

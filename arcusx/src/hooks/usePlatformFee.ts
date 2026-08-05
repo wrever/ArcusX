@@ -13,8 +13,8 @@ import { clientFeePercents, DEFAULT_TOTAL_CLIENT_FEE_PERCENT } from '../utils/es
  * @returns El platform fee como decimal (ej: 0.03 para 3%) y el porcentaje como string
  */
 export function usePlatformFee() {
-  const [platformFee, setPlatformFee] = useState<number>(0.037);
-  const [platformFeePercent, setPlatformFeePercent] = useState<string>('3.7');
+  const [platformFee, setPlatformFee] = useState<number>(0.017);
+  const [platformFeePercent, setPlatformFeePercent] = useState<string>('1.7');
   const [totalClientFeePercent, setTotalClientFeePercent] = useState<string>(
     DEFAULT_TOTAL_CLIENT_FEE_PERCENT,
   );

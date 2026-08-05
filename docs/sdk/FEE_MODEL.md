@@ -1,80 +1,53 @@
-# ArcusX SDK — Modelo de comisión (fee)
+# Fee model
 
-**Fuente de verdad código:** `arcusx/src/utils/bilateralFeeModel.ts` · `supabase/functions/_shared/bilateral-fee.ts`
+**Audience:** partners and SDK integrators  
+**Source of truth:** Edge quotes (`get_platform_fee`, `escrow/quote`) — never recompute fees in the client.
 
-El SDK y la REST API **no recalculan** comisiones. Consumen quotes del Edge.
+## Platform fee
 
----
+ArcusX charges a **2% total platform fee**, deducted from the **worker** on escrow release. The **employer funds exactly the posted task / deal amount** — no platform surcharge when posting or funding.
 
-## On-chain (realidad técnica)
+| Role | What they see |
+|------|----------------|
+| Client / employer | Funds the nominal USDC (task price / deal amount) |
+| Worker | Receives ~98% of the funded amount |
+| Partner | Same quote fields via SDK |
 
-| Componente | Tasa | Sobre qué |
-|------------|------|-----------|
-| ArcusX platform | **3.7%** (`platform_fee` en BD = `0.037`) | Monto del hito escrow (worker net) |
-| Protocolo TW | **0.3%** fijo | Al liberar |
-| **Total efectivo** | **~4% del total fondeado** | Empleador fondea `clientTotal` |
+Example: task **100 USDC** → employer funds **100**, worker receives **~98**, platform **~2**.
 
----
+Exact rates can change in config; always call the API.
 
-## UX bilateral (lo que ve el integrador en copy)
-
-| Rol | Fórmula | Ejemplo nominal $20 |
-|-----|---------|---------------------|
-| Valor de referencia (BD) | `nominal` | $20.00 |
-| Empleador fondea | `nominal × 1.02` | **$20.40** (+2% visible) |
-| Trabajador recibe neto | `clientTotal × 0.96` | **~$19.58** |
-| Hito escrow on-chain | `workerNet` | ~$19.58 |
-
-**Pitch partner (una línea):** “+2% al empleador al fondear; el trabajador ve ganancia neta tras comisión.”
-
-No decir “4%” en copy comercial del empleador — es el total on-chain sobre el fondeo.
-
----
-
-## Qué expone el SDK
+## What the SDK exposes
 
 ### `public.getPlatformFee()`
 
-Devuelve `platform_fee` decimal desde Edge (ej. `0.037`). **No** incluye el 0.3% TW ni el +2% UX empleador.
+Returns the ArcusX share as a decimal from Edge (e.g. `0.017`). Combined with on-chain operation cost, the worker-facing total is **2%**.
 
-### `escrow.quote()` (Fase 2c)
+### `escrow.quote(…)`
 
-Respuesta objetivo:
+Typical shape:
 
-```typescript
+```ts
 interface EscrowQuote {
-  nominal: number;           // task.price / deal.amount_usdc
-  workerNet: number;         // hito escrow
-  clientTotal: number;       // lo que fondea el empleador
-  clientVisibleFee: number;  // nominal × 0.02
-  platformFeeRate: number;   // 0.037
-  fundAmount: number;        // total on-chain a depositar
+  nominal: number;          // what the employer funds
+  workerNet: number;        // worker receives (~98%)
+  clientTotal: number;      // same as nominal (no employer surcharge)
+  platformFeeRate: number;
+  fundAmount: number;       // on-chain deposit
   currency: 'USDC';
 }
 ```
 
-Cálculo en Edge (`quoteBilateralFromNominal` + `quoteEscrowCommission`) — el SDK solo tipa y reenvía.
+The SDK **forwards** the Edge quote; it does not recalculate.
 
-### Reglas SDK
+## Rules for integrators
 
-1. **Nunca** importar lógica de `bilateralFeeModel` en el paquete publicado (opcional: re-exportar tipos read-only en v0.2).
-2. Documentar en QUICKSTART que `price` / `amount_usdc` = valor nominal de referencia.
-3. Ejemplos partner muestran `clientTotal` al empleador y `workerNet` al trabajador cuando aplique.
+1. Do not hardcode fee percentages in production UIs.
+2. Show `clientTotal` to payers and `workerNet` to receivers.
+3. Use sandbox (`testnet` + `axk_test_…`) before mainnet.
 
----
+## Related
 
-## Migración desde docs “3%”
-
-Docs legacy (support FAQ, landing) pueden decir 3%. **SDK y REST v1** usan el modelo bilateral actualizado desde 2026-05-28.
-
-| Doc | Acción |
-|-----|--------|
-| `API_REFERENCE.md` | `FeeQuote` con campos bilateral |
-| `REST_V1.md` | §7 comisión actualizada |
-| `REVENUE_STACK.md` | Nota “hoy 3.7%+0.3%” |
-| `scripts/smoke-edge-api.mjs` | Esperar `0.037` |
-| InstaAwards W3 | “Platform fee” → bilateral copy |
-
----
-
-*Si cambia `platform_fee` en BD, el SDK no requiere release — solo consume el valor actual.*
+- [API Reference — escrow](/sdk/API_REFERENCE)
+- [REST v1](/sdk/REST_V1)
+- [Smart escrow](/getting-started/smart-escrow-contracts)
