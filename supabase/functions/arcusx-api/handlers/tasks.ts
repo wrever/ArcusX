@@ -1,5 +1,5 @@
 import { jsonError, jsonResponse, jsonSuccess } from '../../_shared/arcusx-cors.ts';
-import { normalizePlatformFeeRate } from '../../_shared/platform-fee.ts';
+import { normalizePlatformFeeRate, TRUSTLESS_WORK_PROTOCOL_FEE } from '../../_shared/platform-fee.ts';
 import { quoteBilateralFromNominal } from '../../_shared/bilateral-fee.ts';
 import { stellarNetworkApiLabel } from '../../_shared/stellar-network.ts';
 import { insertArcusxNotification } from '../../_shared/arcusx-notifications.ts';
@@ -924,11 +924,19 @@ export async function getPlatformFee(ctx: ApiContext): Promise<Response> {
     .select('config_value')
     .eq('config_key', 'platform_fee')
     .maybeSingle();
-  const platformFee = normalizePlatformFeeRate(data?.config_value);
+  /** Share ArcusX on-chain (TW platformFee). */
+  const arcusxShare = normalizePlatformFeeRate(data?.config_value);
+  /**
+   * Integrator-facing rate = ArcusX + TW protocol (covers on-chain op).
+   * Example: 1.7% + 0.3% = 2%. Do not hardcode in partner UIs — always call this.
+   */
+  const platformFee = arcusxShare + TRUSTLESS_WORK_PROTOCOL_FEE;
   return jsonResponse(req, {
     success: true,
     platform_fee: platformFee,
     platform_fee_percent: Math.round(platformFee * 10000) / 100,
+    arcusx_share: arcusxShare,
+    protocol_share: TRUSTLESS_WORK_PROTOCOL_FEE,
   });
 }
 

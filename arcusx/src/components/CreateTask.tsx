@@ -106,7 +106,7 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
   const [workerAmount, setWorkerAmount] = useState<string>('');
   const [commissionAmount, setCommissionAmount] = useState<string>('');
   const [totalAmount, setTotalAmount] = useState<string>('');
-  const [platformFee, setPlatformFee] = useState<number>(0.017);
+  const [platformFee, setPlatformFee] = useState<number>(0.02);
   const [totalClientFeePercent, setTotalClientFeePercent] = useState<string>(WORKER_FEE_PERCENT);
   
   // Estados para el popup

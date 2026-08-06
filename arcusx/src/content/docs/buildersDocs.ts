@@ -750,7 +750,7 @@ console.log(created.deal_token);`,
           headers: ['Método', 'Notas'],
           rows: [
             ['getMarketStats()', 'Stats del marketplace'],
-            ['getPlatformFee()', 'Fee decimal desde Edge (no hardcodear)'],
+            ['getPlatformFee()', 'Total 2% (0.02) — incluye cobertura TW; no hardcodear'],
             ['getTasks(filters?)', 'Listado público; p.ej. sort_by: date_desc'],
           ],
         },

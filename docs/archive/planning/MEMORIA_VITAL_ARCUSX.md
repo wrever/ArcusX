@@ -2,8 +2,8 @@
 ## Documento de Referencia Completa del Proyecto
 
 **Última Actualización:** 5 agosto 2026  
-**Versión del Proyecto:** 1.6  
-**Estado:** Testnet operativo · SOW 2 Instawards Week 2 cerrada (award escrow-ready) · docs SPA en `docs.arcusx.pro`
+**Versión del Proyecto:** 1.7  
+**Estado:** Testnet operativo · SOW 2 Instawards Week 2 · fee integradores 2% · docs SPA
 
 ---
 
@@ -1490,7 +1490,7 @@ En lugar de migrar 60-70 archivos PHP individuales, se consolidarán endpoints r
 ### Backend de verdad (2026)
 
 - Producción marketplace: **Supabase Edge** `arcusx-api` / `arcusx-partner-api` + Postgres — **no PHP** en el path de producción.
-- Fee plataforma: **2%** lo asume el **trabajador** al liberar; cliente fondea el nominal. Fuente: `getPlatformFee` / `escrow.quote` (no hardcodear en UI).
+- Fee plataforma: **2%** total al **trabajador** al liberar (cubre share ArcusX + protocolo TW); cliente fondea el nominal. `getPlatformFee` → `0.02`. Fuente: `getPlatformFee` / `escrow.quote` (no hardcodear en UI).
 - Escrow: Trustless Work single-release USDC; ArcusX no custodia keys (prepare → WalletAdapter → confirm `tx_hash`).
 
 ### SOW 2 Instawards (4 semanas — estipulado)
@@ -1546,9 +1546,9 @@ En lugar de migrar 60-70 archivos PHP individuales, se consolidarán endpoints r
 
 ---
 
-**Última actualización:** 5 agosto 2026 (SOW 2 W2 award escrow-ready, demo:week2, packets W2)  
+**Última actualización:** 5 agosto 2026 (fee getPlatformFee=2%, board filtros, tasks copy real, local-test partner)  
 **Mantenido por:** Equipo ArcusX  
-**Versión del documento:** 1.6
+**Versión del documento:** 1.7
 
 ---
 

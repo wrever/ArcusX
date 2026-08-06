@@ -1016,10 +1016,12 @@ const Dashboard = () => {
     totalEarnings: 0
   };
   
-  // Estadísticas de ejemplo
+  const boardListingCount = visiblePlatformTasks.length + visibleExternalJobs.length;
+
+  // Estadísticas
   const stats = [
     { id: 1, title: t('dashboard.stats.completed'), value: userData.tasksCompleted, icon: <FaTasks /> },
-    { id: 2, title: t('dashboard.stats.available'), value: filteredTasks.length, icon: <FaTasks /> },
+    { id: 2, title: t('dashboard.stats.available'), value: boardListingCount, icon: <FaTasks /> },
     { id: 3, title: t('dashboard.stats.earnings'), value: `$${totalEarnings.toFixed(2)}`, icon: <FaWallet /> },
     { id: 4, title: t('dashboard.stats.level'), value: userData.level, icon: <FaChartLine /> }
   ];
@@ -1377,55 +1379,34 @@ const Dashboard = () => {
 
                   <div className={`jobs-unified-body filters-wrapper jobs-filters-panel ${showFilters ? 'active' : ''}`}>
                     <div className="jobs-filter-section">
-                      <span className="jobs-filter-label">{t('dashboard.jobs.filter.origin')}</span>
-                      <div className="jobs-chip-row" role="group" aria-label={t('dashboard.jobs.filter.origin')}>
-                        {(
-                          [
-                            { id: 'all' as const, label: t('dashboard.jobs.origin.all') },
-                            { id: 'platform' as const, label: t('dashboard.jobs.origin.platform') },
-                            { id: 'external' as const, label: t('dashboard.jobs.origin.external') },
-                          ]
-                        ).map((chip) => (
-                          <button
-                            key={chip.id}
-                            type="button"
-                            className={`jobs-chip${boardOrigin === chip.id ? ' active' : ''}`}
-                            onClick={() => setBoardOrigin(chip.id)}
-                          >
-                            {chip.label}
-                          </button>
-                        ))}
-                        <button
-                          type="button"
-                          className={`jobs-chip jobs-chip--remote${remoteOnly ? ' active' : ''}`}
-                          onClick={() => setRemoteOnly((v) => !v)}
-                          aria-pressed={remoteOnly}
-                        >
-                          <FaGlobe aria-hidden />
-                          {t('dashboard.jobs.filter.remoteOnly')}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="jobs-filter-section">
-                      <span className="jobs-filter-label">{t('dashboard.jobs.filter.roles')}</span>
-                      <div className="jobs-chip-row" role="group" aria-label={t('dashboard.jobs.filter.roles')}>
-                        {EXTERNAL_ROLE_CHIPS.map((chip) => (
-                          <button
-                            key={chip.id}
-                            type="button"
-                            className={`jobs-chip${roleChip === chip.id ? ' active' : ''}`}
-                            onClick={() => setRoleChip(chip.id)}
-                          >
-                            {t(chip.labelKey)}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="jobs-filter-section">
                       <span className="jobs-filter-label">{t('dashboard.jobs.filter.details')}</span>
                       <div className="jobs-filter-selects">
+                        <select
+                          className="filter-select"
+                          value={boardOrigin}
+                          onChange={(e) =>
+                            setBoardOrigin(e.target.value as 'all' | 'platform' | 'external')
+                          }
+                          aria-label={t('dashboard.jobs.filter.origin')}
+                        >
+                          <option value="all">{t('dashboard.jobs.origin.all')}</option>
+                          <option value="platform">{t('dashboard.jobs.origin.platform')}</option>
+                          <option value="external">{t('dashboard.jobs.origin.external')}</option>
+                        </select>
+
+                        <select
+                          className="filter-select"
+                          value={roleChip}
+                          onChange={(e) => setRoleChip(e.target.value as ExternalRole | 'all')}
+                          aria-label={t('dashboard.jobs.filter.roles')}
+                        >
+                          {EXTERNAL_ROLE_CHIPS.map((chip) => (
+                            <option key={chip.id} value={chip.id}>
+                              {t(chip.labelKey)}
+                            </option>
+                          ))}
+                        </select>
+
                         <select
                           className="filter-select"
                           value={categoryFilter}
@@ -1481,6 +1462,16 @@ const Dashboard = () => {
                           <option value="price_desc">{t('dashboard.tasks.filter.sort.price.desc')}</option>
                           <option value="popularity">{t('dashboard.tasks.filter.sort.popular')}</option>
                         </select>
+
+                        <button
+                          type="button"
+                          className={`jobs-chip jobs-chip--remote jobs-chip--inline${remoteOnly ? ' active' : ''}`}
+                          onClick={() => setRemoteOnly((v) => !v)}
+                          aria-pressed={remoteOnly}
+                        >
+                          <FaGlobe aria-hidden />
+                          {t('dashboard.jobs.filter.remoteOnly')}
+                        </button>
                       </div>
                     </div>
 
@@ -1562,16 +1553,10 @@ const Dashboard = () => {
                   )}
 
                   <div className="dashboard-results-count">
-                    {visiblePlatformTasks.length + visibleExternalJobs.length}{' '}
-                    {visiblePlatformTasks.length + visibleExternalJobs.length === 1
+                    {boardListingCount}{' '}
+                    {boardListingCount === 1
                       ? t('dashboard.tasks.results.single')
                       : t('dashboard.tasks.results.multiple')}
-                    {visibleExternalJobs.length > 0 && (
-                      <span className="dashboard-results-external-hint">
-                        {' '}
-                        · {visibleExternalJobs.length} {t('dashboard.tasks.external.count')}
-                      </span>
-                    )}
                   </div>
                   </div>
                 </div>

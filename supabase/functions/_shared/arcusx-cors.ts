@@ -4,6 +4,10 @@ const DEFAULT_ORIGINS = [
   'https://empresas.arcusx.pro',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
+  'http://localhost:5199',
+  'http://127.0.0.1:5199',
+  'http://localhost:5200',
+  'http://127.0.0.1:5200',
 ];
 
 function buildAllowedOrigins(): string[] {

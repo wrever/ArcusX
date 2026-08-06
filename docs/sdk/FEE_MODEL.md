@@ -5,23 +5,35 @@
 
 ## Platform fee
 
-ArcusX charges a **2% total platform fee**, deducted from the **worker** on escrow release. The **employer funds exactly the posted task / deal amount** — no platform surcharge when posting or funding.
+ArcusX charges a **2% total** fee, deducted from the **worker** on escrow release. That **2% covers** the ArcusX platform share **and** the Trustless Work on-chain protocol fee. The **employer funds exactly the posted task / deal amount** — no platform surcharge when posting or funding.
 
 | Role | What they see |
 |------|----------------|
 | Client / employer | Funds the nominal USDC (task price / deal amount) |
 | Worker | Receives ~98% of the funded amount |
-| Partner | Same quote fields via SDK |
+| Partner / integrator | `getPlatformFee()` → **`0.02` (2%)** |
 
-Example: task **100 USDC** → employer funds **100**, worker receives **~98**, platform **~2**.
+Example: task **100 USDC** → employer funds **100**, worker receives **~98**, total fee **~2**.
 
 Exact rates can change in config; always call the API.
+
+Internal split (not required for partner UIs): ArcusX treasury share + TW protocol (~0.3%). Partners should only use the **total** from `getPlatformFee` / `escrow.quote`.
 
 ## What the SDK exposes
 
 ### `public.getPlatformFee()`
 
-Returns the ArcusX share as a decimal from Edge (e.g. `0.017`). Combined with on-chain operation cost, the worker-facing total is **2%**.
+Returns the **total** worker-facing fee as a decimal (e.g. `0.02` → 2%).
+
+```ts
+{
+  platform_fee: 0.02,
+  platform_fee_percent: 2,
+  // optional breakout (Edge):
+  // arcusx_share: 0.017,
+  // protocol_share: 0.003
+}
+```
 
 ### `escrow.quote(…)`
 
@@ -32,8 +44,8 @@ interface EscrowQuote {
   nominal: number;          // what the employer funds
   workerNet: number;        // worker receives (~98%)
   clientTotal: number;      // same as nominal (no employer surcharge)
-  platformFeeRate: number;
   fundAmount: number;       // on-chain deposit
+  totalCommission: number;  // ~2% of fund
   currency: 'USDC';
 }
 ```
@@ -44,10 +56,10 @@ The SDK **forwards** the Edge quote; it does not recalculate.
 
 1. Do not hardcode fee percentages in production UIs.
 2. Show `clientTotal` to payers and `workerNet` to receivers.
-3. Use sandbox (`testnet` + `axk_test_…`) before mainnet.
+3. Treat `platform_fee === 0.02` as the all-in rate (includes TW coverage).
+4. Use sandbox (`testnet` + `axk_test_…`) before mainnet.
 
 ## Related
 
-- [API Reference — escrow](/sdk/API_REFERENCE)
-- [REST v1](/sdk/REST_V1)
-- [Smart escrow](/getting-started/smart-escrow-contracts)
+- [API Reference — escrow](./API_REFERENCE.md)
+- [REST v1](./REST_V1.md)

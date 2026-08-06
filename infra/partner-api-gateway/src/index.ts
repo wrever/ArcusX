@@ -17,7 +17,7 @@ const CORS_HEADERS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
   'Access-Control-Allow-Headers':
-    'authorization, content-type, idempotency-key, x-arcusx-api-key, x-client-info',
+    'authorization, content-type, idempotency-key, x-arcusx-api-key, x-arcusx-network, x-client-info',
 };
 
 function isPartnerKey(value: string): boolean {

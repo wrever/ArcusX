@@ -1256,6 +1256,14 @@ input[type="search"]::placeholder {
   margin-left: 0.15rem;
 }
 
+.jobs-chip--inline {
+  margin-left: 0;
+  height: 100%;
+  min-height: 2.4rem;
+  justify-content: center;
+  width: 100%;
+}
+
 .jobs-unified-body .dashboard-filter-active {
   margin-top: 0.15rem;
   padding-top: 0.75rem;

@@ -5,8 +5,8 @@
  * La comisión se retiene en el escrow y puede ser retirada manualmente
  */
 
-// Valor por defecto ArcusX (1.7%); + 0.3% operación → 2% total al trabajador
-export const DEFAULT_COMMISSION_RATE = 0.017;
+// Valor por defecto visible a integradores / UX: 2% total (incluye cobertura TW)
+export const DEFAULT_COMMISSION_RATE = 0.02;
 
 /**
  * Calcula la comisión sobre un monto dado usando el fee del backend
