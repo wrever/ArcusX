@@ -1,9 +1,9 @@
 # 🧠 MEMORIA VITAL - ARCUSX
 ## Documento de Referencia Completa del Proyecto
 
-**Última Actualización:** Mayo 2026  
-**Versión del Proyecto:** 1.4  
-**Estado:** Testnet operativo (preparación de production readiness)
+**Última Actualización:** 5 agosto 2026  
+**Versión del Proyecto:** 1.6  
+**Estado:** Testnet operativo · SOW 2 Instawards Week 2 cerrada (award escrow-ready) · docs SPA en `docs.arcusx.pro`
 
 ---
 
@@ -19,6 +19,7 @@
 8. [Integraciones Externas](#integraciones-externas)
 9. [Configuración y Variables de Entorno](#configuración-y-variables-de-entorno)
 10. [Tipos TypeScript](#tipos-typescript)
+11. [Actualización Agosto 2026 — SOW 2 / Docs / DX](#actualización-agosto-2026--sow-2--docs--dx)
 
 ---
 
@@ -1470,15 +1471,84 @@ En lugar de migrar 60-70 archivos PHP individuales, se consolidarán endpoints r
 ## 📞 CONTACTO Y SOPORTE
 
 - **Website:** https://arcusx.pro
-- **Documentación:** https://docs.arcusx.pro
+- **Documentación (SPA React):** https://docs.arcusx.pro
+- **Partner API:** https://api.arcusx.pro
 - **Twitter:** @ArcusX_one
-- **GitHub:** (repositorio privado)
+- **GitHub:** https://github.com/wrever/ArcusX
 
 ---
 
-**Última actualización:** Mayo 2026 (OAuth-only usuarios, memoria vital alineada al repo)
+## Actualización Agosto 2026 — SOW 2 / Docs / DX
+
+**Archivo memoria del proyecto:** `docs/archive/planning/MEMORIA_VITAL_ARCUSX.md` (este documento).  
+**Changelog Notion Week 1:** `docs/sprints/instaawards-sdk/WEEK1_NOTION_CHANGELOG.md`  
+**Changelog Notion Week 2:** `docs/sprints/instaawards-sdk/WEEK2_NOTION_CHANGELOG.md`  
+**Packet Week 1:** `docs/sprints/instaawards-sdk/INSTAAWARDS_SDK_WEEK1.md`  
+**Packet Week 2:** `docs/sprints/instaawards-sdk/INSTAAWARDS_SDK_WEEK2.md`  
+**SOW 4 semanas:** `docs/sprints/SOW2_DELIVERY_PLAN.md` (§5.1 W1–W4)
+
+### Backend de verdad (2026)
+
+- Producción marketplace: **Supabase Edge** `arcusx-api` / `arcusx-partner-api` + Postgres — **no PHP** en el path de producción.
+- Fee plataforma: **2%** lo asume el **trabajador** al liberar; cliente fondea el nominal. Fuente: `getPlatformFee` / `escrow.quote` (no hardcodear en UI).
+- Escrow: Trustless Work single-release USDC; ArcusX no custodia keys (prepare → WalletAdapter → confirm `tx_hash`).
+
+### SOW 2 Instawards (4 semanas — estipulado)
+
+| Semana | Expected output (resumen) |
+|--------|---------------------------|
+| **W1** | Contrato público SDK, auth sandbox valid/invalid, docs `docs/sdk/*`, smoke+demo |
+| **W2** | Módulos flujo award-style solo con SDK; examples Node |
+| **W3** | Escrow Testnet lifecycle + playground + webhooks HMAC + smoke ampliado |
+| **W4** | Release package, changelog, known limitations, demo E2E, checklist mainnet (solo doc) |
+
+**W1 status:** ✅ Complete (smoke PASS 2026-07-30). Package `@arcusx/sdk` **v0.4.5**. Gateway default `https://api.arcusx.pro`.
+
+**W2 status:** ✅ Code-complete (2026-08-05). Award-style reference SDK-only hasta escrow-ready: `examples/sdk-node-award`. Examples Node endurecidos (marketplace / private / deal). Demo: `npm run demo:week2` (public PASS). **E2E award live** requiere `examples/sdk-node-award/.env` (CLIENT_JWT + WORKER_JWT + wallet) — pendiente de captura stdout revisor. Fund/release on-chain = **W3**.
+
+**Out of SOW:** mainnet launch · agent-to-agent · Python SDK · Soroban nativo como reemplazo TW · multi-milestone · large marketplace UI redesign.
+
+### `@arcusx/sdk` (integradores)
+
+- Path: `packages/arcusx-sdk/`
+- Namespaces SOW: `public`, `marketplace`, `private`, `deals`, `escrow`, `settlement`, `evidence`, `ratings`, `webhooks`
+- `agent.*` existe en el paquete pero **fuera de SOW 2**
+- Errores: `ArcusXApiError` · códigos `missing_api_key` / `invalid_api_key` / `rate_limit_exceeded`
+- Verify: `cd packages/arcusx-sdk && npm run smoke:strict` · `npm run demo:week1` · `npm run demo:week2`
+- Docs contrato: `docs/sdk/QUICKSTART.md`, `API_REFERENCE.md`, `PARTNER_AUTH.md`, `FEE_MODEL.md`
+- Examples: `examples/sdk-node-award` (W2), `examples/sdk-node-{marketplace,private,deal}`, `examples/sdk-playground/`
+
+### Docs públicas `docs.arcusx.pro` (DX)
+
+- **Misma** `arcusx/dist` que la app; hostname `docs.*` → `DocsApp` (`arcusx/src/config/docsSite.ts`, `pages/docs/*`).
+- Contenido builders: Overview, Quickstart, Auth, Modules, Escrow, Errors + FAQ; home mapa tipo tablas.
+- UX: ⌘K search, TOC, code copy, brief/prompt para pegar en IA.
+- **Pollar:** solo inspiración de layout ([docs.pollar.xyz](https://docs.pollar.xyz/docs)) — **sin** integración de producto.
+- Clasificación vs SOW W1: **bonus DX** (W1 gate oficial = `docs/sdk/*.md` + package + smoke). Documentación sí es Deliverable 2 a lo largo del sprint.
+- Deploy: subir `dist/` + **`.htaccess` SPA** al document root de `docs.*` (LiteSpeed 404 en `/developers` si falta rewrite). Guía: `sites/docs/CPANEL_DEPLOY.md`. `.htaccess` fuente: `arcusx/public/.htaccess`.
+
+### Links app ↔ docs
+
+- Navbar / EmpresasNavbar / Footer → `DOCS_SITE_URL` (`docsSite.ts`).
+- Footer rutas actuales: `/developers`, `/developers/escrow`, `/developers/quickstart`, `/faq`, legal/*.
+- Settings Developer promo + `DashboardDeveloperPage` enlazan a docs SDK.
+
+### Producto (extras, no SOW W1)
+
+- Board de tareas: filtros **unificados** en una card; “Remote only” como chip (no toggle suelto) — `dashboard.tsx` + `dashboard.css`.
+- Jobs externas: no mostrar salarios inventados (`salary_text` oculto / null).
+
+### Memoria / cómo actualizar
+
+1. Editar **este archivo** (`MEMORIA_VITAL_ARCUSX.md`) al cerrar hitos.
+2. Para entregas Instawards, también packets en `docs/sprints/instaawards-sdk/` y changelogs Notion (`WEEK1_NOTION_CHANGELOG.md`, `WEEK2_NOTION_CHANGELOG.md`).
+3. Secciones antiguas de esta memoria (PHP monolito, fee 1%, etc.) pueden estar desactualizadas — **prevalece esta sección Agosto 2026 + CLAUDE.md + docs/sdk**.
+
+---
+
+**Última actualización:** 5 agosto 2026 (SOW 2 W2 award escrow-ready, demo:week2, packets W2)  
 **Mantenido por:** Equipo ArcusX  
-**Versión del documento:** 1.4
+**Versión del documento:** 1.6
 
 ---
 

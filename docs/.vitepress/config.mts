@@ -3,19 +3,18 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const docsRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+/** Internal VitePress preview only — public docs.arcusx.pro is the React app on docs.* */
 const distOut = path.resolve(docsRoot, '../sites/docs/dist');
 const publicDir = path.resolve(docsRoot, '../sites/docs/public');
 
 /**
- * Docs site for https://docs.arcusx.pro
- * Edit markdown under `/docs`; build from `docs/` (`npm run build`).
- *
- * Public copy rule: never name third-party escrow vendors — say "ArcusX Escrow" / USDC on Stellar.
+ * Optional internal VitePress build (team). Production docs.arcusx.pro is React
+ * (`arcusx/src/pages/docs`) switched by hostname — do not deploy this output publicly.
  */
 export default defineConfig({
-  title: 'ArcusX Docs',
+  title: 'ArcusX Docs (internal preview)',
   description:
-    'ArcusX documentation — freelancing, ArcusX Escrow (USDC on Stellar), and @arcusx/sdk.',
+    'Internal preview only. Public site is the React docs frontend on docs.arcusx.pro.',
   lang: 'en-US',
   cleanUrls: true,
   outDir: distOut,

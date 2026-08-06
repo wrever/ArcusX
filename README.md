@@ -392,7 +392,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🔗 Links
 
 - **Website**: https://arcusx.pro/
-- **Documentation**: https://docs.arcusx.pro/ (VitePress from `/docs` — `cd docs && npm run build` → deploy `sites/docs/dist/`)
+- **Documentation**: https://docs.arcusx.pro/ (React docs frontend on `docs.*` hostname — same `arcusx/dist` as the app; `cd arcusx && npm run build`)
 - **Stellar Documentation**: https://developers.stellar.org/
 - **Freighter Wallet**: https://www.freighter.app/
 - **Trustless Work**: https://trustlesswork.com/

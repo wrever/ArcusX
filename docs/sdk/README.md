@@ -2,7 +2,7 @@
 
 **Producto:** Work Execution Layer on Stellar — misma API que usa `arcusx.pro`, empaquetada para integradores.
 
-**SOW 2 (Instawards):** [`SOW2_DELIVERY_PLAN.md`](../sprints/SOW2_DELIVERY_PLAN.md) · evidencia Semana 1: [`INSTAAWARDS_SDK_WEEK1.md`](../sprints/instaawards-sdk/INSTAAWARDS_SDK_WEEK1.md)
+**SOW 2 (Instawards):** [`SOW2_DELIVERY_PLAN.md`](../sprints/SOW2_DELIVERY_PLAN.md) · evidencia: [`WEEK1`](../sprints/instaawards-sdk/INSTAAWARDS_SDK_WEEK1.md) · [`WEEK2`](../sprints/instaawards-sdk/INSTAAWARDS_SDK_WEEK2.md)
 
 | Documento | Para qué |
 |-----------|----------|
@@ -18,7 +18,7 @@
 
 ---
 
-## Estado (SOW 2 — Semana 1)
+## Estado (SOW 2 — Semanas 1–2)
 
 | Capa | Estado |
 |------|--------|
@@ -28,7 +28,8 @@
 | `@arcusx/sdk` — contrato tipado + módulos SOW 2 | ✅ |
 | Docs (README / QUICKSTART / API_REFERENCE / package README) | ✅ Semana 1 |
 | Smoke público + invalid API key | ✅ `scripts/smoke-sdk.mjs` |
-| Award-style reference app (Semana 2) | ☐ |
-| Escrow Testnet E2E + release package (Semanas 3–4) | ☐ |
+| Award-style reference app (Semana 2) | ✅ código + `demo:week2` baseline · ⏳ E2E dual JWT pendiente |
+| Node examples marketplace / private / deal | ✅ Semana 2 (marketplace list verificado live) |
+| Escrow Testnet E2E fund/release + release package (Semanas 3–4) | ☐ |
 
-**Siguiente paso:** Semana 2 — award-style reference flow + ejemplos Node con SDK.
+**Siguiente paso:** Semana 3 — prepare/fund/release on-chain + Freighter E2E sobre el flujo award.

@@ -1,27 +1,37 @@
-# ArcusX docs site (`docs.arcusx.pro`)
+# ArcusX docs (`docs.arcusx.pro`)
 
-VitePress site. **Content + config:** `/docs` (+ `/docs/.vitepress`).  
-**Build output:** `sites/docs/dist/` · **Static assets / .htaccess:** `sites/docs/public/`
+Frontend React público (mismo `arcusx/dist` que la app). **No** se publica el markdown interno de `/docs` (sprints, planes, Instawards, etc.).
 
-## Develop
+## Cómo funciona
 
-```bash
-cd docs
-npm install
-npm run dev
+Igual que `empresas.*`: un solo upload. El hostname decide el árbol React.
+
 ```
+arcusx/dist/
+  index.html
+  assets/
+  .htaccess
+```
+
+| Host | UI |
+|------|-----|
+| arcusx.pro | Marketplace |
+| empresas.* | Landing B2B |
+| docs.* | Documentación de producto |
 
 ## Build & deploy
 
 ```bash
-cd docs
-npm run build
-# → sites/docs/dist/
-# Upload dist/ contents to docs.arcusx.pro web root
+cd arcusx && npm run build
+# Subí el contenido de dist/ a public_html
+# Document root de docs.arcusx.pro = el mismo public_html
 ```
 
-Then point/keep DNS `docs.arcusx.pro` on that host and retire GitBook custom domain when ready.
+## Contenido público
 
-Internal markdown (`archive/`, `sprints/`, plans, etc.) is excluded in `docs/.vitepress/config.mts`.
+Editá copy en [`arcusx/src/content/docs/publicDocs.ts`](../../arcusx/src/content/docs/publicDocs.ts)  
+UI: [`arcusx/src/pages/docs/`](../../arcusx/src/pages/docs/)
 
-**Public copy rule:** never name third-party escrow vendors. Use **ArcusX Escrow** / USDC on Stellar only.
+El directorio monorepo `/docs` (VitePress, sprints, …) es **solo interno** para el equipo.
+
+Ver [CPANEL_DEPLOY.md](./CPANEL_DEPLOY.md).

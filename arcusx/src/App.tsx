@@ -7,6 +7,7 @@ import { PollarAppProvider } from './components/PollarAppProvider';
 import Navbar from './components/Navbar';
 import EmpresasNavbar from './components/EmpresasNavbar';
 import { isEnterpriseLandingHost } from './config/enterpriseSite';
+import { isDocsLandingHost } from './config/docsSite';
 import LanguageFab from './components/LanguageFab';
 import ThemeToggle from './components/ThemeToggle';
 import Hero from './components/Hero';
@@ -36,6 +37,7 @@ const EditProfile = lazy(() => import('./components/EditProfile'));
 const SwapPage = lazy(() => import('./pages/SwapPage'));
 const TutorialsPage = lazy(() => import('./pages/TutorialsPage'));
 const EmpresasPage = lazy(() => import('./pages/EmpresasPage'));
+const DocsApp = lazy(() => import('./pages/docs/DocsApp'));
 const DealWizardPage = lazy(() => import('./pages/DealWizardPage'));
 const DealPublicPage = lazy(() => import('./pages/DealPublicPage'));
 const DealJoinRedirect = lazy(() => import('./pages/DealJoinRedirect'));
@@ -187,9 +189,10 @@ function TrustlessWorkProvider({ children }: { children: ReactNode }) {
 
 function App() {
   const [isLoading, setIsLoading] = useState(() => !isReferralEntryPath());
+  const docsHost = typeof window !== 'undefined' && isDocsLandingHost();
 
   useEffect(() => {
-    if (isReferralEntryPath()) {
+    if (docsHost || isReferralEntryPath()) {
       setIsLoading(false);
       return;
     }
@@ -198,7 +201,17 @@ function App() {
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [docsHost]);
+
+  if (docsHost) {
+    return (
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <Suspense fallback={<Preloader />}>
+          <DocsApp />
+        </Suspense>
+      </Router>
+    );
+  }
 
   return (
     <TrustlessWorkProvider>

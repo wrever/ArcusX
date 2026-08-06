@@ -106,6 +106,135 @@ function parseTitleCompany(titleRaw, companyRaw) {
   return { title, company };
 }
 
+const AGGREGATOR_HOSTS = [
+  'web3.career',
+  'remotive.com',
+  'remoteok.com',
+  'remoteok.io',
+  'jobicy.com',
+  'himalayas.app',
+  'cryptojobslist.com',
+  'wwshemi.com',
+  'bondex.app',
+  'network.bondex.app',
+];
+
+const ATS_HINT =
+  /recruitee\.com|greenhouse\.io|boards\.greenhouse|lever\.co|jobs\.lever|ashbyhq\.com|jobs\.ashby|workable\.com|apply\.workable|smartrecruiters\.com|jobvite\.com|bamboohr\.com|myworkdayjobs\.com|wellfound\.com|linkedin\.com\/jobs|indeed\.com\/(viewjob|jobs)|applytojob\.com|personio\.(de|com)|teamtailor\.com|vonq\.io|testedrecruits\.com|workada\.com|jobs\.[a-z0-9-]+\.[a-z]{2,}|careers\.[a-z0-9-]+\.[a-z]{2,}|apply\.[a-z0-9-]+\.[a-z]{2,}|\/careers\/[a-z0-9][\w%.-]{2,}|\/jobs\/[a-z0-9][\w%.-]{2,}|\/job\/[a-z0-9][\w%.-]{2,}/i;
+
+const BAD_PATH =
+  /\/(privacy|cookie|blog|news|about|login|signup|terms|tos|help|support|status|diversity)(\/|$|\?)|recruitment-fraud|best-practices|avoid-fraud/i;
+
+function hostOf(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '').toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+function isAggregatorUrl(url) {
+  const host = hostOf(url);
+  return AGGREGATOR_HOSTS.some((d) => host === d || host.endsWith(`.${d}`));
+}
+
+function cleanUrl(u) {
+  return String(u || '')
+    .replace(/&amp;/g, '&')
+    .replace(/[),.;]+$/g, '')
+    .trim();
+}
+
+function isPlausibleEmployerApply(url) {
+  if (!url || !/^https?:\/\//i.test(url) || isAggregatorUrl(url)) return false;
+  if (/twitter\.com|x\.com|facebook\.com|instagram\.com|youtube\.com|tiktok\.com/i.test(url)) {
+    return false;
+  }
+  if (BAD_PATH.test(url)) return false;
+  return ATS_HINT.test(url);
+}
+
+/** Prefer employer/ATS URLs over aggregator listing pages. */
+function extractEmployerUrlFromHtml(html) {
+  if (!html) return null;
+  const urls = [...String(html).matchAll(/https?:\/\/[^\s"'<>]+/gi)].map((m) =>
+    cleanUrl(m[0]),
+  );
+  const unique = [...new Set(urls)];
+  const ats = unique.find((u) => isPlausibleEmployerApply(u));
+  if (ats) return ats;
+  // Apply-adjacent anchors (Remotive etc.)
+  const applyHref = [
+    ...String(html).matchAll(
+      /<a[^>]+href=["']([^"']+)["'][^>]*>[\s\S]{0,120}?(?:Apply|Postular|Apply now)/gi,
+    ),
+  ]
+    .map((m) => cleanUrl(m[1]))
+    .find((u) => isPlausibleEmployerApply(u) || (/^https?:\/\//i.test(u) && !isAggregatorUrl(u) && !BAD_PATH.test(u) && !/twitter\.com|facebook|instagram/i.test(u)));
+  return applyHref || null;
+}
+
+async function fetchRemotiveEmployerUrl(listingUrl) {
+  try {
+    const res = await fetch(listingUrl, {
+      headers: {
+        Accept: 'text/html',
+        'User-Agent':
+          'Mozilla/5.0 (compatible; ArcusXJobBot/1.0; +https://arcusx.pro)',
+      },
+    });
+    if (!res.ok) return null;
+    return extractEmployerUrlFromHtml(await res.text());
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Prefer direct employer apply URL when available.
+ * web3.career API ToS require apply_url — we only swap when description embeds a clear ATS/careers URL.
+ */
+async function withDirectApplyUrl(job) {
+  const original = job.apply_url;
+  let direct =
+    extractEmployerUrlFromHtml(job._descriptionHtml || '') ||
+    extractEmployerUrlFromHtml(job.excerpt || '');
+
+  if (!direct && job.source === 'remotive' && original) {
+    direct = await fetchRemotiveEmployerUrl(original);
+  }
+
+  if (direct && !isAggregatorUrl(direct) && direct !== original) {
+    return {
+      ...job,
+      apply_url: direct,
+      raw: {
+        ...(job.raw || {}),
+        aggregator_apply_url: original,
+        employer_apply_resolved: true,
+      },
+      _descriptionHtml: undefined,
+    };
+  }
+  const { _descriptionHtml, ...rest } = job;
+  return rest;
+}
+
+async function mapPool(items, concurrency, fn) {
+  const out = new Array(items.length);
+  let i = 0;
+  async function worker() {
+    while (i < items.length) {
+      const idx = i++;
+      out[idx] = await fn(items[idx], idx);
+    }
+  }
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, () => worker()),
+  );
+  return out;
+}
+
 async function fetchJson(endpoint) {
   const res = await fetch(endpoint, {
     headers: { Accept: 'application/json', 'User-Agent': USER_AGENT },
@@ -142,6 +271,7 @@ async function fetchJobicy(tag) {
         excerpt: j.jobExcerpt ? truncate(stripHtml(String(j.jobExcerpt))) : null,
         posted_at: j.pubDate ? String(j.pubDate) : null,
         raw: { id: j.id, tag },
+        _descriptionHtml: j.jobDescription ? String(j.jobDescription) : j.jobExcerpt ? String(j.jobExcerpt) : null,
       };
     })
     .filter(Boolean);
@@ -178,6 +308,7 @@ async function fetchRemoteOk(tag) {
       excerpt: j.description ? truncate(stripHtml(String(j.description))) : null,
       posted_at: j.date ? String(j.date) : null,
       raw: { id: j.id, slug: j.slug, tag },
+      _descriptionHtml: j.description ? String(j.description) : null,
     });
   }
   return out;
@@ -247,6 +378,7 @@ async function fetchWeb3Career(params = {}) {
         excerpt: j.description ? truncate(stripHtml(String(j.description))) : null,
         posted_at,
         raw: { id: j.id, country: j.country, is_remote: j.is_remote },
+        _descriptionHtml: j.description ? String(j.description) : null,
       };
     })
     .filter(Boolean);
@@ -280,6 +412,7 @@ async function fetchRemotive(search) {
         excerpt: j.description ? truncate(stripHtml(String(j.description))) : null,
         posted_at: j.publication_date ? String(j.publication_date) : null,
         raw: { id: j.id, search },
+        _descriptionHtml: j.description ? String(j.description) : null,
       };
     })
     .filter(Boolean);
@@ -318,6 +451,11 @@ async function fetchHimalayas(q) {
             : null,
         posted_at: j.pubDate ? String(j.pubDate) : null,
         raw: { guid: j.guid, q },
+        _descriptionHtml: j.description
+          ? String(j.description)
+          : j.excerpt
+            ? String(j.excerpt)
+            : null,
       };
     })
     .filter(Boolean);
@@ -362,8 +500,13 @@ async function main() {
     return isWeb3Relevant(j);
   });
 
+  console.log(`Resolving direct employer apply URLs for ${unique.length} jobs…`);
+  const resolved = await mapPool(unique, 8, (j) => withDirectApplyUrl(j));
+  const directCount = resolved.filter((j) => j.raw?.employer_apply_resolved).length;
+  console.log(`Direct employer URLs: ${directCount}/${resolved.length}`);
+
   const now = new Date().toISOString();
-  const rows = unique.map((j) => ({
+  const rows = resolved.map((j) => ({
     source: j.source,
     source_job_id: j.source_job_id,
     title: j.title,
@@ -421,11 +564,12 @@ async function main() {
   console.log('OK', {
     upserted: rows.length,
     active: count,
-    jobicy: unique.filter((j) => j.source === 'jobicy').length,
-    remoteok: unique.filter((j) => j.source === 'remoteok').length,
-    remotive: unique.filter((j) => j.source === 'remotive').length,
-    himalayas: unique.filter((j) => j.source === 'himalayas').length,
-    web3career: unique.filter((j) => j.source === 'web3career').length,
+    directEmployer: directCount,
+    jobicy: resolved.filter((j) => j.source === 'jobicy').length,
+    remoteok: resolved.filter((j) => j.source === 'remoteok').length,
+    remotive: resolved.filter((j) => j.source === 'remotive').length,
+    himalayas: resolved.filter((j) => j.source === 'himalayas').length,
+    web3career: resolved.filter((j) => j.source === 'web3career').length,
   });
 }
 

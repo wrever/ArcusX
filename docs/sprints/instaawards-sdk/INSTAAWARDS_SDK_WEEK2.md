@@ -1,134 +1,121 @@
-# InstaAwards — SDK Week 2 deliverable
+# Instawards — SDK Week 2 deliverable (SOW 2)
 
-**Track:** ArcusX Work Execution Layer — public TypeScript SDK  
-**Week:** 2 of 3  
-**Status:** Ready to start  
-**Prerequisite:** [Week 1](./INSTAAWARDS_SDK_WEEK1.md) spec merged  
-**Date:** _fill on submit_
+**Track:** `@arcusx/sdk` — Production-Ready TypeScript SDK  
+**Week:** 2 of 4 (SOW 2 accepted)  
+**Status:** Complete (demo-ready — escrow-ready, not on-chain fund)  
+**Date:** 2026-08-05  
+**SOW source:** [`docs/sprints/SOW2_DELIVERY_PLAN.md`](../SOW2_DELIVERY_PLAN.md)
 
 ---
 
 ## Goal this week
 
-Ship a **working MVP** of `@arcusx/sdk`: callable from Node against testnet Edge API + partner key validation.
+Demonstrate the **award-style validation scenario** using **only** `ArcusXClient` through **escrow-ready** state (quote + create/status). Harden Node examples with documented env + partner gateway auth. Show `Idempotency-Key` / `external_id` attribution in the award demo.
 
-**Checklist:** [`docs/sdk/CHECKLIST.md`](../../sdk/CHECKLIST.md) — Fase 1 + Fase 2a + Fase 2b.
-
----
-
-## Deliverables
-
-| # | Item | Location | Done |
-|---|------|----------|------|
-| 1 | SQL partners aplicada | `supabase/migrations/20260528140000_arcusx_partners.sql` | ☐ |
-| 2 | Partner API keys Edge | `_shared/partner-api-keys.ts`, `partner-context.ts` | ☐ |
-| 3 | `partner_id` en create handlers | `handlers/tasks.ts`, `handlers/deals.ts` | ☐ |
-| 4 | REST v1 router + envelope | `handlers/rest-v1.ts`, `json-envelope.ts` | ☐ |
-| 5 | HTTP client + errors + auth | `packages/arcusx-sdk/src/http.ts`, `auth.ts`, `errors.ts` | ☐ |
-| 6 | Modules public + marketplace | `modules/public.ts`, `marketplace.ts` | ☐ |
-| 7 | Modules private + deals + escrow + settlement | `modules/*.ts` | ☐ |
-| 8 | Quickstart marketplace | `examples/sdk-node-marketplace/` | ☐ |
+Same Edge API that powers `arcusx.pro`. **Fund / release on-chain + Freighter E2E = Week 3.**
 
 ---
 
-## SDK methods (27 total — naming congelado)
+## Planned work → done
 
-Fuente: [`API_REFERENCE.md`](../../sdk/API_REFERENCE.md). Matriz con ☐ en CHECKLIST.md.
-
-### `client.public` (3)
-
-- `getPlatformFee()` → `get_platform_fee`
-- `getMarketStats()` → `get_landing_market_stats`
-- `getTasks(query?)` → `get_tasks`
-
-### `client.marketplace` (7)
-
-- `create(input)` → `create_task`
-- `get(taskId)` → `get_task_details`
-- `listMine()` → `get_user_tasks`
-- `apply(taskId, body)` → `apply_task`
-- `getProposals(taskId)` → `get_task_proposals`
-- `selectProposal(taskId, proposalId)` → `select_proposal`
-- `cancel(taskId, opts?)` → `cancel_task`
-
-### `client.private` (4)
-
-- `list()` → `get_private_offers`
-- `finalize(taskId, body)` → `finalize_private_offer`
-- `accept(taskId)` → `accept_private_offer`
-- `reject(taskId, reason?)` → `reject_private_offer`
-
-### `client.deals` (6)
-
-- `create(input)` → `create_deal`
-- `getByToken(token)` → `get_deal_by_token`
-- `get(id)` → `get_deal_details`
-- `list()` → `get_my_deals`
-- `accept(id)` → `accept_deal`
-- `complete(id)` → `complete_deal`
-
-### `client.escrow` (5)
-
-- `createForTask(taskId, proposalId)` → `create_escrow`
-- `status(taskId)` → `get_escrow_status`
-- `markWorkStarted(taskId)` → `mark_work_started`
-- `prepareDealEscrow(dealId, body)` → `prepare_deal_escrow`
-- `finalizeDealEscrow(dealId, body)` → `finalize_deal_escrow`
-
-### `client.settlement` (2)
-
-- `completeTask(taskId, { txHash })` → `complete_task`
-- `markDealReleased(dealId, { txHash })` → `mark_deal_released`
-
-**Nota:** `complete_task` solo en `settlement` — no duplicar en marketplace.
+| Planned (SOW §Week 2) | Evidence |
+|-----------------------|----------|
+| Refine marketplace / private / deals / evidence / escrow.quote usage | Modules already in `packages/arcusx-sdk/src/modules/`; exercised by examples |
+| Award-style reference app (SDK-only) | [`examples/sdk-node-award/`](../../../examples/sdk-node-award/) |
+| Node examples + `.env` docs | `sdk-node-marketplace`, `sdk-node-private`, `sdk-node-deal` |
+| Idempotency + partner attribution in demo | `external_id` + `idempotencyKey` on `marketplace.create`; second create same key |
+| Week 2 smoke / reviewer walkthrough | `scripts/demo-week2-award.mjs` · `npm run demo:week2` |
 
 ---
 
-## Example usage (target)
+## Expected output (SOW) — checklist
 
-```typescript
-import { ArcusXClient } from '@arcusx/sdk';
+- [x] Award-style flow **implemented** SDK-only to escrow-ready: create → apply → select → evidence → quote → createForTask → status (`examples/sdk-node-award`)
+- [x] No raw `fetch` / no `@trustless-work/*` in the award example (static grep 2026-08-05)
+- [x] Node examples start with documented `.env.example` + README; partner gateway default; `ArcusXApiError` + `requestId`
+- [x] Idempotency / `external_id` coded in award run (second create same key)
+- [x] Packet + demo script for reviewer (`INSTAAWARDS_SDK_WEEK2.md`, `demo:week2`)
+- [ ] On-chain fund / release / Freighter E2E — **Week 3** (out of scope)
 
-const ax = new ArcusXClient({
-  baseUrl: process.env.ARCUSX_API_URL!,
-  apiKey: process.env.ARCUSX_API_KEY!,
-  supabaseAnonKey: process.env.SUPABASE_ANON_KEY!,
-  bearerToken: process.env.ARCUSX_USER_JWT,
-});
+### Live verification matrix (2026-08-05)
 
-const { task_id } = await ax.marketplace.create({
-  user_id: 123,
-  title: 'Landing page fix',
-  description: '…',
-  price: 50,
-  currency: 'USDC',
-  category: 'Desarrollo',
-  difficulty: 'Intermedio',
-});
+| Check | Result |
+|-------|--------|
+| `npm run build` | ✅ PASS |
+| `npm run smoke:strict` (W1) | ✅ PASS — 11 checks |
+| `npm run demo:week1` | ✅ PASS — valid / missing / invalid key |
+| `npm run demo:week2` public baseline | ✅ PASS — fee + market stats via gateway |
+| `examples/sdk-node-marketplace` (partner list) | ✅ PASS — fee/stats/tasks; create skipped without JWT |
+| Award E2E (`CLIENT_JWT` + `WORKER_JWT` + wallet) | ⏳ **PENDING** — `examples/sdk-node-award/.env` absent locally |
+| `sdk-node-private` / `sdk-node-deal` full run | ⏳ Needs `ARCUSX_USER_JWT` (+ wallet for deal) |
+
+**Honest status:** Week 2 deliverables are **code-complete and demo-wired**. Full SOW “award runs through escrow-ready on Testnet” is **proven only after** filling dual JWTs and capturing exit `0` stdout for the reviewer.
+
+---
+
+## Award-style architecture
+
+```
+Integrator (Node example)
+    ↓ @arcusx/sdk only
+marketplace.create (+ external_id, Idempotency-Key)
+    → marketplace.apply (worker JWT)
+    → marketplace.selectProposal (client JWT)
+    → evidence.uploadMilestone (accepted worker)
+    → escrow.quote(nominalUsdc)
+    → escrow.createForTask + escrow.status
+    ↓
+https://api.arcusx.pro → arcusx-api → Postgres (+ escrow row ready)
+    ── Week 3 ──→ Stellar Testnet fund / release (wallet signs)
 ```
 
-On-chain fund/release: integrator implements `WalletAdapter` (Week 3); SDK expects `tx_hash` on settlement.
+**Platform order note:** Milestone evidence is only allowed for the **accepted** worker, so selection precedes evidence (award “submission evidence after winner” maps to post-select upload).
 
 ---
 
-## Acceptance criteria (Week 2)
+## How to verify (demo)
 
-- [ ] `npm run build` in `packages/arcusx-sdk` passes
-- [ ] `node examples/sdk-node-marketplace` creates a task on testnet
-- [ ] `scripts/smoke-sdk.mjs` exits 0 on public actions
-- [ ] Partner key curl creates task with `partner_id` in BD
-- [ ] No `@trustless-work/*` in examples
+```bash
+cd packages/arcusx-sdk
+npm run build
 
----
+# Public baseline; runs award if examples/sdk-node-award/.env is complete
+npm run demo:week2
 
-## Next week preview
+# Award only
+cd ../../examples/sdk-node-award
+cp .env.example .env   # CLIENT_JWT, WORKER_JWT, wallets, user ids
+npm install && npm start
+```
 
-Week 3: QUICKSTART final, Freighter adapter, smoke completo, private + deal quickstarts, CHANGELOG.
+Other examples:
+
+```bash
+cd examples/sdk-node-marketplace && npm start          # list + optional RUN_FULL=1
+cd examples/sdk-node-private && npm start              # list (+ accept/reject docs)
+cd examples/sdk-node-deal && npm start                 # create → getByToken
+```
+
+### Evidence for reviewer
+
+Capture stdout from `npm run demo:week2` or `examples/sdk-node-award` (no secrets). Expect step logs + final JSON (`task_id`, `proposal_id`, `quote`, `escrow_status`, idempotency note) and exit `0`.
 
 ---
 
 ## Links
 
-- Week 1: [`INSTAAWARDS_SDK_WEEK1.md`](./INSTAAWARDS_SDK_WEEK1.md)
-- Checklist: [`docs/sdk/CHECKLIST.md`](../../sdk/CHECKLIST.md)
-- API reference: [`docs/sdk/API_REFERENCE.md`](../../sdk/API_REFERENCE.md)
+| Resource | Path |
+|----------|------|
+| Award example | [`examples/sdk-node-award/`](../../../examples/sdk-node-award/) |
+| API reference | [`docs/sdk/API_REFERENCE.md`](../../sdk/API_REFERENCE.md) |
+| Fee model | [`docs/sdk/FEE_MODEL.md`](../../sdk/FEE_MODEL.md) |
+| Week 1 packet | [`INSTAAWARDS_SDK_WEEK1.md`](./INSTAAWARDS_SDK_WEEK1.md) |
+| Delivery plan | [`SOW2_DELIVERY_PLAN.md`](../SOW2_DELIVERY_PLAN.md) |
+
+---
+
+## Out of scope (Week 3+)
+
+- `escrow.prepare` / fund / release on-chain + Freighter
+- Playground award wizard (optional polish in W3)
+- `agent.*`, mainnet, ArcusX marketplace UI changes

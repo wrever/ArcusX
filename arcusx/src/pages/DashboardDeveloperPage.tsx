@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   FaArrowLeft,
   FaCode,
+  FaExternalLinkAlt,
   FaKey,
   FaLock,
   FaShieldAlt,
@@ -10,9 +11,17 @@ import {
 import ApiKeysPanel from '../components/ApiKeysPanel';
 import DeveloperApiBetaBanner from '../components/DeveloperApiBetaBanner';
 import { dashboardTabHref } from '../config/dashboardTabs';
+import { DOCS_SITE_URL } from '../config/docsSite';
 import { useEnterpriseMode } from '../hooks/useEnterpriseMode';
 import { useI18n } from '../i18n/I18nProvider';
 import '../css/DashboardDeveloperPage.css';
+
+const DOC_LINKS = [
+  { path: '/developers/quickstart', key: 'dashboard.developer.docs.quickstart' },
+  { path: '/developers/auth', key: 'dashboard.developer.docs.auth' },
+  { path: '/developers/escrow', key: 'dashboard.developer.docs.escrow' },
+  { path: '/developers/errors', key: 'dashboard.developer.docs.errors' },
+] as const;
 
 const DashboardDeveloperPage: React.FC = () => {
   const navigate = useNavigate();
@@ -86,9 +95,35 @@ const DashboardDeveloperPage: React.FC = () => {
           <ul className="dashboard-developer-page__sdk-list">
             <li><code>@arcusx/sdk</code> — {t('dashboard.developer.sdk.item1')}</li>
             <li><code>Authorization: Bearer axk_…</code> — {t('dashboard.developer.sdk.item2')}</li>
-            <li><code>client.agent.*</code> — {t('dashboard.developer.sdk.item3')}</li>
+            <li><code>client.marketplace.* / escrow.*</code> — {t('dashboard.developer.sdk.item3')}</li>
           </ul>
           <p className="dashboard-developer-page__sdk-note">{t('dashboard.developer.sdk.note')}</p>
+          <div className="dashboard-developer-page__docs">
+            <p className="dashboard-developer-page__docs-label">{t('dashboard.developer.docs.title')}</p>
+            <ul className="dashboard-developer-page__docs-list">
+              {DOC_LINKS.map((link) => (
+                <li key={link.path}>
+                  <a
+                    href={`${DOCS_SITE_URL}${link.path}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {t(link.key)}
+                    <FaExternalLinkAlt aria-hidden />
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <a
+              className="dashboard-developer-page__docs-all"
+              href={`${DOCS_SITE_URL}/developers`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {t('dashboard.developer.docs.all')}
+              <FaExternalLinkAlt aria-hidden />
+            </a>
+          </div>
         </section>
       </main>
     </div>

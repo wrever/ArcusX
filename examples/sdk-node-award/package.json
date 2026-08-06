@@ -1,0 +1,11 @@
+{
+  "name": "sdk-node-award",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "dependencies": {
+    "@arcusx/sdk": "file:../../packages/arcusx-sdk"
+  }
+}

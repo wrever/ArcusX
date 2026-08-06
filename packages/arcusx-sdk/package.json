@@ -19,6 +19,7 @@
     "smoke:strict": "npm run build && SMOKE_STRICT=1 node ../../scripts/smoke-sdk.mjs",
     "smoke:agentic": "npm run build && node ../../scripts/smoke-agentic.mjs",
     "demo:week1": "npm run build && node ../../scripts/demo-week1-sdk.mjs",
+    "demo:week2": "npm run build && node ../../scripts/demo-week2-award.mjs",
     "demo:agentic": "npm run build && node ../../scripts/demo-agentic-week1.mjs",
     "prepublishOnly": "npm run build"
   },

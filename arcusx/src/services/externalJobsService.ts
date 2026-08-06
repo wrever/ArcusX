@@ -154,12 +154,7 @@ async function fetchRemoteOkTag(tag: string): Promise<ExternalJob[]> {
     const title = String(j.position).trim();
     if (!apply || !title) continue;
     const tags = Array.isArray(j.tags) ? j.tags.map(String).slice(0, 10) : [tag];
-    let salary_text: string | null = null;
-    const min = Number(j.salary_min);
-    const max = Number(j.salary_max);
-    if (Number.isFinite(min) && min > 0 && Number.isFinite(max) && max > 0) {
-      salary_text = `$${Math.round(min / 1000)}k–$${Math.round(max / 1000)}k`;
-    }
+    // No publicamos sueldos: los feeds no son confiables / no los validamos.
     out.push(
       enrich({
         id: `remoteok:${j.id}`,
@@ -167,7 +162,7 @@ async function fetchRemoteOkTag(tag: string): Promise<ExternalJob[]> {
         title,
         company: j.company ? String(j.company) : null,
         location: j.location ? String(j.location) : 'Remote',
-        salary_text,
+        salary_text: null,
         tags: tags.length ? tags : [tag],
         apply_url: apply,
         company_logo: j.company_logo || j.logo || null,
@@ -201,7 +196,7 @@ async function fetchFromEdge(search?: string): Promise<ExternalJob[]> {
         title,
         company: j.company ? String(j.company) : null,
         location: j.location ? String(j.location) : null,
-        salary_text: j.salary_text ? String(j.salary_text) : null,
+        salary_text: null,
         tags,
         apply_url,
         company_logo: j.company_logo ? String(j.company_logo) : null,

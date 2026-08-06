@@ -1351,133 +1351,138 @@ const Dashboard = () => {
                 </button>
               </div>
 
-              <div className="jobs-board">
-                <div className="jobs-board-search">
-                  <div className="search-bar">
-                    <input
-                      type="text"
-                      className="search-input"
-                      placeholder={t('dashboard.tasks.search.placeholder')}
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                    {searchQuery && (
-                      <button
-                        type="button"
-                        className="jobs-search-clear"
-                        onClick={() => setSearchQuery('')}
-                        aria-label={t('dashboard.tasks.search.clear')}
-                      >
-                        <FaTimes />
-                      </button>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    className={`jobs-remote-toggle${remoteOnly ? ' active' : ''}`}
-                    onClick={() => setRemoteOnly((v) => !v)}
-                    aria-pressed={remoteOnly}
-                  >
-                    <FaGlobe aria-hidden />
-                    <span>{t('dashboard.jobs.filter.remoteOnly')}</span>
-                    <span className="jobs-remote-switch" aria-hidden>
-                      <span className="jobs-remote-knob" />
-                    </span>
-                  </button>
-                </div>
-
-                <div className={`filters-wrapper jobs-filters-panel ${showFilters ? 'active' : ''}`}>
-                  <div className="filter-container jobs-filter-container">
-                    <div className="jobs-chip-row jobs-chip-row-origin" role="group" aria-label={t('dashboard.jobs.filter.origin')}>
-                      {(
-                        [
-                          { id: 'all' as const, label: t('dashboard.jobs.origin.all') },
-                          { id: 'platform' as const, label: t('dashboard.jobs.origin.platform') },
-                          { id: 'external' as const, label: t('dashboard.jobs.origin.external') },
-                        ]
-                      ).map((chip) => (
-                        <button
-                          key={chip.id}
-                          type="button"
-                          className={`jobs-chip${boardOrigin === chip.id ? ' active' : ''}`}
-                          onClick={() => setBoardOrigin(chip.id)}
-                        >
-                          {chip.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="jobs-chip-row jobs-chip-row-roles" role="group" aria-label={t('dashboard.jobs.filter.roles')}>
-                      {EXTERNAL_ROLE_CHIPS.map((chip) => (
-                        <button
-                          key={chip.id}
-                          type="button"
-                          className={`jobs-chip jobs-chip-role${roleChip === chip.id ? ' active' : ''}`}
-                          onClick={() => setRoleChip(chip.id)}
-                        >
-                          {t(chip.labelKey)}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="jobs-filter-selects">
-                      <select
-                        className="filter-select"
-                        value={categoryFilter}
-                        onChange={(e) => setCategoryFilter(e.target.value)}
-                      >
-                        <option value="all">{t('dashboard.tasks.filter.categories.all')}</option>
-                        <option value="desarrollo">{t('dashboard.tasks.category.development')}</option>
-                        <option value="diseño">{t('dashboard.tasks.category.design')}</option>
-                        <option value="marketing">{t('dashboard.tasks.category.marketing')}</option>
-                        <option value="blockchain">{t('dashboard.tasks.category.blockchain')}</option>
-                        <option value="contenido">{t('dashboard.tasks.category.content')}</option>
-                      </select>
-
-                      <select
-                        className="filter-select"
-                        value={difficultyFilter}
-                        onChange={(e) => setDifficultyFilter(e.target.value)}
-                      >
-                        <option value="all">{t('dashboard.tasks.filter.difficulty.all')}</option>
-                        <option value="fácil">{t('dashboard.tasks.difficulty.easy')}</option>
-                        <option value="intermedio">{t('dashboard.tasks.difficulty.medium')}</option>
-                        <option value="difícil">{t('dashboard.tasks.difficulty.hard')}</option>
-                      </select>
-
+              <div className="jobs-board jobs-unified">
+                <div className="jobs-unified-card">
+                  <div className="jobs-unified-search">
+                    <div className="search-bar">
                       <input
-                        type="number"
-                        placeholder={t('dashboard.tasks.filter.price.min')}
-                        value={minPrice}
-                        onChange={(e) => setMinPrice(e.target.value)}
-                        min="0"
-                        step="0.01"
-                        className="filter-price-input"
+                        type="text"
+                        className="search-input"
+                        placeholder={t('dashboard.tasks.search.placeholder')}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                       />
-
-                      <input
-                        type="number"
-                        placeholder={t('dashboard.tasks.filter.price.max')}
-                        value={maxPrice}
-                        onChange={(e) => setMaxPrice(e.target.value)}
-                        min="0"
-                        step="0.01"
-                        className="filter-price-input"
-                      />
-
-                      <select
-                        className="filter-select"
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value)}
-                      >
-                        <option value="date_desc">{t('dashboard.tasks.filter.sort.recent')}</option>
-                        <option value="date_asc">{t('dashboard.tasks.filter.sort.oldest')}</option>
-                        <option value="price_asc">{t('dashboard.tasks.filter.sort.price.asc')}</option>
-                        <option value="price_desc">{t('dashboard.tasks.filter.sort.price.desc')}</option>
-                        <option value="popularity">{t('dashboard.tasks.filter.sort.popular')}</option>
-                      </select>
+                      {searchQuery && (
+                        <button
+                          type="button"
+                          className="jobs-search-clear"
+                          onClick={() => setSearchQuery('')}
+                          aria-label={t('dashboard.tasks.search.clear')}
+                        >
+                          <FaTimes />
+                        </button>
+                      )}
                     </div>
                   </div>
+
+                  <div className={`jobs-unified-body filters-wrapper jobs-filters-panel ${showFilters ? 'active' : ''}`}>
+                    <div className="jobs-filter-section">
+                      <span className="jobs-filter-label">{t('dashboard.jobs.filter.origin')}</span>
+                      <div className="jobs-chip-row" role="group" aria-label={t('dashboard.jobs.filter.origin')}>
+                        {(
+                          [
+                            { id: 'all' as const, label: t('dashboard.jobs.origin.all') },
+                            { id: 'platform' as const, label: t('dashboard.jobs.origin.platform') },
+                            { id: 'external' as const, label: t('dashboard.jobs.origin.external') },
+                          ]
+                        ).map((chip) => (
+                          <button
+                            key={chip.id}
+                            type="button"
+                            className={`jobs-chip${boardOrigin === chip.id ? ' active' : ''}`}
+                            onClick={() => setBoardOrigin(chip.id)}
+                          >
+                            {chip.label}
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          className={`jobs-chip jobs-chip--remote${remoteOnly ? ' active' : ''}`}
+                          onClick={() => setRemoteOnly((v) => !v)}
+                          aria-pressed={remoteOnly}
+                        >
+                          <FaGlobe aria-hidden />
+                          {t('dashboard.jobs.filter.remoteOnly')}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="jobs-filter-section">
+                      <span className="jobs-filter-label">{t('dashboard.jobs.filter.roles')}</span>
+                      <div className="jobs-chip-row" role="group" aria-label={t('dashboard.jobs.filter.roles')}>
+                        {EXTERNAL_ROLE_CHIPS.map((chip) => (
+                          <button
+                            key={chip.id}
+                            type="button"
+                            className={`jobs-chip${roleChip === chip.id ? ' active' : ''}`}
+                            onClick={() => setRoleChip(chip.id)}
+                          >
+                            {t(chip.labelKey)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="jobs-filter-section">
+                      <span className="jobs-filter-label">{t('dashboard.jobs.filter.details')}</span>
+                      <div className="jobs-filter-selects">
+                        <select
+                          className="filter-select"
+                          value={categoryFilter}
+                          onChange={(e) => setCategoryFilter(e.target.value)}
+                        >
+                          <option value="all">{t('dashboard.tasks.filter.categories.all')}</option>
+                          <option value="desarrollo">{t('dashboard.tasks.category.development')}</option>
+                          <option value="diseño">{t('dashboard.tasks.category.design')}</option>
+                          <option value="marketing">{t('dashboard.tasks.category.marketing')}</option>
+                          <option value="blockchain">{t('dashboard.tasks.category.blockchain')}</option>
+                          <option value="contenido">{t('dashboard.tasks.category.content')}</option>
+                        </select>
+
+                        <select
+                          className="filter-select"
+                          value={difficultyFilter}
+                          onChange={(e) => setDifficultyFilter(e.target.value)}
+                        >
+                          <option value="all">{t('dashboard.tasks.filter.difficulty.all')}</option>
+                          <option value="fácil">{t('dashboard.tasks.difficulty.easy')}</option>
+                          <option value="intermedio">{t('dashboard.tasks.difficulty.medium')}</option>
+                          <option value="difícil">{t('dashboard.tasks.difficulty.hard')}</option>
+                        </select>
+
+                        <input
+                          type="number"
+                          placeholder={t('dashboard.tasks.filter.price.min')}
+                          value={minPrice}
+                          onChange={(e) => setMinPrice(e.target.value)}
+                          min="0"
+                          step="0.01"
+                          className="filter-price-input"
+                        />
+
+                        <input
+                          type="number"
+                          placeholder={t('dashboard.tasks.filter.price.max')}
+                          value={maxPrice}
+                          onChange={(e) => setMaxPrice(e.target.value)}
+                          min="0"
+                          step="0.01"
+                          className="filter-price-input"
+                        />
+
+                        <select
+                          className="filter-select"
+                          value={sortBy}
+                          onChange={(e) => setSortBy(e.target.value)}
+                        >
+                          <option value="date_desc">{t('dashboard.tasks.filter.sort.recent')}</option>
+                          <option value="date_asc">{t('dashboard.tasks.filter.sort.oldest')}</option>
+                          <option value="price_asc">{t('dashboard.tasks.filter.sort.price.asc')}</option>
+                          <option value="price_desc">{t('dashboard.tasks.filter.sort.price.desc')}</option>
+                          <option value="popularity">{t('dashboard.tasks.filter.sort.popular')}</option>
+                        </select>
+                      </div>
+                    </div>
 
                   {(searchQuery || minPrice || maxPrice || categoryFilter !== 'all' || difficultyFilter !== 'all' || boardOrigin !== 'all' || remoteOnly || roleChip !== 'all') && (
                     <div className="dashboard-filter-active">
@@ -1567,6 +1572,7 @@ const Dashboard = () => {
                         · {visibleExternalJobs.length} {t('dashboard.tasks.external.count')}
                       </span>
                     )}
+                  </div>
                   </div>
                 </div>
               </div>
@@ -1659,9 +1665,7 @@ const Dashboard = () => {
                       <div className="task-detail">
                         <span className="task-detail-label">{t('dashboard.tasks.external.location')}</span>
                         <span className="task-detail-value">
-                          {job.salary_text
-                            ? `${job.location || 'Remote'} · ${job.salary_text}`
-                            : (job.location || 'Remote')}
+                          {job.location || 'Remote'}
                         </span>
                       </div>
                     </div>
@@ -1676,16 +1680,13 @@ const Dashboard = () => {
                       className="task-button task-button-external"
                       href={job.apply_url}
                       target="_blank"
-                      rel={
-                        job.source === 'web3career' || /web3\.career/i.test(job.apply_url)
-                          ? 'noopener'
-                          : 'noopener noreferrer'
-                      }
+                      rel="noopener noreferrer"
                     >
                       {t('dashboard.tasks.external.apply')}{' '}
                       <FaExternalLinkAlt style={{ marginLeft: 6, fontSize: 12 }} />
                     </a>
-                    {(job.source === 'web3career' || /web3\.career/i.test(job.apply_url)) && (
+                    {/* Solo si el CTA sigue abriendo web3.career (no hay ATS directo) */}
+                    {/web3\.career/i.test(job.apply_url) && (
                       <p className="external-job-source">
                         {t('dashboard.tasks.external.source.web3career')}
                       </p>

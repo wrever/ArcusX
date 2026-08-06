@@ -685,17 +685,13 @@ const Hero = () => {
                               )}
                               <div className="hero-carousel-card-footer">
                                 <span className="hero-carousel-card-price">
-                                  {slide.job.salary_text || t('dashboard.jobs.origin.external')}
+                                  {t('dashboard.jobs.origin.external')}
                                 </span>
                                 <a
                                   className="hero-carousel-card-apply"
                                   href={slide.job.apply_url}
                                   target="_blank"
-                                  rel={
-                                    slide.job.source === 'web3career' || /web3\.career/i.test(slide.job.apply_url)
-                                      ? 'noopener'
-                                      : 'noopener noreferrer'
-                                  }
+                                  rel="noopener noreferrer"
                                 >
                                   {t('dashboard.tasks.external.apply')} <FaArrowRight />
                                 </a>

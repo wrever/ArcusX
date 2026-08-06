@@ -83,6 +83,98 @@ function normalizePostedAt(value: unknown): string | null {
   return Number.isFinite(t) ? new Date(t).toISOString() : null;
 }
 
+const AGGREGATOR_HOSTS = [
+  'web3.career',
+  'remotive.com',
+  'remoteok.com',
+  'remoteok.io',
+  'jobicy.com',
+  'himalayas.app',
+  'cryptojobslist.com',
+  'wwshemi.com',
+  'bondex.app',
+  'network.bondex.app',
+];
+
+const ATS_HINT =
+  /recruitee\.com|greenhouse\.io|boards\.greenhouse|lever\.co|jobs\.lever|ashbyhq\.com|jobs\.ashby|workable\.com|apply\.workable|smartrecruiters\.com|jobvite\.com|bamboohr\.com|myworkdayjobs\.com|wellfound\.com|linkedin\.com\/jobs|indeed\.com\/(viewjob|jobs)|applytojob\.com|personio\.(de|com)|teamtailor\.com|vonq\.io|testedrecruits\.com|workada\.com|jobs\.[a-z0-9-]+\.[a-z]{2,}|careers\.[a-z0-9-]+\.[a-z]{2,}|apply\.[a-z0-9-]+\.[a-z]{2,}|\/careers\/[a-z0-9][\w%.-]{2,}|\/jobs\/[a-z0-9][\w%.-]{2,}|\/job\/[a-z0-9][\w%.-]{2,}/i;
+
+const BAD_PATH =
+  /\/(privacy|cookie|blog|news|about|login|signup|terms|tos|help|support|status|diversity)(\/|$|\?)|recruitment-fraud|best-practices|avoid-fraud/i;
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '').toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+function isAggregatorUrl(url: string): boolean {
+  const host = hostOf(url);
+  return AGGREGATOR_HOSTS.some((d) => host === d || host.endsWith(`.${d}`));
+}
+
+function cleanUrl(u: string): string {
+  return String(u || '')
+    .replace(/&amp;/g, '&')
+    .replace(/[),.;]+$/g, '')
+    .trim();
+}
+
+function isPlausibleEmployerUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    if (!/^https?:$/i.test(u.protocol)) return false;
+    if (isAggregatorUrl(url)) return false;
+    const host = u.hostname.toLowerCase();
+    if (
+      /twitter\.com|x\.com|facebook\.com|instagram\.com|youtube\.com|tiktok\.com|medium\.com|substack\.com|t\.me|discord\.gg|discord\.com|github\.com|notion\.so|figma\.com|google\.com|goo\.gl|bit\.ly|t\.co|cdn\.|static\./i
+        .test(host)
+    ) {
+      return false;
+    }
+    if (BAD_PATH.test(u.pathname)) return false;
+    if (u.pathname.length < 2 && !ATS_HINT.test(url)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function extractEmployerUrlFromHtml(html: string | null | undefined): string | null {
+  if (!html) return null;
+  const urls = [...String(html).matchAll(/https?:\/\/[^\s"'<>]+/gi)].map((m) =>
+    cleanUrl(m[0]),
+  );
+  const unique = [...new Set(urls)].filter(isPlausibleEmployerUrl);
+  const ats = unique.find((u) => ATS_HINT.test(u));
+  if (ats) return ats;
+  return null;
+}
+
+type JobWithDesc = NormalizedJob & { _descriptionHtml?: string | null };
+
+function preferDirectApply(job: JobWithDesc): NormalizedJob {
+  const original = job.apply_url;
+  const direct =
+    extractEmployerUrlFromHtml(job._descriptionHtml || '') ||
+    extractEmployerUrlFromHtml(job.excerpt || '');
+  const { _descriptionHtml: _drop, ...base } = job;
+  if (direct && !isAggregatorUrl(direct) && direct !== original) {
+    return {
+      ...base,
+      apply_url: direct,
+      raw: {
+        ...(typeof base.raw === 'object' && base.raw ? base.raw as Record<string, unknown> : {}),
+        aggregator_apply_url: original,
+        employer_apply_resolved: true,
+      },
+    };
+  }
+  return base;
+}
+
 function parseTitleCompany(
   titleRaw: unknown,
   companyRaw: unknown,
@@ -145,9 +237,14 @@ async function fetchJobicy(tag: string): Promise<NormalizedJob[]> {
         excerpt: j.jobExcerpt ? truncate(stripHtml(String(j.jobExcerpt))) : null,
         posted_at: j.pubDate ? String(j.pubDate) : null,
         raw: { id: j.id, tag },
-      } satisfies NormalizedJob;
+        _descriptionHtml: j.jobDescription
+          ? String(j.jobDescription)
+          : j.jobExcerpt
+            ? String(j.jobExcerpt)
+            : null,
+      } as JobWithDesc;
     })
-    .filter(Boolean) as NormalizedJob[];
+    .filter(Boolean) as JobWithDesc[];
 }
 
 async function fetchRemoteOk(tag: string): Promise<NormalizedJob[]> {
@@ -189,7 +286,8 @@ async function fetchRemoteOk(tag: string): Promise<NormalizedJob[]> {
       excerpt: j.description ? truncate(stripHtml(String(j.description))) : null,
       posted_at: j.date ? String(j.date) : null,
       raw: { id: j.id, slug: j.slug, tag },
-    });
+      _descriptionHtml: j.description ? String(j.description) : null,
+    } as JobWithDesc);
   }
   return out;
 }
@@ -271,7 +369,8 @@ async function fetchWeb3Career(opts: {
       excerpt: j.description ? truncate(stripHtml(String(j.description))) : null,
       posted_at,
       raw: { id: j.id, country: j.country, is_remote: j.is_remote },
-    });
+      _descriptionHtml: j.description ? String(j.description) : null,
+    } as JobWithDesc);
   }
   return out;
 }
@@ -306,9 +405,10 @@ async function fetchRemotive(search: string): Promise<NormalizedJob[]> {
         excerpt: j.description ? truncate(stripHtml(String(j.description))) : null,
         posted_at: j.publication_date ? String(j.publication_date) : null,
         raw: { id: j.id, search },
-      } satisfies NormalizedJob;
+        _descriptionHtml: j.description ? String(j.description) : null,
+      } as JobWithDesc;
     })
-    .filter(Boolean) as NormalizedJob[];
+    .filter(Boolean) as JobWithDesc[];
 }
 
 async function fetchHimalayas(q: string): Promise<NormalizedJob[]> {
@@ -345,7 +445,12 @@ async function fetchHimalayas(q: string): Promise<NormalizedJob[]> {
           : null,
       posted_at: j.pubDate ? String(j.pubDate) : null,
       raw: { guid: j.guid, q },
-    });
+      _descriptionHtml: j.description
+        ? String(j.description)
+        : j.excerpt
+          ? String(j.excerpt)
+          : null,
+    } as JobWithDesc);
   }
   return out;
 }
@@ -380,12 +485,14 @@ async function collectAllSources(): Promise<{ jobs: NormalizedJob[]; errors: str
     errors.push('WEB3_CAREER_API_TOKEN not set — web3.career skipped');
   }
   const seen = new Set<string>();
-  const jobs = collected.filter((j) => {
-    const key = `${j.source}:${j.source_job_id}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return isWeb3Relevant(j);
-  });
+  const jobs = collected
+    .filter((j) => {
+      const key = `${j.source}:${j.source_job_id}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return isWeb3Relevant(j);
+    })
+    .map((j) => preferDirectApply(j as JobWithDesc));
   return { jobs, errors };
 }
 

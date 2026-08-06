@@ -27,20 +27,30 @@ if (!fs.existsSync(payloadPath)) {
 const payload = JSON.parse(fs.readFileSync(payloadPath, 'utf8'));
 const url = `https://api.supabase.com/v1/projects/${PROJECT_REF}/functions/deploy?slug=${encodeURIComponent(fn)}`;
 
-const res = await fetch(url, {
-  method: 'POST',
-  headers: {
-    Authorization: `Bearer ${token}`,
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    slug: payload.name,
+const form = new FormData();
+form.append(
+  'metadata',
+  JSON.stringify({
     name: payload.name,
     entrypoint_path: payload.entrypoint_path,
     verify_jwt: payload.verify_jwt,
     import_map_path: payload.import_map_path,
-    files: payload.files,
   }),
+);
+for (const f of payload.files || []) {
+  form.append(
+    'file',
+    new Blob([f.content], { type: 'application/typescript' }),
+    f.name,
+  );
+}
+
+const res = await fetch(url, {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
+  body: form,
 });
 
 const text = await res.text();

@@ -16,12 +16,17 @@ Filtros UI: origen + roles + remote + categoría/precio **en un solo panel**, ch
 
 wwshemi agrega career pages + boards remotos; nosotros usamos los **JSON públicos** equivalentes (sin scrape Cloudflare de CJL/LaborX).
 
-### web3.career — términos
+### Links directos al empleador
 
-1. `apply_url` sin modificar  
-2. Link follow (`rel="noopener"`, nunca `nofollow`)  
-3. Mencionar fuente en UI  
-4. Token solo server-side  
+En sync preferimos la URL de postulación del **empleador/ATS** (Greenhouse, Lever, Recruitee, etc.) cuando aparece en la descripción o en la página del board:
+
+| Fuente | Directo posible |
+|--------|-----------------|
+| Remotive | Sí (scrape Apply → ATS) |
+| web3.career | A veces (ATS en descripción). La API solo da `web3.career/r/…`; ToS pide usar ese link — si no hay ATS en el texto, el CTA sigue yendo a web3.career |
+| RemoteOK / Jobicy / Himalayas | Parcial (si la descripción trae careers/ATS) |
+
+El `apply_url` original del agregador queda en `raw.aggregator_apply_url`.
 
 ## Sync 24/7
 

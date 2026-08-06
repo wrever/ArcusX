@@ -501,30 +501,16 @@
   border-color: rgba(10, 184, 106, 0.4);
   color: #087a48;
 }
-:root[data-theme="light"] .jobs-remote-toggle {
-  background: rgba(0, 0, 0, 0.03);
-  border-color: rgba(0, 0, 0, 0.1);
-  color: #4a6356;
-}
-:root[data-theme="light"] .jobs-remote-toggle:hover {
-  color: #0f2a1f;
-  border-color: rgba(10, 184, 106, 0.35);
-}
-:root[data-theme="light"] .jobs-remote-toggle.active {
-  background: rgba(10, 184, 106, 0.12);
-  border-color: rgba(10, 184, 106, 0.4);
-  color: #087a48;
-}
-:root[data-theme="light"] .jobs-remote-switch {
-  background: rgba(0, 0, 0, 0.1);
-  border-color: rgba(0, 0, 0, 0.12);
-}
-:root[data-theme="light"] .jobs-remote-knob {
+:root[data-theme="light"] .jobs-unified-card {
   background: #fff;
+  border-color: rgba(0, 0, 0, 0.08);
 }
-:root[data-theme="light"] .jobs-chip-row-roles,
-:root[data-theme="light"] .jobs-filter-selects {
+:root[data-theme="light"] .jobs-filter-section,
+:root[data-theme="light"] .jobs-unified-body .dashboard-filter-active {
   border-top-color: rgba(0, 0, 0, 0.06);
+}
+:root[data-theme="light"] .jobs-filter-label {
+  color: #6b8074;
 }
 :root[data-theme="light"] .dashboard-filter-chip {
   color: #087a48;
