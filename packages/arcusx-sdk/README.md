@@ -37,7 +37,9 @@ Docs: [`docs/sdk/QUICKSTART.md`](../../docs/sdk/QUICKSTART.md) · [`docs/sdk/API
 | `marketplace` | Create / apply / proposals / cancel work objects |
 | `private` | Private offer lifecycle |
 | `deals` | Shareable payment links (`deal_token`) |
-| `escrow` | Quote, deploy/fund/release prepare+confirm, deal escrow |
+| `escrow` | Quote, deploy/fund/release prepare+confirm (marketplace + task JWT) |
+| `partnerEscrow` | **Motor escrow API-key-only** — wallets + amount, sin JWT |
+| `partnerDeals` | **Payment links** API-key-only (Edge `/v1/partner/deals` live Testnet) |
 | `settlement` | `completeTask`, `markDealReleased` (`tx_hash`) |
 | `evidence` | Milestone / deal evidence |
 | `ratings` | Create + user summary |
@@ -59,14 +61,20 @@ Default: **REST `/v1/`**. Set `useLegacyActions: true` for `?action=` compatibil
 
 ## Wallet
 
-ArcusX does not custody funds. Sign on-chain with your `WalletAdapter` (Freighter, etc.).
+ArcusX does not custody funds. Sign on-chain with your `WalletAdapter`.
 
-## Smoke / Week 1 demo
+Copy-ready Freighter: [`examples/sdk-freighter-adapter`](../../examples/sdk-freighter-adapter/).  
+Rail guide: [`docs/sdk/V0_3_PERFECT_INTEGRATION.md`](../../docs/sdk/V0_3_PERFECT_INTEGRATION.md).  
+Limits: [`docs/sdk/KNOWN_LIMITATIONS.md`](../../docs/sdk/KNOWN_LIMITATIONS.md).
+
+## Smoke / weekly demos
 
 ```bash
 # ARCUSX_API_KEY=axk_test_… in env or ../../arcusx/.env
-npm run smoke:strict    # full matrix (Edge + gateway valid + 401s)
-npm run demo:week1      # short walkthrough for screen recording
+npm run smoke:strict    # Edge + gateway + auth negatives + escrow.quote (13 checks)
+npm run demo:week1      # public contract + auth
+npm run demo:week2      # award-style → escrow-ready
+npm run demo:week3      # escrow quote + webhook HMAC
 ```
 
-See [`docs/sprints/instaawards-sdk/INSTAAWARDS_SDK_WEEK1.md`](../../docs/sprints/instaawards-sdk/INSTAAWARDS_SDK_WEEK1.md).
+Packets: [`WEEK1`](../../docs/sprints/instaawards-sdk/INSTAAWARDS_SDK_WEEK1.md) · [`WEEK2`](../../docs/sprints/instaawards-sdk/INSTAAWARDS_SDK_WEEK2.md) · [`WEEK3`](../../docs/sprints/instaawards-sdk/INSTAAWARDS_SDK_WEEK3.md).

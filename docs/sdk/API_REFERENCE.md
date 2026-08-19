@@ -149,15 +149,20 @@ Inputs usan **snake_case** (`is_private_invite`, `wallet_address`, …).
 | Método | Notas |
 |--------|-------|
 | `quote(nominalUsdc)` | Fee quote (no recalcular en cliente) |
-| `createForTask(taskId, proposalId)` | Metadata BD |
-| `status(taskId, escrowId?)` | |
+| `createForTask(taskId, proposalId)` | Metadata BD (escrow-ready) |
+| `status(taskId, escrowId?)` | **Bounded** — 1× tras acción; no loops de render |
 | `markWorkStarted(taskId)` | |
-| `prepareDeploy` / `confirmDeploy` | XDR → sign → confirm |
-| `prepareFund` / `confirmFund` | |
-| `prepareRelease` / `confirmRelease` | |
+| `prepareDeploy(taskId, proposalId, clientWallet)` | Devuelve `unsigned_xdr` |
+| `confirmDeploy(taskId, { proposalId, signedXdr?, deployTxHash?, contractId? })` | Tras firma / broadcast |
+| `prepareFund(taskId, clientWallet)` | `unsigned_xdr` |
+| `confirmFund(taskId, { proposalId, contractId, fundTxHash?, signedXdr? })` | |
+| `prepareRelease(taskId, clientWallet)` | `steps[].unsigned_xdr` |
+| `confirmRelease(taskId, releaseTxHash \| { releaseTxHash?, signedXdr? })` | |
 | `prepareDealEscrow` / `finalizeDealEscrow` | Deals |
 
 Escrow settlement is ArcusX-only for integrators — no separate escrow vendor SDK.
+
+Examples: [`examples/sdk-node-escrow`](../../examples/sdk-node-escrow/) · Freighter adapter: [`examples/sdk-freighter-adapter`](../../examples/sdk-freighter-adapter/)
 
 ---
 
@@ -194,8 +199,10 @@ Escrow settlement is ArcusX-only for integrators — no separate escrow vendor S
 
 | Método | Notas |
 |--------|-------|
-| `listDeliveries()` | HTTP |
-| `verifySignature(rawBody, signatureHeader, secret)` | HMAC local (sin round-trip) |
+| `listDeliveries()` | HTTP (partner key; a menudo + JWT) |
+| `verifySignature(secret, rawBody, signatureHeader)` | HMAC local `sha256=` (sin round-trip) |
+
+Example: [`examples/sdk-node-webhooks`](../../examples/sdk-node-webhooks/)
 
 ---
 
@@ -207,13 +214,17 @@ Escrow settlement is ArcusX-only for integrators — no separate escrow vendor S
 | Key inválida o revocada | 401 | `invalid_api_key` |
 | Key válida | 200 | envelope `success: true` + `data` |
 
-Scripts: `scripts/smoke-sdk.mjs`, `scripts/demo-week1-sdk.mjs`.
+Scripts: `scripts/smoke-sdk.mjs`, `npm run demo:week1` / `demo:week2` / `demo:week3`.
 
 ---
 
 ## Wallet
 
 `WalletAdapter` en `packages/arcusx-sdk/src/wallet/adapter.ts` — la firma on-chain queda en la app del integrador.
+
+Copy-ready Freighter: [`examples/sdk-freighter-adapter`](../../examples/sdk-freighter-adapter/).
+
+Known limits: [`KNOWN_LIMITATIONS.md`](./KNOWN_LIMITATIONS.md).
 
 ---
 

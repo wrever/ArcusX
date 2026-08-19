@@ -1,5 +1,5 @@
 /**
- * Gateway público para partners — estilo Soroswap / Trustless Work.
+ * Gateway público para partners — una API key, estilo Soroswap.
  * El integrador solo envía: Authorization: Bearer axk_test_…
  * Este worker inyecta apikey (Supabase anon) en servidor; nunca sale al cliente.
  *

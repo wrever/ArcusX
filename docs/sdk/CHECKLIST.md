@@ -27,7 +27,7 @@ Este documento es la **lista de trabajo ejecutable**. Cada ítem tiene ID, archi
 
 1. **Nombres congelados:** namespaces `public`, `marketplace`, `private`, `deals`, `escrow`, `settlement` — no renombrar sin bump minor en `PLAN_MAESTRO.md`.
 2. **Fee:** el SDK **nunca** calcula comisión. Consume `get_platform_fee` y `escrow/quote` (cuando exista). Ver [`FEE_MODEL.md`](./FEE_MODEL.md).
-3. **TW invisible:** cero imports `@trustless-work/*` en `examples/` ni en exports públicos del SDK.
+3. **Motor interno invisible:** cero SDKs de escrow de terceros en `examples/` ni en exports públicos del SDK.
 4. **Compat:** `?action=` sigue funcionando; REST v1 es alias sobre handlers existentes.
 5. **Un PR = un módulo o una migración** — no big-bang.
 6. **DoD por tarea:** build verde + smoke manual documentado en el PR.

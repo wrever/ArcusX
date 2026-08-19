@@ -1166,7 +1166,7 @@ const handleCreateError = (error: any): EscrowResult => {
     return {
       success: false,
       error:
-        `Trustless Work rechazó la API key (${network}, ${trustlessWorkBaseUrl()}). ` +
+        `El servicio de escrow rechazó la API key (${network}). ` +
         `Regenera la key en el dashboard TW, actualiza ${envVar} en arcusx/.env y reinicia el dev server.`,
     };
   }

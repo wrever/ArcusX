@@ -5,7 +5,7 @@
 
 ## Platform fee
 
-ArcusX charges a **2% total** fee, deducted from the **worker** on escrow release. That **2% covers** the ArcusX platform share **and** the Trustless Work on-chain protocol fee. The **employer funds exactly the posted task / deal amount** — no platform surcharge when posting or funding.
+ArcusX charges a **2% total** fee, deducted from the **worker** on escrow release. That **2%** is the all-in platform fee (includes on-chain protocol costs). The **employer funds exactly the posted task / deal amount** — no platform surcharge when posting or funding.
 
 | Role | What they see |
 |------|----------------|
@@ -17,7 +17,7 @@ Example: task **100 USDC** → employer funds **100**, worker receives **~98**, 
 
 Exact rates can change in config; always call the API.
 
-Internal split (not required for partner UIs): ArcusX treasury share + TW protocol (~0.3%). Partners should only use the **total** from `getPlatformFee` / `escrow.quote`.
+Internal split (optional breakout in API): `arcusx_share` + `protocol_share`. Partners should only use the **total** from `getPlatformFee` / `escrow.quote`.
 
 ## What the SDK exposes
 

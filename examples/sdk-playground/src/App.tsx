@@ -4,10 +4,12 @@ import {
   createClient,
   loadConfig,
   saveConfig,
+  gatewayLabel,
   type PlaygroundConfig,
 } from './sdkClient';
+import { runPartnerSuite, type SuiteReport } from './partnerSuite';
 
-type Tab = 'public' | 'marketplace' | 'private' | 'deals' | 'escrow' | 'settlement' | 'disputes' | 'evidence' | 'ratings' | 'trust' | 'rail';
+type Tab = 'suite' | 'public' | 'marketplace' | 'private' | 'deals' | 'escrow' | 'settlement' | 'disputes' | 'evidence' | 'ratings' | 'trust' | 'rail' | 'webhooks' | 'award';
 
 type RunState = {
   loading: boolean;
@@ -18,6 +20,7 @@ type RunState = {
 };
 
 const TABS: { id: Tab; label: string; auth?: string }[] = [
+  { id: 'suite', label: 'suite' },
   { id: 'public', label: 'public' },
   { id: 'marketplace', label: 'marketplace', auth: 'JWT + userId' },
   { id: 'private', label: 'private', auth: 'JWT' },
@@ -28,13 +31,16 @@ const TABS: { id: Tab; label: string; auth?: string }[] = [
   { id: 'evidence', label: 'evidence', auth: 'JWT' },
   { id: 'ratings', label: 'ratings', auth: 'JWT' },
   { id: 'trust', label: 'trust', auth: 'JWT' },
-  { id: 'rail', label: 'riel E2E', auth: 'JWT + wallet' },
+  { id: 'award', label: 'award→ready', auth: 'JWT' },
+  { id: 'rail', label: 'rail E2E', auth: 'JWT + wallet' },
+  { id: 'webhooks', label: 'webhooks' },
 ];
 
 function ActionCard({
   title,
   hint,
   needsAuth,
+  authBadge = 'JWT',
   hasAuth,
   onRun,
   loading,
@@ -42,6 +48,7 @@ function ActionCard({
   title: string;
   hint?: string;
   needsAuth?: boolean;
+  authBadge?: string;
   hasAuth: boolean;
   onRun: () => void;
   loading: boolean;
@@ -51,7 +58,7 @@ function ActionCard({
     <div className="action-card">
       <div className="action-card-head">
         <code>{title}</code>
-        {needsAuth && <span className="badge">JWT</span>}
+        {needsAuth && <span className="badge">{authBadge}</span>}
       </div>
       {hint && <p className="hint">{hint}</p>}
       <button type="button" onClick={onRun} disabled={disabled}>
@@ -63,7 +70,7 @@ function ActionCard({
 
 export default function App() {
   const [config, setConfig] = useState<PlaygroundConfig>(loadConfig);
-  const [tab, setTab] = useState<Tab>('public');
+  const [tab, setTab] = useState<Tab>('suite');
   const [taskId, setTaskId] = useState('1');
   const [dealToken, setDealToken] = useState('');
   const [dealId, setDealId] = useState('');
@@ -71,6 +78,12 @@ export default function App() {
   const [nominalQuote, setNominalQuote] = useState('100');
   const [proposalId, setProposalId] = useState('1');
   const [clientWallet, setClientWallet] = useState('');
+  const [contractId, setContractId] = useState('');
+  const [deployTxHash, setDeployTxHash] = useState('');
+  const [fundTxHash, setFundTxHash] = useState('');
+  const [releaseTxHash, setReleaseTxHash] = useState('');
+  const [suite, setSuite] = useState<SuiteReport | null>(null);
+  const [suiteRunning, setSuiteRunning] = useState(false);
   const [run, setRun] = useState<RunState>({
     loading: false,
     label: '',
@@ -115,6 +128,36 @@ export default function App() {
     }
   }, [config]);
 
+  const runSuite = useCallback(async () => {
+    setSuiteRunning(true);
+    setSuite(null);
+    setRun({ loading: true, label: 'partner suite', result: null, error: null, ms: null });
+    const t0 = performance.now();
+    try {
+      const client = createClient(config);
+      const report = await runPartnerSuite(client, { gatewayLabel: gatewayLabel(config) });
+      setSuite(report);
+      setRun({
+        loading: false,
+        label: 'partner suite',
+        result: report,
+        error: report.failed > 0 ? `${report.failed} check(s) failed` : null,
+        ms: Math.round(performance.now() - t0),
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setRun({
+        loading: false,
+        label: 'partner suite',
+        result: null,
+        error: msg,
+        ms: Math.round(performance.now() - t0),
+      });
+    } finally {
+      setSuiteRunning(false);
+    }
+  }, [config]);
+
   const ax = useMemo(() => {
     try {
       return createClient(config);
@@ -134,26 +177,27 @@ export default function App() {
           <span className="logo">AX</span>
           <div>
             <h1>SDK Playground</h1>
-            <p>Integrador externo · @arcusx/sdk v0.3 · riel ArcusX</p>
+            <p>Integrador externo · @arcusx/sdk · suite partner (API key)</p>
           </div>
         </header>
 
         <section className="panel">
           <h2>Conexión</h2>
           <label>
-            API URL
+            API URL (opcional)
             <input
               value={config.baseUrl}
               onChange={(e) => update('baseUrl', e.target.value)}
-              placeholder="…/functions/v1/arcusx-api"
+              placeholder="vacío = https://api.arcusx.pro"
             />
           </label>
           <label>
-            Supabase anon key
+            Supabase anon key (solo Edge directo)
             <input
               type="password"
               value={config.supabaseAnonKey}
               onChange={(e) => update('supabaseAnonKey', e.target.value)}
+              placeholder="partners: dejar vacío"
             />
           </label>
           <label>
@@ -194,7 +238,8 @@ export default function App() {
 
         <section className="panel status">
           <div className={ax ? 'dot ok' : 'dot err'} />
-          <span>{ax ? 'Cliente listo' : 'Falta baseUrl'}</span>
+          <span>{ax ? 'Cliente listo' : 'Falta API key o JWT'}</span>
+          <span className="chip">{gatewayLabel(config).replace(/^https?:\/\//, '')}</span>
           {config.apiKey && <span className="chip">partner key</span>}
           {hasJwt && <span className="chip">JWT</span>}
         </section>
@@ -240,6 +285,22 @@ export default function App() {
             clientWallet (G…)
             <input value={clientWallet} onChange={(e) => setClientWallet(e.target.value)} placeholder="G…56 chars" />
           </label>
+          <label>
+            contractId (C…)
+            <input value={contractId} onChange={(e) => setContractId(e.target.value)} placeholder="C…" />
+          </label>
+          <label>
+            deployTxHash
+            <input value={deployTxHash} onChange={(e) => setDeployTxHash(e.target.value)} />
+          </label>
+          <label>
+            fundTxHash
+            <input value={fundTxHash} onChange={(e) => setFundTxHash(e.target.value)} />
+          </label>
+          <label>
+            releaseTxHash
+            <input value={releaseTxHash} onChange={(e) => setReleaseTxHash(e.target.value)} />
+          </label>
         </div>
 
         {tab === 'disputes' && (
@@ -250,6 +311,36 @@ export default function App() {
         )}
 
         <div className="actions-grid">
+          {tab === 'suite' && (
+            <>
+              <ActionCard
+                title="Correr suite partner (7 checks)"
+                hint="fee · stats · tasks · quote · quote 400 · key 401 · HMAC — sin JWT ni wallet"
+                onRun={() => void runSuite()}
+                loading={run.loading || suiteRunning}
+                hasAuth={Boolean(config.apiKey.trim())}
+                needsAuth
+                authBadge="API key"
+              />
+              {suite && (
+                <div className="suite-panel">
+                  <p className="hint">
+                    {suite.passed}/{suite.passed + suite.failed} PASS · {suite.gateway}
+                  </p>
+                  <ul className="suite-list">
+                    {suite.checks.map((c) => (
+                      <li key={c.id} className={c.pass ? 'pass' : 'fail'}>
+                        <span className="mark">{c.pass ? 'PASS' : 'FAIL'}</span>
+                        <span>{c.label}</span>
+                        <span className="detail">{c.detail}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
+          )}
+
           {tab === 'public' && (
             <>
               <ActionCard
@@ -388,7 +479,7 @@ export default function App() {
                 title="escrow.createForTask(taskId, proposalId)"
                 needsAuth
                 hasAuth={hasJwt}
-                onRun={() => exec('createForTask', () => createClient(config).escrow.createForTask(Number(taskId), 1))}
+                onRun={() => exec('createForTask', () => createClient(config).escrow.createForTask(Number(taskId), Number(proposalId)))}
                 loading={run.loading}
               />
               <ActionCard
@@ -482,6 +573,70 @@ export default function App() {
             </>
           )}
 
+          {tab === 'award' && (
+            <>
+              <p className="hint" style={{ gridColumn: '1 / -1', margin: 0, opacity: 0.75, fontSize: '0.85rem' }}>
+                Flujo Week 2→3 con un JWT (cliente): create → (apply requiere otro user) → select → quote → createForTask → status.
+                Dual JWT completo: <code>examples/sdk-node-award</code>.
+              </p>
+              <ActionCard
+                title="① marketplace.create"
+                needsAuth
+                hasAuth={hasUser}
+                onRun={() =>
+                  exec('award.create', async () => {
+                    const created = await createClient(config).marketplace.create(
+                      {
+                        user_id: userId,
+                        title: 'Playground award microtask',
+                        description: 'SOW2 W3 playground: work object → escrow-ready',
+                        price: Number(nominalQuote) || 50,
+                        currency: 'USDC',
+                        category: 'Desarrollo',
+                        difficulty: 'Intermedio',
+                        external_id: `playground-award-${Date.now()}`,
+                      },
+                      { idempotencyKey: `pg-award-${Date.now()}` },
+                    );
+                    if (created?.task_id) setTaskId(String(created.task_id));
+                    return created;
+                  })
+                }
+                loading={run.loading}
+              />
+              <ActionCard
+                title="② marketplace.getProposals + select"
+                needsAuth
+                hasAuth={hasJwt && Boolean(taskId)}
+                onRun={() =>
+                  exec('award.select', async () => {
+                    const list = await createClient(config).marketplace.getProposals(Number(taskId));
+                    const first = Array.isArray(list) ? list[0] : null;
+                    if (!first?.id) throw new Error('Sin proposals — apply desde otro JWT (sdk-node-award)');
+                    setProposalId(String(first.id));
+                    return createClient(config).marketplace.selectProposal(Number(taskId), Number(first.id));
+                  })
+                }
+                loading={run.loading}
+              />
+              <ActionCard
+                title="③ escrow.quote + createForTask + status"
+                needsAuth
+                hasAuth={hasJwt && Boolean(taskId) && Boolean(proposalId)}
+                onRun={() =>
+                  exec('award.escrowReady', async () => {
+                    const client = createClient(config);
+                    const quote = await client.escrow.quote(Number(nominalQuote) || 50);
+                    const created = await client.escrow.createForTask(Number(taskId), Number(proposalId));
+                    const status = await client.escrow.status(Number(taskId));
+                    return { quote, created, status };
+                  })
+                }
+                loading={run.loading}
+              />
+            </>
+          )}
+
           {tab === 'rail' && (
             <>
               <ActionCard
@@ -519,10 +674,101 @@ export default function App() {
                 loading={run.loading}
               />
               <ActionCard
+                title="⑤ escrow.status (bounded ×1)"
+                needsAuth
+                hasAuth={hasJwt && Boolean(taskId)}
+                onRun={() => exec('status', () => createClient(config).escrow.status(Number(taskId)))}
+                loading={run.loading}
+              />
+              <ActionCard
+                title="⑥ confirmDeploy (tx or after sign)"
+                needsAuth
+                hasAuth={hasJwt && Boolean(taskId) && Boolean(proposalId) && Boolean(deployTxHash || contractId)}
+                onRun={() =>
+                  exec('confirmDeploy', () =>
+                    createClient(config).escrow.confirmDeploy(Number(taskId), {
+                      proposalId: Number(proposalId),
+                      deployTxHash: deployTxHash || undefined,
+                      contractId: contractId || undefined,
+                      clientWallet: clientWallet || undefined,
+                    }),
+                  )
+                }
+                loading={run.loading}
+              />
+              <ActionCard
+                title="⑦ confirmFund"
+                needsAuth
+                hasAuth={hasJwt && Boolean(taskId) && Boolean(contractId) && Boolean(fundTxHash)}
+                onRun={() =>
+                  exec('confirmFund', () =>
+                    createClient(config).escrow.confirmFund(Number(taskId), {
+                      proposalId: Number(proposalId),
+                      contractId,
+                      fundTxHash,
+                      clientWallet: clientWallet || undefined,
+                    }),
+                  )
+                }
+                loading={run.loading}
+              />
+              <ActionCard
+                title="⑧ confirmRelease"
+                needsAuth
+                hasAuth={hasJwt && Boolean(taskId) && Boolean(releaseTxHash)}
+                onRun={() =>
+                  exec('confirmRelease', () =>
+                    createClient(config).escrow.confirmRelease(Number(taskId), releaseTxHash),
+                  )
+                }
+                loading={run.loading}
+              />
+              <ActionCard
                 title="webhooks.listDeliveries()"
                 needsAuth
                 hasAuth={Boolean(config.apiKey.trim())}
                 onRun={() => exec('webhooks', () => createClient(config).webhooks.listDeliveries())}
+                loading={run.loading}
+              />
+            </>
+          )}
+
+          {tab === 'webhooks' && (
+            <>
+              <ActionCard
+                title="webhooks.listDeliveries()"
+                hint="Partner audit log (API key)"
+                needsAuth
+                hasAuth={Boolean(config.apiKey.trim())}
+                onRun={() => exec('listDeliveries', () => createClient(config).webhooks.listDeliveries())}
+                loading={run.loading}
+              />
+              <ActionCard
+                title="webhooks.verifySignature() local"
+                hint="HMAC sha256= demo — no network"
+                hasAuth
+                onRun={() =>
+                  exec('verifySignature', async () => {
+                    const secret = 'playground-demo-secret';
+                    const rawBody = JSON.stringify({ event: 'escrow.funded', task_id: Number(taskId) || 1 });
+                    const key = await crypto.subtle.importKey(
+                      'raw',
+                      new TextEncoder().encode(secret),
+                      { name: 'HMAC', hash: 'SHA-256' },
+                      false,
+                      ['sign'],
+                    );
+                    const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(rawBody));
+                    const hex = Array.from(new Uint8Array(sig))
+                      .map((b) => b.toString(16).padStart(2, '0'))
+                      .join('');
+                    const header = `sha256=${hex}`;
+                    const client = createClient(config);
+                    const ok = await client.webhooks.verifySignature(secret, rawBody, header);
+                    const bad = await client.webhooks.verifySignature(secret, rawBody, 'sha256=00');
+                    return { ok, bad, header_prefix: header.slice(0, 18) + '…' };
+                  })
+                }
                 loading={run.loading}
               />
             </>

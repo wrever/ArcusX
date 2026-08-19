@@ -48,3 +48,25 @@ export async function requirePartnerAuth(ctx: ApiContext): Promise<AuthContext> 
     userId: ownerId,
   };
 }
+
+/**
+ * Partner-key-only (sin JWT, sin owner_user_id).
+ * Para el rail de escrow standalone: wallets + monto + comisión ArcusX.
+ */
+export async function requirePartnerKey(ctx: ApiContext): Promise<{
+  supabase: ApiContext['supabase'];
+  partnerId: string;
+}> {
+  if (!ctx.partnerId) {
+    throw new Error('Unauthorized');
+  }
+  const { data: partner } = await ctx.supabase
+    .from('arcusx_partners')
+    .select('id, status')
+    .eq('id', ctx.partnerId)
+    .maybeSingle();
+  if (!partner || partner.status === 'suspended') {
+    throw new Error('Unauthorized');
+  }
+  return { supabase: ctx.supabase, partnerId: ctx.partnerId };
+}

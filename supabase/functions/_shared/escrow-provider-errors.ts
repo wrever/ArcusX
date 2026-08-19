@@ -1,4 +1,4 @@
-/** Mensajes al integrador sin mencionar Trustless Work (motor oculto). */
+/** Mensajes al integrador — solo marca ArcusX (motor de escrow interno). */
 
 export function escrowProviderUnavailable(): string {
   return 'Servicio de escrow ArcusX no disponible. Reintenta en unos minutos.';

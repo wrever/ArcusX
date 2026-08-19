@@ -152,23 +152,35 @@ const byToken = await ax.deals.getByToken(created.deal_token);
 
 ## 5. Escrow (quote + ciclo)
 
-ArcusX **no custodia** ni firma por el usuario. El SDK prepara XDR / confirma hashes.
+ArcusX **no custodia** ni firma por el usuario. El SDK prepara XDR; el partner firma con su `WalletAdapter` y confirma.
 
 ```typescript
-const quote = await ax.escrow.quote(50); // nominal USDC
-await ax.escrow.createForTask(taskId, proposalId);
-const status = await ax.escrow.status(taskId);
+const { quote } = await ax.escrow.quote(50); // nominal USDC — fee live, no hardcodear %
+const walletAddr = await wallet.getAddress();
 
-// Prepare → sign with WalletAdapter → confirm
-// const prep = await ax.escrow.prepareFund(taskId, { … });
-// await wallet.signTransaction(prep…);
-// await ax.escrow.confirmFund(taskId, { tx_hash: '…' });
+const deploy = await ax.escrow.prepareDeploy(taskId, proposalId, walletAddr);
+const signedDeploy = await wallet.signTransaction(String(deploy.unsigned_xdr));
+await ax.escrow.confirmDeploy(taskId, { proposalId, signedXdr: signedDeploy });
 
-await ax.settlement.completeTask(taskId, { tx_hash: '…' });
+const fund = await ax.escrow.prepareFund(taskId, walletAddr);
+const signedFund = await wallet.signTransaction(String(fund.unsigned_xdr));
+// broadcast on-chain → fundTxHash
+await ax.escrow.confirmFund(taskId, {
+  proposalId,
+  contractId: String(fund.contract_id),
+  fundTxHash,
+  // o signedXdr: signedFund
+});
+
+await ax.escrow.status(taskId); // bounded — 1× after action, never on every render
+
+const release = await ax.escrow.prepareRelease(taskId, walletAddr);
+// sign steps → broadcast →
+await ax.escrow.confirmRelease(taskId, releaseTxHash);
 ```
 
-Implementá `WalletAdapter` (Freighter, etc.) — `packages/arcusx-sdk/src/wallet/adapter.ts`.
-
+Freighter copy-paste: [`examples/sdk-freighter-adapter`](../../examples/sdk-freighter-adapter/).  
+Full rail: [`V0_3_PERFECT_INTEGRATION.md`](./V0_3_PERFECT_INTEGRATION.md) · limits: [`KNOWN_LIMITATIONS.md`](./KNOWN_LIMITATIONS.md).
 ---
 
 ## 6. Evidence, ratings, webhooks (helpers estables)
@@ -177,7 +189,7 @@ Implementá `WalletAdapter` (Freighter, etc.) — `packages/arcusx-sdk/src/walle
 await ax.evidence.uploadMilestone(taskId, formData);
 await ax.ratings.create({ /* … */ });
 await ax.webhooks.listDeliveries();
-const ok = await ax.webhooks.verifySignature(rawBody, headerSignature, secret);
+const ok = await ax.webhooks.verifySignature(secret, rawBody, headerSignature);
 ```
 
 ---

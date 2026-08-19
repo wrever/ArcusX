@@ -553,7 +553,7 @@ export async function buildDisputeTimelinePayload(
       id: eventId++,
       type: 'escrow_created',
       title: 'Escrow creado',
-      description: 'Contrato escrow creado en Trustless Work',
+      description: 'Contrato escrow creado',
       date: task.escrow_created_at,
       metadata: { contract_id: task.escrow_id ?? null },
     });

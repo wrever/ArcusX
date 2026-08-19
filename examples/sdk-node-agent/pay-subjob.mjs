@@ -1,5 +1,5 @@
 /**
- * Pago real agentic → escrow Trustless Work (testnet).
+ * Pago real agentic → escrow ArcusX (testnet).
  *
  * Env:
  *   ARCUSX_API_URL, SUPABASE_ANON_KEY, ARCUSX_USER_JWT

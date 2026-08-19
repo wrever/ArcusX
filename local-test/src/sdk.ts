@@ -12,7 +12,7 @@ const envDefaults: LocalTestConfig = {
   baseUrl: import.meta.env.VITE_ARCUSX_API_URL ?? '',
 };
 
-/** En Vite DEV el proxy /partner-api evita CORS del browser. */
+/** En Vite DEV el proxy /partner-api → Edge arcusx-api (inyecta anon). */
 export function defaultDevBaseUrl(): string {
   if (typeof window !== 'undefined' && import.meta.env.DEV) {
     return `${window.location.origin}/partner-api`;
@@ -47,7 +47,9 @@ export function saveConfig(config: LocalTestConfig): void {
 export function gatewayHint(config: LocalTestConfig): string {
   const custom = config.baseUrl.trim();
   if (custom) return custom;
-  return import.meta.env.DEV ? `${defaultDevBaseUrl()} → ${DEFAULT_PARTNER_API_BASE}` : DEFAULT_PARTNER_API_BASE;
+  return import.meta.env.DEV
+    ? `${defaultDevBaseUrl()} → Edge arcusx-api (testnet)`
+    : DEFAULT_PARTNER_API_BASE;
 }
 
 /** Cliente partner: solo API key. Sin JWT, sin wallet. */

@@ -28,6 +28,8 @@ import * as dealEvidence from './deal-evidence.ts';
 import * as kyc from './kyc.ts';
 import * as badges from './badges.ts';
 import * as escrowProvider from './escrow-provider.ts';
+import * as partnerEscrow from './partner-escrow.ts';
+import * as partnerDeals from './partner-deals.ts';
 import * as agentic from './agentic.ts';
 import * as apiKeys from './api-keys.ts';
 import * as externalJobs from './external-jobs.ts';
@@ -127,6 +129,23 @@ const ROUTES: Record<string, ApiHandler> = {
   prepare_escrow_release: escrowProvider.prepareEscrowRelease,
   confirm_escrow_release: escrowProvider.confirmEscrowRelease,
   list_webhook_deliveries: escrowProvider.listWebhookDeliveries,
+  // Partner escrow rail (API key only — no JWT)
+  partner_escrow_deploy_prepare: partnerEscrow.preparePartnerEscrowDeploy,
+  partner_escrow_deploy_confirm: partnerEscrow.confirmPartnerEscrowDeploy,
+  partner_escrow_fund_prepare: partnerEscrow.preparePartnerEscrowFund,
+  partner_escrow_fund_confirm: partnerEscrow.confirmPartnerEscrowFund,
+  partner_escrow_release_prepare: partnerEscrow.preparePartnerEscrowRelease,
+  partner_escrow_release_confirm: partnerEscrow.confirmPartnerEscrowRelease,
+  partner_escrow_get: partnerEscrow.getPartnerEscrow,
+  partner_escrow_list: partnerEscrow.listPartnerEscrows,
+  partner_deal_create: partnerDeals.createPartnerDeal,
+  partner_deal_get_by_token: partnerDeals.getPartnerDealByToken,
+  partner_deal_get: partnerDeals.getPartnerDeal,
+  partner_deal_list: partnerDeals.listPartnerDeals,
+  partner_deal_fund_prepare: partnerDeals.preparePartnerDealFund,
+  partner_deal_fund_confirm: partnerDeals.confirmPartnerDealFund,
+  partner_deal_release_prepare: partnerDeals.preparePartnerDealRelease,
+  partner_deal_release_confirm: partnerDeals.confirmPartnerDealRelease,
   get_deal_evidence: dealEvidence.getDealEvidence,
 
   create_job: agentic.createJob,

@@ -73,15 +73,18 @@ Always `escrow` in paths and types — never vendor-specific names.
 ## SDK pattern
 
 ```ts
-const quote = await ax.escrow.quote(taskId);
-const prep = await ax.escrow.prepareFund(taskId, { clientWallet, workerWallet });
-// sign prep XDR with user wallet
-await ax.escrow.confirmFund(taskId, { txHash });
-await ax.settlement.completeTask(taskId, { txHash: releaseHash });
+const { quote } = await ax.escrow.quote(50); // nominal USDC
+const prep = await ax.escrow.prepareFund(taskId, clientWallet);
+// sign prep.unsigned_xdr with WalletAdapter → broadcast
+await ax.escrow.confirmFund(taskId, {
+  proposalId,
+  contractId,
+  fundTxHash, // and/or signedXdr
+});
+await ax.escrow.confirmRelease(taskId, releaseTxHash);
 ```
 
-Wallet adapter (browser): Freighter / kit — Node examples sign with your own key management.
-
+Wallet adapter (browser): copy-ready Freighter in [`examples/sdk-freighter-adapter`](../../examples/sdk-freighter-adapter/).
 ## Fees
 
 Partners see one ArcusX fee quote (2% from worker; employer funds nominal). Details: [Fee model](/sdk/FEE_MODEL).

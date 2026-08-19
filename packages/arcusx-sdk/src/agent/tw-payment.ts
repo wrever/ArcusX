@@ -1,5 +1,5 @@
 /**
- * Orquestación de pagos agentic → escrow Trustless Work (vía Edge, TW oculto).
+ * Orquestación de pagos agentic → escrow ArcusX (vía Edge).
  *
  * Flujo payer (agente orquestador):
  *   fundSubjob → USDC bloqueado en contrato TW

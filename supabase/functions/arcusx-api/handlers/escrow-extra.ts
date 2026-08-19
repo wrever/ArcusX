@@ -94,7 +94,7 @@ export async function getEscrowStatus(ctx: ApiContext): Promise<Response> {
       balance: null,
       balance_source: 'database_only',
       balance_hint:
-        'Consulta el balance on-chain con Trustless Work (getEscrowByContractIds) en el cliente.',
+        'Consulta el status del escrow vía SDK (escrow.status / partnerEscrow.get).',
       task_id: row.id,
       client_id: row.user_id,
       worker_id: row.accepted_applicant_id,
@@ -105,7 +105,7 @@ export async function getEscrowStatus(ctx: ApiContext): Promise<Response> {
 function deprecated(req: Request, name: string): Response {
   return jsonError(
     req,
-    `Este endpoint está deprecado (${name}). Trustless Work maneja las transacciones.`,
+    `Este endpoint está deprecado (${name}). Usa el ciclo prepare/confirm de escrow ArcusX.`,
     410,
     'deprecated',
   );

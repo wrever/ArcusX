@@ -121,7 +121,8 @@ export function createEscrowModule(client: ArcusXClient) {
       input: {
         proposalId: number;
         contractId: string;
-        fundTxHash: string;
+        fundTxHash?: string;
+        signedXdr?: string;
         clientWallet?: string;
       },
       opts?: RequestOptions,
@@ -138,6 +139,7 @@ export function createEscrowModule(client: ArcusXClient) {
           escrow_id: input.contractId,
           fund_tx_hash: input.fundTxHash,
           transaction_hash: input.fundTxHash,
+          signed_xdr: input.signedXdr,
           funding_confirmed: true,
           client_wallet: input.clientWallet,
         },
@@ -162,15 +164,24 @@ export function createEscrowModule(client: ArcusXClient) {
 
     confirmRelease(
       taskId: number,
-      releaseTxHash: string,
+      input: string | { releaseTxHash?: string; signedXdr?: string | string[] },
       opts?: RequestOptions,
     ): Promise<Record<string, unknown>> {
+      const body =
+        typeof input === 'string'
+          ? { task_id: taskId, release_tx_hash: input, tx_hash: input }
+          : {
+              task_id: taskId,
+              release_tx_hash: input.releaseTxHash,
+              tx_hash: input.releaseTxHash,
+              signed_xdr: input.signedXdr,
+            };
       return httpPost(
         client.http,
         client.config,
         REST_PATHS.escrowReleaseConfirm(taskId),
         LEGACY_ACTIONS.confirmEscrowRelease,
-        { task_id: taskId, release_tx_hash: releaseTxHash, tx_hash: releaseTxHash },
+        body,
         opts,
       );
     },

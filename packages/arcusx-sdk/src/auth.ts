@@ -20,7 +20,7 @@ export function buildAuthHeaders(
       headers['x-arcusx-api-key'] = config.apiKey;
     }
   } else if (config.apiKey) {
-    // Modo partner servidor (Soroswap / Trustless Work): solo Bearer axk_…
+    // Modo partner servidor: solo Bearer axk_…
     headers.Authorization = `Bearer ${config.apiKey}`;
   }
 

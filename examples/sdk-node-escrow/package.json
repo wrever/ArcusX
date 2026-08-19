@@ -1,0 +1,12 @@
+{
+  "name": "arcusx-sdk-node-escrow",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "dependencies": {
+    "@arcusx/sdk": "file:../../packages/arcusx-sdk"
+  }
+}

@@ -20,6 +20,7 @@
     "smoke:agentic": "npm run build && node ../../scripts/smoke-agentic.mjs",
     "demo:week1": "npm run build && node ../../scripts/demo-week1-sdk.mjs",
     "demo:week2": "npm run build && node ../../scripts/demo-week2-award.mjs",
+    "demo:week3": "npm run build && node ../../scripts/demo-week3-escrow.mjs",
     "demo:agentic": "npm run build && node ../../scripts/demo-agentic-week1.mjs",
     "prepublishOnly": "npm run build"
   },

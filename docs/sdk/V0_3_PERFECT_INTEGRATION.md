@@ -1,6 +1,6 @@
 # ArcusX SDK v0.3 — Integración perfecta
 
-**North star:** El integrador monta su producto; ArcusX es el **riel de ejecución** (escrow USDC, disputas, settlement). Trustless Work queda **100% oculto** detrás de la Edge.
+**North star:** El integrador monta su producto; ArcusX es el **riel de ejecución** (escrow USDC, disputas, settlement). El motor on-chain es interno a la Edge.
 
 **Tesis:** [`RAIL_THESIS.md`](./RAIL_THESIS.md)
 
@@ -23,7 +23,7 @@ Partner App (UX, CRM, matching)
         ▼
 arcusx-api REST /v1
   ├── partner auth (x-arcusx-api-key)
-  ├── TW server-side (_shared/trustless-work-api.ts)
+  ├── escrow prepare/confirm (server-side)
   └── webhook deliveries (HMAC sha256)
         │
         ▼
@@ -105,16 +105,16 @@ const log = await ax.webhooks.listDeliveries(); // requiere API key
 
 ## Edge secrets (solo ArcusX ops — nunca partner ni usuario final)
 
-La API key de Trustless Work **vive únicamente en Supabase Edge secrets del proyecto ArcusX**. Los integradores usan `x-arcusx-api-key` (`axk_test_` / `axk_live_`); **no** reciben `TRUSTLESS_WORK_API_KEY`. Si tuvieran TW, podrían saltarse ArcusX y perderíamos comisión + riel de disputas.
+Credenciales del motor de escrow viven **solo** en secrets de Edge. Los integradores usan `axk_test_` / `axk_live_`; **nunca** reciben keys del motor interno.
 
 | Secret (vault ArcusX) | Uso |
 |--------|-----|
-| `TRUSTLESS_WORK_API_KEY` | Llamadas TW server-side en `prepareDeploy` / `prepareFund` / `prepareRelease` |
-| `PLATFORM_WALLET` | Recibe comisión ArcusX (~3.7%) on-chain |
-| `ADMIN_WALLET` | `disputeResolver` en contrato TW |
+| Escrow provider API key | `prepareDeploy` / `prepareFund` / `prepareRelease` |
+| `PLATFORM_WALLET` | Recibe comisión ArcusX on-chain |
+| `ADMIN_WALLET` | `disputeResolver` del contrato |
 | `STELLAR_NETWORK` | testnet / mainnet |
 
-El integrador solo firma **XDR** que devuelve el SDK; ArcusX firma la relación con TW por detrás.
+El integrador solo firma **XDR** que devuelve el SDK.
 
 ---
 

@@ -230,6 +230,46 @@ try {
   push('client.requires_credentials', /apiKey|bearerToken/i.test(String(e)), String(e).slice(0, 60));
 }
 
+/** E — Week 3: escrow.quote + clear error (requires valid key) */
+if (apiKey) {
+  try {
+    const ax = new ArcusXClient({
+      baseUrl: gatewayBase,
+      apiKey,
+      network: 'testnet',
+    });
+    const quote = await ax.escrow.quote(50);
+    const q = quote?.quote ?? quote;
+    const ok =
+      q &&
+      typeof q === 'object' &&
+      (typeof q.nominal === 'number' || typeof q.fundAmount === 'number' || typeof q.workerNet === 'number');
+    push('gateway.escrow.quote', Boolean(ok), ok ? `nominal=${q.nominal ?? '?'}` : JSON.stringify(quote).slice(0, 80));
+  } catch (e) {
+    push(
+      'gateway.escrow.quote',
+      false,
+      e instanceof ArcusXApiError ? `${e.status} ${e.code}` : String(e),
+    );
+  }
+
+  try {
+    const ax = new ArcusXClient({ baseUrl: gatewayBase, apiKey, network: 'testnet' });
+    await ax.escrow.quote(0);
+    push('gateway.escrow.quote_invalid', false, 'expected error');
+  } catch (e) {
+    const ok = e instanceof ArcusXApiError && e.status >= 400;
+    push(
+      'gateway.escrow.quote_invalid',
+      ok,
+      e instanceof ArcusXApiError ? `${e.status} ${e.code || e.message}` : String(e),
+    );
+  }
+} else if (STRICT) {
+  push('gateway.escrow.quote', false, 'SKIPPED — set ARCUSX_API_KEY');
+  push('gateway.escrow.quote_invalid', false, 'SKIPPED');
+}
+
 let failed = 0;
 console.log('');
 for (const t of tests) {
@@ -239,5 +279,9 @@ for (const t of tests) {
 }
 
 console.log('');
-console.log(failed === 0 ? `Week 1 smoke PASS (${tests.length} checks)` : `Week 1 smoke FAIL (${failed}/${tests.length})`);
+console.log(
+  failed === 0
+    ? `SDK smoke PASS (${tests.length} checks)`
+    : `SDK smoke FAIL (${failed}/${tests.length})`,
+);
 process.exit(failed > 0 ? 1 : 0);

@@ -10,6 +10,8 @@ import { createWebhooksModule, type WebhooksModule } from './modules/webhooks.js
 import { createEscrowModule, type EscrowModule } from './modules/escrow.js';
 import { createMarketplaceModule, type MarketplaceModule } from './modules/marketplace.js';
 import { createPrivateModule, type PrivateModule } from './modules/private.js';
+import { createPartnerDealsModule, type PartnerDealsModule } from './modules/partnerDeals.js';
+import { createPartnerEscrowModule, type PartnerEscrowModule } from './modules/partnerEscrow.js';
 import { createPublicModule, type PublicModule } from './modules/public.js';
 import { createSettlementModule, type SettlementModule } from './modules/settlement.js';
 import type { Network } from './types.js';
@@ -42,6 +44,8 @@ export class ArcusXClient {
   readonly private: PrivateModule;
   readonly deals: DealsModule;
   readonly escrow: EscrowModule;
+  readonly partnerEscrow: PartnerEscrowModule;
+  readonly partnerDeals: PartnerDealsModule;
   readonly settlement: SettlementModule;
   readonly disputes: DisputesModule;
   readonly evidence: EvidenceModule;
@@ -66,6 +70,8 @@ export class ArcusXClient {
     this.private = createPrivateModule(this);
     this.deals = createDealsModule(this);
     this.escrow = createEscrowModule(this);
+    this.partnerEscrow = createPartnerEscrowModule(this);
+    this.partnerDeals = createPartnerDealsModule(this);
     this.settlement = createSettlementModule(this);
     this.disputes = createDisputesModule(this);
     this.evidence = createEvidenceModule(this);

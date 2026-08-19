@@ -3,8 +3,9 @@
 **Track:** `@arcusx/sdk` — Production-Ready TypeScript SDK  
 **Week:** 2 of 4 (SOW 2 accepted)  
 **Status:** Complete (demo-ready — escrow-ready, not on-chain fund)  
-**Date:** 2026-08-05  
-**SOW source:** [`docs/sprints/SOW2_DELIVERY_PLAN.md`](../SOW2_DELIVERY_PLAN.md)
+**Date:** 2026-08-05 · re-verified 2026-08-14  
+**SOW source:** [`docs/sprints/SOW2_DELIVERY_PLAN.md`](../SOW2_DELIVERY_PLAN.md)  
+**Reviewer changelog:** [`WEEK2_NOTION_CHANGELOG.md`](./WEEK2_NOTION_CHANGELOG.md)
 
 ---
 
@@ -37,19 +38,19 @@ Same Edge API that powers `arcusx.pro`. **Fund / release on-chain + Freighter E2
 - [x] Packet + demo script for reviewer (`INSTAAWARDS_SDK_WEEK2.md`, `demo:week2`)
 - [ ] On-chain fund / release / Freighter E2E — **Week 3** (out of scope)
 
-### Live verification matrix (2026-08-05)
+### Live verification matrix (2026-08-14)
 
 | Check | Result |
 |-------|--------|
 | `npm run build` | ✅ PASS |
-| `npm run smoke:strict` (W1) | ✅ PASS — 11 checks |
-| `npm run demo:week1` | ✅ PASS — valid / missing / invalid key |
+| `npm run smoke:strict` (W1 regression) | ✅ PASS — 11 checks · fee **0.02** |
 | `npm run demo:week2` public baseline | ✅ PASS — fee + market stats via gateway |
-| `examples/sdk-node-marketplace` (partner list) | ✅ PASS — fee/stats/tasks; create skipped without JWT |
-| Award E2E (`CLIENT_JWT` + `WORKER_JWT` + wallet) | ⏳ **PENDING** — `examples/sdk-node-award/.env` absent locally |
+| `examples/sdk-node-marketplace` (partner list) | ✅ PASS |
+| Award example: no `fetch` / no `@trustless-work` | ✅ PASS (static) |
+| Award E2E (`CLIENT_JWT` + `WORKER_JWT` + wallet) | ⏳ Fill `examples/sdk-node-award/.env` for live stdout |
 | `sdk-node-private` / `sdk-node-deal` full run | ⏳ Needs `ARCUSX_USER_JWT` (+ wallet for deal) |
 
-**Honest status:** Week 2 deliverables are **code-complete and demo-wired**. Full SOW “award runs through escrow-ready on Testnet” is **proven only after** filling dual JWTs and capturing exit `0` stdout for the reviewer.
+**Honest status:** Week 2 deliverables are **code-complete and demo-wired**. Partner baseline is live. Full award escrow-ready stdout needs dual JWTs (documented). See [`WEEK2_NOTION_CHANGELOG.md`](./WEEK2_NOTION_CHANGELOG.md).
 
 ---
 

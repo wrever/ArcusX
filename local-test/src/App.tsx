@@ -7,8 +7,9 @@ import {
   saveConfig,
   type LocalTestConfig,
 } from './sdk';
+import { runPartnerSuite, type SuiteReport } from './partnerSuite';
 
-type Tab = 'board' | 'quote' | 'deal';
+type Tab = 'suite' | 'board' | 'quote' | 'escrow' | 'deals' | 'deal';
 
 type RunState = {
   loading: boolean;
@@ -53,11 +54,25 @@ function Action({
 
 export default function App() {
   const [config, setConfig] = useState<LocalTestConfig>(loadConfig);
-  const [tab, setTab] = useState<Tab>('board');
+  const [tab, setTab] = useState<Tab>('suite');
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [nominal, setNominal] = useState('50');
   const [dealToken, setDealToken] = useState('');
+  const [dealId, setDealId] = useState('');
+  const [payeeWallet, setPayeeWallet] = useState(
+    () => import.meta.env.VITE_TEST_WORKER_WALLET?.trim() || '',
+  );
+  const [dealTitle, setDealTitle] = useState('Pago seguro — local-test');
+  const [clientWallet, setClientWallet] = useState(
+    () => import.meta.env.VITE_TEST_CLIENT_WALLET?.trim() || '',
+  );
+  const [workerWallet, setWorkerWallet] = useState(
+    () => import.meta.env.VITE_TEST_WORKER_WALLET?.trim() || '',
+  );
+  const [escrowId, setEscrowId] = useState('');
+  const [suite, setSuite] = useState<SuiteReport | null>(null);
+  const [suiteRunning, setSuiteRunning] = useState(false);
   const [run, setRun] = useState<RunState>({
     loading: false,
     label: '',
@@ -119,30 +134,37 @@ export default function App() {
     }
   }
 
-  async function runPartnerSmoke() {
-    await exec('partner smoke', async () => {
+  async function runSuite() {
+    setSuiteRunning(true);
+    setSuite(null);
+    setRun({ loading: true, label: 'partner suite', result: null, error: null, ms: null });
+    const t0 = performance.now();
+    try {
       const client = ax();
-      const fee = await client.public.getPlatformFee();
-      const stats = await client.public.getMarketStats();
-      const list = await client.public.getTasks({ sort_by: 'date_desc' });
-      const rows = Array.isArray(list) ? (list as TaskRow[]) : [];
-      setTasks(rows);
-      if (rows[0]?.id != null) setSelectedId(Number(rows[0].id));
-      const samplePrice = Number(rows[0]?.price) || 50;
-      setNominal(String(samplePrice));
-      const quote = await client.escrow.quote(samplePrice);
-      return {
-        gateway: gatewayHint(config),
-        fee,
-        stats,
-        tasks_listed: rows.length,
-        sample_task: rows[0]
-          ? { id: rows[0].id, title: rows[0].title, price: rows[0].price }
-          : null,
-        quote,
-        note: 'Solo API key. Wallet/JWT los maneja la app del integrador.',
-      };
-    });
+      const report = await runPartnerSuite(client, {
+        gatewayLabel: gatewayHint(config),
+        apiKey: config.apiKey.trim(),
+      });
+      setSuite(report);
+      setRun({
+        loading: false,
+        label: 'partner suite',
+        result: report,
+        error: report.failed > 0 ? `${report.failed} check(s) failed` : null,
+        ms: Math.round(performance.now() - t0),
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setRun({
+        loading: false,
+        label: 'partner suite',
+        result: null,
+        error: msg,
+        ms: Math.round(performance.now() - t0),
+      });
+    } finally {
+      setSuiteRunning(false);
+    }
   }
 
   return (
@@ -150,8 +172,8 @@ export default function App() {
       <header className="hero">
         <h1>ArcusX SDK · local-test</h1>
         <p>
-          Como lo usa un integrador en su propia app: API key → leer mercado, fee y
-          quotes. Sin login ArcusX, sin Freighter, sin wallets aquí.
+          Harness de integrador: API key → fee, board, quote, errores tipados, HMAC.
+          Sin JWT ArcusX, sin Freighter. Wallet / evidencia on-chain = app del partner.
         </p>
         <div className="gateway">gateway → {gatewayHint(config)}</div>
       </header>
@@ -169,11 +191,11 @@ export default function App() {
             />
           </label>
           <label>
-            API URL (opcional — en DEV se usa proxy /partner-api)
+            API URL (opcional — en DEV se usa proxy /partner-api → Edge)
             <input
               value={config.baseUrl}
               onChange={(e) => patch({ baseUrl: e.target.value })}
-              placeholder="vacío = proxy local → api.arcusx.pro"
+              placeholder="vacío = proxy local → Edge testnet"
               autoComplete="off"
             />
           </label>
@@ -182,10 +204,10 @@ export default function App() {
           <button
             type="button"
             className="primary"
-            disabled={!hasKey || run.loading}
-            onClick={() => void runPartnerSmoke()}
+            disabled={!hasKey || suiteRunning || run.loading}
+            onClick={() => void runSuite()}
           >
-            Smoke partner (fee + board + quote)
+            {suiteRunning ? 'Corriendo suite…' : 'Correr suite partner (9 checks)'}
           </button>
           <button
             type="button"
@@ -193,26 +215,49 @@ export default function App() {
             onClick={() => {
               localStorage.removeItem('arcusx-sdk-local-test-v2');
               setConfig(loadConfig());
+              setSuite(null);
             }}
           >
             Limpiar
           </button>
           <span className="badge">{hasKey ? 'key ✓' : 'pega tu key'}</span>
+          {suite && (
+            <span className={suite.failed === 0 ? 'badge ok' : 'badge fail'}>
+              {suite.passed}/{suite.passed + suite.failed} PASS
+            </span>
+          )}
         </div>
-        <p className="hint" style={{ marginTop: '0.75rem' }}>
-          Crear tareas, propuestas o firmar escrow on-chain ocurre en <strong>tu</strong>{' '}
-          producto (tus users + tu wallet). Este panel solo ejercita el rail de lectura /
-          quote que embebés con el SDK.
-        </p>
       </section>
 
+      {suite && (
+        <section className="panel">
+          <h2>Suite results</h2>
+          <p className="hint">
+            {suite.startedAt} · {suite.gateway} · {suite.passed} ok · {suite.failed} fail
+          </p>
+          <ul className="suite-list">
+            {suite.checks.map((c) => (
+              <li key={c.id} className={c.pass ? 'pass' : 'fail'}>
+                <span className="mark">{c.pass ? 'PASS' : 'FAIL'}</span>
+                <span className="label">{c.label}</span>
+                <span className="detail">{c.detail}</span>
+                <span className="ms">{c.ms}ms</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section className="panel">
-        <h2>Explorar</h2>
+        <h2>Explorar (manual)</h2>
         <div className="tabs">
           {(
             [
+              ['suite', 'Suite'],
               ['board', 'Board / tasks'],
               ['quote', 'Fee quote'],
+              ['escrow', 'Partner escrow'],
+              ['deals', 'Partner deals'],
               ['deal', 'Deal preview'],
             ] as const
           ).map(([id, label]) => (
@@ -226,6 +271,14 @@ export default function App() {
             </button>
           ))}
         </div>
+
+        {tab === 'suite' && (
+          <p className="hint" style={{ marginTop: '0.75rem' }}>
+            Usa el botón verde de arriba. Checks: fee 0.02 · market stats · getTasks ·
+            escrow.quote · quote inválido · API key inválida · HMAC · partnerEscrow.list ·
+            partnerDeals.create+getByToken. Firma on-chain = app del partner (no aquí).
+          </p>
+        )}
 
         {tab === 'board' && (
           <>
@@ -316,6 +369,219 @@ export default function App() {
           </>
         )}
 
+        {tab === 'escrow' && (
+          <>
+            <p className="hint" style={{ marginTop: '0.75rem' }}>
+              Motor escrow sin JWT: API key + wallets + monto. ArcusX aplica la
+              comisión. La firma on-chain la hace la wallet en <strong>tu</strong> app.
+            </p>
+            <div className="fields" style={{ marginTop: '0.75rem' }}>
+              <label>
+                client_wallet (G…)
+                <input
+                  value={clientWallet}
+                  onChange={(e) => setClientWallet(e.target.value.trim())}
+                  placeholder="G… pagador"
+                />
+              </label>
+              <label>
+                worker_wallet (G…)
+                <input
+                  value={workerWallet}
+                  onChange={(e) => setWorkerWallet(e.target.value.trim())}
+                  placeholder="G… receptor"
+                />
+              </label>
+              <label>
+                amount USDC
+                <input value={nominal} onChange={(e) => setNominal(e.target.value)} />
+              </label>
+              <label>
+                escrow_id (tras prepare)
+                <input
+                  value={escrowId}
+                  onChange={(e) => setEscrowId(e.target.value.trim())}
+                  placeholder="uuid"
+                />
+              </label>
+            </div>
+            <div className="actions">
+              <Action
+                title="partnerEscrow.prepareDeploy"
+                hint="Ambas G… deben existir en Testnet con trustline USDC"
+                loading={run.loading}
+                disabled={
+                  !hasKey ||
+                  !clientWallet.startsWith('G') ||
+                  !workerWallet.startsWith('G')
+                }
+                onRun={() =>
+                  void exec('partnerEscrow.prepareDeploy', async () => {
+                    const res = await ax().partnerEscrow.prepareDeploy({
+                      clientWallet,
+                      workerWallet,
+                      amountUsdc: Number(nominal) || 50,
+                      externalId: `local-test-${Date.now()}`,
+                      title: 'local-test partner escrow',
+                    });
+                    const id = String(
+                      (res as { escrow?: { id?: string } })?.escrow?.id ?? '',
+                    );
+                    if (id) setEscrowId(id);
+                    return res;
+                  })
+                }
+              />
+              <Action
+                title="partnerEscrow.get"
+                loading={run.loading}
+                disabled={!hasKey || !escrowId}
+                onRun={() =>
+                  void exec('partnerEscrow.get', () => ax().partnerEscrow.get(escrowId))
+                }
+              />
+              <Action
+                title="partnerEscrow.list"
+                loading={run.loading}
+                disabled={!hasKey}
+                onRun={() =>
+                  void exec('partnerEscrow.list', () => ax().partnerEscrow.list())
+                }
+              />
+              <Action
+                title="partnerEscrow.prepareFund"
+                hint="Tras confirmar deploy + contract_id"
+                loading={run.loading}
+                disabled={!hasKey || !escrowId || !clientWallet.startsWith('G')}
+                onRun={() =>
+                  void exec('partnerEscrow.prepareFund', () =>
+                    ax().partnerEscrow.prepareFund(escrowId, clientWallet),
+                  )
+                }
+              />
+            </div>
+          </>
+        )}
+
+        {tab === 'deals' && (
+          <>
+            <p className="hint" style={{ marginTop: '0.75rem' }}>
+              Payment link Testnet: API key → create → <code>deal_token</code> → prepareFund
+              (devuelve XDR deploy). Confirm/fund on-chain = wallet en tu app.
+            </p>
+            <div className="fields" style={{ marginTop: '0.75rem' }}>
+              <label>
+                payee_wallet (G…)
+                <input
+                  value={payeeWallet}
+                  onChange={(e) => setPayeeWallet(e.target.value.trim())}
+                  placeholder="G… quien cobra"
+                />
+              </label>
+              <label>
+                payer_wallet / client (G…)
+                <input
+                  value={clientWallet}
+                  onChange={(e) => setClientWallet(e.target.value.trim())}
+                  placeholder="G… quien paga"
+                />
+              </label>
+              <label>
+                title
+                <input value={dealTitle} onChange={(e) => setDealTitle(e.target.value)} />
+              </label>
+              <label>
+                amount USDC
+                <input value={nominal} onChange={(e) => setNominal(e.target.value)} />
+              </label>
+              <label>
+                deal_id
+                <input
+                  value={dealId}
+                  onChange={(e) => setDealId(e.target.value.trim())}
+                  placeholder="uuid tras create"
+                />
+              </label>
+              <label>
+                deal_token
+                <input
+                  value={dealToken}
+                  onChange={(e) => setDealToken(e.target.value.trim())}
+                  placeholder="tras create"
+                />
+              </label>
+            </div>
+            <div className="actions">
+              <Action
+                title="partnerDeals.create"
+                hint="Genera link / token (Edge /v1/partner/deals)"
+                loading={run.loading}
+                disabled={!hasKey || !payeeWallet.startsWith('G') || !dealTitle.trim()}
+                onRun={() =>
+                  void exec('partnerDeals.create', async () => {
+                    const res = await ax().partnerDeals.create({
+                      amountUsdc: Number(nominal) || 50,
+                      payeeWallet,
+                      payerWallet: clientWallet.startsWith('G') ? clientWallet : undefined,
+                      title: dealTitle,
+                      externalId: `local-deal-${Date.now()}`,
+                    });
+                    const token = String(
+                      (res as { deal_token?: string; deal?: { deal_token?: string } })?.deal_token ??
+                        (res as { deal?: { deal_token?: string } })?.deal?.deal_token ??
+                        '',
+                    );
+                    const id = String(
+                      (res as { deal_id?: string; deal?: { id?: string } })?.deal_id ??
+                        (res as { deal?: { id?: string } })?.deal?.id ??
+                        '',
+                    );
+                    if (token) setDealToken(token);
+                    if (id) setDealId(id);
+                    return res;
+                  })
+                }
+              />
+              <Action
+                title="partnerDeals.getByToken"
+                loading={run.loading}
+                disabled={!hasKey || !dealToken}
+                onRun={() =>
+                  void exec('partnerDeals.getByToken', () =>
+                    ax().partnerDeals.getByToken(dealToken),
+                  )
+                }
+              />
+              <Action
+                title="partnerDeals.prepareFund"
+                hint="Sin escrow → step=deploy + unsigned_xdr (wallets con USDC trustline)"
+                loading={run.loading}
+                disabled={!hasKey || !dealId || !clientWallet.startsWith('G')}
+                onRun={() =>
+                  void exec('partnerDeals.prepareFund', async () => {
+                    const res = await ax().partnerDeals.prepareFund(dealId, clientWallet);
+                    const esc = String(
+                      (res as { escrow_id?: string; escrow?: { id?: string } })?.escrow_id ??
+                        (res as { escrow?: { id?: string } })?.escrow?.id ??
+                        '',
+                    );
+                    if (esc) setEscrowId(esc);
+                    return res;
+                  })
+                }
+              />
+              <Action
+                title="partnerDeals.list"
+                loading={run.loading}
+                disabled={!hasKey}
+                onRun={() =>
+                  void exec('partnerDeals.list', () => ax().partnerDeals.list())
+                }
+              />
+            </div>
+          </>
+        )}
+
         {tab === 'deal' && (
           <>
             <div className="fields" style={{ marginTop: '0.75rem' }}>
@@ -344,7 +610,7 @@ export default function App() {
       </section>
 
       <section className="panel">
-        <h2>Resultado</h2>
+        <h2>Último resultado JSON</h2>
         <div className="meta">
           <span>
             last: <strong>{run.label || '—'}</strong>
@@ -352,9 +618,9 @@ export default function App() {
           <span>
             ms: <strong>{run.ms ?? '—'}</strong>
           </span>
-          <span>{run.loading ? 'running…' : 'idle'}</span>
+          <span>{run.loading || suiteRunning ? 'running…' : 'idle'}</span>
         </div>
-        {run.error ? (
+        {run.error && !suite ? (
           <pre className="log error">{run.error}</pre>
         ) : (
           <pre className="log">

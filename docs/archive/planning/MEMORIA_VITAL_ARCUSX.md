@@ -1,9 +1,9 @@
 # 🧠 MEMORIA VITAL - ARCUSX
 ## Documento de Referencia Completa del Proyecto
 
-**Última Actualización:** 5 agosto 2026  
-**Versión del Proyecto:** 1.7  
-**Estado:** Testnet operativo · SOW 2 Instawards Week 2 · fee integradores 2% · docs SPA
+**Última Actualización:** 18 agosto 2026  
+**Versión del Proyecto:** 1.8  
+**Estado:** Testnet operativo · SOW 2 · **partner escrow + partner deals live (API key)** · fee 2% · docs SPA
 
 ---
 
@@ -1504,7 +1504,9 @@ En lugar de migrar 60-70 archivos PHP individuales, se consolidarán endpoints r
 
 **W1 status:** ✅ Complete (smoke PASS 2026-07-30). Package `@arcusx/sdk` **v0.4.5**. Gateway default `https://api.arcusx.pro`.
 
-**W2 status:** ✅ Code-complete (2026-08-05). Award-style reference SDK-only hasta escrow-ready: `examples/sdk-node-award`. Examples Node endurecidos (marketplace / private / deal). Demo: `npm run demo:week2` (public PASS). **E2E award live** requiere `examples/sdk-node-award/.env` (CLIENT_JWT + WORKER_JWT + wallet) — pendiente de captura stdout revisor. Fund/release on-chain = **W3**.
+**W2 status:** ✅ Code-complete (2026-08-05). Award-style reference SDK-only hasta escrow-ready: `examples/sdk-node-award`. Examples Node endurecidos (marketplace / private / deal). Demo: `npm run demo:week2`. **E2E award live** requiere dual JWT en `.env`.
+
+**W3 status:** ✅ Complete (2026-08-18). Escrow rail: `examples/sdk-node-escrow` · Freighter adapter `examples/sdk-freighter-adapter` · webhooks HMAC `examples/sdk-node-webhooks` · playground tabs award→ready / rail E2E / webhooks · `npm run demo:week3` · smoke 13 checks (incl. `escrow.quote`). On-chain tx hashes = evidencia opcional con wallet del integrador. Packet: `INSTAAWARDS_SDK_WEEK3.md` · changelog Notion `WEEK3_NOTION_CHANGELOG.md`.
 
 **Out of SOW:** mainnet launch · agent-to-agent · Python SDK · Soroban nativo como reemplazo TW · multi-milestone · large marketplace UI redesign.
 
@@ -1512,11 +1514,28 @@ En lugar de migrar 60-70 archivos PHP individuales, se consolidarán endpoints r
 
 - Path: `packages/arcusx-sdk/`
 - Namespaces SOW: `public`, `marketplace`, `private`, `deals`, `escrow`, `settlement`, `evidence`, `ratings`, `webhooks`
+- **Rail B2B (API key only, sin JWT):** `partnerEscrow.*` · `partnerDeals.*` — wallets + monto; fee server-side; firma en app del partner (`WalletAdapter`)
 - `agent.*` existe en el paquete pero **fuera de SOW 2**
 - Errores: `ArcusXApiError` · códigos `missing_api_key` / `invalid_api_key` / `rate_limit_exceeded`
-- Verify: `cd packages/arcusx-sdk && npm run smoke:strict` · `npm run demo:week1` · `npm run demo:week2`
-- Docs contrato: `docs/sdk/QUICKSTART.md`, `API_REFERENCE.md`, `PARTNER_AUTH.md`, `FEE_MODEL.md`
-- Examples: `examples/sdk-node-award` (W2), `examples/sdk-node-{marketplace,private,deal}`, `examples/sdk-playground/`
+- Verify: `cd packages/arcusx-sdk && npm run smoke:strict` · `npm run demo:week1` · `demo:week2` · `demo:week3`
+- Harness UI: `local-test/` (:5200) — suite 9 checks → proxy Edge Testnet
+- Docs contrato: `docs/sdk/QUICKSTART.md`, `API_REFERENCE.md`, `PARTNER_AUTH.md`, `PARTNER_ESCROW.md`, `PARTNER_DEALS.md`, `FEE_MODEL.md`, `KNOWN_LIMITATIONS.md`
+- Examples: `sdk-node-award` (W2), `sdk-node-escrow` / `sdk-node-webhooks` / `sdk-freighter-adapter` (W3), `sdk-playground/`
+
+### Partner rail Testnet (2026-08-18) — LIVE
+
+| Pieza | Estado |
+|-------|--------|
+| Tabla `arcusx_partner_escrows` | ✅ migración aplicada |
+| Tabla `arcusx_partner_deals` | ✅ migración `20260818230000` aplicada |
+| Edge `arcusx-api` | ✅ v113 — routes `/v1/partner/escrows/*` + `/v1/partner/deals/*` |
+| SDK `partnerEscrow` / `partnerDeals` | ✅ en `@arcusx/sdk` |
+| Smoke `prepareDeploy` → `unsigned_xdr` | ✅ (wallets con USDC trustline Testnet) |
+| Smoke `partnerDeals.create` + `prepareFund` step=deploy | ✅ |
+| Confirm on-chain (Freighter) | ⚪ evidencia del **integrador** (no DoD ArcusX) |
+| Gateway `api.arcusx.pro` | ⚠ puede fallar SSL local; harness usa Edge directo vía proxy |
+
+**Separación de rails:** partner (API key + wallets) ≠ marketplace JWT (`escrow-provider` / `task_id`). Ver `docs/sdk/RAILS_SEPARATION.md`. Motor on-chain interno — **nunca** nombrar proveedor en UI/SDK/errors partner-facing.
 
 ### Docs públicas `docs.arcusx.pro` (DX)
 
@@ -1546,9 +1565,9 @@ En lugar de migrar 60-70 archivos PHP individuales, se consolidarán endpoints r
 
 ---
 
-**Última actualización:** 5 agosto 2026 (fee getPlatformFee=2%, board filtros, tasks copy real, local-test partner)  
+**Última actualización:** 18 agosto 2026 (partner escrow + partner deals live Testnet, local-test 9 checks → Edge)  
 **Mantenido por:** Equipo ArcusX  
-**Versión del documento:** 1.7
+**Versión del documento:** 1.8
 
 ---
 

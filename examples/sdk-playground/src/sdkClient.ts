@@ -1,4 +1,4 @@
-import { ArcusXClient } from '@arcusx/sdk';
+import { ArcusXClient, DEFAULT_PARTNER_API_BASE } from '@arcusx/sdk';
 
 export type PlaygroundConfig = {
   baseUrl: string;
@@ -9,7 +9,7 @@ export type PlaygroundConfig = {
   useLegacyActions: boolean;
 };
 
-const STORAGE_KEY = 'arcusx-sdk-playground-config';
+const STORAGE_KEY = 'arcusx-sdk-playground-config-v3';
 
 const envDefaults: PlaygroundConfig = {
   baseUrl: import.meta.env.VITE_ARCUSX_API_URL ?? '',
@@ -20,10 +20,23 @@ const envDefaults: PlaygroundConfig = {
   useLegacyActions: false,
 };
 
+function defaultDevBaseUrl(): string {
+  if (typeof window !== 'undefined' && import.meta.env.DEV) {
+    return `${window.location.origin}/partner-api`;
+  }
+  return DEFAULT_PARTNER_API_BASE;
+}
+
 export function loadConfig(): PlaygroundConfig {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { ...envDefaults, ...JSON.parse(raw) };
+    if (raw) {
+      const parsed = { ...envDefaults, ...JSON.parse(raw) } as PlaygroundConfig;
+      if (import.meta.env.DEV && /api\.arcusx\.pro/i.test(parsed.baseUrl.trim())) {
+        parsed.baseUrl = '';
+      }
+      return parsed;
+    }
   } catch {
     /* ignore */
   }
@@ -34,12 +47,21 @@ export function saveConfig(config: PlaygroundConfig): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
 }
 
+export function gatewayLabel(config: PlaygroundConfig): string {
+  const custom = config.baseUrl.trim();
+  if (custom) return custom;
+  return import.meta.env.DEV
+    ? `${defaultDevBaseUrl()} → ${DEFAULT_PARTNER_API_BASE}`
+    : DEFAULT_PARTNER_API_BASE;
+}
+
 export function createClient(config: PlaygroundConfig): ArcusXClient {
-  if (!config.baseUrl.trim()) {
-    throw new Error('baseUrl requerido');
+  if (!config.apiKey.trim() && !config.bearerToken.trim()) {
+    throw new Error('apiKey o bearerToken requerido');
   }
+  const custom = config.baseUrl.trim();
   return new ArcusXClient({
-    baseUrl: config.baseUrl.trim(),
+    baseUrl: custom || (import.meta.env.DEV ? defaultDevBaseUrl() : undefined),
     supabaseAnonKey: config.supabaseAnonKey.trim() || undefined,
     apiKey: config.apiKey.trim() || undefined,
     bearerToken: config.bearerToken.trim() || undefined,

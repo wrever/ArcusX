@@ -1,6 +1,6 @@
 # SOW 2 Week 2 — Award-style reference (`@arcusx/sdk` only)
 
-Demonstrates the Instawards validation scenario on **Stellar Testnet** using **only** `ArcusXClient` — no raw `fetch`, no `@trustless-work/*`.
+Demonstrates the Instawards validation scenario on **Stellar Testnet** using **only** `ArcusXClient` — no raw `fetch`, no third-party escrow SDKs.
 
 ## Flow (platform mapping)
 

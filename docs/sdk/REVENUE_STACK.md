@@ -39,7 +39,7 @@
 | Capa | % sobre fondeo | Quién recibe |
 |------|----------------|--------------|
 | ArcusX | **3.7%** | `VITE_PLATFORM_WALLET` |
-| Trustless Work | **0.3%** | Protocolo TW |
+| On-chain protocol (interno) | incluido en el 2% | Cubierto por fee ArcusX |
 | **UX empleador** | **+2%** sobre nominal | `clientTotal = nominal × 1.02` |
 | **Neto trabajador** | **~−4%** del fondeo | `workerNet = clientTotal × 0.96` |
 | Stellar | ~$0 | Validators |
