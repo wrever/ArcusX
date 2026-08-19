@@ -54,14 +54,80 @@ export interface TwUnsignedResponse {
   message?: string;
 }
 
+/** Unwrap deployer/fund responses (flat or nested `data`). */
+export function normalizeTwUnsigned(raw: unknown): TwUnsignedResponse {
+  const root = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const nested = (root.data && typeof root.data === 'object'
+    ? root.data
+    : root) as Record<string, unknown>;
+  const unsigned = String(
+    nested.unsignedTransaction ?? nested.unsigned_xdr ?? nested.xdr ?? '',
+  ).trim();
+  const contractId = String(nested.contractId ?? nested.contract_id ?? '').trim();
+  return {
+    unsignedTransaction: unsigned || undefined,
+    contractId: contractId.startsWith('C') ? contractId : undefined,
+    status: nested.status != null ? String(nested.status) : undefined,
+    message: nested.message != null ? String(nested.message) : undefined,
+  };
+}
+
 export interface TwSendTxBody {
   signedXdr: string;
 }
 
 export interface TwSendTxResponse {
-  contractId?: string;
+  /** Legacy / some TW builds */
   hash?: string;
+  /** Current TW / React SDK field */
+  txHash?: string;
+  contractId?: string;
   status?: string;
+  code?: string;
+  message?: string;
+  ledger?: number;
+  escrow?: { contractId?: string };
+}
+
+/** Normalize TW send-transaction payloads (flat, nested data, hash vs txHash). */
+export function normalizeTwSendResult(raw: unknown): {
+  hash: string | null;
+  contractId: string | null;
+  raw: Record<string, unknown>;
+} {
+  const root = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const nested = (root.data && typeof root.data === 'object'
+    ? root.data
+    : root) as Record<string, unknown>;
+  const escrow = (nested.escrow && typeof nested.escrow === 'object'
+    ? nested.escrow
+    : {}) as Record<string, unknown>;
+  const hash = String(
+    nested.txHash ?? nested.hash ?? nested.transaction_hash ?? nested.tx_hash ?? '',
+  ).trim();
+  const contractId = String(
+    nested.contractId ?? nested.contract_id ?? escrow.contractId ?? '',
+  ).trim();
+  return {
+    hash: hash || null,
+    contractId: contractId.startsWith('C') ? contractId : null,
+    raw: nested,
+  };
+}
+
+/** POST /helper/send-transaction */
+export async function twSendTransaction(
+  signedXdr: string,
+  network: StellarNetworkId = 'testnet',
+): Promise<TwSendTxResponse & { hash?: string }> {
+  const raw = await twPost<unknown>('/helper/send-transaction', { signedXdr }, network);
+  const norm = normalizeTwSendResult(raw);
+  return {
+    ...(norm.raw as TwSendTxResponse),
+    hash: norm.hash ?? undefined,
+    txHash: norm.hash ?? undefined,
+    contractId: norm.contractId ?? undefined,
+  };
 }
 
 function assertTrustlessWorkApiNetworkAlignment(network: StellarNetworkId): void {
@@ -114,7 +180,7 @@ export async function twDeploySingleRelease(
   body: DeploySingleReleaseBody,
   network: StellarNetworkId = 'testnet',
 ): Promise<TwUnsignedResponse> {
-  return twPost<TwUnsignedResponse>('/deployer/single-release', body, network);
+  return normalizeTwUnsigned(await twPost<unknown>('/deployer/single-release', body, network));
 }
 
 /** POST /deployer/multi-release — Deals milestone (receiver por hito) */
@@ -192,20 +258,14 @@ export async function twFundSingleRelease(
   return twPost<TwUnsignedResponse>('/escrow/single-release/fund-escrow', body, network);
 }
 
-/** POST /helper/send-transaction */
-export async function twSendTransaction(
-  signedXdr: string,
-  network: StellarNetworkId = 'testnet',
-): Promise<TwSendTxResponse> {
-  return twPost<TwSendTxResponse>('/helper/send-transaction', { signedXdr }, network);
-}
-
 /** POST /escrow/single-release/release-funds — campo API: `releaseSigner` */
 export async function twReleaseSingleRelease(
   body: { contractId: string; releaseSigner: string },
   network: StellarNetworkId = 'testnet',
 ): Promise<TwUnsignedResponse> {
-  return twPost<TwUnsignedResponse>('/escrow/single-release/release-funds', body, network);
+  return normalizeTwUnsigned(
+    await twPost<unknown>('/escrow/single-release/release-funds', body, network),
+  );
 }
 
 /** POST /escrow/single-release/approve-milestone — campo API: `approver` */
@@ -213,7 +273,9 @@ export async function twApproveMilestone(
   body: { contractId: string; approver: string; milestoneIndex: string },
   network: StellarNetworkId = 'testnet',
 ): Promise<TwUnsignedResponse> {
-  return twPost<TwUnsignedResponse>('/escrow/single-release/approve-milestone', body, network);
+  return normalizeTwUnsigned(
+    await twPost<unknown>('/escrow/single-release/approve-milestone', body, network),
+  );
 }
 
 /** POST /escrow/single-release/change-milestone-status — campo API: `serviceProvider` */
@@ -227,7 +289,9 @@ export async function twChangeMilestoneStatus(
   },
   network: StellarNetworkId = 'testnet',
 ): Promise<TwUnsignedResponse> {
-  return twPost<TwUnsignedResponse>('/escrow/single-release/change-milestone-status', body, network);
+  return normalizeTwUnsigned(
+    await twPost<unknown>('/escrow/single-release/change-milestone-status', body, network),
+  );
 }
 
 /** POST /escrow/single-release/dispute-escrow */

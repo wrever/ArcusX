@@ -1,5 +1,6 @@
 import { twSendTransaction } from './trustless-work-api.ts';
 import type { StellarNetworkId } from './stellar-network.ts';
+import { hashFromSignedXdr } from './xdr-hash.ts';
 
 /** Resuelve tx hash desde body: signed_xdr (TW send) o hash explícito. */
 export async function resolveEscrowTxHash(
@@ -14,8 +15,14 @@ export async function resolveEscrowTxHash(
 
   const signed = body.signed_xdr ? String(body.signed_xdr).trim() : '';
   if (signed) {
-    const sent = await twSendTransaction(signed, network);
-    return String(sent.hash ?? '').trim() || null;
+    try {
+      const sent = await twSendTransaction(signed, network);
+      const fromTw = String(sent.hash ?? sent.txHash ?? '').trim();
+      if (fromTw) return fromTw;
+    } catch (e) {
+      console.warn('[resolveEscrowTxHash] TW send failed, falling back to XDR hash', e);
+    }
+    return hashFromSignedXdr(signed, network);
   }
   return null;
 }
@@ -29,8 +36,14 @@ export async function submitSignedXdrSequence(
   for (const xdr of signedXdrs) {
     const trimmed = xdr.trim();
     if (!trimmed) continue;
-    const sent = await twSendTransaction(trimmed, network);
-    const h = String(sent.hash ?? '').trim();
+    let h = '';
+    try {
+      const sent = await twSendTransaction(trimmed, network);
+      h = String(sent.hash ?? sent.txHash ?? '').trim();
+    } catch (e) {
+      console.warn('[submitSignedXdrSequence] TW send failed', e);
+    }
+    if (!h) h = hashFromSignedXdr(trimmed, network) ?? '';
     if (h) hashes.push(h);
   }
   return { hashes, lastHash: hashes.length ? hashes[hashes.length - 1] : null };
@@ -39,6 +52,9 @@ export async function submitSignedXdrSequence(
 export function collectSignedXdrs(body: Record<string, unknown>): string[] {
   if (Array.isArray(body.signed_xdrs)) {
     return body.signed_xdrs.map((x) => String(x).trim()).filter(Boolean);
+  }
+  if (Array.isArray(body.signed_xdr)) {
+    return body.signed_xdr.map((x) => String(x).trim()).filter(Boolean);
   }
   const single = body.signed_xdr ? String(body.signed_xdr).trim() : '';
   return single ? [single] : [];

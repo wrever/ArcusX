@@ -8,6 +8,11 @@ import {
   type LocalTestConfig,
 } from './sdk';
 import { runPartnerSuite, type SuiteReport } from './partnerSuite';
+import {
+  createFreighterAdapter,
+  stellarExpertContractUrl,
+  stellarExpertTxUrl,
+} from './freighter';
 
 type Tab = 'suite' | 'board' | 'quote' | 'escrow' | 'deals' | 'deal';
 
@@ -27,6 +32,55 @@ type TaskRow = {
   status?: string;
   category?: string;
 };
+
+type EscrowChainState = {
+  unsignedXdr: string;
+  contractId: string;
+  expertUrl: string;
+  deployTxUrl: string;
+  releaseSteps: string[];
+  lifecycleStep: string;
+  escrowStatus: string;
+};
+
+function emptyChain(): EscrowChainState {
+  return {
+    unsignedXdr: '',
+    contractId: '',
+    expertUrl: '',
+    deployTxUrl: '',
+    releaseSteps: [],
+    lifecycleStep: '',
+    escrowStatus: '',
+  };
+}
+
+function absorbEscrowResponse(res: unknown): Partial<EscrowChainState> & { escrowId?: string } {
+  const r = (res ?? {}) as Record<string, unknown>;
+  const escrow = (r.escrow ?? {}) as Record<string, unknown>;
+  const contractId = String(r.contract_id ?? escrow.contract_id ?? '').trim();
+  const expertUrl = String(
+    r.stellar_expert_url ??
+      escrow.stellar_expert_url ??
+      (contractId ? stellarExpertContractUrl(contractId) : ''),
+  );
+  const deployTxHash = String(r.deploy_tx_hash ?? escrow.deploy_tx_hash ?? '').trim();
+  const steps = Array.isArray(r.steps) ? (r.steps as Array<{ unsigned_xdr?: string }>) : [];
+  return {
+    escrowId: String(escrow.id ?? r.escrow_id ?? '').trim() || undefined,
+    unsignedXdr: String(r.unsigned_xdr ?? '').trim(),
+    contractId,
+    expertUrl,
+    deployTxUrl: String(
+      r.deploy_tx_url ??
+        escrow.deploy_tx_url ??
+        (deployTxHash ? stellarExpertTxUrl(deployTxHash) : ''),
+    ),
+    releaseSteps: steps.map((s) => String(s.unsigned_xdr ?? '')).filter(Boolean),
+    lifecycleStep: String(r.step ?? '').trim(),
+    escrowStatus: String(escrow.status ?? '').trim(),
+  };
+}
 
 function Action({
   title,
@@ -71,6 +125,8 @@ export default function App() {
     () => import.meta.env.VITE_TEST_WORKER_WALLET?.trim() || '',
   );
   const [escrowId, setEscrowId] = useState('');
+  const [chain, setChain] = useState<EscrowChainState>(emptyChain);
+  const [freighterBusy, setFreighterBusy] = useState(false);
   const [suite, setSuite] = useState<SuiteReport | null>(null);
   const [suiteRunning, setSuiteRunning] = useState(false);
   const [run, setRun] = useState<RunState>({
@@ -89,8 +145,48 @@ export default function App() {
     saveConfig(next);
   }
 
+  function applyChain(res: unknown) {
+    const picked = absorbEscrowResponse(res);
+    if (picked.escrowId) setEscrowId(picked.escrowId);
+    setChain((prev) => ({
+      unsignedXdr: picked.unsignedXdr || prev.unsignedXdr,
+      contractId: picked.contractId || prev.contractId,
+      expertUrl: picked.expertUrl || prev.expertUrl,
+      deployTxUrl: picked.deployTxUrl || prev.deployTxUrl,
+      releaseSteps: picked.releaseSteps?.length ? picked.releaseSteps : prev.releaseSteps,
+      lifecycleStep: picked.lifecycleStep || prev.lifecycleStep,
+      escrowStatus: picked.escrowStatus || prev.escrowStatus,
+    }));
+  }
+
   function ax() {
     return createPartnerClient(config);
+  }
+
+  async function connectFreighter() {
+    setFreighterBusy(true);
+    try {
+      const wallet = createFreighterAdapter();
+      const address = await wallet.getAddress();
+      setClientWallet(address);
+      setRun({
+        loading: false,
+        label: 'freighter.connect',
+        result: { address, network: 'testnet', tip: 'Usa esta G… como client_wallet (pagador/firmante)' },
+        error: null,
+        ms: null,
+      });
+    } catch (e) {
+      setRun({
+        loading: false,
+        label: 'freighter.connect',
+        result: null,
+        error: e instanceof Error ? e.message : String(e),
+        ms: null,
+      });
+    } finally {
+      setFreighterBusy(false);
+    }
   }
 
   async function exec(label: string, fn: () => Promise<unknown>) {
@@ -372,12 +468,61 @@ export default function App() {
         {tab === 'escrow' && (
           <>
             <p className="hint" style={{ marginTop: '0.75rem' }}>
-              Motor escrow sin JWT: API key + wallets + monto. ArcusX aplica la
-              comisión. La firma on-chain la hace la wallet en <strong>tu</strong> app.
+              Flujo Testnet (solo Freighter del <strong>cliente</strong>): deploy → fund →
+              prepareRelease×3 (complete → approve → release). Worker solo recibe USDC
+              (trustline Testnet).
             </p>
+            <div className="row" style={{ marginTop: '0.75rem', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="primary"
+                disabled={freighterBusy || run.loading}
+                onClick={() => void connectFreighter()}
+              >
+                {freighterBusy ? 'Freighter…' : 'Conectar Freighter → client_wallet'}
+              </button>
+              {chain.contractId ? (
+                <a
+                  className="badge ok"
+                  href={chain.expertUrl || stellarExpertContractUrl(chain.contractId)}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Expert · {chain.contractId.slice(0, 8)}…
+                </a>
+              ) : (
+                <span className="badge">contract_id tras firmar deploy</span>
+              )}
+              {chain.deployTxUrl ? (
+                <a className="badge ok" href={chain.deployTxUrl} target="_blank" rel="noreferrer">
+                  tx deploy
+                </a>
+              ) : null}
+              {chain.escrowStatus ? (
+                <span className={chain.escrowStatus === 'released' ? 'badge ok' : 'badge'}>
+                  status: {chain.escrowStatus}
+                </span>
+              ) : null}
+              {chain.lifecycleStep ? (
+                <span className="badge">last step: {chain.lifecycleStep}</span>
+              ) : null}
+            </div>
+            {chain.escrowStatus === 'funded' && chain.lifecycleStep.includes('complete') ? (
+              <p className="hint" style={{ marginTop: '0.5rem', color: 'var(--accent)' }}>
+                Milestone marked COMPLETED — USDC still locked in contract. Run{' '}
+                <strong>5 · prepareRelease</strong> again → sign <strong>approve</strong>, then again
+                → sign <strong>release</strong>. Only then worker receives USDC.
+              </p>
+            ) : null}
+            {chain.escrowStatus === 'released' ? (
+              <p className="hint" style={{ marginTop: '0.5rem', color: 'var(--accent)' }}>
+                Released — worker should see USDC (~workerNet after 2% fee). Check Freighter /
+                Expert account GA7U…
+              </p>
+            ) : null}
             <div className="fields" style={{ marginTop: '0.75rem' }}>
               <label>
-                client_wallet (G…)
+                client_wallet (G… firmante Freighter)
                 <input
                   value={clientWallet}
                   onChange={(e) => setClientWallet(e.target.value.trim())}
@@ -397,18 +542,35 @@ export default function App() {
                 <input value={nominal} onChange={(e) => setNominal(e.target.value)} />
               </label>
               <label>
-                escrow_id (tras prepare)
+                escrow_id
                 <input
                   value={escrowId}
                   onChange={(e) => setEscrowId(e.target.value.trim())}
                   placeholder="uuid"
                 />
               </label>
+              <label>
+                contract_id (C…)
+                <input
+                  value={chain.contractId}
+                  onChange={(e) =>
+                    setChain((c) => ({
+                      ...c,
+                      contractId: e.target.value.trim(),
+                      expertUrl: e.target.value.trim().startsWith('C')
+                        ? stellarExpertContractUrl(e.target.value.trim())
+                        : c.expertUrl,
+                    }))
+                  }
+                  placeholder="aparece tras confirmDeploy"
+                  readOnly={!chain.contractId}
+                />
+              </label>
             </div>
             <div className="actions">
               <Action
-                title="partnerEscrow.prepareDeploy"
-                hint="Ambas G… deben existir en Testnet con trustline USDC"
+                title="1 · prepareDeploy"
+                hint="Devuelve unsigned_xdr (contract_id aún null)"
                 loading={run.loading}
                 disabled={
                   !hasKey ||
@@ -417,6 +579,7 @@ export default function App() {
                 }
                 onRun={() =>
                   void exec('partnerEscrow.prepareDeploy', async () => {
+                    setChain(emptyChain());
                     const res = await ax().partnerEscrow.prepareDeploy({
                       clientWallet,
                       workerWallet,
@@ -424,10 +587,125 @@ export default function App() {
                       externalId: `local-test-${Date.now()}`,
                       title: 'local-test partner escrow',
                     });
-                    const id = String(
-                      (res as { escrow?: { id?: string } })?.escrow?.id ?? '',
+                    applyChain(res);
+                    return res;
+                  })
+                }
+              />
+              <Action
+                title="2 · Firmar deploy (Freighter)"
+                hint="Abre Freighter → confirmDeploy → contract_id + Expert"
+                loading={run.loading || freighterBusy}
+                disabled={!hasKey || !escrowId || !chain.unsignedXdr}
+                onRun={() =>
+                  void exec('freighter.sign → confirmDeploy', async () => {
+                    const wallet = createFreighterAdapter();
+                    const address = await wallet.getAddress();
+                    if (address !== clientWallet) {
+                      throw new Error(
+                        `Freighter=${address.slice(0, 8)}… ≠ client_wallet. Conectá la wallet pagadora.`,
+                      );
+                    }
+                    const signed = await wallet.signTransaction(chain.unsignedXdr);
+                    const res = await ax().partnerEscrow.confirmDeploy(escrowId, {
+                      signedXdr: signed,
+                      contractId: chain.contractId || undefined,
+                    });
+                    applyChain(res);
+                    setChain((c) => ({ ...c, unsignedXdr: '' }));
+                    return res;
+                  })
+                }
+              />
+              <Action
+                title="3 · prepareFund"
+                hint="Requiere contract_id (tras paso 2)"
+                loading={run.loading}
+                disabled={
+                  !hasKey || !escrowId || !clientWallet.startsWith('G') || !chain.contractId
+                }
+                onRun={() =>
+                  void exec('partnerEscrow.prepareFund', async () => {
+                    const res = await ax().partnerEscrow.prepareFund(escrowId, clientWallet);
+                    applyChain(res);
+                    return res;
+                  })
+                }
+              />
+              <Action
+                title="4 · Firmar fund (Freighter)"
+                loading={run.loading || freighterBusy}
+                disabled={!hasKey || !escrowId || !chain.unsignedXdr || !chain.contractId}
+                onRun={() =>
+                  void exec('freighter.sign → confirmFund', async () => {
+                    const wallet = createFreighterAdapter();
+                    const signed = await wallet.signTransaction(chain.unsignedXdr);
+                    const res = await ax().partnerEscrow.confirmFund(escrowId, {
+                      signedXdr: signed,
+                      contractId: chain.contractId,
+                    });
+                    applyChain(res);
+                    setChain((c) => ({ ...c, unsignedXdr: '' }));
+                    return res;
+                  })
+                }
+              />
+              <Action
+                title="5 · prepareRelease (next step)"
+                hint="1 paso por vez: complete → approve → release (todo firma client)"
+                loading={run.loading}
+                disabled={
+                  !hasKey || !escrowId || !clientWallet.startsWith('G') || !chain.contractId
+                }
+                onRun={() =>
+                  void exec('partnerEscrow.prepareRelease', async () => {
+                    const res = await ax().partnerEscrow.prepareRelease(
+                      escrowId,
+                      clientWallet,
                     );
-                    if (id) setEscrowId(id);
+                    applyChain(res);
+                    return res;
+                  })
+                }
+              />
+              <Action
+                title="6 · Firmar paso (Freighter client)"
+                hint="Siempre client_wallet — no hace falta cambiar a worker"
+                loading={run.loading || freighterBusy}
+                disabled={
+                  !hasKey ||
+                  !escrowId ||
+                  !(chain.releaseSteps.length > 0 || chain.unsignedXdr)
+                }
+                onRun={() =>
+                  void exec('freighter.sign → confirmRelease', async () => {
+                    const last = run.result as {
+                      step?: string;
+                      signer_wallet?: string;
+                    } | null;
+                    const step = String(last?.step ?? 'release');
+                    const expectedSigner = String(last?.signer_wallet || clientWallet);
+                    const wallet = createFreighterAdapter();
+                    const address = await wallet.getAddress();
+                    if (expectedSigner.startsWith('G') && address !== expectedSigner) {
+                      throw new Error(
+                        `Freighter=${address.slice(0, 10)}… debe ser client ${expectedSigner.slice(0, 10)}…`,
+                      );
+                    }
+                    const xdrs =
+                      chain.releaseSteps.length > 0
+                        ? chain.releaseSteps
+                        : [chain.unsignedXdr];
+                    const signed: string[] = [];
+                    for (const xdr of xdrs) {
+                      signed.push(await wallet.signTransaction(xdr));
+                    }
+                    const res = await ax().partnerEscrow.confirmRelease(escrowId, {
+                      signedXdr: signed,
+                      step,
+                    });
+                    applyChain(res);
+                    setChain((c) => ({ ...c, unsignedXdr: '', releaseSteps: [] }));
                     return res;
                   })
                 }
@@ -437,7 +715,11 @@ export default function App() {
                 loading={run.loading}
                 disabled={!hasKey || !escrowId}
                 onRun={() =>
-                  void exec('partnerEscrow.get', () => ax().partnerEscrow.get(escrowId))
+                  void exec('partnerEscrow.get', async () => {
+                    const res = await ax().partnerEscrow.get(escrowId);
+                    applyChain(res);
+                    return res;
+                  })
                 }
               />
               <Action
@@ -446,17 +728,6 @@ export default function App() {
                 disabled={!hasKey}
                 onRun={() =>
                   void exec('partnerEscrow.list', () => ax().partnerEscrow.list())
-                }
-              />
-              <Action
-                title="partnerEscrow.prepareFund"
-                hint="Tras confirmar deploy + contract_id"
-                loading={run.loading}
-                disabled={!hasKey || !escrowId || !clientWallet.startsWith('G')}
-                onRun={() =>
-                  void exec('partnerEscrow.prepareFund', () =>
-                    ax().partnerEscrow.prepareFund(escrowId, clientWallet),
-                  )
                 }
               />
             </div>

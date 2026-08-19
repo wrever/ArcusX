@@ -154,8 +154,8 @@ export async function confirmEscrowDeploy(ctx: ApiContext): Promise<Response> {
 
   if (body.signed_xdr) {
     const sent = await twSendTransaction(String(body.signed_xdr), stellarNetwork);
-    contractId = String(sent.contractId ?? contractId);
-    deployTxHash = String(sent.hash ?? deployTxHash);
+    if (sent.contractId) contractId = String(sent.contractId);
+    deployTxHash = String(sent.hash ?? sent.txHash ?? deployTxHash);
   }
 
   if (!contractId || !deployTxHash) {

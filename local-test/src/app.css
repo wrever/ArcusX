@@ -283,6 +283,11 @@ button.task-row.active {
 .badge.ok {
   color: var(--accent);
   border-color: var(--accent-dim);
+  text-decoration: none;
+}
+
+a.badge.ok:hover {
+  text-decoration: underline;
 }
 
 .badge.fail {

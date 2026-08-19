@@ -16,13 +16,16 @@ import {
 } from '../../_shared/stellar-network.ts';
 import {
   twApproveMilestone,
+  twChangeMilestoneStatus,
   twDeploySingleRelease,
   twFundSingleRelease,
+  twGetEscrowByContractIds,
   twReleaseSingleRelease,
   twSendTransaction,
 } from '../../_shared/trustless-work-api.ts';
 import { escrowPrepareFailed, escrowProviderUnavailable } from '../../_shared/escrow-provider-errors.ts';
 import { collectSignedXdrs, resolveEscrowTxHash, submitSignedXdrSequence } from '../../_shared/escrow-signed-submit.ts';
+import { hashFromSignedXdr, horizonTxSuccessful } from '../../_shared/xdr-hash.ts';
 import { toTrustlessWorkPlatformFee } from '../../_shared/tw-fee.ts';
 import type { ApiContext } from './types.ts';
 import { requirePartnerKey } from './require.ts';
@@ -36,7 +39,17 @@ async function loadPlatformFee(supabase: ApiContext['supabase']): Promise<number
   return normalizePlatformFeeRate(data?.config_value);
 }
 
+function expertBase(network: unknown): string {
+  const n = String(network ?? 'testnet').toLowerCase();
+  return n === 'mainnet'
+    ? 'https://stellar.expert/explorer/public'
+    : 'https://stellar.expert/explorer/testnet';
+}
+
 function serializeRow(row: Record<string, unknown>) {
+  const contractId = row.contract_id ? String(row.contract_id) : null;
+  const network = row.stellar_network ?? 'testnet';
+  const base = expertBase(network);
   return {
     id: row.id,
     external_id: row.external_id ?? null,
@@ -48,12 +61,16 @@ function serializeRow(row: Record<string, unknown>) {
     amount_usdc: Number(row.amount_usdc),
     fund_amount: Number(row.fund_amount),
     platform_fee: Number(row.platform_fee),
-    contract_id: row.contract_id ?? null,
+    contract_id: contractId,
+    stellar_expert_url: contractId ? `${base}/contract/${contractId}` : null,
     status: row.status,
     deploy_tx_hash: row.deploy_tx_hash ?? null,
     fund_tx_hash: row.fund_tx_hash ?? null,
     release_tx_hash: row.release_tx_hash ?? null,
-    stellar_network: row.stellar_network,
+    deploy_tx_url: row.deploy_tx_hash ? `${base}/tx/${row.deploy_tx_hash}` : null,
+    fund_tx_url: row.fund_tx_hash ? `${base}/tx/${row.fund_tx_hash}` : null,
+    release_tx_url: row.release_tx_hash ? `${base}/tx/${row.release_tx_hash}` : null,
+    stellar_network: network,
     quote: row.quote ?? null,
     metadata: row.metadata ?? {},
     created_at: row.created_at,
@@ -143,8 +160,10 @@ export async function preparePartnerEscrowDeploy(ctx: ApiContext): Promise<Respo
       amount: fundAmount,
       platformFee: twPlatformFee,
       roles: {
+        // Partner rail: cliente controla complete/approve/release.
+        // Worker solo recibe (receiver). Evita segunda Freighter.
         approver: clientWallet,
-        serviceProvider: workerWallet,
+        serviceProvider: clientWallet,
         platformAddress: platformWallet(stellarNetwork),
         releaseSigner: clientWallet,
         disputeResolver: adminWallet(stellarNetwork),
@@ -248,7 +267,13 @@ export async function preparePartnerEscrowDeploy(ctx: ApiContext): Promise<Respo
     step: 'deploy',
     provider: 'arcusx_escrow',
     unsigned_xdr: twRes.unsignedTransaction,
+    /** Present after confirmDeploy (send signed XDR); usually null at prepare time. */
     contract_id: twRes.contractId ?? null,
+    stellar_expert_url: twRes.contractId
+      ? `${expertBase(stellarNetwork)}/contract/${twRes.contractId}`
+      : null,
+    next: 'sign unsigned_xdr with Freighter (client_wallet) → confirmDeploy',
+    note: 'contract_id aparece tras confirmar el deploy firmado',
     engagement_id: engagementId,
     fund_amount: fundAmount,
     client_total: bilateral.clientTotal,
@@ -273,13 +298,44 @@ export async function confirmPartnerEscrowDeploy(ctx: ApiContext): Promise<Respo
   let deployTxHash = String(body.deploy_tx_hash ?? body.transaction_hash ?? '').trim();
 
   if (body.signed_xdr) {
-    const sent = await twSendTransaction(String(body.signed_xdr), stellarNetwork);
-    contractId = String(sent.contractId ?? contractId);
-    deployTxHash = String(sent.hash ?? deployTxHash);
+    const signed = String(body.signed_xdr).trim();
+    const computedHash = hashFromSignedXdr(signed, stellarNetwork);
+    try {
+      const sent = await twSendTransaction(signed, stellarNetwork);
+      console.log('[partner-escrow] confirmDeploy send keys', Object.keys(sent), {
+        hash: sent.hash,
+        txHash: sent.txHash,
+        contractId: sent.contractId,
+        status: sent.status,
+        code: sent.code,
+      });
+      if (sent.contractId) contractId = String(sent.contractId);
+      deployTxHash = String(sent.hash ?? sent.txHash ?? computedHash ?? deployTxHash);
+    } catch (e) {
+      console.error('[partner-escrow] confirmDeploy send', e);
+      // Freighter may have already submitted; if Horizon has the tx, treat as success
+      if (computedHash && await horizonTxSuccessful(computedHash, stellarNetwork)) {
+        deployTxHash = computedHash;
+      } else {
+        const raw = e instanceof Error ? e.message : String(e);
+        return jsonError(
+          req,
+          `No se pudo enviar la tx firmada: ${raw.slice(0, 160)}`,
+          502,
+        );
+      }
+    }
+    if (!deployTxHash && computedHash) deployTxHash = computedHash;
   }
 
   if (!contractId || !deployTxHash) {
-    return jsonError(req, 'contract_id y deploy_tx_hash (o signed_xdr) requeridos', 400);
+    return jsonError(
+      req,
+      !body.signed_xdr
+        ? 'contract_id y deploy_tx_hash (o signed_xdr) requeridos'
+        : `Send OK parcial — falta ${!contractId ? 'contract_id' : 'deploy_tx_hash'}. Reintenta get o pasa contract_id manual.`,
+      400,
+    );
   }
 
   const now = new Date().toISOString();
@@ -306,6 +362,10 @@ export async function confirmPartnerEscrowDeploy(ctx: ApiContext): Promise<Respo
 
   return jsonSuccess(req, {
     step: 'deploy_confirm',
+    contract_id: contractId,
+    deploy_tx_hash: deployTxHash,
+    stellar_expert_url: `${expertBase(stellarNetwork)}/contract/${contractId}`,
+    deploy_tx_url: `${expertBase(stellarNetwork)}/tx/${deployTxHash}`,
     escrow: serializeRow(updated as Record<string, unknown>),
   });
 }
@@ -348,6 +408,8 @@ export async function preparePartnerEscrowFund(ctx: ApiContext): Promise<Respons
     provider: 'arcusx_escrow',
     unsigned_xdr: twRes.unsignedTransaction,
     contract_id: contractId,
+    stellar_expert_url: `${expertBase(stellarNetwork)}/contract/${contractId}`,
+    next: 'sign unsigned_xdr with Freighter → confirmFund',
     fund_amount: fundAmount,
     escrow_id: escrowId,
   });
@@ -395,7 +457,7 @@ export async function confirmPartnerEscrowFund(ctx: ApiContext): Promise<Respons
   });
 }
 
-/** POST partner_escrow_release_prepare */
+/** POST partner_escrow_release_prepare — next on-chain step (complete → approve → release). */
 export async function preparePartnerEscrowRelease(ctx: ApiContext): Promise<Response> {
   const { req, body, stellarNetwork } = ctx;
   const { supabase, partnerId } = await requirePartnerKey(ctx);
@@ -415,49 +477,133 @@ export async function preparePartnerEscrowRelease(ctx: ApiContext): Promise<Resp
   const contractId = String(row.contract_id ?? '').trim();
   if (!contractId) return jsonError(req, 'Sin contract_id', 400);
 
-  let approveRes: Awaited<ReturnType<typeof twApproveMilestone>>;
-  let releaseRes: Awaited<ReturnType<typeof twReleaseSingleRelease>>;
+  // Inspect on-chain / indexer milestone state when possible
+  let milestoneStatus = '';
+  let milestoneApproved = false;
   try {
-    approveRes = await twApproveMilestone({
-      contractId,
-      approver: clientWallet,
-      milestoneIndex: '0',
-    }, stellarNetwork);
-    releaseRes = await twReleaseSingleRelease({
+    const rows = await twGetEscrowByContractIds([contractId], true, stellarNetwork);
+    const esc = (rows[0] ?? null) as Record<string, unknown> | null;
+    const milestones = Array.isArray(esc?.milestones) ? esc!.milestones as Record<string, unknown>[] : [];
+    const m0 = milestones[0] ?? {};
+    milestoneStatus = String(m0.status ?? m0.milestoneStatus ?? '').trim().toLowerCase();
+    milestoneApproved = Boolean(m0.approvedFlag ?? m0.approved);
+  } catch (e) {
+    console.warn('[partner-escrow] indexer peek', e);
+  }
+
+  const needsComplete = !milestoneStatus || milestoneStatus === 'pending' || milestoneStatus === 'empty';
+  const forceStep = String(body.step ?? body.next_step ?? '').trim(); // complete | approve | release
+
+  try {
+    if (forceStep === 'complete' || (needsComplete && forceStep !== 'approve' && forceStep !== 'release')) {
+      // serviceProvider on-chain = client (partner rail); worker only receives funds
+      const completeRes = await twChangeMilestoneStatus({
+        contractId,
+        serviceProvider: clientWallet,
+        milestoneIndex: '0',
+        newStatus: 'COMPLETED',
+        newEvidence: String(body.evidence ?? body.new_evidence ?? 'Work completed via partner API'),
+      }, stellarNetwork);
+      if (!completeRes.unsignedTransaction) {
+        return jsonError(req, escrowPrepareFailed('release'), 502);
+      }
+      return jsonSuccess(req, {
+        step: 'complete',
+        action: 'change_milestone_status',
+        signer_role: 'client',
+        signer_wallet: clientWallet,
+        provider: 'arcusx_escrow',
+        contract_id: contractId,
+        stellar_expert_url: `${expertBase(stellarNetwork)}/contract/${contractId}`,
+        next: 'Freighter (client_wallet) firma → confirmRelease({ signedXdr, step: "complete" }) → prepareRelease otra vez',
+        escrow_id: escrowId,
+        unsigned_xdr: completeRes.unsignedTransaction,
+        steps: [{
+          action: 'change_milestone_status',
+          signer_role: 'client',
+          signer_wallet: clientWallet,
+          milestone_index: '0',
+          unsigned_xdr: completeRes.unsignedTransaction,
+        }],
+      });
+    }
+
+    if (forceStep === 'approve' || (!milestoneApproved && forceStep !== 'release')) {
+      const approveRes = await twApproveMilestone({
+        contractId,
+        approver: clientWallet,
+        milestoneIndex: '0',
+      }, stellarNetwork);
+      if (!approveRes.unsignedTransaction) {
+        return jsonError(req, escrowPrepareFailed('release'), 502);
+      }
+      return jsonSuccess(req, {
+        step: 'approve',
+        action: 'approve_milestone',
+        signer_role: 'client',
+        signer_wallet: clientWallet,
+        provider: 'arcusx_escrow',
+        contract_id: contractId,
+        stellar_expert_url: `${expertBase(stellarNetwork)}/contract/${contractId}`,
+        next: 'Freighter (client_wallet) firma → confirmRelease({ signedXdr, step: "approve" }) → prepareRelease otra vez',
+        escrow_id: escrowId,
+        unsigned_xdr: approveRes.unsignedTransaction,
+        steps: [{
+          action: 'approve_milestone',
+          signer_role: 'client',
+          signer_wallet: clientWallet,
+          milestone_index: '0',
+          unsigned_xdr: approveRes.unsignedTransaction,
+        }],
+      });
+    }
+
+    const releaseRes = await twReleaseSingleRelease({
       contractId,
       releaseSigner: clientWallet,
     }, stellarNetwork);
+    if (!releaseRes.unsignedTransaction) {
+      return jsonError(req, escrowPrepareFailed('release'), 502);
+    }
+    return jsonSuccess(req, {
+      step: 'release',
+      action: 'release_funds',
+      signer_role: 'client',
+      signer_wallet: clientWallet,
+      provider: 'arcusx_escrow',
+      contract_id: contractId,
+      stellar_expert_url: `${expertBase(stellarNetwork)}/contract/${contractId}`,
+      next: 'Freighter (client_wallet) firma → confirmRelease({ signedXdr, step: "release" })',
+      escrow_id: escrowId,
+      unsigned_xdr: releaseRes.unsignedTransaction,
+      steps: [{
+        action: 'release_funds',
+        signer_role: 'client',
+        signer_wallet: clientWallet,
+        unsigned_xdr: releaseRes.unsignedTransaction,
+      }],
+    });
   } catch (e) {
     console.error('[partner-escrow] prepareRelease', e);
-    return jsonError(req, escrowPrepareFailed('release'), 502);
+    const raw = e instanceof Error ? e.message : String(e);
+    const safe = raw
+      .replace(/Trustless\s*Work/gi, 'provider')
+      .replace(/\bTW\b/g, 'provider')
+      .replace(/trustlesswork\.com/gi, 'escrow-api')
+      .slice(0, 180);
+    // Guide user if TW says milestone status empty
+    if (/status cannot be empty|must be completed|milestone/i.test(raw)) {
+      return jsonError(
+        req,
+        `Milestone pendiente: el worker debe marcar completed antes de aprobar/liberar. ${safe}`,
+        400,
+      );
+    }
+    return jsonError(req, `${escrowPrepareFailed('release')} [${safe}]`, 502);
   }
-
-  const steps: Array<Record<string, unknown>> = [];
-  if (approveRes.unsignedTransaction) {
-    steps.push({
-      action: 'approve_milestone',
-      milestone_index: '0',
-      unsigned_xdr: approveRes.unsignedTransaction,
-    });
-  }
-  if (releaseRes.unsignedTransaction) {
-    steps.push({
-      action: 'release_funds',
-      unsigned_xdr: releaseRes.unsignedTransaction,
-    });
-  }
-  if (!steps.length) return jsonError(req, escrowPrepareFailed('release'), 502);
-
-  return jsonSuccess(req, {
-    step: 'release',
-    provider: 'arcusx_escrow',
-    contract_id: contractId,
-    escrow_id: escrowId,
-    steps,
-  });
 }
 
-/** POST partner_escrow_release_confirm */
+/** POST partner_escrow_release_confirm — submits signed XDR for complete/approve/release. */
 export async function confirmPartnerEscrowRelease(ctx: ApiContext): Promise<Response> {
   const { req, body, stellarNetwork } = ctx;
   const { supabase, partnerId } = await requirePartnerKey(ctx);
@@ -467,43 +613,57 @@ export async function confirmPartnerEscrowRelease(ctx: ApiContext): Promise<Resp
   const row = await loadOwnedEscrow(supabase, partnerId, escrowId);
   if (!row) return jsonError(req, 'Escrow no encontrado', 404);
 
-  let releaseTxHash = String(
+  const step = String(body.step ?? body.action ?? 'release').trim().toLowerCase();
+  let txHash = String(
     body.release_tx_hash ?? body.transaction_hash ?? body.tx_hash ?? '',
   ).trim() || null;
 
   const signedList = collectSignedXdrs(body);
   if (signedList.length > 0) {
     const seq = await submitSignedXdrSequence(signedList, stellarNetwork);
-    releaseTxHash = seq.lastHash ?? releaseTxHash;
+    txHash = seq.lastHash ?? txHash;
   }
-  if (!releaseTxHash) {
-    releaseTxHash = await resolveEscrowTxHash(body, stellarNetwork);
+  if (!txHash) {
+    txHash = await resolveEscrowTxHash(body, stellarNetwork);
   }
-  if (!releaseTxHash) return jsonError(req, 'release_tx_hash o signed_xdr requeridos', 400);
+  if (!txHash) return jsonError(req, 'release_tx_hash o signed_xdr requeridos', 400);
 
-  const { data: updated, error } = await supabase
-    .from('arcusx_partner_escrows')
-    .update({
-      release_tx_hash: releaseTxHash,
-      status: 'released',
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', escrowId)
-    .eq('partner_id', partnerId)
-    .select('*')
-    .single();
+  const isFinalRelease = step === 'release' || step === 'release_funds' || step === 'release_confirm';
+  if (isFinalRelease) {
+    const { data: updated, error } = await supabase
+      .from('arcusx_partner_escrows')
+      .update({
+        release_tx_hash: txHash,
+        status: 'released',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', escrowId)
+      .eq('partner_id', partnerId)
+      .select('*')
+      .single();
 
-  if (error || !updated) return jsonError(req, 'No se pudo confirmar release', 500);
+    if (error || !updated) return jsonError(req, 'No se pudo confirmar release', 500);
 
-  void emitPartnerWebhook(supabase, partnerId, 'partner_escrow.released', {
-    escrow_id: escrowId,
-    release_tx_hash: releaseTxHash,
-  });
+    void emitPartnerWebhook(supabase, partnerId, 'partner_escrow.released', {
+      escrow_id: escrowId,
+      release_tx_hash: txHash,
+    });
 
+    return jsonSuccess(req, {
+      step: 'release_confirm',
+      release_tx_hash: txHash,
+      next: null,
+      escrow: serializeRow(updated as Record<string, unknown>),
+    });
+  }
+
+  // complete / approve: only submit on-chain; keep status funded
   return jsonSuccess(req, {
-    step: 'release_confirm',
-    release_tx_hash: releaseTxHash,
-    escrow: serializeRow(updated as Record<string, unknown>),
+    step: `${step}_confirm`,
+    tx_hash: txHash,
+    deploy_tx_url: `${expertBase(stellarNetwork)}/tx/${txHash}`,
+    next: 'prepareRelease otra vez para el siguiente paso (approve o release)',
+    escrow: serializeRow(row),
   });
 }
 

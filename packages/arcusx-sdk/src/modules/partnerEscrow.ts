@@ -102,16 +102,24 @@ export function createPartnerEscrowModule(client: ArcusXClient) {
 
     confirmRelease(
       escrowId: string,
-      input: string | { releaseTxHash?: string; signedXdr?: string | string[] },
+      input:
+        | string
+        | {
+            releaseTxHash?: string;
+            signedXdr?: string | string[];
+            /** complete | approve | release — default release */
+            step?: string;
+          },
       opts?: RequestOptions,
     ) {
       const body =
         typeof input === 'string'
-          ? { escrow_id: escrowId, release_tx_hash: input }
+          ? { escrow_id: escrowId, release_tx_hash: input, step: 'release' }
           : {
               escrow_id: escrowId,
               release_tx_hash: input.releaseTxHash,
               signed_xdr: input.signedXdr,
+              step: input.step ?? 'release',
             };
       return httpPost(
         client.http,
