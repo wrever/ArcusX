@@ -166,7 +166,7 @@ const dep = await ax.partnerEscrow.prepareDeploy({
   title: 'Sprint fix',
 });
 // Freighter (cliente) firma dep.unsigned_xdr → confirmDeploy → prepareFund → …
-// prepareRelease ×3: complete → approve → release
+// prepareRelease → 2× Freighter (approve → release) → confirmRelease({ signedXdr: [...] })
 
 // Payment link
 const deal = await ax.partnerDeals.create({

@@ -4,7 +4,15 @@
 
 **Contacto:** Bruno Andrés · ArcusX · https://arcusx.pro · Portal B2B: https://arcusx.pro/empresas (`empresas.*`)
 
-**Estado ago 2026:** Producto en **Stellar Testnet**; piloto B2B con onboarding manual. Mainnet = próximo hito para GMV real. **No prometer** features no listadas. Fee público vigente: **2%** (`getPlatformFee`).
+**Estado ago 2026:** Producto en **Stellar Testnet**; piloto B2B con onboarding manual. Mainnet = próximo hito. Fee **2%** (`getPlatformFee`).
+
+**Chile — límites legales/comerciales (no negociables en el pitch):**
+- ArcusX **no emite boletas de honorarios ni facturas electrónicas** (SII).
+- ArcusX **no** es banco ni entidad de pago regulada (CMF).
+- Settlement = **USDC on-chain** (no CLP / transferencia bancaria chilena).
+- Non-custodial: el usuario firma con su wallet.
+- Crypto en Chile: marco en evolución — **no** dar asesoría tributaria ni laboral.
+- Detalle y CAP: [`CUSTOMER_ACQUISITION_PLAN.md`](./CUSTOMER_ACQUISITION_PLAN.md) §0.
 
 
 ---
@@ -13,7 +21,7 @@
 
 **ArcusX** es infraestructura de ejecución de trabajo con **escrow en USDC sobre Stellar**: publicas un encargo, eliges quién lo ejecuta, el dinero queda en smart contract hasta que apruebas la entrega, y el pago se liquida en segundos. No somos custodios del dinero — el contrato on-chain sí.
 
-**ArcusX Empresas** es el portal B2B para equipos que contratan talento **por tarea** (no por “puesto”): CTOs, compras, finanzas y founders que necesitan devs/diseño/especialistas sin inflar plantilla ni armar contratos de 10 páginas por trabajos chicos.
+**ArcusX Empresas** es el portal B2B para equipos que coordinan talento **por tarea** con escrow USDC: CTOs y founders que necesitan devs/diseño/especialistas sin inflar plantilla. No reemplaza asesoría laboral ni emisión de documentos tributarios.
 
 ---
 
@@ -45,7 +53,7 @@
 ### Headline del landing (copy aprobado)
 
 - **Título:** *Contrata talento por tarea. Sin contratar de más.*
-- **Subtítulo:** *Para una tarea simple no necesitas contratar a alguien ni gastar en contratos y trámites: publica el encargo, elige propuesta y paga en USDC solo cuando apruebas la entrega.*
+- **Subtítulo:** *Publica el encargo, elige propuesta y libera USDC en escrow cuando apruebas la entrega. (No reemplaza asesoría legal/tributaria ni emisión de boletas.)*
 
 ### Tres pilares (venta)
 
@@ -152,11 +160,14 @@
 | **Fintechs LATAM** | Entienden blockchain/USDC | Misma infra que ya confían |
 | **Consultoras nearshore** | Devs en 3+ países | Unificar contrato/pago |
 
-### Anti-ICP (no perder tiempo)
+### Anti-ICP (no perder tiempo — crítico Chile)
 
-- Empresas que **nunca** pagarían en crypto/USDC (solo fiat local, cero apertura).
-- Procurement enterprise con 12 meses de vendor onboarding (Fortune 500 clásico).
-- Quien busca **nómina / EOR** — no somos Deel; somos **tarea + escrow**.
+- Exigen **boleta de honorarios / factura electrónica** emitida por ArcusX.
+- Solo aceptan **CLP** a cuenta bancaria chilena.
+- Preguntan si somos **entidad de pago CMF** y no aceptan el framing software/escrow.
+- Empresas que **nunca** usarían USDC/wallet.
+- Quien busca **nómina / EOR / contrato laboral** vía la plataforma.
+- Procurement enterprise pesado (12 meses vendor) sin apertura crypto.
 
 ---
 
@@ -188,7 +199,7 @@
 | **Bloqueo backend** en `create_task` / `create_deal` / ofertas privadas | 🔲 **Pendiente — prioridad alta** |
 | **Bloqueo frontend** (CreateTask, DealWizard deshabilitados) | 🔲 **Pendiente** |
 
-**En outreach:** la política es **KYB antes de publicar a escala**. En piloto: *“activamos tu cuenta de publicación tras verificación (24–72 h)”*. No digas que cualquiera publica sin revisión.
+**En outreach:** KYB = **verificación interna del producto** (quién publica). **No** es inscripción CMF ni cumplimiento SII. En piloto: *“activamos publicación tras verificación (24–72 h)”*.
 
 ---
 
@@ -259,15 +270,16 @@
 
 | Objeción | Respuesta |
 |----------|-----------|
-| “¿Por qué crypto?” | USDC = dólar digital estable; no es trading. Misma unidad que muchas tesorerías tech. |
-| “¿Y si desaparecen?” | Non-custodial: el escrow está en **smart contract**, no en nuestra cuenta bancaria. |
-| “Solo testnet” | Perfecto para **aprender el flujo hoy**. Mainnet es el siguiente hito; sin GMV real hasta entonces. |
-| “Mi equipo no sabe usar wallet” | OAuth + Freighter guiado; sesión de onboarding incluida en el piloto. |
-| “Necesito factura / boleta” | En piloto: foco en operación y escrow; facturación local Chile = roadmap. |
-| “Ya usamos Upwork / Workana” | Compara **un encargo**: mismo tipo de talento, **~2% vs 10–20%**. |
-| “Nadie en Chile usa Freighter” | Por eso el piloto incluye onboarding; si no hay disposición a wallet, no es fit hoy. |
-| “Necesito pagar en CLP” | Settlement hoy es USDC on-chain; on-ramp fiat = roadmap — no prometer fecha. |
-| “¿Por qué verificación?” | Protege el marketplace B2B y prioriza cupos Founding. |
+| “¿Por qué crypto?” | USDC = unidad estable on-chain; no es trading. Escrow técnico en Stellar. |
+| “¿Y si desaparecen?” | Non-custodial: fondos en **smart contract**, no en cuenta bancaria ArcusX. |
+| “Solo testnet” | Correcto para practicar sin USDC real. Mainnet = hito aparte + disclaimers. |
+| “Mi equipo no sabe usar wallet” | Onboarding Freighter en piloto; si no hay wallet, no es fit. |
+| “Necesito factura / boleta” | **No emitimos boletas ni facturas SII.** Si es requisito duro → no somos fit. |
+| “Necesito pagar en CLP” | **No.** Solo USDC on-chain. Sin transferencia bancaria chilena en el producto. |
+| “¿Están regulados / CMF?” | Somos **software** non-custodial, no entidad de pago. |
+| “¿Y los impuestos?” | No asesoramos ni liquidamos impuestos. Que consulten a su contador/abogado. |
+| “¿Reemplaza contrato laboral?” | **No.** Coordinación + escrow; no sustituye relación laboral. |
+| “Ya usamos Upwork / Workana” | Compara un encargo: fee **~2%** vs 10–20% (settlement crypto, no fiat). |
 | “Quiero probar sin costo” | Testnet gratis; fee mainnet = **2%** salvo acuerdo Founding por escrito. |
 
 ---
@@ -280,7 +292,7 @@
 
 > Hola [Nombre],
 >
-> Abrimos cupos **Founding Partner** en Chile para ArcusX Empresas. **Hoy:** verificación + práctica en Testnet con nosotros. Fee público **2%** (mucho menos que Workana/Upwork). Beneficio mainnet Founding solo si lo acordamos por escrito.
+> Abrimos cupos **Founding Partner** en Chile (piloto técnico). **Hoy:** verificación + Testnet. Escrow USDC non-custodial; fee **2%**. No emitimos boletas ni movemos CLP — somos software de escrow. Beneficio mainnet solo por escrito.
 >
 > ¿20 minutos esta semana para ver el flujo?
 >
@@ -294,7 +306,7 @@
 >
 > Escalar con freelancers en Chile/LATAM suele ser transferencia a ciegas o comisiones altas.
 >
-> **ArcusX Empresas:** encargo → escrow USDC → pagas al aprobar. Partimos en **Testnet** con onboarding Freighter. Fee **2%**.
+> **ArcusX Empresas:** encargo → escrow USDC → liberas al aprobar. **Testnet** + Freighter. Fee **2%**. No boletas SII / no CLP bancario.
 >
 > ¿15 min para una demo?
 >
@@ -388,8 +400,14 @@
 - Mainnet producción
 - Multi-usuario por empresa (roles, invitaciones)
 - SSO enterprise
-- Facturación legal por país
 - Wallet embebida sin Freighter
+
+### Fuera de alcance (no “roadmap” comercial)
+
+- Emisión de **boletas / facturas SII**
+- Pagos en **CLP** / integración banca chilena
+- Licencia como entidad de pago / banco
+- Asesoría tributaria o laboral
 
 ---
 
@@ -432,10 +450,12 @@ Eso convierte a un SaaS o agencia con producto propio en **partner** además de 
 4. Freighter onboarding incluido en piloto.
 
 **No hacer:**
-- Prometer mainnet o CLP nativo sin fecha real.  
+- Prometer boletas, facturas SII, CLP bancario o “estamos regulados como banco/PSP”.  
+- Decir “sin impuestos” / “sin papeles” / “evitas al SII”.  
+- Prometer mainnet sin aclarar Testnet + disclaimers.  
 - Inventar % de fee o “0%” sin política escrita.  
-- Vender “inversión crypto”.  
-- Mencionar herramientas o proveedores internos irrelevantes al cliente.
+- Vender inversión crypto o reemplazo de contrato laboral.  
+- Dar asesoría tributaria o laboral.
 
 ---
 

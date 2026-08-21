@@ -89,6 +89,37 @@ export function createPartnerEscrowModule(client: ArcusXClient) {
       );
     },
 
+    prepareComplete(escrowId: string, workerWallet: string, opts?: RequestOptions) {
+      return httpPost(
+        client.http,
+        client.config,
+        REST_PATHS.partnerEscrowCompletePrepare(escrowId),
+        LEGACY_ACTIONS.partnerEscrowCompletePrepare,
+        { escrow_id: escrowId, worker_wallet: workerWallet },
+        opts,
+      );
+    },
+
+    confirmComplete(
+      escrowId: string,
+      input: { signedXdr?: string | string[]; txHash?: string },
+      opts?: RequestOptions,
+    ) {
+      return httpPost(
+        client.http,
+        client.config,
+        REST_PATHS.partnerEscrowCompleteConfirm(escrowId),
+        LEGACY_ACTIONS.partnerEscrowCompleteConfirm,
+        {
+          escrow_id: escrowId,
+          signed_xdr: input.signedXdr,
+          tx_hash: input.txHash,
+        },
+        opts,
+      );
+    },
+
+    /** Cliente: approve → release (2 firmas). Requiere prepareComplete previo del worker. */
     prepareRelease(escrowId: string, clientWallet: string, opts?: RequestOptions) {
       return httpPost(
         client.http,
@@ -107,7 +138,7 @@ export function createPartnerEscrowModule(client: ArcusXClient) {
         | {
             releaseTxHash?: string;
             signedXdr?: string | string[];
-            /** complete | approve | release — default release */
+            /** approve | release */
             step?: string;
           },
       opts?: RequestOptions,

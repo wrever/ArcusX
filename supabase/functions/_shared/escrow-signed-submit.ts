@@ -2,7 +2,11 @@ import { twSendTransaction } from './trustless-work-api.ts';
 import type { StellarNetworkId } from './stellar-network.ts';
 import { hashFromSignedXdr } from './xdr-hash.ts';
 
-/** Resuelve tx hash desde body: signed_xdr (TW send) o hash explícito. */
+/**
+ * Resuelve tx hash desde body: signed_xdr (broadcast) o hash explícito.
+ * Si hay signed_xdr, **debe** broadcast-earse — no inventar éxito con solo hash del XDR
+ * (eso marcaba approve/release como OK sin que la tx llegara a Stellar).
+ */
 export async function resolveEscrowTxHash(
   body: Record<string, unknown>,
   network: StellarNetworkId = 'testnet',
@@ -15,19 +19,18 @@ export async function resolveEscrowTxHash(
 
   const signed = body.signed_xdr ? String(body.signed_xdr).trim() : '';
   if (signed) {
-    try {
-      const sent = await twSendTransaction(signed, network);
-      const fromTw = String(sent.hash ?? sent.txHash ?? '').trim();
-      if (fromTw) return fromTw;
-    } catch (e) {
-      console.warn('[resolveEscrowTxHash] TW send failed, falling back to XDR hash', e);
-    }
-    return hashFromSignedXdr(signed, network);
+    const sent = await twSendTransaction(signed, network);
+    const fromTw = String(sent.hash ?? sent.txHash ?? '').trim();
+    if (fromTw) return fromTw;
+    // Último recurso solo si el provider no devolvió hash pero el envío no tiró:
+    const local = hashFromSignedXdr(signed, network);
+    if (local) return local;
+    throw new Error('Broadcast ok pero sin tx hash — reintenta confirm');
   }
   return null;
 }
 
-/** Envía N XDR firmados en orden (release = approve + release). Devuelve hash del último. */
+/** Envía N XDR firmados en orden. Falla si algún broadcast falla (no fake-success). */
 export async function submitSignedXdrSequence(
   signedXdrs: string[],
   network: StellarNetworkId = 'testnet',
@@ -36,15 +39,13 @@ export async function submitSignedXdrSequence(
   for (const xdr of signedXdrs) {
     const trimmed = xdr.trim();
     if (!trimmed) continue;
-    let h = '';
-    try {
-      const sent = await twSendTransaction(trimmed, network);
-      h = String(sent.hash ?? sent.txHash ?? '').trim();
-    } catch (e) {
-      console.warn('[submitSignedXdrSequence] TW send failed', e);
-    }
+    const sent = await twSendTransaction(trimmed, network);
+    let h = String(sent.hash ?? sent.txHash ?? '').trim();
     if (!h) h = hashFromSignedXdr(trimmed, network) ?? '';
-    if (h) hashes.push(h);
+    if (!h) {
+      throw new Error('Broadcast sin tx hash — reintenta confirm');
+    }
+    hashes.push(h);
   }
   return { hashes, lastHash: hashes.length ? hashes[hashes.length - 1] : null };
 }

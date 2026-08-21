@@ -178,7 +178,7 @@ Sin JWT. Input: wallets + monto. Spec: [`PARTNER_ESCROW.md`](./PARTNER_ESCROW.md
 | `confirmDeploy(id, { signedXdr })` | `POST …/deploy/confirm` |
 | `prepareFund(id, clientWallet)` | `POST …/fund/prepare` |
 | `confirmFund(id, { signedXdr })` | `POST …/fund/confirm` |
-| `prepareRelease(id, clientWallet)` | `POST …/release/prepare` (stateful: complete → approve → release) |
+| `prepareRelease(id, clientWallet)` | `POST …/release/prepare` → 2 XDR (approve + release) |
 | `confirmRelease(id, { signedXdr, step })` | `POST …/release/confirm` |
 | `get(id)` / `list()` | `GET /v1/partner/escrows/:id` · `GET /v1/partner/escrows` |
 

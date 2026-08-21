@@ -39,7 +39,9 @@ type EscrowChainState = {
   expertUrl: string;
   deployTxUrl: string;
   releaseSteps: string[];
+  /** Último step de prepare* (complete | approve | release) — para confirm */
   lifecycleStep: string;
+  pendingSigner: string;
   escrowStatus: string;
 };
 
@@ -51,6 +53,7 @@ function emptyChain(): EscrowChainState {
     deployTxUrl: '',
     releaseSteps: [],
     lifecycleStep: '',
+    pendingSigner: '',
     escrowStatus: '',
   };
 }
@@ -78,6 +81,7 @@ function absorbEscrowResponse(res: unknown): Partial<EscrowChainState> & { escro
     ),
     releaseSteps: steps.map((s) => String(s.unsigned_xdr ?? '')).filter(Boolean),
     lifecycleStep: String(r.step ?? '').trim(),
+    pendingSigner: String(r.signer_wallet ?? '').trim(),
     escrowStatus: String(escrow.status ?? '').trim(),
   };
 }
@@ -155,6 +159,7 @@ export default function App() {
       deployTxUrl: picked.deployTxUrl || prev.deployTxUrl,
       releaseSteps: picked.releaseSteps?.length ? picked.releaseSteps : prev.releaseSteps,
       lifecycleStep: picked.lifecycleStep || prev.lifecycleStep,
+      pendingSigner: picked.pendingSigner || prev.pendingSigner,
       escrowStatus: picked.escrowStatus || prev.escrowStatus,
     }));
   }
@@ -168,6 +173,26 @@ export default function App() {
     try {
       const wallet = createFreighterAdapter();
       const address = await wallet.getAddress();
+      // No pisar client_wallet si ya hay escrow con otro pagador (evita GA worker por error)
+      if (
+        clientWallet.startsWith('G') &&
+        clientWallet !== address &&
+        (escrowId || chain.contractId)
+      ) {
+        setRun({
+          loading: false,
+          label: 'freighter.connect',
+          result: {
+            address,
+            warning:
+              `Freighter=${address.slice(0, 10)}… pero client_wallet del escrow es ${clientWallet.slice(0, 10)}…. ` +
+              `En Freighter cambia a la cuenta CLIENTE (pagador) antes de firmar. No se sobrescribió el campo.`,
+          },
+          error: null,
+          ms: null,
+        });
+        return;
+      }
       setClientWallet(address);
       setRun({
         loading: false,
@@ -468,9 +493,8 @@ export default function App() {
         {tab === 'escrow' && (
           <>
             <p className="hint" style={{ marginTop: '0.75rem' }}>
-              Flujo Testnet (solo Freighter del <strong>cliente</strong>): deploy → fund →
-              prepareRelease×3 (complete → approve → release). Worker solo recibe USDC
-              (trustline Testnet).
+              Paridad marketplace: deploy → fund → <strong>6 · Liberar</strong> = Freighter{' '}
+              <strong>cliente</strong> ×2 (approve → release). Sin firma del worker.
             </p>
             <div className="row" style={{ marginTop: '0.75rem', gap: '0.5rem', flexWrap: 'wrap' }}>
               <button
@@ -507,17 +531,16 @@ export default function App() {
                 <span className="badge">last step: {chain.lifecycleStep}</span>
               ) : null}
             </div>
-            {chain.escrowStatus === 'funded' && chain.lifecycleStep.includes('complete') ? (
+            {chain.escrowStatus === 'funded' ? (
               <p className="hint" style={{ marginTop: '0.5rem', color: 'var(--accent)' }}>
-                Milestone marked COMPLETED — USDC still locked in contract. Run{' '}
-                <strong>5 · prepareRelease</strong> again → sign <strong>approve</strong>, then again
-                → sign <strong>release</strong>. Only then worker receives USDC.
+                Funded — Freighter = <strong>cliente</strong> → pulsa{' '}
+                <strong>6 · Liberar ×2</strong> (approve → release).
               </p>
             ) : null}
             {chain.escrowStatus === 'released' ? (
               <p className="hint" style={{ marginTop: '0.5rem', color: 'var(--accent)' }}>
-                Released — worker should see USDC (~workerNet after 2% fee). Check Freighter /
-                Expert account GA7U…
+                Released — worker debería ver USDC (~98%). Verifica en Expert la cuenta receptor y
+                balance del contrato ≈ 0.
               </p>
             ) : null}
             <div className="fields" style={{ marginTop: '0.75rem' }}>
@@ -639,6 +662,12 @@ export default function App() {
                 onRun={() =>
                   void exec('freighter.sign → confirmFund', async () => {
                     const wallet = createFreighterAdapter();
+                    const address = await wallet.getAddress();
+                    if (address !== clientWallet) {
+                      throw new Error(
+                        `Freighter=${address.slice(0, 10)}… debe ser client ${clientWallet.slice(0, 10)}…`,
+                      );
+                    }
                     const signed = await wallet.signTransaction(chain.unsignedXdr);
                     const res = await ax().partnerEscrow.confirmFund(escrowId, {
                       signedXdr: signed,
@@ -651,17 +680,17 @@ export default function App() {
                 }
               />
               <Action
-                title="5 · prepareRelease (next step)"
-                hint="1 paso por vez: complete → approve → release (todo firma client)"
+                title="5 · (opcional) prepareComplete"
+                hint="No lo usa el marketplace. Solo si quieres evidencia COMPLETED on-chain."
                 loading={run.loading}
                 disabled={
-                  !hasKey || !escrowId || !clientWallet.startsWith('G') || !chain.contractId
+                  !hasKey || !escrowId || !workerWallet.startsWith('G') || !chain.contractId
                 }
                 onRun={() =>
-                  void exec('partnerEscrow.prepareRelease', async () => {
-                    const res = await ax().partnerEscrow.prepareRelease(
+                  void exec('partnerEscrow.prepareComplete', async () => {
+                    const res = await ax().partnerEscrow.prepareComplete(
                       escrowId,
-                      clientWallet,
+                      workerWallet,
                     );
                     applyChain(res);
                     return res;
@@ -669,44 +698,75 @@ export default function App() {
                 }
               />
               <Action
-                title="6 · Firmar paso (Freighter client)"
-                hint="Siempre client_wallet — no hace falta cambiar a worker"
+                title="6 · Liberar (Freighter = cliente ×2)"
+                hint="approve → release. Igual que CompleteTaskPopup del marketplace."
                 loading={run.loading || freighterBusy}
                 disabled={
-                  !hasKey ||
-                  !escrowId ||
-                  !(chain.releaseSteps.length > 0 || chain.unsignedXdr)
+                  !hasKey || !escrowId || !clientWallet.startsWith('G') || !chain.contractId
                 }
                 onRun={() =>
-                  void exec('freighter.sign → confirmRelease', async () => {
-                    const last = run.result as {
-                      step?: string;
-                      signer_wallet?: string;
-                    } | null;
-                    const step = String(last?.step ?? 'release');
-                    const expectedSigner = String(last?.signer_wallet || clientWallet);
+                  void exec('freighter.release×2', async () => {
                     const wallet = createFreighterAdapter();
                     const address = await wallet.getAddress();
-                    if (expectedSigner.startsWith('G') && address !== expectedSigner) {
+                    if (address !== clientWallet) {
                       throw new Error(
-                        `Freighter=${address.slice(0, 10)}… debe ser client ${expectedSigner.slice(0, 10)}…`,
+                        `Freighter=${address.slice(0, 10)}… debe ser CLIENTE ${clientWallet.slice(0, 10)}….`,
                       );
                     }
-                    const xdrs =
-                      chain.releaseSteps.length > 0
-                        ? chain.releaseSteps
-                        : [chain.unsignedXdr];
-                    const signed: string[] = [];
-                    for (const xdr of xdrs) {
-                      signed.push(await wallet.signTransaction(xdr));
+                    const log: Array<Record<string, unknown>> = [];
+                    for (let round = 0; round < 2; round++) {
+                      const prep = (await ax().partnerEscrow.prepareRelease(
+                        escrowId,
+                        clientWallet,
+                      )) as {
+                        step?: string;
+                        unsigned_xdr?: string;
+                        steps?: Array<{ unsigned_xdr?: string }>;
+                      };
+                      applyChain(prep);
+                      const step = String(prep.step ?? '').trim();
+                      const xdr =
+                        String(prep.unsigned_xdr ?? '').trim() ||
+                        String(prep.steps?.[0]?.unsigned_xdr ?? '').trim();
+                      if (!xdr) {
+                        throw new Error(`prepareRelease sin XDR (step=${step})`);
+                      }
+                      const signed = await wallet.signTransaction(xdr);
+                      const conf = (await ax().partnerEscrow.confirmRelease(escrowId, {
+                        signedXdr: signed,
+                        step,
+                      })) as {
+                        step?: string;
+                        escrow?: { status?: string };
+                        tx_hash?: string;
+                        release_tx_hash?: string;
+                      };
+                      applyChain(conf);
+                      log.push({
+                        round: round + 1,
+                        step,
+                        confirm: conf.step,
+                        tx: conf.tx_hash || conf.release_tx_hash,
+                      });
+                      if (
+                        String(conf.escrow?.status) === 'released' ||
+                        String(conf.step).includes('release_confirm')
+                      ) {
+                        setChain((c) => ({
+                          ...c,
+                          unsignedXdr: '',
+                          releaseSteps: [],
+                          lifecycleStep: 'release_confirm',
+                          escrowStatus: 'released',
+                        }));
+                        return {
+                          ok: true,
+                          message: 'RELEASE OK (2 firmas cliente). Paridad marketplace.',
+                          steps: log,
+                        };
+                      }
                     }
-                    const res = await ax().partnerEscrow.confirmRelease(escrowId, {
-                      signedXdr: signed,
-                      step,
-                    });
-                    applyChain(res);
-                    setChain((c) => ({ ...c, unsignedXdr: '', releaseSteps: [] }));
-                    return res;
+                    throw new Error(`No released. Log: ${JSON.stringify(log)}`);
                   })
                 }
               />

@@ -118,6 +118,8 @@ const ROUTES: RestRoute[] = [
   { method: 'POST', pattern: /^partner\/escrows\/([^/]+)\/deploy\/confirm$/, action: 'partner_escrow_deploy_confirm', pathToBody: { escrow_id: '$1' } },
   { method: 'POST', pattern: /^partner\/escrows\/([^/]+)\/fund\/prepare$/, action: 'partner_escrow_fund_prepare', pathToBody: { escrow_id: '$1' } },
   { method: 'POST', pattern: /^partner\/escrows\/([^/]+)\/fund\/confirm$/, action: 'partner_escrow_fund_confirm', pathToBody: { escrow_id: '$1' } },
+  { method: 'POST', pattern: /^partner\/escrows\/([^/]+)\/complete\/prepare$/, action: 'partner_escrow_complete_prepare', pathToBody: { escrow_id: '$1' } },
+  { method: 'POST', pattern: /^partner\/escrows\/([^/]+)\/complete\/confirm$/, action: 'partner_escrow_complete_confirm', pathToBody: { escrow_id: '$1' } },
   { method: 'POST', pattern: /^partner\/escrows\/([^/]+)\/release\/prepare$/, action: 'partner_escrow_release_prepare', pathToBody: { escrow_id: '$1' } },
   { method: 'POST', pattern: /^partner\/escrows\/([^/]+)\/release\/confirm$/, action: 'partner_escrow_release_confirm', pathToBody: { escrow_id: '$1' } },
   { method: 'GET', pattern: /^partner\/escrows$/, action: 'partner_escrow_list' },

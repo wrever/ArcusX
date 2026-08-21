@@ -27,7 +27,7 @@
 | Never hardcode % | `getPlatformFee()` returns **0.02** (2% total); `escrow.quote` for amounts |
 | Internal split | `arcusx_share` + `protocol_share` are optional breakouts; use total only |
 | Partner escrow live | Client signs all steps; worker receives USDC only — see `PARTNER_ESCROW.md` |
-| Release is multi-step | `prepareRelease` → complete → approve → release (one XDR each) |
+| Release = 2 firmas | `prepareRelease` → approve + release (2 XDR); `confirmRelease` una vez |
 | `contract_id` | Appears after `confirmDeploy` (not always at prepare) |
 
 ## Out of SOW 2

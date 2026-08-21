@@ -148,7 +148,7 @@ Ver [`FEE_MODEL.md`](./FEE_MODEL.md).
 ## Evidencia Testnet (partner)
 
 - Suite local-test: fee, stats, tasks, quote, errores, HMAC, list escrow, create deal.  
-- Ciclo on-chain: deploy → fund → complete → approve → release con `contract_id` + links Stellar Expert.  
+- Ciclo on-chain: deploy → fund → approve → release (2 firmas Freighter) con `contract_id` + links Stellar Expert.  
 - Firma: solo wallet del **cliente** en el modelo partner actual.
 
 ---

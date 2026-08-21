@@ -80,7 +80,7 @@ Sin JWT. Specs: [Partner Escrow](./PARTNER_ESCROW.md) · [Partner Deals](./PARTN
 | `/v1/partner/escrows/:id/deploy/confirm` | POST | after client sign |
 | `/v1/partner/escrows/:id/fund/prepare` | POST | |
 | `/v1/partner/escrows/:id/fund/confirm` | POST | |
-| `/v1/partner/escrows/:id/release/prepare` | POST | next step: complete → approve → release |
+| `/v1/partner/escrows/:id/release/prepare` | POST | approve + release (2 XDR) |
 | `/v1/partner/escrows/:id/release/confirm` | POST | |
 | `/v1/partner/escrows` · `/:id` | GET | list / get |
 | `/v1/partner/deals` | POST/GET | create / list payment links |

@@ -134,6 +134,8 @@ const ROUTES: Record<string, ApiHandler> = {
   partner_escrow_deploy_confirm: partnerEscrow.confirmPartnerEscrowDeploy,
   partner_escrow_fund_prepare: partnerEscrow.preparePartnerEscrowFund,
   partner_escrow_fund_confirm: partnerEscrow.confirmPartnerEscrowFund,
+  partner_escrow_complete_prepare: partnerEscrow.preparePartnerEscrowComplete,
+  partner_escrow_complete_confirm: partnerEscrow.confirmPartnerEscrowComplete,
   partner_escrow_release_prepare: partnerEscrow.preparePartnerEscrowRelease,
   partner_escrow_release_confirm: partnerEscrow.confirmPartnerEscrowRelease,
   partner_escrow_get: partnerEscrow.getPartnerEscrow,

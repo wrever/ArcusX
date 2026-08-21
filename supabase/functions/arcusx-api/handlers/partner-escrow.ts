@@ -160,10 +160,10 @@ export async function preparePartnerEscrowDeploy(ctx: ApiContext): Promise<Respo
       amount: fundAmount,
       platformFee: twPlatformFee,
       roles: {
-        // Partner rail: cliente controla complete/approve/release.
-        // Worker solo recibe (receiver). Evita segunda Freighter.
+        // Paridad marketplace / deals: worker = serviceProvider + receiver;
+        // cliente = approver + releaseSigner → liberar = 2 firmas Freighter.
         approver: clientWallet,
-        serviceProvider: clientWallet,
+        serviceProvider: workerWallet,
         platformAddress: platformWallet(stellarNetwork),
         releaseSigner: clientWallet,
         disputeResolver: adminWallet(stellarNetwork),
@@ -457,7 +457,160 @@ export async function confirmPartnerEscrowFund(ctx: ApiContext): Promise<Respons
   });
 }
 
-/** POST partner_escrow_release_prepare — next on-chain step (complete → approve → release). */
+/**
+ * POST partner_escrow_complete_prepare — OPCIONAL (no lo usa el marketplace).
+ * El flujo estándar de liberación es solo approve → release (cliente).
+ * Se mantiene por si un integrador quiere marcar evidencia on-chain aparte.
+ */
+export async function preparePartnerEscrowComplete(ctx: ApiContext): Promise<Response> {
+  const { req, body, stellarNetwork } = ctx;
+  const { supabase, partnerId } = await requirePartnerKey(ctx);
+  const escrowId = String(body.escrow_id ?? body.id ?? '').trim();
+  const workerWallet = String(
+    body.worker_wallet ?? body.service_provider ?? '',
+  ).trim();
+  if (!escrowId) return jsonError(req, 'escrow_id requerido', 400);
+  if (!isValidStellarG(workerWallet)) return jsonError(req, 'worker_wallet inválida', 400);
+
+  const row = await loadOwnedEscrow(supabase, partnerId, escrowId);
+  if (!row) return jsonError(req, 'Escrow no encontrado', 404);
+  if (String(row.worker_wallet) !== workerWallet) {
+    return jsonError(req, 'worker_wallet no coincide con el escrow', 403);
+  }
+  if (String(row.status) !== 'funded') {
+    return jsonError(req, 'Escrow debe estar funded', 400);
+  }
+  const contractId = String(row.contract_id ?? '').trim();
+  if (!contractId) return jsonError(req, 'Sin contract_id', 400);
+
+  const meta = (row.metadata && typeof row.metadata === 'object'
+    ? row.metadata
+    : {}) as Record<string, unknown>;
+  const progress = (meta.release_progress && typeof meta.release_progress === 'object'
+    ? meta.release_progress
+    : {}) as Record<string, unknown>;
+  if (progress.complete_tx) {
+    return jsonSuccess(req, {
+      step: 'complete_already_done',
+      message: 'Milestone ya marcado COMPLETED — continúa con prepareRelease (cliente)',
+      escrow_id: escrowId,
+      contract_id: contractId,
+      next: 'prepareRelease(client_wallet) → approve → release',
+    });
+  }
+
+  try {
+    const completeRes = await twChangeMilestoneStatus({
+      contractId,
+      serviceProvider: workerWallet,
+      milestoneIndex: '0',
+      newStatus: 'COMPLETED',
+      newEvidence: String(
+        body.evidence ?? body.new_evidence ?? 'Work completed via partner API',
+      ),
+    }, stellarNetwork);
+    if (!completeRes.unsignedTransaction) {
+      return jsonError(req, escrowPrepareFailed('release'), 502);
+    }
+    return jsonSuccess(req, {
+      step: 'complete',
+      action: 'change_milestone_status',
+      signer_role: 'worker',
+      signer_wallet: workerWallet,
+      provider: 'arcusx_escrow',
+      contract_id: contractId,
+      stellar_expert_url: `${expertBase(stellarNetwork)}/contract/${contractId}`,
+      next: 'Freighter (worker) firma → confirmComplete({ signedXdr }) → prepareRelease (cliente, 2 firmas)',
+      escrow_id: escrowId,
+      unsigned_xdr: completeRes.unsignedTransaction,
+      steps: [{
+        action: 'change_milestone_status',
+        signer_role: 'worker',
+        signer_wallet: workerWallet,
+        milestone_index: '0',
+        unsigned_xdr: completeRes.unsignedTransaction,
+      }],
+    });
+  } catch (e) {
+    console.error('[partner-escrow] prepareComplete', e);
+    const raw = e instanceof Error ? e.message : String(e);
+    const safe = raw
+      .replace(/Trustless\s*Work/gi, 'provider')
+      .replace(/\bTW\b/g, 'provider')
+      .replace(/trustlesswork\.com/gi, 'escrow-api')
+      .slice(0, 180);
+    return jsonError(
+      req,
+      safe ? `${escrowPrepareFailed('release')} [${safe}]` : escrowPrepareFailed('release'),
+      502,
+    );
+  }
+}
+
+/** POST partner_escrow_complete_confirm */
+export async function confirmPartnerEscrowComplete(ctx: ApiContext): Promise<Response> {
+  const { req, body, stellarNetwork } = ctx;
+  const { supabase, partnerId } = await requirePartnerKey(ctx);
+  const escrowId = String(body.escrow_id ?? body.id ?? '').trim();
+  if (!escrowId) return jsonError(req, 'escrow_id requerido', 400);
+
+  const row = await loadOwnedEscrow(supabase, partnerId, escrowId);
+  if (!row) return jsonError(req, 'Escrow no encontrado', 404);
+
+  let txHash = String(body.tx_hash ?? body.transaction_hash ?? '').trim() || null;
+  const signedList = collectSignedXdrs(body);
+  if (signedList.length > 0) {
+    const seq = await submitSignedXdrSequence(signedList, stellarNetwork);
+    txHash = seq.lastHash ?? txHash;
+  }
+  if (!txHash) {
+    txHash = await resolveEscrowTxHash(body, stellarNetwork);
+  }
+  if (!txHash) return jsonError(req, 'tx_hash o signed_xdr requeridos', 400);
+
+  const prevMeta = (row.metadata && typeof row.metadata === 'object'
+    ? row.metadata
+    : {}) as Record<string, unknown>;
+  const prevProgress = (prevMeta.release_progress && typeof prevMeta.release_progress === 'object'
+    ? prevMeta.release_progress
+    : {}) as Record<string, unknown>;
+
+  const { data: updated } = await supabase
+    .from('arcusx_partner_escrows')
+    .update({
+      metadata: {
+        ...prevMeta,
+        release_progress: {
+          ...prevProgress,
+          complete_tx: txHash,
+          complete_at: new Date().toISOString(),
+        },
+      },
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', escrowId)
+    .eq('partner_id', partnerId)
+    .select('*')
+    .single();
+
+  void emitPartnerWebhook(supabase, partnerId, 'partner_escrow.completed', {
+    escrow_id: escrowId,
+    complete_tx_hash: txHash,
+  });
+
+  return jsonSuccess(req, {
+    step: 'complete_confirm',
+    tx_hash: txHash,
+    next: 'prepareRelease(client_wallet) → Freighter ×2 (approve → release)',
+    escrow: serializeRow((updated ?? row) as Record<string, unknown>),
+  });
+}
+
+/**
+ * POST partner_escrow_release_prepare — paridad marketplace público:
+ * solo approve → release (cliente, 2 firmas). Sin change_milestone_status.
+ * El provider no deja preparar release hasta que approve esté on-chain → 1 XDR por prepare.
+ */
 export async function preparePartnerEscrowRelease(ctx: ApiContext): Promise<Response> {
   const { req, body, stellarNetwork } = ctx;
   const { supabase, partnerId } = await requirePartnerKey(ctx);
@@ -477,58 +630,41 @@ export async function preparePartnerEscrowRelease(ctx: ApiContext): Promise<Resp
   const contractId = String(row.contract_id ?? '').trim();
   if (!contractId) return jsonError(req, 'Sin contract_id', 400);
 
-  // Inspect on-chain / indexer milestone state when possible
-  let milestoneStatus = '';
+  const meta = (row.metadata && typeof row.metadata === 'object'
+    ? row.metadata
+    : {}) as Record<string, unknown>;
+  const progress = (meta.release_progress && typeof meta.release_progress === 'object'
+    ? meta.release_progress
+    : {}) as Record<string, unknown>;
+  const dbApproveDone = Boolean(progress.approve_tx);
+
   let milestoneApproved = false;
   try {
     const rows = await twGetEscrowByContractIds([contractId], true, stellarNetwork);
     const esc = (rows[0] ?? null) as Record<string, unknown> | null;
-    const milestones = Array.isArray(esc?.milestones) ? esc!.milestones as Record<string, unknown>[] : [];
+    const milestones = Array.isArray(esc?.milestones)
+      ? esc!.milestones as Record<string, unknown>[]
+      : [];
     const m0 = milestones[0] ?? {};
-    milestoneStatus = String(m0.status ?? m0.milestoneStatus ?? '').trim().toLowerCase();
     milestoneApproved = Boolean(m0.approvedFlag ?? m0.approved);
   } catch (e) {
     console.warn('[partner-escrow] indexer peek', e);
   }
 
-  const needsComplete = !milestoneStatus || milestoneStatus === 'pending' || milestoneStatus === 'empty';
-  const forceStep = String(body.step ?? body.next_step ?? '').trim(); // complete | approve | release
+  const needsApprove = !dbApproveDone && !milestoneApproved;
+  const forceStep = String(body.step ?? body.next_step ?? '').trim().toLowerCase();
+
+  const baseMeta = {
+    signer_role: 'client' as const,
+    signer_wallet: clientWallet,
+    provider: 'arcusx_escrow',
+    contract_id: contractId,
+    stellar_expert_url: `${expertBase(stellarNetwork)}/contract/${contractId}`,
+    escrow_id: escrowId,
+  };
 
   try {
-    if (forceStep === 'complete' || (needsComplete && forceStep !== 'approve' && forceStep !== 'release')) {
-      // serviceProvider on-chain = client (partner rail); worker only receives funds
-      const completeRes = await twChangeMilestoneStatus({
-        contractId,
-        serviceProvider: clientWallet,
-        milestoneIndex: '0',
-        newStatus: 'COMPLETED',
-        newEvidence: String(body.evidence ?? body.new_evidence ?? 'Work completed via partner API'),
-      }, stellarNetwork);
-      if (!completeRes.unsignedTransaction) {
-        return jsonError(req, escrowPrepareFailed('release'), 502);
-      }
-      return jsonSuccess(req, {
-        step: 'complete',
-        action: 'change_milestone_status',
-        signer_role: 'client',
-        signer_wallet: clientWallet,
-        provider: 'arcusx_escrow',
-        contract_id: contractId,
-        stellar_expert_url: `${expertBase(stellarNetwork)}/contract/${contractId}`,
-        next: 'Freighter (client_wallet) firma → confirmRelease({ signedXdr, step: "complete" }) → prepareRelease otra vez',
-        escrow_id: escrowId,
-        unsigned_xdr: completeRes.unsignedTransaction,
-        steps: [{
-          action: 'change_milestone_status',
-          signer_role: 'client',
-          signer_wallet: clientWallet,
-          milestone_index: '0',
-          unsigned_xdr: completeRes.unsignedTransaction,
-        }],
-      });
-    }
-
-    if (forceStep === 'approve' || (!milestoneApproved && forceStep !== 'release')) {
+    if (forceStep === 'approve' || (needsApprove && forceStep !== 'release')) {
       const approveRes = await twApproveMilestone({
         contractId,
         approver: clientWallet,
@@ -538,15 +674,10 @@ export async function preparePartnerEscrowRelease(ctx: ApiContext): Promise<Resp
         return jsonError(req, escrowPrepareFailed('release'), 502);
       }
       return jsonSuccess(req, {
+        ...baseMeta,
         step: 'approve',
         action: 'approve_milestone',
-        signer_role: 'client',
-        signer_wallet: clientWallet,
-        provider: 'arcusx_escrow',
-        contract_id: contractId,
-        stellar_expert_url: `${expertBase(stellarNetwork)}/contract/${contractId}`,
-        next: 'Freighter (client_wallet) firma → confirmRelease({ signedXdr, step: "approve" }) → prepareRelease otra vez',
-        escrow_id: escrowId,
+        next: 'Freighter (cliente) firma → confirmRelease({ step: "approve" }) → prepareRelease',
         unsigned_xdr: approveRes.unsignedTransaction,
         steps: [{
           action: 'approve_milestone',
@@ -566,15 +697,10 @@ export async function preparePartnerEscrowRelease(ctx: ApiContext): Promise<Resp
       return jsonError(req, escrowPrepareFailed('release'), 502);
     }
     return jsonSuccess(req, {
+      ...baseMeta,
       step: 'release',
       action: 'release_funds',
-      signer_role: 'client',
-      signer_wallet: clientWallet,
-      provider: 'arcusx_escrow',
-      contract_id: contractId,
-      stellar_expert_url: `${expertBase(stellarNetwork)}/contract/${contractId}`,
-      next: 'Freighter (client_wallet) firma → confirmRelease({ signedXdr, step: "release" })',
-      escrow_id: escrowId,
+      next: 'Freighter (cliente) firma → confirmRelease({ step: "release" })',
       unsigned_xdr: releaseRes.unsignedTransaction,
       steps: [{
         action: 'release_funds',
@@ -591,19 +717,23 @@ export async function preparePartnerEscrowRelease(ctx: ApiContext): Promise<Resp
       .replace(/\bTW\b/g, 'provider')
       .replace(/trustlesswork\.com/gi, 'escrow-api')
       .slice(0, 180);
-    // Guide user if TW says milestone status empty
-    if (/status cannot be empty|must be completed|milestone/i.test(raw)) {
+    // Si el provider exige approve on-chain antes de release, guiar al paso approve
+    if (/must be completed|not approved|approve/i.test(raw) && !dbApproveDone) {
       return jsonError(
         req,
-        `Milestone pendiente: el worker debe marcar completed antes de aprobar/liberar. ${safe}`,
+        `Primero firma approve (prepareRelease step=approve). Luego release. ${safe}`,
         400,
       );
     }
-    return jsonError(req, `${escrowPrepareFailed('release')} [${safe}]`, 502);
+    return jsonError(
+      req,
+      safe ? `${escrowPrepareFailed('release')} [${safe}]` : escrowPrepareFailed('release'),
+      502,
+    );
   }
 }
 
-/** POST partner_escrow_release_confirm — submits signed XDR for complete/approve/release. */
+/** POST partner_escrow_release_confirm — approve (intermedio) o release (final). */
 export async function confirmPartnerEscrowRelease(ctx: ApiContext): Promise<Response> {
   const { req, body, stellarNetwork } = ctx;
   const { supabase, partnerId } = await requirePartnerKey(ctx);
@@ -628,13 +758,35 @@ export async function confirmPartnerEscrowRelease(ctx: ApiContext): Promise<Resp
   }
   if (!txHash) return jsonError(req, 'release_tx_hash o signed_xdr requeridos', 400);
 
-  const isFinalRelease = step === 'release' || step === 'release_funds' || step === 'release_confirm';
-  if (isFinalRelease) {
-    const { data: updated, error } = await supabase
+  const prevMeta = (row.metadata && typeof row.metadata === 'object'
+    ? row.metadata
+    : {}) as Record<string, unknown>;
+  const prevProgress = (prevMeta.release_progress && typeof prevMeta.release_progress === 'object'
+    ? prevMeta.release_progress
+    : {}) as Record<string, unknown>;
+
+  const isApprove =
+    step === 'approve' ||
+    step === 'approve_milestone' ||
+    step === 'approve_confirm';
+  const isFinalRelease =
+    !isApprove &&
+    (step === 'release' ||
+      step === 'release_funds' ||
+      step === 'release_confirm');
+
+  if (isApprove || !isFinalRelease) {
+    const { data: updatedMid } = await supabase
       .from('arcusx_partner_escrows')
       .update({
-        release_tx_hash: txHash,
-        status: 'released',
+        metadata: {
+          ...prevMeta,
+          release_progress: {
+            ...prevProgress,
+            approve_tx: txHash,
+            approve_at: new Date().toISOString(),
+          },
+        },
         updated_at: new Date().toISOString(),
       })
       .eq('id', escrowId)
@@ -642,30 +794,50 @@ export async function confirmPartnerEscrowRelease(ctx: ApiContext): Promise<Resp
       .select('*')
       .single();
 
-    if (error || !updated) return jsonError(req, 'No se pudo confirmar release', 500);
-
-    void emitPartnerWebhook(supabase, partnerId, 'partner_escrow.released', {
-      escrow_id: escrowId,
-      release_tx_hash: txHash,
-    });
-
     return jsonSuccess(req, {
-      step: 'release_confirm',
-      release_tx_hash: txHash,
-      next: null,
-      escrow: serializeRow(updated as Record<string, unknown>),
+      step: 'approve_confirm',
+      tx_hash: txHash,
+      next: 'prepareRelease → firmar release → confirmRelease({ step: "release" })',
+      auto_next_step: 'release',
+      escrow: serializeRow((updatedMid ?? row) as Record<string, unknown>),
     });
   }
 
-  // complete / approve: only submit on-chain; keep status funded
+  const { data: updated, error } = await supabase
+    .from('arcusx_partner_escrows')
+    .update({
+      release_tx_hash: txHash,
+      status: 'released',
+      metadata: {
+        ...prevMeta,
+        release_progress: {
+          ...prevProgress,
+          release_tx: txHash,
+          release_at: new Date().toISOString(),
+        },
+      },
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', escrowId)
+    .eq('partner_id', partnerId)
+    .select('*')
+    .single();
+
+  if (error || !updated) return jsonError(req, 'No se pudo confirmar release', 500);
+
+  void emitPartnerWebhook(supabase, partnerId, 'partner_escrow.released', {
+    escrow_id: escrowId,
+    release_tx_hash: txHash,
+  });
+
   return jsonSuccess(req, {
-    step: `${step}_confirm`,
-    tx_hash: txHash,
-    deploy_tx_url: `${expertBase(stellarNetwork)}/tx/${txHash}`,
-    next: 'prepareRelease otra vez para el siguiente paso (approve o release)',
-    escrow: serializeRow(row),
+    step: 'release_confirm',
+    release_tx_hash: txHash,
+    next: null,
+    escrow: serializeRow(updated as Record<string, unknown>),
   });
 }
+
 
 /** GET partner_escrow_get */
 export async function getPartnerEscrow(ctx: ApiContext): Promise<Response> {
