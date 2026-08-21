@@ -1,10 +1,10 @@
 # Partner Deals — payment links sin sesión ArcusX
 
-**Producto:** link de pago (`deal_token`) que guarda USDC en escrow hasta aprobación.  
-**Auth objetivo:** solo API key del partner.  
-**Estado:** ✅ live Testnet (Edge `arcusx-api` v113+ · tabla `arcusx_partner_deals` · SDK `partnerDeals`).
+**Estado:** ✅ **live Testnet** (Edge `arcusx-api`, tabla `arcusx_partner_deals`, SDK `partnerDeals`).
 
-Relacionado: [`INFRA_THESIS.md`](./INFRA_THESIS.md) · [`PARTNER_ESCROW.md`](./PARTNER_ESCROW.md)
+**Producto:** link de pago (`deal_token`) que guarda USDC en escrow hasta aprobación.  
+**Auth:** solo API key del partner.  
+**Relacionado:** [`INFRA_THESIS.md`](./INFRA_THESIS.md) · [`PARTNER_ESCROW.md`](./PARTNER_ESCROW.md) · [`PLATFORM_OVERVIEW.md`](./PLATFORM_OVERVIEW.md)
 
 ---
 
@@ -13,85 +13,62 @@ Relacionado: [`INFRA_THESIS.md`](./INFRA_THESIS.md) · [`PARTNER_ESCROW.md`](./P
 Escrow “crudo” (2 wallets + monto) sirve a marketplaces.  
 **Deals** sirve a casi cualquiera: freelancers, coaches, agencias — “te mando un link y el dinero queda en escrow”.
 
-Es el embudo más simple hacia la comisión ArcusX.
-
 ---
 
-## Flujo deseado (partner)
+## Flujo
 
 ```
 Partner (API key)
   → partnerDeals.create({
-       amount_usdc,
-       payer_wallet?,      // opcional al crear; se fija al aceptar/fondear
-       payee_wallet,       // quien recibe
+       amountUsdc,
+       payeeWallet,       // receptor
        title,
-       external_id?,
+       payerWallet?,      // opcional; se fija al fondear
+       externalId?,
      })
   → { deal_id, deal_token, share_url }
-  → Partner manda link al pagador (su UX / WhatsApp / email)
+  → Partner manda el link al pagador
 
-Pagador (en app partner o página mínima)
-  → ve deal por token (lectura pública o key)
-  → partnerDeals.prepareFund(deal_id | token) → XDR
-  → firma wallet → confirmFund
-  → trabajo / entrega (fuera de ArcusX o con evidence opcional)
-  → partnerDeals.prepareRelease → sign → confirmRelease
+Pagador (app partner)
+  → getByToken / get
+  → prepareFund → sign → confirmFund   # puede incluir deploy interno
+  → (trabajo fuera de ArcusX)
+  → prepareRelease → sign steps → confirmRelease
 ```
+
+Internamente el deal **reutiliza** el motor `partnerEscrow` (misma fee, mismos pasos on-chain). No duplicar lógica.
 
 ---
 
-## Auth matrix (objetivo)
+## Auth
 
 | Acción | Auth |
 |--------|------|
-| `create` | API key |
-| `getByToken` | Público o API key |
-| `list` (del partner) | API key |
-| `prepareFund` / `confirmFund` | API key (+ wallet del payer) |
-| `prepareRelease` / `confirmRelease` | API key (+ wallet del release signer) |
+| `create` / `list` | API key |
+| `get` / `getByToken` | API key (token público vía partner) |
+| `prepareFund` / `confirmFund` | API key + wallet payer |
+| `prepareRelease` / `confirmRelease` | API key + wallet release signer |
 
-**Sin** JWT de usuario ArcusX.  
-(Hoy `deals.create` en Edge usa JWT — hay que añadir rail `partner/deals` paralelo, igual que `partner/escrows`.)
+**Sin** JWT de usuario ArcusX. Distinto de `ax.deals.*` (marketplace JWT).
 
 ---
 
-## Campos mínimos create
+## Campos create
 
-| Campo | Reqatorio | Notas |
-|-------|-----------|--------|
-| `amount_usdc` | sí | Nominal; fee vía quote |
-| `payee_wallet` | sí | G… receptor |
+| Campo | Req | Notas |
+|-------|-----|--------|
+| `amountUsdc` | sí | Nominal; fee vía quote |
+| `payeeWallet` | sí | G… receptor |
 | `title` | sí | Visible en el link |
-| `payer_wallet` | no | Si falta, se fija al fondear |
-| `external_id` | no | Idempotencia CRM partner |
+| `payerWallet` | no | Si falta, se fija al fondear |
+| `externalId` | no | Idempotencia CRM |
 | `description` | no | |
-| `metadata` | no | JSON partner |
 
-Respuesta: `deal_id`, `deal_token`, `share_url` (p.ej. `https://arcusx.pro/deal/{token}` o URL del partner).
-
----
-
-## Relación con partnerEscrow
-
-Internamente un deal **es** un partner escrow con metadata de link:
-
-```
-partnerDeals.create
-  → crea fila deal (token)
-  → al fondear: mismo motor TW que partnerEscrow (fee, roles, USDC)
-```
-
-No duplicar lógica TW: deals llama al mismo prepare/confirm o reutiliza `arcusx_partner_escrows` con `kind=deal`.
-
-Opción recomendada (simple):
-
-- Tabla `arcusx_partner_deals` (`partner_id`, `deal_token`, `escrow_id` FK → `arcusx_partner_escrows`, status, …)
-- O columna `source` en `arcusx_partner_escrows` (`standalone` | `deal`) + `deal_token`
+Respuesta típica: `deal_id`, `deal_token`, `share_url`.
 
 ---
 
-## SDK (superficie propuesta)
+## SDK
 
 ```typescript
 const deal = await ax.partnerDeals.create({
@@ -100,7 +77,6 @@ const deal = await ax.partnerDeals.create({
   title: 'Logo redesign',
   externalId: 'crm-9981',
 });
-// deal.deal_token → compartir
 
 const view = await ax.partnerDeals.getByToken(deal.deal_token);
 
@@ -108,24 +84,22 @@ const fund = await ax.partnerDeals.prepareFund(deal.deal_id, payerWallet);
 // wallet.sign(fund.unsigned_xdr) → confirmFund …
 ```
 
----
-
-## Qué reutilizamos del deals JWT actual
-
-- Idea de `deal_token` / share link  
-- Página pública deal (arcusx.pro) como preview opcional  
-- Fee bilateral  
-
-**No** reutilizar `requireUser` ownership. Nuevo handler `requirePartnerKey`.
+REST: `/v1/partner/deals/*`
 
 ---
 
-## Criterio de listo (antes de deploy)
+## vs deals JWT (marketplace)
 
-- [ ] Spec SDK + REST congelada (este doc)  
-- [ ] Tabla + handlers Mirror de partner-escrow  
-- [ ] `local-test` tab Deals (create + getByToken)  
-- [ ] Example `examples/sdk-node-partner-deal`  
-- [ ] Docs QUICKSTART sección “Payment link”  
+| | `partnerDeals` | `ax.deals` |
+|--|----------------|------------|
+| Auth | API key | JWT usuario |
+| Users | Wallets externas | Usuarios ArcusX |
+| Uso | Apps terceras | `arcusx.pro` |
 
-Deploy Edge/BD: cuando exista acceso Supabase ArcusX.
+Ver [`RAILS_SEPARATION.md`](./RAILS_SEPARATION.md).
+
+---
+
+## Harness
+
+`local-test/` — create deal + list en la suite automatizada.

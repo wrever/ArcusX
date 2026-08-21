@@ -1,5 +1,8 @@
 # ArcusX SDK — Plan maestro (Work Execution Layer)
 
+> **Actualidad:** [`PLATFORM_OVERVIEW.md`](./PLATFORM_OVERVIEW.md) · fee [`FEE_MODEL.md`](./FEE_MODEL.md) (**2%**) · partner live [`PARTNER_ESCROW.md`](./PARTNER_ESCROW.md).  
+> Este plan es **histórico**. No citar proveedores on-chain externos en material partner — solo **escrow ArcusX**.
+
 **Versión:** 1.2 · **Fecha:** 2026-05-28  
 **Audiencia:** equipo interno, integradores B2B, revisores InstaAwards  
 **North star:** `arcusx.pro` es el **cliente #1**. El producto es **infra de ejecución de trabajo** — API + `@arcusx/sdk` — con settlement USDC no custodial en Stellar.

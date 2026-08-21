@@ -1,6 +1,7 @@
 # ArcusX SDK — Quickstart
 
 **Paquete:** `@arcusx/sdk` **v0.4.5** · **Red objetivo SOW 2:** Stellar **Testnet**  
+**Overview (marketplace + partner):** [`PLATFORM_OVERVIEW.md`](./PLATFORM_OVERVIEW.md)  
 **Contrato:** [`API_REFERENCE.md`](./API_REFERENCE.md) · **Auth:** [`PARTNER_AUTH.md`](./PARTNER_AUTH.md)
 
 ---
@@ -129,7 +130,7 @@ await ax.private.finalize(task_id, {
 
 ---
 
-## 4. Deal por link
+## 4. Deal por link (marketplace — JWT)
 
 ```typescript
 const created = await ax.deals.create({
@@ -148,9 +149,39 @@ console.log('Share token:', created.deal_token);
 const byToken = await ax.deals.getByToken(created.deal_token);
 ```
 
+Para payment links **sin** JWT (apps terceras): §4b `partnerDeals`.
+
 ---
 
-## 5. Escrow (quote + ciclo)
+## 4b. Partner escrow + deals (solo API key)
+
+Sin login ArcusX. Specs: [`PARTNER_ESCROW.md`](./PARTNER_ESCROW.md) · [`PARTNER_DEALS.md`](./PARTNER_DEALS.md)
+
+```typescript
+// Escrow: wallets + monto
+const dep = await ax.partnerEscrow.prepareDeploy({
+  clientWallet: 'G…',
+  workerWallet: 'G…',
+  amountUsdc: 25,
+  title: 'Sprint fix',
+});
+// Freighter (cliente) firma dep.unsigned_xdr → confirmDeploy → prepareFund → …
+// prepareRelease ×3: complete → approve → release
+
+// Payment link
+const deal = await ax.partnerDeals.create({
+  amountUsdc: 100,
+  payeeWallet: 'G…',
+  title: 'Logo redesign',
+});
+console.log(deal.deal_token, deal.share_url);
+```
+
+Harness UI: `local-test/` (tab Partner escrow).
+
+---
+
+## 5. Escrow marketplace (quote + ciclo, JWT + task_id)
 
 ArcusX **no custodia** ni firma por el usuario. El SDK prepara XDR; el partner firma con su `WalletAdapter` y confirma.
 

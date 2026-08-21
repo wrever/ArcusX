@@ -1,8 +1,10 @@
 # ArcusX — Plan de adaptación: SDK + API pública → infraestructura Stellar
 
+> **Actualidad:** [`PLATFORM_OVERVIEW.md`](./PLATFORM_OVERVIEW.md). Documento histórico de horizonte largo. Settlement = **escrow ArcusX** + Stellar USDC (sin nombrar motor interno en docs partner).
+
 **Plan operativo SDK (v0.1):** [`PLAN_MAESTRO.md`](./PLAN_MAESTRO.md) — leer primero. Este documento cubre el horizonte largo (fases 0–6).
 
-**Objetivo:** Pasar de *marketplace que consume su propia Edge API* a **Work Execution Layer** — misma API y SDK que usa `arcusx.pro` disponibles para integradores, con settlement USDC en Stellar (Trustless Work hoy → Soroban nativo).
+**Objetivo:** Pasar de *marketplace que consume su propia Edge API* a **Work Execution Layer** — misma API y SDK que usa `arcusx.pro` disponibles para integradores, con settlement USDC en Stellar.
 
 **Relacionado:** [`INSTAAWARDS_SDK_WEEK*.md`](../sprints/instaawards-sdk/) · [`API_REFERENCE.md`](./API_REFERENCE.md) · [`ENDPOINTS.md`](../api/ENDPOINTS.md) · [`escrow-native/GUIA.md`](../escrow-native/GUIA.md)
 

@@ -164,6 +164,41 @@ Escrow settlement is ArcusX-only for integrators — no separate escrow vendor S
 
 Examples: [`examples/sdk-node-escrow`](../../examples/sdk-node-escrow/) · Freighter adapter: [`examples/sdk-freighter-adapter`](../../examples/sdk-freighter-adapter/)
 
+**Marketplace path** (`task_id` + JWT). For B2B without ArcusX login, use `partnerEscrow` / `partnerDeals` below.
+
+---
+
+## `ax.partnerEscrow` (API key only — live Testnet)
+
+Sin JWT. Input: wallets + monto. Spec: [`PARTNER_ESCROW.md`](./PARTNER_ESCROW.md)
+
+| Método | REST |
+|--------|------|
+| `prepareDeploy({ clientWallet, workerWallet, amountUsdc, … })` | `POST /v1/partner/escrows/deploy/prepare` |
+| `confirmDeploy(id, { signedXdr })` | `POST …/deploy/confirm` |
+| `prepareFund(id, clientWallet)` | `POST …/fund/prepare` |
+| `confirmFund(id, { signedXdr })` | `POST …/fund/confirm` |
+| `prepareRelease(id, clientWallet)` | `POST …/release/prepare` (stateful: complete → approve → release) |
+| `confirmRelease(id, { signedXdr, step })` | `POST …/release/confirm` |
+| `get(id)` / `list()` | `GET /v1/partner/escrows/:id` · `GET /v1/partner/escrows` |
+
+El **cliente** firma todos los pasos; el worker solo recibe USDC.
+
+---
+
+## `ax.partnerDeals` (API key only — live Testnet)
+
+Payment links. Spec: [`PARTNER_DEALS.md`](./PARTNER_DEALS.md)
+
+| Método | Notas |
+|--------|-------|
+| `create({ amountUsdc, payeeWallet, title, … })` | → `deal_token` / `share_url` |
+| `get` / `getByToken` / `list` | |
+| `prepareFund` / `confirmFund` | Reusa motor partner escrow |
+| `prepareRelease` / `confirmRelease` | Multi-step como partner escrow |
+
+Distinto de `ax.deals` (JWT marketplace).
+
 ---
 
 ## `ax.settlement`

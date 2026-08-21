@@ -1,9 +1,9 @@
 # 🧠 MEMORIA VITAL - ARCUSX
 ## Documento de Referencia Completa del Proyecto
 
-**Última Actualización:** 18 agosto 2026  
-**Versión del Proyecto:** 1.8  
-**Estado:** Testnet operativo · SOW 2 · **partner escrow + partner deals live (API key)** · fee 2% · docs SPA
+**Última Actualización:** 20 agosto 2026  
+**Versión del Proyecto:** 1.9  
+**Estado:** Testnet operativo · SOW 2 W1–W3 ✅ · **partner escrow + deals live** (firma cliente) · fee 2% · docs [`PLATFORM_OVERVIEW.md`](../../sdk/PLATFORM_OVERVIEW.md)
 
 ---
 
@@ -27,28 +27,30 @@
 
 ### ¿Qué es ArcusX?
 
-**ArcusX** es una plataforma de freelancing descentralizada construida sobre la blockchain Stellar que conecta clientes con trabajadores mediante contratos inteligentes (escrow) seguros. La plataforma permite:
+**ArcusX** es una plataforma de freelancing y **infraestructura de payout** sobre Stellar. Dos rieles:
 
-- **Creación de tareas** por parte de clientes
-- **Aplicación de propuestas** por parte de trabajadores
-- **Gestión de escrows** mediante Trustless Work
-- **Pagos instantáneos** en USDC (3-5 segundos)
-- **Resolución de disputas** integrada
-- **Sistema de ratings** y reviews
-- **Swap de tokens** (XLM ↔ USDC) integrado
+1. **Marketplace** (`arcusx.pro`) — OAuth, tareas, ofertas privadas, deals JWT, disputas, ratings.  
+2. **Partner** (`@arcusx/sdk` + API key) — escrow y payment links sin obligar login ArcusX; wallets + monto; fee 2%.
+
+La plataforma permite:
+
+- **Creación de tareas** y propuestas (marketplace)
+- **Escrow USDC** on-chain (cliente firma; worker recibe)
+- **Partner escrow / deals** para apps terceras
+- **Pagos** en USDC Stellar
+- **Disputas**, ratings, evidence
+- **Swap** XLM ↔ USDC (app)
 
 ### Stack Tecnológico
 
 - **Frontend:** React 19 + TypeScript + Vite
-- **UI:** CSS Modules + Chakra UI (parcial)
-- **Routing:** React Router v6
-- **Estado:** React Hooks + Context API
-- **Blockchain:** Stellar SDK + Trustless Work SDK
-- **Wallets:** Freighter (Stellar Wallets Kit)
-- **Autenticación:** Supabase OAuth (Google/GitHub) obligatorio para usuarios; JWT emitido por `sync_supabase_user.php` tras el callback (sin registro ni login por email/contraseña en la app)
-- **HTTP Client:** Axios
-- **i18n:** Sistema propio de traducciones
-- **Temas:** Dark/Light mode con CSS Variables
+- **API:** Supabase Edge `arcusx-api` + Postgres (path prod; no PHP)
+- **SDK:** `@arcusx/sdk` (`packages/arcusx-sdk`)
+- **Blockchain:** Stellar (Testnet) · escrow ArcusX (motor interno)
+- **Wallets:** Freighter / `WalletAdapter` del integrador
+- **Auth marketplace:** Supabase OAuth → JWT app
+- **Auth partner:** API key `axk_test_` / `axk_live_`
+- **i18n / temas:** sistema propio + dark/light
 
 ---
 
@@ -1490,8 +1492,8 @@ En lugar de migrar 60-70 archivos PHP individuales, se consolidarán endpoints r
 ### Backend de verdad (2026)
 
 - Producción marketplace: **Supabase Edge** `arcusx-api` / `arcusx-partner-api` + Postgres — **no PHP** en el path de producción.
-- Fee plataforma: **2%** total al **trabajador** al liberar (cubre share ArcusX + protocolo TW); cliente fondea el nominal. `getPlatformFee` → `0.02`. Fuente: `getPlatformFee` / `escrow.quote` (no hardcodear en UI).
-- Escrow: Trustless Work single-release USDC; ArcusX no custodia keys (prepare → WalletAdapter → confirm `tx_hash`).
+- Fee plataforma: **2%** total al **trabajador** al liberar; cliente fondea el nominal. `getPlatformFee` → `0.02`. Fuente: `getPlatformFee` / `escrow.quote` (no hardcodear en UI).
+- Escrow: single-release USDC vía motor ArcusX interno; no custodia keys (prepare → WalletAdapter → confirm `signedXdr` / `tx_hash`). **Nunca** nombrar proveedor on-chain en docs/SDK/UI partner.
 
 ### SOW 2 Instawards (4 semanas — estipulado)
 
@@ -1508,34 +1510,32 @@ En lugar de migrar 60-70 archivos PHP individuales, se consolidarán endpoints r
 
 **W3 status:** ✅ Complete (2026-08-18). Escrow rail: `examples/sdk-node-escrow` · Freighter adapter `examples/sdk-freighter-adapter` · webhooks HMAC `examples/sdk-node-webhooks` · playground tabs award→ready / rail E2E / webhooks · `npm run demo:week3` · smoke 13 checks (incl. `escrow.quote`). On-chain tx hashes = evidencia opcional con wallet del integrador. Packet: `INSTAAWARDS_SDK_WEEK3.md` · changelog Notion `WEEK3_NOTION_CHANGELOG.md`.
 
-**Out of SOW:** mainnet launch · agent-to-agent · Python SDK · Soroban nativo como reemplazo TW · multi-milestone · large marketplace UI redesign.
+**Out of SOW:** mainnet launch · agent-to-agent · Python SDK · reemplazo motor on-chain nativo · multi-milestone · large marketplace UI redesign.
 
 ### `@arcusx/sdk` (integradores)
 
 - Path: `packages/arcusx-sdk/`
 - Namespaces SOW: `public`, `marketplace`, `private`, `deals`, `escrow`, `settlement`, `evidence`, `ratings`, `webhooks`
-- **Rail B2B (API key only, sin JWT):** `partnerEscrow.*` · `partnerDeals.*` — wallets + monto; fee server-side; firma en app del partner (`WalletAdapter`)
-- `agent.*` existe en el paquete pero **fuera de SOW 2**
-- Errores: `ArcusXApiError` · códigos `missing_api_key` / `invalid_api_key` / `rate_limit_exceeded`
-- Verify: `cd packages/arcusx-sdk && npm run smoke:strict` · `npm run demo:week1` · `demo:week2` · `demo:week3`
-- Harness UI: `local-test/` (:5200) — suite 9 checks → proxy Edge Testnet
-- Docs contrato: `docs/sdk/QUICKSTART.md`, `API_REFERENCE.md`, `PARTNER_AUTH.md`, `PARTNER_ESCROW.md`, `PARTNER_DEALS.md`, `FEE_MODEL.md`, `KNOWN_LIMITATIONS.md`
-- Examples: `sdk-node-award` (W2), `sdk-node-escrow` / `sdk-node-webhooks` / `sdk-freighter-adapter` (W3), `sdk-playground/`
+- **Rail B2B (API key only):** `partnerEscrow.*` · `partnerDeals.*` — wallets + monto; fee server-side; firma en app del partner
+- Modelo partner: **cliente** firma deploy/fund/complete/approve/release; worker = receptor USDC
+- `agent.*` fuera de SOW 2
+- Errores: `ArcusXApiError` · `missing_api_key` / `invalid_api_key` / `rate_limit_exceeded`
+- Verify: `npm run smoke:strict` · `demo:week1|2|3` · harness `local-test/` (:5200)
+- Docs: `docs/sdk/PLATFORM_OVERVIEW.md` + QUICKSTART / API_REFERENCE / PARTNER_* / FEE_MODEL / KNOWN_LIMITATIONS
+- Examples: `sdk-node-*`, `sdk-freighter-adapter`, `sdk-playground/`
 
-### Partner rail Testnet (2026-08-18) — LIVE
+### Partner rail Testnet (2026-08-20) — LIVE
 
 | Pieza | Estado |
 |-------|--------|
-| Tabla `arcusx_partner_escrows` | ✅ migración aplicada |
-| Tabla `arcusx_partner_deals` | ✅ migración `20260818230000` aplicada |
-| Edge `arcusx-api` | ✅ v113 — routes `/v1/partner/escrows/*` + `/v1/partner/deals/*` |
-| SDK `partnerEscrow` / `partnerDeals` | ✅ en `@arcusx/sdk` |
-| Smoke `prepareDeploy` → `unsigned_xdr` | ✅ (wallets con USDC trustline Testnet) |
-| Smoke `partnerDeals.create` + `prepareFund` step=deploy | ✅ |
-| Confirm on-chain (Freighter) | ⚪ evidencia del **integrador** (no DoD ArcusX) |
-| Gateway `api.arcusx.pro` | ⚠ puede fallar SSL local; harness usa Edge directo vía proxy |
+| Tablas `arcusx_partner_escrows` / `arcusx_partner_deals` | ✅ |
+| Edge routes `/v1/partner/escrows/*` + `/v1/partner/deals/*` | ✅ |
+| SDK `partnerEscrow` / `partnerDeals` | ✅ |
+| Ciclo on-chain Freighter (client) → `released` + Stellar Expert | ✅ evidenciado |
+| `contract_id` + URLs Expert en respuestas | ✅ |
+| Gateway `api.arcusx.pro` | ⚠ SSL local a veces; harness → Edge directo |
 
-**Separación de rails:** partner (API key + wallets) ≠ marketplace JWT (`escrow-provider` / `task_id`). Ver `docs/sdk/RAILS_SEPARATION.md`. Motor on-chain interno — **nunca** nombrar proveedor en UI/SDK/errors partner-facing.
+**Separación:** partner ≠ marketplace JWT. Ver `RAILS_SEPARATION.md` · overview `PLATFORM_OVERVIEW.md`.
 
 ### Docs públicas `docs.arcusx.pro` (DX)
 
@@ -1565,9 +1565,9 @@ En lugar de migrar 60-70 archivos PHP individuales, se consolidarán endpoints r
 
 ---
 
-**Última actualización:** 18 agosto 2026 (partner escrow + partner deals live Testnet, local-test 9 checks → Edge)  
+**Última actualización:** 20 agosto 2026 (docs PLATFORM_OVERVIEW · partner live · fee 2% · sin nombrar motor on-chain externo)  
 **Mantenido por:** Equipo ArcusX  
-**Versión del documento:** 1.8
+**Versión del documento:** 1.9
 
 ---
 

@@ -9,26 +9,25 @@
 `https://<project_ref>.supabase.co/functions/v1/arcusx-api?action=<nombre>`  
 (+ `apikey` Supabase anon when calling Edge directly)
 
-**On-chain:** ArcusX Escrow — prepare/confirm via API; wallet signs XDR. Integrators use SDK `escrow/*` only.
+**On-chain:** ArcusX Escrow — prepare/confirm via API; wallet signs XDR. Partner rail: `partnerEscrow` / `partnerDeals` (API key only). Marketplace: `escrow/*` + JWT.
 
-**Platform fee:** see [Fee model](/sdk/FEE_MODEL) (2% from worker on escrow).
+**Platform fee:** see [Fee model](/sdk/FEE_MODEL) (2% from worker on escrow).  
+**How it works:** [Platform overview](/sdk/PLATFORM_OVERVIEW)
 
 ---
 
-## Superficie pública SDK v0.1 (27 métodos)
+## Superficie pública SDK
 
-Subset documentado para integradores B2B — no incluye admin, cron ni perfil/KYC (v0.2+).
+| Namespace | Uso |
+|-----------|-----|
+| `public` | stats, fee, board |
+| `marketplace` / `private` / `deals` / `escrow` | app `arcusx.pro` (JWT) |
+| `partnerEscrow` / `partnerDeals` | integradores (API key + wallets) — **live Testnet** |
+| `settlement` / `evidence` / `ratings` / `webhooks` | SOW helpers |
 
-| Namespace | Actions cubiertas |
-|-----------|-------------------|
-| `public` | `get_landing_market_stats`, `get_platform_fee`, `get_tasks` |
-| `marketplace` | `create_task`, `get_task_details`, `get_user_tasks`, `apply_task`, `get_task_proposals`, `select_proposal`, `cancel_task` |
-| `private` | `get_private_offers`, `finalize_private_offer`, `accept_private_offer`, `reject_private_offer` |
-| `deals` | `create_deal`, `get_deal_by_token`, `get_deal_details`, `get_my_deals`, `accept_deal`, `complete_deal` |
-| `escrow` | `create_escrow`, `get_escrow_status`, `mark_work_started`, `prepare_deal_escrow`, `finalize_deal_escrow` |
-| `settlement` | `complete_task`, `mark_deal_released` |
+**Idempotency:** `create_task`, `create_deal`, `apply_task`, `select_proposal`, `create_escrow`, partner deploy — header `Idempotency-Key` cuando aplique.
 
-**Idempotency:** `create_task`, `create_deal`, `apply_task`, `select_proposal`, `create_escrow` — header `Idempotency-Key`.
+Subset histórico documentado abajo (actions Edge). Partner REST: `/v1/partner/escrows/*`, `/v1/partner/deals/*` — ver [`PARTNER_ESCROW`](../sdk/PARTNER_ESCROW.md).
 
 **Internal / v0.2+:** resto de actions en este doc (KYC, disputas, admin, cron).
 

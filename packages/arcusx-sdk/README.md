@@ -27,7 +27,7 @@ const fee = await ax.public.getPlatformFee();
 const stats = await ax.public.getMarketStats();
 ```
 
-Docs: [`docs/sdk/QUICKSTART.md`](../../docs/sdk/QUICKSTART.md) · [`docs/sdk/API_REFERENCE.md`](../../docs/sdk/API_REFERENCE.md)
+Docs: [`PLATFORM_OVERVIEW`](../../docs/sdk/PLATFORM_OVERVIEW.md) · [`QUICKSTART`](../../docs/sdk/QUICKSTART.md) · [`API_REFERENCE`](../../docs/sdk/API_REFERENCE.md) · [`PARTNER_ESCROW`](../../docs/sdk/PARTNER_ESCROW.md)
 
 ## Modules (SOW 2 surface)
 

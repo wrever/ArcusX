@@ -56,7 +56,7 @@ The SDK **forwards** the Edge quote; it does not recalculate.
 
 1. Do not hardcode fee percentages in production UIs.
 2. Show `clientTotal` to payers and `workerNet` to receivers.
-3. Treat `platform_fee === 0.02` as the all-in rate (includes TW coverage).
+3. Treat `platform_fee === 0.02` as the all-in rate.
 4. Use sandbox (`testnet` + `axk_test_…`) before mainnet.
 
 ## Related

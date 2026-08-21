@@ -1,16 +1,27 @@
 # Partner Escrow — motor sin sesión ArcusX
 
-**Tesis:** [`INFRA_THESIS.md`](./INFRA_THESIS.md) · **Deals (links):** [`PARTNER_DEALS.md`](./PARTNER_DEALS.md)
+**Estado:** ✅ **live Testnet** (Edge `arcusx-api`, tabla `arcusx_partner_escrows`, SDK `partnerEscrow`).
 
-**Norte:** un integrador embebe el escrow USDC de ArcusX en **su** producto con:
+**Tesis:** [`INFRA_THESIS.md`](./INFRA_THESIS.md) · **Deals:** [`PARTNER_DEALS.md`](./PARTNER_DEALS.md) · **Overview:** [`PLATFORM_OVERVIEW.md`](./PLATFORM_OVERVIEW.md)
+
+**Norte:** un integrador embebe escrow USDC ArcusX en **su** producto con:
 
 1. API key (`axk_test_…` / `axk_live_…`)
 2. `client_wallet` + `worker_wallet` (G…)
 3. `amount_usdc`
 
-**No** hace falta JWT / login / usuario ArcusX. La firma on-chain la hace la wallet en la app del partner (`WalletAdapter`). ArcusX aplica la comisión en el escrow.
+**No** hace falta JWT / login ArcusX. Firma on-chain = wallet en la app del partner. Comisión en servidor.
 
-## Ya disponible (lectura)
+## Modelo de firmas (partner)
+
+| Rol | Quién |
+|-----|--------|
+| Deploy / fund / complete / approve / release | **Cliente** (`client_wallet`) |
+| Receptor USDC | **Worker** (`worker_wallet` = receiver) |
+
+Así el integrador no necesita Freighter del freelancer para cerrar el payout.
+
+## Lecturas (API key)
 
 | SDK | Auth |
 |-----|------|
@@ -18,49 +29,46 @@
 | `public.getTasks` / `getMarketStats` | API key |
 | `escrow.quote(nominal)` | API key |
 
-## Nuevo rail: `partnerEscrow`
+## API `partnerEscrow`
 
 | SDK | REST |
 |-----|------|
-| `partnerEscrow.prepareDeploy({ clientWallet, workerWallet, amountUsdc, externalId? })` | `POST /v1/partner/escrows/deploy/prepare` |
-| `partnerEscrow.confirmDeploy(id, { signedXdr \| deployTxHash, contractId })` | `POST /v1/partner/escrows/:id/deploy/confirm` |
-| `partnerEscrow.prepareFund(id, clientWallet)` | `POST /v1/partner/escrows/:id/fund/prepare` |
-| `partnerEscrow.confirmFund(id, { fundTxHash \| signedXdr })` | `POST /v1/partner/escrows/:id/fund/confirm` |
-| `partnerEscrow.prepareRelease(id, clientWallet)` | `POST /v1/partner/escrows/:id/release/prepare` |
-| `partnerEscrow.confirmRelease(id, hash \| { signedXdr })` | `POST /v1/partner/escrows/:id/release/confirm` |
-| `partnerEscrow.get(id)` / `list()` | `GET /v1/partner/escrows/:id` · `GET /v1/partner/escrows` |
+| `prepareDeploy({ clientWallet, workerWallet, amountUsdc, externalId? })` | `POST /v1/partner/escrows/deploy/prepare` |
+| `confirmDeploy(id, { signedXdr })` | `POST /v1/partner/escrows/:id/deploy/confirm` |
+| `prepareFund(id, clientWallet)` | `POST /v1/partner/escrows/:id/fund/prepare` |
+| `confirmFund(id, { signedXdr })` | `POST /v1/partner/escrows/:id/fund/confirm` |
+| `prepareRelease(id, clientWallet)` | `POST /v1/partner/escrows/:id/release/prepare` |
+| `confirmRelease(id, { signedXdr, step })` | `POST /v1/partner/escrows/:id/release/confirm` |
+| `get(id)` / `list()` | `GET /v1/partner/escrows/:id` · `GET /v1/partner/escrows` |
 
-Persistencia: tabla `arcusx_partner_escrows` (migración `20260818180000_arcusx_partner_escrows.sql`).
+`prepareRelease` es **stateful**: cada llamada devuelve el **siguiente** paso (`complete` → `approve` → `release`). Tras firmar, volver a llamar `prepareRelease`.
+
+Respuestas incluyen `contract_id`, `stellar_expert_url`, `*_tx_url` cuando aplica.
 
 ## Flujo
 
 ```
 quote (opcional)
-  → prepareDeploy → sign XDR (wallet partner) → confirmDeploy
-  → prepareFund → sign → confirmFund
-  → (trabajo en app partner)
-  → prepareRelease → sign steps → confirmRelease
+  → prepareDeploy → sign (client) → confirmDeploy   # contract_id + Expert
+  → prepareFund   → sign → confirmFund
+  → prepareRelease → sign (complete)
+  → prepareRelease → sign (approve)
+  → prepareRelease → sign (release)                 # USDC → worker (~98%)
 ```
 
-## Modelo de negocio
+## Fee
 
-El fee de plataforma (hoy **2%** total) se aplica en `prepareDeploy` vía quote bilateral. El integrador **no** hardcodea %.
+**2%** total al worker (cliente fondea nominal). Ver [`FEE_MODEL.md`](./FEE_MODEL.md).
 
-## Qué queda atado a JWT (marketplace ArcusX)
+## vs marketplace
 
-Tasks create/apply/select, private offers, deals con roles de usuario, disputes in-app — esos flujos son de la plataforma ArcusX. El **motor escrow** para partners es `partnerEscrow`.
+Tasks / private / deals JWT / disputas in-app = producto `arcusx.pro`.  
+Este rail = infra para partners. Ver [`RAILS_SEPARATION.md`](./RAILS_SEPARATION.md).
 
 ## Harness
 
-`local-test` → tab **Partner escrow** (API key only).
+`local-test/` → tab **Partner escrow** (API key + Freighter client).
 
-## Requisitos de wallets
+## Requisitos wallets
 
-Ambas `G…` deben existir en la red (Testnet/Mainnet) **y** tener trustline USDC. Si no, `prepareDeploy` falla con validación de trustline (esperado).
-
-## Deploy checklist
-
-1. Aplicar migración en proyecto ArcusX (`atgsesbstjleabesclzs`)
-2. Redeploy Edge `arcusx-api` (incluye `handlers/partner-escrow.ts`)
-3. `cd packages/arcusx-sdk && npm run build`
-4. Probar prepareDeploy desde local-test
+Ambas `G…` en la red con **trustline USDC**. Sin eso, `prepareDeploy` / fund fallan (esperado).

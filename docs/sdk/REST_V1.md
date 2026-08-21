@@ -70,6 +70,22 @@ Always `escrow` in paths and types — never vendor-specific names.
 | `/v1/deals/:dealId/escrow/prepare` | POST | Deal escrow |
 | `/v1/deals/:dealId/escrow/finalize` | POST | Finalize deal escrow |
 
+## Partner rail (API key only — live)
+
+Sin JWT. Specs: [Partner Escrow](./PARTNER_ESCROW.md) · [Partner Deals](./PARTNER_DEALS.md)
+
+| Path | Method | Purpose |
+|------|--------|---------|
+| `/v1/partner/escrows/deploy/prepare` | POST | wallets + amount → `unsigned_xdr` |
+| `/v1/partner/escrows/:id/deploy/confirm` | POST | after client sign |
+| `/v1/partner/escrows/:id/fund/prepare` | POST | |
+| `/v1/partner/escrows/:id/fund/confirm` | POST | |
+| `/v1/partner/escrows/:id/release/prepare` | POST | next step: complete → approve → release |
+| `/v1/partner/escrows/:id/release/confirm` | POST | |
+| `/v1/partner/escrows` · `/:id` | GET | list / get |
+| `/v1/partner/deals` | POST/GET | create / list payment links |
+| `/v1/partner/deals/:id/…` | | fund/release (reuses partner escrow) |
+
 ## SDK pattern
 
 ```ts

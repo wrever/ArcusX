@@ -2,7 +2,7 @@
 
 **Una frase:** ArcusX es la **infraestructura de pago a freelancers** sobre Stellar: escrow USDC + deals (links de pago) + comisión. El integrador solo ve `@arcusx/sdk` y Stellar.
 
-**Estado:** diseño activo · deploy Supabase ArcusX pendiente · no bloquea el diseño.
+**Estado:** diseño + **rail partner live Testnet** · marketplace JWT sigue en riel separado.
 
 **Regla dura:** el proveedor de contratos on-chain es **interno**. Nunca nombrarlo en UI, SDK público, ejemplos, mensajes de API ni docs de integrador. Hablar solo de **escrow ArcusX**.
 

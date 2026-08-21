@@ -1,7 +1,7 @@
 # Known limitations — `@arcusx/sdk` (SOW 2)
 
 **Audience:** partners / reviewers  
-**Last updated:** 2026-08-18 (Week 3)
+**Last updated:** 2026-08-20 (partner rail live + Week 3)
 
 ## Escrow / wallet
 
@@ -24,8 +24,11 @@
 
 | Limitation | Guidance |
 |------------|----------|
-| Never hardcode % | `getPlatformFee()` returns **0.02** (2% total, covers TW); `escrow.quote` for amounts |
-| Internal split | `arcusx_share` + `protocol_share` are optional breakouts |
+| Never hardcode % | `getPlatformFee()` returns **0.02** (2% total); `escrow.quote` for amounts |
+| Internal split | `arcusx_share` + `protocol_share` are optional breakouts; use total only |
+| Partner escrow live | Client signs all steps; worker receives USDC only — see `PARTNER_ESCROW.md` |
+| Release is multi-step | `prepareRelease` → complete → approve → release (one XDR each) |
+| `contract_id` | Appears after `confirmDeploy` (not always at prepare) |
 
 ## Out of SOW 2
 
