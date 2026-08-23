@@ -210,7 +210,7 @@ export function DocsHomeHero({
   ctaApp,
   ctaAppHref,
   ctaStart,
-  ctaStartHref = '/developers',
+  ctaStartHref = '/guides',
 }: {
   eyebrow: string;
   title: string;

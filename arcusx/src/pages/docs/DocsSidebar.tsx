@@ -49,8 +49,17 @@ export default function DocsSidebar({ open, onNavigate, onOpenSearch }: Props) {
 
       {DOCS_CHAPTERS.map((chapter) => {
         const expanded = openChapters[chapter.id] !== false;
+        const audienceKey =
+          chapter.audience === 'human' ? 'docs.audience.human' : 'docs.audience.tech';
+        const prev = DOCS_CHAPTERS[DOCS_CHAPTERS.indexOf(chapter) - 1];
+        const showAudience = !prev || prev.audience !== chapter.audience;
         return (
           <div key={chapter.id} className="ax-docs__chapter">
+            {showAudience && (
+              <p className={`ax-docs__audience-label ax-docs__audience-label--${chapter.audience}`}>
+                {t(audienceKey)}
+              </p>
+            )}
             <button
               type="button"
               className="ax-docs__chapter-toggle"

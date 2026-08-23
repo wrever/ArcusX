@@ -9,6 +9,7 @@ import {
 } from "../config/enterpriseSite";
 import stellarPartnerLogo from "../images/stellar.png";
 import soroswapPartnerLogo from "../images/soroswap.png";
+import { DOCS_SITE_URL } from "../config/docsSite";
 import "../css/EmpresasPage.css";
 import "../css/EmpresasPage.subdomain.css";
 
@@ -390,6 +391,37 @@ export default function EmpresasPage() {
           </ul>
         </section>
 
+        <section className="ax-empresas__section" aria-labelledby="emp-modes" {...subReveal}>
+          <div className="ax-empresas__section-head">
+            <h2 id="emp-modes" className="ax-empresas__section-title">
+              {t("empresa.section.modes.title")}
+            </h2>
+            <p className="ax-empresas__section-sub">{t("empresa.section.modes.sub")}</p>
+          </div>
+          <ul className="ax-empresas__grid">
+            <li className="ax-empresas__card">
+              <IconSupply />
+              <h3 className="ax-empresas__card-title">{t("empresa.mode.public.title")}</h3>
+              <p className="ax-empresas__card-desc">{t("empresa.mode.public.desc")}</p>
+            </li>
+            <li className="ax-empresas__card">
+              <IconProcurement />
+              <h3 className="ax-empresas__card-title">{t("empresa.mode.private.title")}</h3>
+              <p className="ax-empresas__card-desc">{t("empresa.mode.private.desc")}</p>
+            </li>
+            <li className="ax-empresas__card">
+              <IconFinance />
+              <h3 className="ax-empresas__card-title">{t("empresa.mode.deals.title")}</h3>
+              <p className="ax-empresas__card-desc">{t("empresa.mode.deals.desc")}</p>
+            </li>
+            <li className="ax-empresas__card">
+              <IconCompliance />
+              <h3 className="ax-empresas__card-title">{t("empresa.mode.api.title")}</h3>
+              <p className="ax-empresas__card-desc">{t("empresa.mode.api.desc")}</p>
+            </li>
+          </ul>
+        </section>
+
         <section className="ax-empresas__section" aria-labelledby="emp-usecases" {...subReveal}>
           <div className="ax-empresas__section-head">
             <h2 id="emp-usecases" className="ax-empresas__section-title">
@@ -484,6 +516,14 @@ export default function EmpresasPage() {
             </a>
             <a href={MAIN_SITE_URL} className="ax-empresas__btn ax-empresas__btn--ghost">
               {t("empresa.cta.secondary")}
+            </a>
+            <a
+              href={DOCS_SITE_URL}
+              className="ax-empresas__btn ax-empresas__btn--ghost"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {t("empresa.cta.docs")}
             </a>
           </div>
 

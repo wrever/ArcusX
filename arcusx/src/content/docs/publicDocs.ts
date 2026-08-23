@@ -1,4 +1,5 @@
 import { BUILDERS_PAGES } from './buildersDocs';
+import { GUIDES_PAGES } from './guidesDocs';
 import { PLATFORM_PAGES } from './platformDocs';
 export type DocsLang = 'es' | 'en' | 'pt';
 
@@ -62,6 +63,8 @@ export type DocsChapter = {
   id: string;
   /** Ruta del índice del capítulo (opcional) */
   path?: string;
+  /** human = usar la app; tech = integrar SDK/API */
+  audience: 'human' | 'tech';
   label: Record<DocsLang, string>;
   blurb: Record<DocsLang, string>;
   articles: DocsNavItem[];
@@ -71,64 +74,82 @@ function L(es: DocsPageContent, en: DocsPageContent): Record<DocsLang, DocsPageC
   return { es, en, pt: es };
 }
 
-/** Producto (marketplace) + builders (SDK) + FAQ. */
+/**
+ * Dos modos:
+ * - Usar ArcusX (humano): manuales para trabajar / dar trabajo
+ * - Integrar (técnico): SDK, API, rail partner + referencia de producto
+ */
 export const DOCS_CHAPTERS: DocsChapter[] = [
   {
-    id: 'platform',
+    id: 'guides',
+    path: '/guides',
+    audience: 'human',
     label: {
-      es: 'Producto',
-      en: 'Product',
-      pt: 'Produto',
+      es: 'Usar ArcusX',
+      en: 'Using ArcusX',
+      pt: 'Usar ArcusX',
     },
     blurb: {
-      es: 'Marketplace público/privado, deals, escrow y rail partner.',
-      en: 'Public/private marketplace, deals, escrow, and partner rail.',
-      pt: 'Marketplace público/privado, deals, escrow e rail partner.',
+      es: 'Manuales para clientes y freelancers: publicar, postular, pagar y cobrar.',
+      en: 'Guides for clients and freelancers: post, apply, pay, and get paid.',
+      pt: 'Manuais para clientes e freelancers: publicar, candidatar, pagar e receber.',
     },
     articles: [
       {
-        path: '/platform',
+        path: '/guides',
         kind: 'article',
-        label: { es: 'Cómo funciona', en: 'How it works', pt: 'Como funciona' },
+        label: { es: 'Empezar aquí', en: 'Start here', pt: 'Começar aqui' },
       },
       {
-        path: '/platform/marketplace',
+        path: '/guides/cuenta',
+        kind: 'article',
+        label: { es: 'Cuenta y wallet', en: 'Account & wallet', pt: 'Conta e wallet' },
+      },
+      {
+        path: '/guides/marketplace',
         kind: 'article',
         label: { es: 'Marketplace público', en: 'Public marketplace', pt: 'Marketplace público' },
       },
       {
-        path: '/platform/private',
+        path: '/guides/privado',
         kind: 'article',
         label: { es: 'Ofertas privadas', en: 'Private offers', pt: 'Ofertas privadas' },
       },
       {
-        path: '/platform/deals',
+        path: '/guides/deals',
         kind: 'article',
         label: { es: 'Deals', en: 'Deals', pt: 'Deals' },
       },
       {
-        path: '/platform/escrow-fees',
+        path: '/guides/pagos',
         kind: 'article',
-        label: { es: 'Escrow & fees', en: 'Escrow & fees', pt: 'Escrow & fees' },
+        label: { es: 'Pagos y comisión', en: 'Payments & fees', pt: 'Pagamentos e taxa' },
       },
       {
-        path: '/platform/partner',
+        path: '/guides/disputas',
         kind: 'article',
-        label: { es: 'Rail partner', en: 'Partner rail', pt: 'Rail partner' },
+        label: { es: 'Disputas', en: 'Disputes', pt: 'Disputas' },
+      },
+      {
+        path: '/guides/empresas',
+        kind: 'article',
+        label: { es: 'Portal Empresas', en: 'Business portal', pt: 'Portal Empresas' },
       },
     ],
   },
   {
     id: 'builders',
+    path: '/developers',
+    audience: 'tech',
     label: {
-      es: 'SDK & API',
-      en: 'SDK & API',
-      pt: 'SDK & API',
+      es: 'Integrar (SDK)',
+      en: 'Integrate (SDK)',
+      pt: 'Integrar (SDK)',
     },
     blurb: {
-      es: 'Instalar, autenticar e integrar @arcusx/sdk.',
-      en: 'Install, auth, and integrate @arcusx/sdk.',
-      pt: 'Instalar, autenticar e integrar @arcusx/sdk.',
+      es: 'Para builders: @arcusx/sdk, API keys, escrow prepare/confirm y rail partner.',
+      en: 'For builders: @arcusx/sdk, API keys, escrow prepare/confirm, and partner rail.',
+      pt: 'Para builders: @arcusx/sdk, API keys, escrow prepare/confirm e rail partner.',
     },
     articles: [
       {
@@ -157,6 +178,11 @@ export const DOCS_CHAPTERS: DocsChapter[] = [
         label: { es: 'Escrow on-chain', en: 'On-chain escrow', pt: 'Escrow on-chain' },
       },
       {
+        path: '/platform/partner',
+        kind: 'article',
+        label: { es: 'Rail partner', en: 'Partner rail', pt: 'Rail partner' },
+      },
+      {
         path: '/developers/errors',
         kind: 'article',
         label: {
@@ -168,16 +194,59 @@ export const DOCS_CHAPTERS: DocsChapter[] = [
     ],
   },
   {
+    id: 'platform',
+    path: '/platform',
+    audience: 'tech',
+    label: {
+      es: 'Producto (técnico)',
+      en: 'Product (tech)',
+      pt: 'Produto (técnico)',
+    },
+    blurb: {
+      es: 'Referencia técnica de canales, fee y flujos on-chain.',
+      en: 'Technical reference for channels, fees, and on-chain flows.',
+      pt: 'Referência técnica de canais, fee e fluxos on-chain.',
+    },
+    articles: [
+      {
+        path: '/platform',
+        kind: 'article',
+        label: { es: 'Cómo funciona', en: 'How it works', pt: 'Como funciona' },
+      },
+      {
+        path: '/platform/marketplace',
+        kind: 'article',
+        label: { es: 'Marketplace público', en: 'Public marketplace', pt: 'Marketplace público' },
+      },
+      {
+        path: '/platform/private',
+        kind: 'article',
+        label: { es: 'Ofertas privadas', en: 'Private offers', pt: 'Ofertas privadas' },
+      },
+      {
+        path: '/platform/deals',
+        kind: 'article',
+        label: { es: 'Deals', en: 'Deals', pt: 'Deals' },
+      },
+      {
+        path: '/platform/escrow-fees',
+        kind: 'article',
+        label: { es: 'Escrow & fees', en: 'Escrow & fees', pt: 'Escrow & fees' },
+      },
+    ],
+  },
+  {
     id: 'ayuda',
+    audience: 'human',
     label: {
       es: 'Ayuda',
       en: 'Help',
       pt: 'Ajuda',
     },
     blurb: {
-      es: 'FAQ de integración y bases legales.',
-      en: 'Integration FAQ and legal basics.',
-      pt: 'FAQ de integração e bases legais.',
+      es: 'FAQ para usuarios e integradores.',
+      en: 'FAQ for users and integrators.',
+      pt: 'FAQ para usuários e integradores.',
     },
     articles: [
       { path: '/faq', kind: 'article', label: { es: 'FAQ', en: 'FAQ', pt: 'FAQ' } },
@@ -220,58 +289,58 @@ export const DOCS_PAGES: Record<string, Record<DocsLang, DocsPageContent>> = {
       title: 'ArcusX Docs',
       kind: 'home',
       description:
-        'Marketplace + escrow USDC en Stellar. Docs de producto y de integración (@arcusx/sdk).',
+        'Dos modos: Usar ArcusX (manuales) e Integrar (SDK/API). Escrow USDC en Stellar.',
       blocks: [
         {
           type: 'p',
-          text: 'ArcusX combina marketplace (tareas públicas, privadas y deals) con un rail partner para apps terceras. Settlement USDC en Stellar, sin custodia de claves.',
+          text: 'Elige tu camino: guías humanas si quieres trabajar o dar trabajo en arcusx.pro, o docs técnicas si vas a integrar @arcusx/sdk / API.',
         },
         {
           type: 'stat',
           items: [
-            { value: '@arcusx/sdk', label: 'Cliente TypeScript' },
-            { value: 'api.arcusx.pro', label: 'Gateway partner' },
-            { value: 'testnet', label: 'Red para empezar' },
+            { value: 'Usar', label: 'Manuales de la plataforma' },
+            { value: 'Integrar', label: 'SDK & API partner' },
+            { value: '2%', label: 'Fee al worker' },
           ],
         },
-        { type: 'h2', text: 'Producto' },
+        { type: 'h2', text: 'Usar ArcusX (humano)' },
         {
           type: 'linkTable',
           headers: ['Guía', 'Para qué'],
           rows: [
             {
-              path: '/platform',
-              label: 'Cómo funciona',
-              blurb: 'Marketplace + partner, fee 2%, dos rieles',
+              path: '/guides',
+              label: 'Empezar aquí',
+              blurb: 'Mapa de manuales para clientes y freelancers',
             },
             {
-              path: '/platform/marketplace',
+              path: '/guides/marketplace',
               label: 'Marketplace público',
-              blurb: 'Publicar → postular → fondear → liberar',
+              blurb: 'Publicar, postular, fondear y liberar',
             },
             {
-              path: '/platform/private',
+              path: '/guides/privado',
               label: 'Ofertas privadas',
-              blurb: 'Invitación 1:1',
+              blurb: 'Invitación 1:1 con escrow',
             },
             {
-              path: '/platform/deals',
+              path: '/guides/deals',
               label: 'Deals',
-              blurb: 'Payment links y acuerdos',
+              blurb: 'Acuerdos y links de pago',
             },
             {
-              path: '/platform/escrow-fees',
-              label: 'Escrow & fees',
-              blurb: 'Deploy, fund, approve→release',
+              path: '/guides/pagos',
+              label: 'Pagos y comisión',
+              blurb: 'Escrow, 2% y quién firma',
             },
             {
-              path: '/platform/partner',
-              label: 'Rail partner',
-              blurb: 'API key + wallets, sin login ArcusX',
+              path: '/guides/empresas',
+              label: 'Portal Empresas',
+              blurb: 'Misma plataforma, vista B2B',
             },
           ],
         },
-        { type: 'h2', text: 'SDK & API' },
+        { type: 'h2', text: 'Integrar (técnico)' },
         {
           type: 'linkTable',
           headers: ['Guía', 'Para qué'],
@@ -330,58 +399,58 @@ export const DOCS_PAGES: Record<string, Record<DocsLang, DocsPageContent>> = {
       title: 'ArcusX Docs',
       kind: 'home',
       description:
-        'Marketplace + USDC escrow on Stellar. Product and integration docs (@arcusx/sdk).',
+        'Two modes: Using ArcusX (guides) and Integrate (SDK/API). USDC escrow on Stellar.',
       blocks: [
         {
           type: 'p',
-          text: 'ArcusX combines a marketplace (public tasks, private offers, deals) with a partner rail for third-party apps. USDC settlement on Stellar, non-custodial.',
+          text: 'Pick your path: human guides if you work or hire on arcusx.pro, or technical docs if you integrate @arcusx/sdk / API.',
         },
         {
           type: 'stat',
           items: [
-            { value: '@arcusx/sdk', label: 'TypeScript client' },
-            { value: 'api.arcusx.pro', label: 'Partner gateway' },
-            { value: 'testnet', label: 'Network to start on' },
+            { value: 'Use', label: 'Platform manuals' },
+            { value: 'Integrate', label: 'SDK & partner API' },
+            { value: '2%', label: 'Fee on the worker' },
           ],
         },
-        { type: 'h2', text: 'Product' },
+        { type: 'h2', text: 'Using ArcusX (human)' },
         {
           type: 'linkTable',
           headers: ['Guide', 'What it covers'],
           rows: [
             {
-              path: '/platform',
-              label: 'How it works',
-              blurb: 'Marketplace + partner, 2% fee, two rails',
+              path: '/guides',
+              label: 'Start here',
+              blurb: 'Map of manuals for clients and freelancers',
             },
             {
-              path: '/platform/marketplace',
+              path: '/guides/marketplace',
               label: 'Public marketplace',
-              blurb: 'Publish → apply → fund → release',
+              blurb: 'Post, apply, fund, and release',
             },
             {
-              path: '/platform/private',
+              path: '/guides/privado',
               label: 'Private offers',
-              blurb: '1:1 invites',
+              blurb: '1:1 invite with escrow',
             },
             {
-              path: '/platform/deals',
+              path: '/guides/deals',
               label: 'Deals',
-              blurb: 'Payment links and agreements',
+              blurb: 'Agreements and payment links',
             },
             {
-              path: '/platform/escrow-fees',
-              label: 'Escrow & fees',
-              blurb: 'Deploy, fund, approve→release',
+              path: '/guides/pagos',
+              label: 'Payments & fees',
+              blurb: 'Escrow, 2%, who signs',
             },
             {
-              path: '/platform/partner',
-              label: 'Partner rail',
-              blurb: 'API key + wallets, no ArcusX login',
+              path: '/guides/empresas',
+              label: 'Business portal',
+              blurb: 'Same platform, B2B view',
             },
           ],
         },
-        { type: 'h2', text: 'SDK & API' },
+        { type: 'h2', text: 'Integrate (technical)' },
         {
           type: 'linkTable',
           headers: ['Guide', 'What it covers'],
@@ -438,6 +507,7 @@ export const DOCS_PAGES: Record<string, Record<DocsLang, DocsPageContent>> = {
     },
   ),
 
+  ...GUIDES_PAGES,
   ...PLATFORM_PAGES,
   ...BUILDERS_PAGES,
 

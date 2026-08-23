@@ -174,15 +174,26 @@ export default function DocsArticle({ path }: { path: string }) {
             ctaApp={t('docs.nav.openApp')}
             ctaAppHref={MAIN_SITE_URL}
             ctaStart={t('docs.hero.browse')}
-            ctaStartHref="/developers"
+            ctaStartHref="/guides"
           />
         ) : (
           <>
             <div className="ax-docs__meta-row">
               {chapter && (
-                <span className="ax-docs__meta-chapter">
-                  {chapter.label[docsLang] || chapter.label.en}
-                </span>
+                <>
+                  <span
+                    className={`ax-docs__meta-audience ax-docs__meta-audience--${chapter.audience}`}
+                  >
+                    {t(
+                      chapter.audience === 'human'
+                        ? 'docs.audience.human'
+                        : 'docs.audience.tech',
+                    )}
+                  </span>
+                  <span className="ax-docs__meta-chapter">
+                    {chapter.label[docsLang] || chapter.label.en}
+                  </span>
+                </>
               )}
             </div>
             <h1 className="ax-docs__title">{page.title}</h1>

@@ -31,9 +31,10 @@ cd arcusx && npm run build
 
 | Archivo | Qué |
 |---------|-----|
-| [`platformDocs.ts`](../../arcusx/src/content/docs/platformDocs.ts) | Producto: marketplace público/privado, deals, escrow, partner |
-| [`buildersDocs.ts`](../../arcusx/src/content/docs/buildersDocs.ts) | SDK & API |
-| [`publicDocs.ts`](../../arcusx/src/content/docs/publicDocs.ts) | Home, nav, FAQ, legal + merge de capítulos |
+| [`guidesDocs.ts`](../../arcusx/src/content/docs/guidesDocs.ts) | **Modo humano** — manuales: cuenta, marketplace, privado, deals, pagos, disputas, empresas |
+| [`buildersDocs.ts`](../../arcusx/src/content/docs/buildersDocs.ts) | **Modo técnico** — SDK & API |
+| [`platformDocs.ts`](../../arcusx/src/content/docs/platformDocs.ts) | Referencia técnica de producto (+ rail partner) |
+| [`publicDocs.ts`](../../arcusx/src/content/docs/publicDocs.ts) | Home, nav (dos audiencias), FAQ, legal |
 
 UI: [`arcusx/src/pages/docs/`](../../arcusx/src/pages/docs/)
 

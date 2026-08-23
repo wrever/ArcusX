@@ -1,29 +1,21 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import DocsArticle from './DocsArticle';
 import DocsSidebar, { DocsNavbar } from './DocsSidebar';
 import DocsSearch from './DocsSearch';
+import { DOCS_PAGES } from '../../content/docs/publicDocs';
 import '../../css/DocsSite.css';
 
-const PAGE_PATHS = [
-  '/',
-  '/developers',
-  '/developers/quickstart',
-  '/developers/auth',
-  '/developers/modules',
-  '/developers/escrow',
-  '/developers/errors',
-  '/faq',
-  '/legal/privacy',
-  '/legal/terms',
-  '/legal/security',
-  '/legal/compliance',
-] as const;
+export default function DocsApp() {
+  return <DocsShell />;
+}
 
 function DocsShell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const location = useLocation();
+
+  const pagePaths = useMemo(() => Object.keys(DOCS_PAGES), []);
 
   const openSearch = useCallback(() => setSearchOpen(true), []);
   const closeSearch = useCallback(() => setSearchOpen(false), []);
@@ -60,7 +52,7 @@ function DocsShell() {
           onOpenSearch={openSearch}
         />
         <Routes>
-          {PAGE_PATHS.map((p) => (
+          {pagePaths.map((p) => (
             <Route key={p} path={p} element={<DocsArticle path={p} />} />
           ))}
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -68,8 +60,4 @@ function DocsShell() {
       </div>
     </div>
   );
-}
-
-export default function DocsApp() {
-  return <DocsShell />;
 }

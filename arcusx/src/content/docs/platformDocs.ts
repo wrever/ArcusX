@@ -551,7 +551,7 @@ const preview = await ax.deals.getByToken(created.deal_token);`,
     {
       title: 'Rail partner',
       kind: 'article',
-      chapterId: 'platform',
+      chapterId: 'builders',
       description: 'Integrar escrow y deals con API key — sin obligar login ArcusX a tus usuarios.',
       blocks: [
         {
@@ -611,7 +611,7 @@ const fee = await ax.public.getPlatformFee();
     {
       title: 'Partner rail',
       kind: 'article',
-      chapterId: 'platform',
+      chapterId: 'builders',
       description: 'Integrate escrow and deals with an API key — no ArcusX login required for your users.',
       blocks: [
         {
