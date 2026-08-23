@@ -1,7 +1,7 @@
 # ArcusX — Cómo funciona la plataforma
 
 **Audiencia:** equipo, revisores, integradores  
-**Última actualización:** 2026-08-20  
+**Última actualización:** 2026-08-22  
 **Regla:** el motor de contratos on-chain es **interno**. En docs/SDK/UI partner solo se habla de **escrow ArcusX** + Stellar USDC.
 
 ---
@@ -80,16 +80,17 @@ Harness local: `local-test/` (:5200) proxy → Edge.
 ### Partner Escrow (`partnerEscrow`)
 
 **Input:** `client_wallet` + `worker_wallet` + `amount_usdc` (+ title / `external_id`).  
-**Roles on-chain (modelo partner):** el **cliente** firma deploy, fund, complete, approve y release; el **worker** solo es receptor (`receiver`) del USDC.
+**Roles on-chain (modelo partner):** el **cliente** firma deploy, fund, approve y release; el **worker** es `serviceProvider` + `receiver` (recibe USDC; no firma el payout).
 
 ```
 quote (opcional)
   → prepareDeploy → Freighter(client) → confirmDeploy  → contract_id + Stellar Expert
   → prepareFund   → sign → confirmFund
-  → prepareRelease → sign (complete)
   → prepareRelease → sign (approve)
   → prepareRelease → sign (release)  → status released · USDC al worker (~98%)
 ```
+
+Liberar = **2 firmas del cliente** (approve → release), igual que en marketplace. `prepareComplete` es opcional y no forma parte del flujo estándar.
 
 REST: `/v1/partner/escrows/*` · Tabla: `arcusx_partner_escrows`  
 Spec: [`PARTNER_ESCROW.md`](./PARTNER_ESCROW.md)
@@ -141,7 +142,8 @@ Ver [`FEE_MODEL.md`](./FEE_MODEL.md).
 | W3 — escrow prepare/confirm, HMAC, playground, Freighter adapter | ✅ |
 | Partner escrow + deals live Testnet | ✅ |
 | local-test harness (suite + Freighter E2E) | ✅ |
-| W4 — release package, changelog, mainnet checklist (doc) | ☐ |
+| W4 — release package, changelog, fresh-clone, demo notes | ✅ |
+| Mainnet production launch | ❌ futuro — [`MAINNET_READINESS.md`](./MAINNET_READINESS.md) |
 
 ---
 
@@ -163,4 +165,8 @@ Ver [`FEE_MODEL.md`](./FEE_MODEL.md).
 | [`PARTNER_ESCROW.md`](./PARTNER_ESCROW.md) | Motor wallets + monto |
 | [`PARTNER_DEALS.md`](./PARTNER_DEALS.md) | Payment links |
 | [`KNOWN_LIMITATIONS.md`](./KNOWN_LIMITATIONS.md) | Límites honestos |
+| [`FRESH_CLONE_VERIFICATION.md`](./FRESH_CLONE_VERIFICATION.md) | Clone limpio |
+| [`MODULE_STATUS.md`](./MODULE_STATUS.md) | Estado módulos |
+| [`E2E_DEMO_NOTES.md`](./E2E_DEMO_NOTES.md) | Guion demo |
+| [`MAINNET_READINESS.md`](./MAINNET_READINESS.md) | Futuro (no launch) |
 | [`../archive/planning/MEMORIA_VITAL_ARCUSX.md`](../archive/planning/MEMORIA_VITAL_ARCUSX.md) | Memoria del proyecto |

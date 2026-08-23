@@ -1,4 +1,5 @@
 import { BUILDERS_PAGES } from './buildersDocs';
+import { PLATFORM_PAGES } from './platformDocs';
 export type DocsLang = 'es' | 'en' | 'pt';
 
 export type DocsBlock =
@@ -70,8 +71,53 @@ function L(es: DocsPageContent, en: DocsPageContent): Record<DocsLang, DocsPageC
   return { es, en, pt: es };
 }
 
-/** Solo docs de builders (+ FAQ). Producto / “cómo usarlo” viven en arcusx.pro. */
+/** Producto (marketplace) + builders (SDK) + FAQ. */
 export const DOCS_CHAPTERS: DocsChapter[] = [
+  {
+    id: 'platform',
+    label: {
+      es: 'Producto',
+      en: 'Product',
+      pt: 'Produto',
+    },
+    blurb: {
+      es: 'Marketplace público/privado, deals, escrow y rail partner.',
+      en: 'Public/private marketplace, deals, escrow, and partner rail.',
+      pt: 'Marketplace público/privado, deals, escrow e rail partner.',
+    },
+    articles: [
+      {
+        path: '/platform',
+        kind: 'article',
+        label: { es: 'Cómo funciona', en: 'How it works', pt: 'Como funciona' },
+      },
+      {
+        path: '/platform/marketplace',
+        kind: 'article',
+        label: { es: 'Marketplace público', en: 'Public marketplace', pt: 'Marketplace público' },
+      },
+      {
+        path: '/platform/private',
+        kind: 'article',
+        label: { es: 'Ofertas privadas', en: 'Private offers', pt: 'Ofertas privadas' },
+      },
+      {
+        path: '/platform/deals',
+        kind: 'article',
+        label: { es: 'Deals', en: 'Deals', pt: 'Deals' },
+      },
+      {
+        path: '/platform/escrow-fees',
+        kind: 'article',
+        label: { es: 'Escrow & fees', en: 'Escrow & fees', pt: 'Escrow & fees' },
+      },
+      {
+        path: '/platform/partner',
+        kind: 'article',
+        label: { es: 'Rail partner', en: 'Partner rail', pt: 'Rail partner' },
+      },
+    ],
+  },
   {
     id: 'builders',
     label: {
@@ -174,11 +220,11 @@ export const DOCS_PAGES: Record<string, Record<DocsLang, DocsPageContent>> = {
       title: 'ArcusX Docs',
       kind: 'home',
       description:
-        'Infraestructura de trabajo + escrow USDC en Stellar. Documentación para integrar @arcusx/sdk y la Partner API.',
+        'Marketplace + escrow USDC en Stellar. Docs de producto y de integración (@arcusx/sdk).',
       blocks: [
         {
           type: 'p',
-          text: 'ArcusX expone marketplace, deals, escrow prepare/confirm, evidencia, ratings y webhooks vía api.arcusx.pro. Esta docs es para builders — el producto para usuarios finales está en arcusx.pro.',
+          text: 'ArcusX combina marketplace (tareas públicas, privadas y deals) con un rail partner para apps terceras. Settlement USDC en Stellar, sin custodia de claves.',
         },
         {
           type: 'stat',
@@ -186,6 +232,43 @@ export const DOCS_PAGES: Record<string, Record<DocsLang, DocsPageContent>> = {
             { value: '@arcusx/sdk', label: 'Cliente TypeScript' },
             { value: 'api.arcusx.pro', label: 'Gateway partner' },
             { value: 'testnet', label: 'Red para empezar' },
+          ],
+        },
+        { type: 'h2', text: 'Producto' },
+        {
+          type: 'linkTable',
+          headers: ['Guía', 'Para qué'],
+          rows: [
+            {
+              path: '/platform',
+              label: 'Cómo funciona',
+              blurb: 'Marketplace + partner, fee 2%, dos rieles',
+            },
+            {
+              path: '/platform/marketplace',
+              label: 'Marketplace público',
+              blurb: 'Publicar → postular → fondear → liberar',
+            },
+            {
+              path: '/platform/private',
+              label: 'Ofertas privadas',
+              blurb: 'Invitación 1:1',
+            },
+            {
+              path: '/platform/deals',
+              label: 'Deals',
+              blurb: 'Payment links y acuerdos',
+            },
+            {
+              path: '/platform/escrow-fees',
+              label: 'Escrow & fees',
+              blurb: 'Deploy, fund, approve→release',
+            },
+            {
+              path: '/platform/partner',
+              label: 'Rail partner',
+              blurb: 'API key + wallets, sin login ArcusX',
+            },
           ],
         },
         { type: 'h2', text: 'SDK & API' },
@@ -239,7 +322,7 @@ export const DOCS_PAGES: Record<string, Record<DocsLang, DocsPageContent>> = {
         },
         {
           type: 'callout',
-          text: 'Keys: panel Developer en arcusx.pro · Paquete: npm i @arcusx/sdk · Ejemplos: examples/sdk-node-* en el monorepo.',
+          text: 'Keys: panel Developer en arcusx.pro · Paquete: npm i @arcusx/sdk · App: arcusx.pro',
         },
       ],
     },
@@ -247,11 +330,11 @@ export const DOCS_PAGES: Record<string, Record<DocsLang, DocsPageContent>> = {
       title: 'ArcusX Docs',
       kind: 'home',
       description:
-        'Work execution + USDC escrow infrastructure on Stellar. Docs for integrating @arcusx/sdk and the Partner API.',
+        'Marketplace + USDC escrow on Stellar. Product and integration docs (@arcusx/sdk).',
       blocks: [
         {
           type: 'p',
-          text: 'ArcusX exposes marketplace, deals, escrow prepare/confirm, evidence, ratings, and webhooks via api.arcusx.pro. This site is for builders — the end-user product lives at arcusx.pro.',
+          text: 'ArcusX combines a marketplace (public tasks, private offers, deals) with a partner rail for third-party apps. USDC settlement on Stellar, non-custodial.',
         },
         {
           type: 'stat',
@@ -259,6 +342,43 @@ export const DOCS_PAGES: Record<string, Record<DocsLang, DocsPageContent>> = {
             { value: '@arcusx/sdk', label: 'TypeScript client' },
             { value: 'api.arcusx.pro', label: 'Partner gateway' },
             { value: 'testnet', label: 'Network to start on' },
+          ],
+        },
+        { type: 'h2', text: 'Product' },
+        {
+          type: 'linkTable',
+          headers: ['Guide', 'What it covers'],
+          rows: [
+            {
+              path: '/platform',
+              label: 'How it works',
+              blurb: 'Marketplace + partner, 2% fee, two rails',
+            },
+            {
+              path: '/platform/marketplace',
+              label: 'Public marketplace',
+              blurb: 'Publish → apply → fund → release',
+            },
+            {
+              path: '/platform/private',
+              label: 'Private offers',
+              blurb: '1:1 invites',
+            },
+            {
+              path: '/platform/deals',
+              label: 'Deals',
+              blurb: 'Payment links and agreements',
+            },
+            {
+              path: '/platform/escrow-fees',
+              label: 'Escrow & fees',
+              blurb: 'Deploy, fund, approve→release',
+            },
+            {
+              path: '/platform/partner',
+              label: 'Partner rail',
+              blurb: 'API key + wallets, no ArcusX login',
+            },
           ],
         },
         { type: 'h2', text: 'SDK & API' },
@@ -312,12 +432,13 @@ export const DOCS_PAGES: Record<string, Record<DocsLang, DocsPageContent>> = {
         },
         {
           type: 'callout',
-          text: 'Keys: Developer panel on arcusx.pro · Package: npm i @arcusx/sdk · Examples: examples/sdk-node-* in the monorepo.',
+          text: 'Keys: Developer panel on arcusx.pro · Package: npm i @arcusx/sdk · App: arcusx.pro',
         },
       ],
     },
   ),
 
+  ...PLATFORM_PAGES,
   ...BUILDERS_PAGES,
 
   '/legal/privacy': L(

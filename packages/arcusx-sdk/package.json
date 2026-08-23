@@ -1,6 +1,6 @@
 {
   "name": "@arcusx/sdk",
-  "version": "0.4.5",
+  "version": "0.5.0",
   "description": "TypeScript SDK for ArcusX Work Execution Layer (Stellar USDC escrow + task lifecycle)",
   "type": "module",
   "main": "./dist/index.js",
@@ -21,6 +21,7 @@
     "demo:week1": "npm run build && node ../../scripts/demo-week1-sdk.mjs",
     "demo:week2": "npm run build && node ../../scripts/demo-week2-award.mjs",
     "demo:week3": "npm run build && node ../../scripts/demo-week3-escrow.mjs",
+    "demo:week4": "npm run build && node ../../scripts/demo-week4-release.mjs",
     "demo:agentic": "npm run build && node ../../scripts/demo-agentic-week1.mjs",
     "prepublishOnly": "npm run build"
   },

@@ -29,7 +29,12 @@ cd arcusx && npm run build
 
 ## Contenido público
 
-Editá copy en [`arcusx/src/content/docs/publicDocs.ts`](../../arcusx/src/content/docs/publicDocs.ts)  
+| Archivo | Qué |
+|---------|-----|
+| [`platformDocs.ts`](../../arcusx/src/content/docs/platformDocs.ts) | Producto: marketplace público/privado, deals, escrow, partner |
+| [`buildersDocs.ts`](../../arcusx/src/content/docs/buildersDocs.ts) | SDK & API |
+| [`publicDocs.ts`](../../arcusx/src/content/docs/publicDocs.ts) | Home, nav, FAQ, legal + merge de capítulos |
+
 UI: [`arcusx/src/pages/docs/`](../../arcusx/src/pages/docs/)
 
 El directorio monorepo `/docs` (VitePress, sprints, …) es **solo interno** para el equipo.

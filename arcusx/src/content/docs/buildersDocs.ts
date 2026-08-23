@@ -916,6 +916,11 @@ const wallet: WalletAdapter = {
 // Usa los campos que devuelve Edge (nominal, worker net, fee rate, fundAmount…)
 // NUNCA recalcules % en tu UI de producción — llama quote / getPlatformFee`,
         },
+        { type: 'h2', text: 'Liberar = 2 firmas del cliente' },
+        {
+          type: 'p',
+          text: 'Tras el trabajo entregado, el cliente firma approve y luego release (dos prepareRelease → sign → confirm). El worker recibe USDC; no firma el payout. En partnerEscrow el modelo es el mismo.',
+        },
         { type: 'h2', text: 'Ejemplo task (esqueleto)' },
         {
           type: 'code',
@@ -933,10 +938,11 @@ const status = await ax.escrow.status(taskId);
 // const signedFund = await wallet.signTransaction(fundPrep.xdr);
 // await ax.escrow.confirmFund(taskId, { tx_hash: '…' });
 
-// --- Release (tras aprobación) ---
-// const relPrep = await ax.escrow.prepareRelease(taskId, { … });
-// await wallet.signTransaction(relPrep.xdr);
-// await ax.escrow.confirmRelease(taskId, { tx_hash: '…' });
+// --- Release: approve → release (2 firmas cliente) ---
+// let rel = await ax.escrow.prepareRelease(taskId, { … }); // approve
+// await wallet.signTransaction(rel.xdr); confirmRelease({ tx_hash })
+// rel = await ax.escrow.prepareRelease(taskId, { … }); // release
+// await wallet.signTransaction(rel.xdr); confirmRelease({ tx_hash })
 
 await ax.settlement.completeTask(taskId, { tx_hash: '…' });`,
         },
@@ -946,6 +952,7 @@ await ax.settlement.completeTask(taskId, { tx_hash: '…' });`,
           items: [
             'Wallets: solo direcciones Stellar G… — nunca uses un contract ID C… como issuer',
             'Single-release: el amount del milestone debe igualar el amount del escrow',
+            'Release: dos pasos del cliente (approve → release); no prepares release antes de que approve esté on-chain',
             'No inventes firmas en el backend: firma el dueño de la key (usuario/integrador)',
             'confirm* siempre con el tx_hash real observado en Horizon/testnet explorer',
             'No reenvíes el mismo confirm con un hash inventado “para pasar el paso”',
@@ -1001,12 +1008,18 @@ await ax.settlement.completeTask(taskId, { tx_hash: '…' });`,
           type: 'p',
           text: 'Client funds the nominal. Worker pays ~2% on release. Always call quote / getPlatformFee — never hardcode percentages.',
         },
+        { type: 'h2', text: 'Release = 2 client signatures' },
+        {
+          type: 'p',
+          text: 'Approve then release (two prepareRelease → sign → confirm). Worker receives USDC and does not sign payout. Same model on partnerEscrow.',
+        },
         { type: 'h2', text: 'Critical rules' },
         {
           type: 'ul',
           items: [
             'G… addresses only (not C… as issuer)',
             'Single-release: milestone amount = escrow amount',
+            'Do not prepare release before approve is on-chain',
             'Do not forge signatures server-side',
             'Confirm with the real Horizon tx_hash',
             'Match network (testnet/mainnet) across SDK, wallet, and USDC',
@@ -1018,6 +1031,7 @@ await ax.settlement.completeTask(taskId, { tx_hash: '…' });`,
           text: `const quote = await ax.escrow.quote(50);
 await ax.escrow.createForTask(taskId, proposalId);
 // prepare* → wallet.signTransaction → confirm*({ tx_hash })
+// release: prepareRelease (approve) → sign → confirm; then prepareRelease (release) → sign → confirm
 await ax.settlement.completeTask(taskId, { tx_hash: '…' });`,
         },
       ],

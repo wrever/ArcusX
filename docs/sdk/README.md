@@ -4,7 +4,7 @@
 
 **Mapa completo (marketplace + partner):** [`PLATFORM_OVERVIEW.md`](./PLATFORM_OVERVIEW.md)
 
-**SOW 2:** [`SOW2_DELIVERY_PLAN.md`](../sprints/SOW2_DELIVERY_PLAN.md) · W1–W3 packets/changelogs en `docs/sprints/instaawards-sdk/`
+**SOW 2:** [`SOW2_DELIVERY_PLAN.md`](../sprints/SOW2_DELIVERY_PLAN.md) · W1–W4 packets/changelogs en `docs/sprints/instaawards-sdk/`
 
 | Documento | Para qué |
 |-----------|----------|
@@ -18,22 +18,27 @@
 | [`PARTNER_DEALS.md`](./PARTNER_DEALS.md) | Payment links API key (**live**) |
 | [`RAILS_SEPARATION.md`](./RAILS_SEPARATION.md) | Partner ≠ marketplace JWT |
 | [`KNOWN_LIMITATIONS.md`](./KNOWN_LIMITATIONS.md) | Límites SOW 2 / escrow / auth |
+| [`FRESH_CLONE_VERIFICATION.md`](./FRESH_CLONE_VERIFICATION.md) | Verificación clone limpio (W4) |
+| [`MODULE_STATUS.md`](./MODULE_STATUS.md) | Estado módulos / ejemplos / scripts |
+| [`E2E_DEMO_NOTES.md`](./E2E_DEMO_NOTES.md) | Guion demo Testnet |
+| [`MAINNET_READINESS.md`](./MAINNET_READINESS.md) | Checklist futuro — **no launch** |
 | [`REST_V1.md`](./REST_V1.md) | Mapa REST → Edge actions |
 | [`openapi-v1.yaml`](./openapi-v1.yaml) | OpenAPI v1 (núcleo) |
 
-**Código:** `packages/arcusx-sdk/` (`@arcusx/sdk` **v0.4.5**) · **API:** [`ENDPOINTS.md`](../api/ENDPOINTS.md) · **Harness:** `local-test/` (:5200)
+**Código:** `packages/arcusx-sdk/` (`@arcusx/sdk` **v0.5.0**) · **API:** [`ENDPOINTS.md`](../api/ENDPOINTS.md) · **Harness:** `local-test/` (:5200)
 
 ---
 
-## Estado (2026-08-20)
+## Estado (2026-08-22)
 
 | Capa | Estado |
 |------|--------|
 | Edge `arcusx-api` + REST `/v1/` | ✅ |
 | Partner / user API keys | ✅ |
 | Gateway `https://api.arcusx.pro` | ✅ (harness puede usar Edge directo) |
-| `@arcusx/sdk` módulos SOW + partner | ✅ |
+| `@arcusx/sdk` módulos SOW + partner | ✅ v0.5.0 |
 | Marketplace JWT (tasks / private / deals app) | ✅ (rieles separados) |
 | `partnerEscrow` + `partnerDeals` Testnet | ✅ live |
 | Smoke + local-test suite + Freighter E2E | ✅ |
-| W4 release package / mainnet checklist doc | ☐ |
+| W4 release package (docs + changelog + fresh-clone) | ✅ |
+| Mainnet production launch | ❌ fuera de SOW — ver `MAINNET_READINESS.md` |

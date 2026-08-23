@@ -11,6 +11,7 @@
 | 1 | [`INSTAAWARDS_SDK_WEEK1.md`](./INSTAAWARDS_SDK_WEEK1.md) | `sdk/week-1-spec` → `main` |
 | 2 | [`INSTAAWARDS_SDK_WEEK2.md`](./INSTAAWARDS_SDK_WEEK2.md) | `sdk/week-2-mvp` → `main` |
 | 3 | [`INSTAAWARDS_SDK_WEEK3.md`](./INSTAAWARDS_SDK_WEEK3.md) | `sdk/week-3-docs` → `main` |
+| 4 | [`INSTAAWARDS_SDK_WEEK4.md`](./INSTAAWARDS_SDK_WEEK4.md) | `sdk/week-4-release` → `main` |
 
 **Regla:** El revisor tiene acceso a GitHub. Cada semana solo debe existir en `main` lo declarado en el entregable de esa semana. Trabajo adelantado vive en rama privada hasta la fecha de merge acordada con el calendario InstaAwards.
 
