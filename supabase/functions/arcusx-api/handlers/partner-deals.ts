@@ -356,11 +356,15 @@ export async function confirmPartnerDealRelease(ctx: ApiContext): Promise<Respon
   });
   if (!rel.ok) return rel;
 
-  await supabase
-    .from('arcusx_partner_deals')
-    .update({ status: 'released', updated_at: new Date().toISOString() })
-    .eq('id', deal.id);
-
   const parsed = await rel.clone().json() as { data?: Record<string, unknown> };
-  return jsonSuccess(req, { ...(parsed.data ?? parsed), deal_id: deal.id });
+  const data = (parsed.data ?? parsed) as Record<string, unknown>;
+  const step = String(data.step ?? '').toLowerCase();
+  if (step === 'release_confirm') {
+    await supabase
+      .from('arcusx_partner_deals')
+      .update({ status: 'released', updated_at: new Date().toISOString() })
+      .eq('id', deal.id);
+  }
+
+  return jsonSuccess(req, { ...data, deal_id: deal.id });
 }

@@ -119,7 +119,7 @@ export function createPartnerEscrowModule(client: ArcusXClient) {
       );
     },
 
-    /** Cliente: approve → release (2 firmas). Requiere prepareComplete previo del worker. */
+    /** Cliente: approve → release (2 firmas). prepareComplete es opcional. */
     prepareRelease(escrowId: string, clientWallet: string, opts?: RequestOptions) {
       return httpPost(
         client.http,

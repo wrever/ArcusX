@@ -125,7 +125,12 @@ export function createPartnerDealsModule(client: ArcusXClient) {
 
     confirmRelease(
       dealId: string,
-      input: string | { releaseTxHash?: string; signedXdr?: string | string[] },
+      input: string | {
+        releaseTxHash?: string;
+        signedXdr?: string | string[];
+        /** approve for the first signature, release for the final payout */
+        step?: string;
+      },
       opts?: RequestOptions,
     ) {
       const body =
@@ -135,6 +140,7 @@ export function createPartnerDealsModule(client: ArcusXClient) {
               deal_id: dealId,
               release_tx_hash: input.releaseTxHash,
               signed_xdr: input.signedXdr,
+              step: input.step ?? 'release',
             };
       return httpPost(
         client.http,

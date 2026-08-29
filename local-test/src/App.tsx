@@ -214,6 +214,17 @@ export default function App() {
     }
   }
 
+  async function clientFreighter() {
+    const wallet = createFreighterAdapter();
+    const address = await wallet.getAddress();
+    if (address !== clientWallet) {
+      throw new Error(
+        `Freighter=${address.slice(0, 10)}… debe ser CLIENTE ${clientWallet.slice(0, 10)}…`,
+      );
+    }
+    return wallet;
+  }
+
   async function exec(label: string, fn: () => Promise<unknown>) {
     const t0 = performance.now();
     setRun({ loading: true, label, result: null, error: null, ms: null });
@@ -288,13 +299,94 @@ export default function App() {
     }
   }
 
+  async function confirmDealDeploy() {
+    await exec('partnerDeals.sign → confirmDeploy', async () => {
+      if (!dealId || !escrowId || !chain.unsignedXdr) {
+        throw new Error('Primero ejecuta partnerDeals.prepareFund y obtén el XDR de deploy');
+      }
+      const wallet = await clientFreighter();
+      const signed = await wallet.signTransaction(chain.unsignedXdr);
+      const res = await ax().partnerDeals.confirmFund(dealId, {
+        signedXdr: signed,
+        contractId: chain.contractId || undefined,
+        step: 'deploy',
+      });
+      applyChain(res);
+      setChain((current) => ({ ...current, unsignedXdr: '' }));
+      return res;
+    });
+  }
+
+  async function confirmDealFund() {
+    await exec('partnerDeals.sign → confirmFund', async () => {
+      if (!dealId || !escrowId || !chain.unsignedXdr || !chain.contractId) {
+        throw new Error('Primero confirma el deploy y vuelve a ejecutar prepareFund para obtener el fund XDR');
+      }
+      const wallet = await clientFreighter();
+      const signed = await wallet.signTransaction(chain.unsignedXdr);
+      const res = await ax().partnerDeals.confirmFund(dealId, {
+        signedXdr: signed,
+        contractId: chain.contractId,
+        step: 'fund',
+      });
+      applyChain(res);
+      setChain((current) => ({ ...current, unsignedXdr: '' }));
+      return res;
+    });
+  }
+
+  async function releaseDeal() {
+    await exec('partnerDeals.release ×2', async () => {
+      if (!dealId || !escrowId || !clientWallet.startsWith('G') || !chain.contractId) {
+        throw new Error('Necesitas deal_id, escrow_id, client_wallet y contract_id');
+      }
+      const wallet = await clientFreighter();
+      const steps: Array<Record<string, unknown>> = [];
+
+      for (let round = 0; round < 2; round += 1) {
+        const prep = (await ax().partnerDeals.prepareRelease(dealId, clientWallet)) as {
+          step?: string;
+          unsigned_xdr?: string;
+          steps?: Array<{ unsigned_xdr?: string }>;
+        };
+        applyChain(prep);
+        const step = String(prep.step ?? (round === 0 ? 'approve' : 'release')).trim();
+        const xdr =
+          String(prep.unsigned_xdr ?? '').trim() ||
+          String(prep.steps?.[0]?.unsigned_xdr ?? '').trim();
+        if (!xdr) throw new Error(`prepareRelease sin XDR (step=${step})`);
+
+        const signed = await wallet.signTransaction(xdr);
+        const confirm = await ax().partnerDeals.confirmRelease(dealId, {
+          signedXdr: signed,
+          step,
+        });
+        applyChain(confirm);
+        steps.push({ round: round + 1, step, confirm });
+      }
+
+      setChain((current) => ({
+        ...current,
+        unsignedXdr: '',
+        releaseSteps: [],
+        lifecycleStep: 'release_confirm',
+        escrowStatus: 'released',
+      }));
+      return {
+        ok: true,
+        message: 'DEAL RELEASE OK (approve → release, 2 firmas del cliente)',
+        steps,
+      };
+    });
+  }
+
   return (
     <div className="app">
       <header className="hero">
         <h1>ArcusX SDK · local-test</h1>
         <p>
-          Harness de integrador: API key → fee, board, quote, errores tipados, HMAC.
-          Sin JWT ArcusX, sin Freighter. Wallet / evidencia on-chain = app del partner.
+          Harness de integrador: API key → fee, board, quote, deals y escrow on-chain.
+          Firma Testnet con Freighter desde esta app.
         </p>
         <div className="gateway">gateway → {gatewayHint(config)}</div>
       </header>
@@ -797,9 +889,24 @@ export default function App() {
         {tab === 'deals' && (
           <>
             <p className="hint" style={{ marginTop: '0.75rem' }}>
-              Payment link Testnet: API key → create → <code>deal_token</code> → prepareFund
-              (devuelve XDR deploy). Confirm/fund on-chain = wallet en tu app.
+              Flujo completo Testnet: create → prepareFund → firmar deploy → prepareFund →
+              firmar fund → approve → release. Usa la wallet CLIENTE/payer en Freighter.
             </p>
+            <div className="row" style={{ marginTop: '0.75rem', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="primary"
+                disabled={freighterBusy || run.loading}
+                onClick={() => void connectFreighter()}
+              >
+                {freighterBusy ? 'Freighter…' : 'Conectar Freighter → payer_wallet'}
+              </button>
+              {clientWallet ? (
+                <span className="badge">payer: {clientWallet.slice(0, 10)}…</span>
+              ) : (
+                <span className="badge">conecta la wallet pagadora</span>
+              )}
+            </div>
             <div className="fields" style={{ marginTop: '0.75rem' }}>
               <label>
                 payee_wallet (G…)
@@ -850,6 +957,8 @@ export default function App() {
                 disabled={!hasKey || !payeeWallet.startsWith('G') || !dealTitle.trim()}
                 onRun={() =>
                   void exec('partnerDeals.create', async () => {
+                    setChain(emptyChain());
+                    setEscrowId('');
                     const res = await ax().partnerDeals.create({
                       amountUsdc: Number(nominal) || 50,
                       payeeWallet,
@@ -891,6 +1000,7 @@ export default function App() {
                 onRun={() =>
                   void exec('partnerDeals.prepareFund', async () => {
                     const res = await ax().partnerDeals.prepareFund(dealId, clientWallet);
+                    applyChain(res);
                     const esc = String(
                       (res as { escrow_id?: string; escrow?: { id?: string } })?.escrow_id ??
                         (res as { escrow?: { id?: string } })?.escrow?.id ??
@@ -900,6 +1010,39 @@ export default function App() {
                     return res;
                   })
                 }
+              />
+              <Action
+                title="Firmar deploy (Freighter)"
+                hint="Disponible cuando prepareFund devuelve step=deploy"
+                loading={run.loading || freighterBusy}
+                disabled={!hasKey || !dealId || !escrowId || !chain.unsignedXdr}
+                onRun={() => void confirmDealDeploy()}
+              />
+              <Action
+                title="Firmar fund (Freighter)"
+                hint="Ejecuta prepareFund otra vez tras confirmar deploy"
+                loading={run.loading || freighterBusy}
+                disabled={
+                  !hasKey ||
+                  !dealId ||
+                  !escrowId ||
+                  !chain.contractId ||
+                  !chain.unsignedXdr
+                }
+                onRun={() => void confirmDealFund()}
+              />
+              <Action
+                title="Liberar deal (Freighter ×2)"
+                hint="approve → release; firma el cliente/payer"
+                loading={run.loading || freighterBusy}
+                disabled={
+                  !hasKey ||
+                  !dealId ||
+                  !escrowId ||
+                  !chain.contractId ||
+                  !clientWallet.startsWith('G')
+                }
+                onRun={() => void releaseDeal()}
               />
               <Action
                 title="partnerDeals.list"
