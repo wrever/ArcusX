@@ -18,6 +18,7 @@
     "smoke": "npm run build && node ../../scripts/smoke-sdk.mjs",
     "smoke:strict": "npm run build && SMOKE_STRICT=1 node ../../scripts/smoke-sdk.mjs",
     "smoke:agentic": "npm run build && node ../../scripts/smoke-agentic.mjs",
+    "smoke:sow3:week1": "npm run build && node ../../scripts/smoke-sow3-week1.mjs",
     "demo:week1": "npm run build && node ../../scripts/demo-week1-sdk.mjs",
     "demo:week2": "npm run build && node ../../scripts/demo-week2-award.mjs",
     "demo:week3": "npm run build && node ../../scripts/demo-week3-escrow.mjs",

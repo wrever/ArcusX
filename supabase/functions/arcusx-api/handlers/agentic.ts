@@ -185,11 +185,11 @@ export async function createJob(ctx: ApiContext): Promise<Response> {
   const auth = await requirePartnerAuth(ctx);
 
   const title = String(body.title ?? '').trim();
-  if (!title) return jsonError(req, 'title requerido', 400);
+  if (!title) return jsonError(req, 'title requerido', 400, 'missing_title');
 
   const payerWallet = body.payer_wallet ? String(body.payer_wallet).trim() : null;
   if (payerWallet && !STELLAR_G.test(payerWallet)) {
-    return jsonError(req, 'payer_wallet inválida', 400);
+    return jsonError(req, 'payer_wallet inválida', 400, 'invalid_payer_wallet');
   }
 
   const externalRef = body.external_ref ? String(body.external_ref).trim() : null;
@@ -210,13 +210,21 @@ export async function createJob(ctx: ApiContext): Promise<Response> {
   }
 
   const now = new Date().toISOString();
+  const baseMeta =
+    body.metadata && typeof body.metadata === 'object' && !Array.isArray(body.metadata)
+      ? (body.metadata as Record<string, unknown>)
+      : {};
   const insertRow: Record<string, unknown> = {
     owner_user_id: auth.userId,
     title,
     description: body.description ? String(body.description) : null,
     payer_wallet: payerWallet,
     status: body.status ? String(body.status) : 'open',
-    metadata: body.metadata && typeof body.metadata === 'object' ? body.metadata : {},
+    metadata: {
+      ...baseMeta,
+      source: baseMeta.source ?? 'agentic_api',
+      sow: baseMeta.sow ?? 'sow3',
+    },
     external_ref: externalRef,
     partner_id: ctx.partnerId,
     created_at: now,
@@ -229,7 +237,7 @@ export async function createJob(ctx: ApiContext): Promise<Response> {
     .select('*')
     .single();
 
-  if (error) return jsonError(req, error.message, 500);
+  if (error) return jsonError(req, error.message, 500, 'job_create_failed');
 
   await logDomainEvent(auth.supabase, {
     entity_type: 'job',
@@ -245,10 +253,14 @@ export async function createJob(ctx: ApiContext): Promise<Response> {
     status: data.status,
   });
 
-  return jsonSuccess(req, {
-    job_id: data.id,
-    job: serializeJob(data as Record<string, unknown>),
-  });
+  return jsonSuccess(
+    req,
+    {
+      job_id: data.id,
+      job: serializeJob(data as Record<string, unknown>),
+    },
+    201,
+  );
 }
 
 /** GET get_job */
@@ -256,10 +268,10 @@ export async function getJob(ctx: ApiContext): Promise<Response> {
   const { req, url } = ctx;
   const auth = await requirePartnerAuth(ctx);
   const jobId = qp(url, 'job_id') ?? String(ctx.body.job_id ?? '');
-  if (!UUID_RE.test(jobId)) return jsonError(req, 'job_id UUID inválido', 400);
+  if (!UUID_RE.test(jobId)) return jsonError(req, 'job_id UUID inválido', 400, 'invalid_job_id');
 
   const job = await loadJob(auth.supabase, jobId, auth.userId);
-  if (!job) return jsonError(req, 'Job no encontrado', 404);
+  if (!job) return jsonError(req, 'Job no encontrado', 404, 'job_not_found');
 
   const { data: subjobs } = await auth.supabase
     .from('arcusx_subjobs')

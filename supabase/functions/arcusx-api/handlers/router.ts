@@ -340,8 +340,16 @@ export async function dispatch(req: Request): Promise<Response> {
     return response;
   } catch (e) {
     if (e instanceof Error) {
-      if (e.message === 'Unauthorized') {
-        return jsonError(req, 'Unauthorized', 401, 'invalid_or_missing_token');
+      if (e.message === 'Unauthorized' || e.message.startsWith('Unauthorized:')) {
+        const code =
+          e.message === 'Unauthorized:missing_api_key'
+            ? 'missing_api_key'
+            : e.message === 'Unauthorized:partner_missing_owner'
+              ? 'partner_missing_owner'
+              : e.message === 'Unauthorized:invalid_api_key'
+                ? 'invalid_api_key'
+                : 'invalid_or_missing_token';
+        return jsonError(req, 'Unauthorized', 401, code);
       }
       if (e.message.includes('admin') || e.message.includes('Forbidden')) {
         return jsonError(req, e.message, 403);

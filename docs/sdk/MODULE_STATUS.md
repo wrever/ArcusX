@@ -25,7 +25,7 @@ Legend: ✅ SOW-ready · 🟡 Available / parallel track · ❌ Out of SOW 2
 | `webhooks` | ✅ | HMAC verify helpers + delivery list |
 | `settlement` | 🟡 | Helpers; prefer `escrow` / `partnerEscrow` |
 | `trust` | 🟡 | Trustline helpers |
-| `agent` | 🟡 | Parallel agentic track — not SOW 2 gate |
+| `agent` | 🟡 | SOW 3 foundation — Week 1 create/status baseline (`docs/sprints/instaawards-sow3/`) |
 
 ---
 

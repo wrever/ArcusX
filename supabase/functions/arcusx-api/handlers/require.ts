@@ -17,6 +17,11 @@ export async function requireAdmin(ctx: { req: Request }): Promise<AuthContext> 
 /**
  * Auth para integraciones agénticas: JWT de usuario **o** solo API key de partner.
  * Con solo API key se actúa como el owner_user_id del partner (servidor/agente).
+ *
+ * Throws coded Unauthorized messages so the router can return stable SOW 3 envelopes:
+ * - `Unauthorized:missing_api_key`
+ * - `Unauthorized:invalid_api_key`
+ * - `Unauthorized:partner_missing_owner`
  */
 export async function requirePartnerAuth(ctx: ApiContext): Promise<AuthContext> {
   const token = bearerToken(ctx.req);
@@ -25,7 +30,7 @@ export async function requirePartnerAuth(ctx: ApiContext): Promise<AuthContext> 
   }
 
   if (!ctx.partnerId) {
-    throw new Error('Unauthorized');
+    throw new Error('Unauthorized:missing_api_key');
   }
 
   const { data: partner } = await ctx.supabase
@@ -35,12 +40,12 @@ export async function requirePartnerAuth(ctx: ApiContext): Promise<AuthContext> 
     .maybeSingle();
 
   if (!partner || partner.status === 'suspended') {
-    throw new Error('Unauthorized');
+    throw new Error('Unauthorized:invalid_api_key');
   }
 
   const ownerId = partner.owner_user_id != null ? Number(partner.owner_user_id) : null;
   if (ownerId == null) {
-    throw new Error('Unauthorized');
+    throw new Error('Unauthorized:partner_missing_owner');
   }
 
   return {
