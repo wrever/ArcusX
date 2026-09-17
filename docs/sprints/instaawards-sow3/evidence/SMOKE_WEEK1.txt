@@ -3,9 +3,11 @@ SOW3 Week1 smoke via https://api.arcusx.pro
 ✓ auth.missing_key — 401 missing_api_key
 ✓ auth.invalid_key — 401 invalid_api_key
 ✓ agent.missing_title — 400 error
-✓ agent.createJob — 200 660bafdb-1d04-4fce-86c6-05562f479fb8
-✓ envelope.create_success — request_id=6cff8e50-4bf7-42f5-97a2-9eb428ebf64c
+✓ agent.createJob — 200 adafdcd8-694a-42a7-803e-532851b81558
+✓ envelope.create_success — request_id=bd71e042-bea5-44fc-a859-e565acefe477
 ✓ agent.getJob — status=open
-✓ envelope.get_success — request_id=7896a48e-dacc-4609-a759-1f1b21349b64
+✓ envelope.get_success — request_id=30bc16e3-7630-4360-9f35-e7190e681849
+✓ agent.create_idempotent — 200 existing=true same=true
+✓ agent.invalid_job_id — 400 error
 
-SOW3 Week1 smoke PASS (7 checks)
+SOW3 Week1 smoke PASS (9 checks)

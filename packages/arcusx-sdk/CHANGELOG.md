@@ -1,5 +1,15 @@
 # Changelog — `@arcusx/sdk`
 
+## Unreleased — SOW 3 Week 1 (2026-09-17)
+
+### Agentic foundation (Instawards SOW 3)
+- Week 1 baseline: partner auth negatives + `agent.create` / `agent.get` on Testnet gateway.
+- Scripts: `npm run smoke:sow3:week1`, `npm run demo:sow3:week1`.
+- Sprint packet: `docs/sprints/instaawards-sow3/` (surface map, evidence, changelog).
+- OpenAPI: clearer `/jobs` create/get response codes.
+
+---
+
 ## 0.5.0 — SOW 2 Week 4 release candidate (2026-08-22)
 
 ### Release package

@@ -1,0 +1,24 @@
+@arcusx/sdk — SOW 3 Week 1 demo (agentic foundation)
+Gateway: https://api.arcusx.pro
+Network: testnet
+
+── 1) Missing API key → 401 ────────────────────────────────
+HTTP 401 code=missing_api_key
+
+── 2) Invalid API key → 401 ────────────────────────────────
+ArcusXApiError status=401 code=invalid_api_key
+
+── 3) Create job (valid key) ───────────────────────────────
+job_id=07ee5b96-c4c8-45e0-a85b-b8d083979631
+status=open
+external_ref=sow3-demo-w1-1789671693355
+
+── 4) Get job status ───────────────────────────────────────
+id=07ee5b96-c4c8-45e0-a85b-b8d083979631
+status=open
+subjobs=0
+
+── 5) Idempotent create (same external_ref) ────────────────
+job_id=07ee5b96-c4c8-45e0-a85b-b8d083979631 existing=true same=true
+
+SOW 3 Week 1 demo complete.
