@@ -43,13 +43,16 @@ SOW 3 Week 1 freezes the **machine-callable job baseline** on top of the SOW 2 S
 ✓ envelope.create_success — request_id=…
 ✓ agent.getJob — status=open
 ✓ envelope.get_success — request_id=…
-SOW3 Week1 smoke PASS (7 checks)
+✓ agent.create_idempotent — existing=true same=true
+✓ agent.invalid_job_id — 400 …
+SOW3 Week1 smoke PASS (9 checks)
 ```
 
 Reproduce:
 
 ```bash
 cd packages/arcusx-sdk && npm run smoke:sow3:week1
+npm run demo:sow3:week1
 ```
 
 ---
