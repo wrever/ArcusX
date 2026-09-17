@@ -292,8 +292,14 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateJobRequest'
       responses:
+        '201':
+          description: Created (envelope data.job_id + data.job)
         '200':
-          description: Created (envelope data.job_id)
+          description: Idempotent existing job (same external_ref)
+        '400':
+          description: Validation error (e.g. missing_title, invalid_payer_wallet)
+        '401':
+          description: Missing/invalid partner API key
   /jobs/{jobId}:
     get:
       summary: Get job + subjobs
@@ -303,7 +309,11 @@ paths:
         - $ref: '#/components/parameters/JobId'
       responses:
         '200':
-          description: OK
+          description: OK (envelope data.job)
+        '401':
+          description: Missing/invalid partner API key
+        '404':
+          description: job_not_found
   /jobs/{jobId}/cancel:
     post:
       summary: Cancel job

@@ -74,4 +74,4 @@ Detail maps: [`REST_V1.md`](./REST_V1.md) · [`API_REFERENCE.md`](./API_REFERENC
 |---------|--------|
 | `npm run smoke` / `smoke:strict` | ✅ |
 | `npm run demo:week1` … `demo:week4` | ✅ |
-| `npm run smoke:agentic` | 🟡 Parallel track |
+| `npm run smoke:sow3:week1` | 🟢 SOW 3 Week 1 — auth + create + status |

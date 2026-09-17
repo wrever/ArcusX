@@ -16,7 +16,9 @@
 
 | Archivo | Contenido |
 |---------|-----------|
-| **[AGENTIC_WEEK1.md](./AGENTIC_WEEK1.md)** | Evidencia Fase 1 / Week 1 (smoke + demo) |
+| **[SOW 3 Week 1 (Instawards)](../sprints/instaawards-sow3/INSTAAWARDS_SOW3_WEEK1.md)** | Foundation create/status + auth smoke (active track) |
+| **[SOW3_MVP_SURFACE.md](../sprints/instaawards-sow3/SOW3_MVP_SURFACE.md)** | Endpoint map create→fund→release |
+| **[AGENTIC_WEEK1.md](./AGENTIC_WEEK1.md)** | Evidencia Fase 1 previa (jobs/subjobs/quote) |
 | **[VISION.md](./VISION.md)** | Problema, oportunidad, pitch YC, competencia, moat |
 | **[PLAN_MAESTRO.md](./PLAN_MAESTRO.md)** | Fases 0→4, hitos, dependencias, métricas |
 | **[ARCHITECTURE.md](./ARCHITECTURE.md)** | Capas, flujos, modelo de datos, integración escrow |
