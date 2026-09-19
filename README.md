@@ -11,6 +11,8 @@ Empowering freelancers with fast, secure, and borderless crypto payments on Stel
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7.2-3178c6)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
+**Current line:** [`ArcusX3.8`](https://github.com/wrever/ArcusX/tree/ArcusX3.8) · marketplace [arcusx.pro](https://arcusx.pro) · partner API [api.arcusx.pro](https://api.arcusx.pro) · docs [docs.arcusx.pro](https://docs.arcusx.pro)
+
 </div>
 
 ---
@@ -40,332 +42,173 @@ Los cambios notables están en **[CHANGELOG.md](./CHANGELOG.md)**.
 
 ## 🎯 Overview
 
-ArcusX is a decentralized freelancing platform built on the Stellar blockchain that connects clients with freelancers through secure, trustless escrow contracts powered by Trustless Work. By leveraging Stellar's fast, low-cost transactions and Freighter wallet integration, ArcusX eliminates intermediaries and provides a transparent, efficient marketplace for freelance work.
+ArcusX is a Stellar Testnet marketplace and **payout infrastructure**: clients and freelancers settle in **USDC** through non-custodial escrow, plus a **partner SDK** (`@arcusx/sdk`) so third-party apps and agents can create jobs without the marketplace UI.
+
+### Rails
+
+| Rail | Who | Auth |
+|------|-----|------|
+| Marketplace | Humans on [arcusx.pro](https://arcusx.pro) | OAuth + app JWT |
+| Partner | Integrators | API key `axk_test_…` / `axk_live_…` |
+| Agentic (SOW 3) | Agent runtimes via `client.agent.*` | Same partner API key (`partner_id`) |
+
+**SOW 3 Week 1 (this line):** authenticated `POST/GET /v1/jobs` — create, status, idempotent retry. Fund / release on-chain is **Week 2+**. Packet: [`docs/sprints/instaawards-sow3/`](./docs/sprints/instaawards-sow3/).
 
 ### Key Benefits
 
-- **Ultra-Low Fees**: Only 0.5% commission (vs 10-20% on traditional platforms)
-- **Instant Payments**: 3-5 second transaction finality
-- **Secure Escrow**: Trustless Work escrow system with milestone-based payments
-- **Global Access**: No banking restrictions or geographic limitations
-- **Transparent**: All transactions verifiable on the Stellar blockchain
-- **Dispute Resolution**: Built-in dispute management system
+- **2% platform fee** deducted from the **worker** on escrow release (employer funds the posted amount)
+- **Instant settlement** on Stellar (~5s)
+- **Non-custodial escrow** — client signs; worker receives ~98% USDC
+- **Partner + agent APIs** without forcing ArcusX login
+- **Transparent** on-chain verification
+- **Dispute** flow with chat and evidence
 
 ## ✨ Features
 
 ### For Clients
-- Create unlimited tasks with flexible budgets in XLM
-- Review freelancer proposals and portfolios
-- Secure escrow system protects funds until work is approved
-- Instant payment processing
-- Transparent transaction history on blockchain
+- Create tasks with USDC budgets (Testnet)
+- Review freelancer proposals
+- Escrow protects funds until work is approved
+- Client signs deploy / fund / release
 
 ### For Freelancers
-- Browse and apply to tasks globally
-- Secure payment guarantee through Trustless Work escrow
-- Fast payment processing (3-5 seconds)
-- Low platform fees (0.5% vs 10-20% industry standard)
-- Direct wallet-to-wallet payments via Freighter
-- Automatic task deletion after 24 hours of completion
+- Browse and apply globally
+- Payment guarantee through escrow
+- Low platform fee vs traditional marketplaces
+- Direct USDC to Freighter (or partner-provided wallet)
 
-### Platform Features
-- Real-time messaging between parties
-- Task management dashboard
-- Application tracking system
-- Transaction history and escrow status monitoring
-- Admin panel for platform management
-- Daily/weekly task limits with cooldown system
+### Platform / developers
+- `@arcusx/sdk` — public, marketplace, partner escrow/deals, **agent jobs**
+- Gateway `https://api.arcusx.pro`
+- Agentic harness: `local-test/` → `npm run dev` (http://localhost:5200)
+- Smoke: `cd packages/arcusx-sdk && npm run smoke:sow3:week1`
 
 ## 🛠 Technology Stack
 
 ### Frontend
-- **Framework**: React 19.0.0
-- **Language**: TypeScript 5.7.2
-- **Build Tool**: Vite 6.2.0
-- **Routing**: React Router DOM 6.30.0
-- **UI Libraries**:
-  - Chakra UI 3.15.0
-  - Framer Motion 12.6.3
-  - React Icons 5.5.0
-- **HTTP Client**: Axios 1.9.0
-- **Authentication**: Supabase 2.78.0
+- **Framework**: React 19 + TypeScript + Vite
+- **Routing**: React Router DOM 6
+- **Auth**: Supabase OAuth (Google / GitHub) → app JWT
+- **Wallet**: Freighter / `WalletAdapter`
 
 ### Backend
-- **Language**: PHP
-- **Database**: MySQL/MariaDB
-- **Authentication**: JWT (Firebase JWT 6.0)
-- **OAuth**: Supabase (Google, GitHub)
+- **API**: Supabase Edge Functions (`arcusx-api`, `arcusx-admin`) — **no PHP on the production path**
+- **Database**: Postgres (Supabase)
+- **Partner keys**: `axk_test_` / `axk_live_`
 
 ### Blockchain
-- **Network**: Stellar Testnet (migrating to Mainnet)
-- **Wallet**: Freighter
-- **SDK**: Stellar SDK 11.2.2
-- **Escrow**: Trustless Work (single-release escrow contracts)
-- **Currency**: USDC on Stellar
-- **Escrow Service**: Trustless Work API integration
+- **Network**: Stellar **Testnet** (mainnet is documented as future work)
+- **Asset**: USDC on Stellar
+- **Escrow**: ArcusX prepare → sign XDR → confirm (single-release)
 
 ## 🏗 Architecture
 
 ```
 ArcusX/
-├── arcusx/                    # Frontend React + TypeScript
-│   ├── src/
-│   │   ├── components/        # React components
-│   │   ├── hooks/             # Custom React hooks
-│   │   ├── services/          # API and blockchain services
-│   │   ├── config/            # Configuration files
-│   │   └── css/               # Stylesheets
-│   └── package.json
-│
-├── backend_externo/           # Backend PHP API
-│   ├── *.php                  # REST API endpoints
-│   ├── config.php             # Database and JWT configuration
-│   └── composer.json          # PHP dependencies
-│
-└── docs/                      # Documentation
+├── arcusx/                 # Marketplace SPA (Vite)
+├── packages/arcusx-sdk/    # @arcusx/sdk
+├── supabase/functions/     # Edge API (arcusx-api)
+├── local-test/             # Partner + agentic visual harness (:5200)
+├── examples/               # Node / playground samples
+└── docs/                   # SOW packets, SDK, escrow-native
 ```
 
-### Escrow System
-
-ArcusX uses **Trustless Work** for secure escrow management on Stellar:
-
-1. **Escrow Creation**: Trustless Work contract is initialized for each task
-2. **Funding**: Client funds the escrow with the task amount in USDC
-3. **Work Completion**: Freelancer marks milestone as completed
-4. **Approval**: Client approves the completed milestone
-5. **Fund Release**: Client releases funds to the freelancer
-6. **Payment**: Funds are instantly transferred to the freelancer (minus 0.5% platform fee)
-7. **Dispute Resolution**: Built-in dispute system for conflict resolution
-
-The platform fee (0.5%) is automatically deducted and sent to the configured treasury address.
+Production API: `https://api.arcusx.pro` → Edge `arcusx-api`.
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
 - Node.js 18+ and npm
-- PHP 7.4+ and Composer
-- MySQL/MariaDB
-- Freighter wallet extension
-- Stellar Testnet account (for testing)
+- Freighter (for on-chain signing)
+- Stellar Testnet account + USDC trustline (for escrow demos)
+- `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` for the marketplace app
+- Partner sandbox key `ARCUSX_API_KEY=axk_test_…` for SDK / local-test
 
-### Installation
+### Marketplace
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/arcusx.git
-   cd arcusx
-   ```
+```bash
+cd arcusx
+npm install
+npm run dev
+# → http://localhost:5173
+```
 
-2. **Install Frontend Dependencies**
-   ```bash
-   cd arcusx
-   npm install
-   ```
+### SDK + Week 1 agentic smoke
 
-3. **Install Backend Dependencies**
-   ```bash
-   cd backend_externo
-   composer install
-   ```
+```bash
+cd packages/arcusx-sdk && npm run build
+npm run smoke:sow3:week1
+npm run demo:sow3:week1
+```
 
-4. **Database Setup**
-   - Create a MySQL database
-   - Import the schema (see `docs/` for database structure)
-   - Update `backend_externo/config.php` with your database credentials
+### Visual agentic test app
 
-5. **Environment Configuration**
-   - Copy `arcusx/.env.example` to `arcusx/.env` (if exists)
-   - Update API URLs and Supabase credentials
-   - Configure JWT secret in `backend_externo/config.php`
+```bash
+cd local-test && npm install && npm run dev
+# → http://localhost:5200
+```
 
-6. **Start Development Server**
-   ```bash
-   # Frontend
-   cd arcusx
-   npm run dev
-   # → http://localhost:5173
+See [`local-test/README.md`](./local-test/README.md) and [`CLAUDE.md`](./CLAUDE.md) for env vars.
 
-   # Backend (PHP built-in example)
-   cd backend_externo
-   php -S localhost:8080
-   # Point VITE_API_URL=http://localhost:8080 in arcusx/.env for local API
-   ```
+### Docs for reviewers / Instawards
 
-7. **Backend secrets (required)**
-   - Copy `backend_externo/.env.example` values into server env or Apache `SetEnv` (see `.htaccess` template).
-   - Never commit real `ARCUSX_JWT_SECRET` or DB passwords.
-
-### Hero public stats
-
-The landing page shows **open tasks**, **registered users**, and **completed volume (USDC)**:
-
-- With **Supabase** configured (`VITE_SUPABASE_URL`), stats come from RPCs (preferred).
-- Otherwise **`GET /auth/get_landing_market_stats.php`** (public JSON, no JWT).
-
-### Week 3 reviewer docs
-
-- API list: [`docs/api/ENDPOINTS.md`](./docs/api/ENDPOINTS.md)
-- Testnet demo script: [`docs/demo/E2E_TESTNET.md`](./docs/demo/E2E_TESTNET.md)
-- Sprint changelog: Week 3 [`week-03-changelog-and-architecture.md`](./docs/sprints/week-03-changelog-and-architecture.md) · Week 4 [`week-04-changelog-and-architecture.md`](./docs/sprints/week-04-changelog-and-architecture.md)
-- **Tranche 2 (Q2 2026):** cierre [`TRANCHE2_CLOSURE.md`](./docs/sprints/TRANCHE2_CLOSURE.md) · próximos pasos [`POST_TRANCHE2_TODO.md`](./docs/sprints/POST_TRANCHE2_TODO.md) · E2E [`E2E_CHECKLIST.md`](./docs/demo/E2E_CHECKLIST.md)
-- InstaAwards: Week 3 [`instaawards-week3.md`](./docs/sprints/instaawards-week3.md) · Week 4 close [`instaawards-week4.md`](./docs/sprints/instaawards-week4.md) · checklist [`week-04-plan-and-checklist.md`](./docs/sprints/week-04-plan-and-checklist.md)
-- **ArcusX Guard + agentic payments:** [`docs/agentic-payments/arcusx-guard/`](./docs/agentic-payments/arcusx-guard/) — escrow agéntico + IA protectora
-- **ArcusX Deals (acuerdos modulares):** [`docs/agreement-deals/`](./docs/agreement-deals/) — plantillas + link de pago (alquiler, P2P, coaching…)
-- Escrow nativo Soroban: [`docs/escrow-native/`](./docs/escrow-native/)
+- SOW 3 Week 1: [`docs/sprints/instaawards-sow3/INSTAAWARDS_SOW3_WEEK1.md`](./docs/sprints/instaawards-sow3/INSTAAWARDS_SOW3_WEEK1.md)
+- SOW 2 SDK: [`docs/sdk/`](./docs/sdk/)
+- Memory: [`docs/archive/planning/MEMORIA_VITAL_ARCUSX.md`](./docs/archive/planning/MEMORIA_VITAL_ARCUSX.md)
+- Releasing: [`docs/RELEASING.md`](./docs/RELEASING.md)
 
 ## ⚙️ Configuration
 
-### Frontend Configuration
+Marketplace: `arcusx/.env` (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, Stellar/Testnet wallets).  
+SDK / harness: `ARCUSX_API_KEY=axk_test_…` (never commit). Details in [`CLAUDE.md`](./CLAUDE.md).
 
-Update `arcusx/src/config/database.ts`:
-```typescript
-export const API_URL = import.meta.env.DEV 
-  ? 'http://arcusx.pro/api'  // Development
-  : 'https://arcusx.pro/api'; // Production
+Testnet only on this line. Mainnet is a documented future switch (`useWallet.ts` + env), not part of v3.8.0.
+
+## 📖 Usage (marketplace)
+
+1. Sign in with Google/GitHub on [arcusx.pro](https://arcusx.pro)
+2. Create or apply to a USDC task
+3. Client funds escrow (Freighter, Testnet)
+4. Worker delivers; client approves and **releases** (≈2% fee from worker)
+
+Agent / partner (no marketplace UI):
+
+```ts
+const ax = new ArcusXClient({ apiKey: 'axk_test_…', network: 'testnet' });
+const { job_id } = await ax.agent.create({ title: '…', external_ref: '…' });
+await ax.agent.get(job_id);
 ```
-
-Update `arcusx/src/config/supabase.ts` with your Supabase credentials.
-
-### Backend Configuration
-
-Update `backend_externo/config.php`:
-```php
-$db_config = [
-    'host' => 'localhost',
-    'user' => 'your_user',
-    'password' => 'your_password',
-    'database' => 'arcusxon_users'
-];
-
-$jwt_secret = "your_jwt_secret_key";
-```
-
-### Stellar Network
-
-Currently configured for **Testnet**. To switch to Mainnet:
-
-Update `arcusx/src/hooks/useWallet.ts`:
-```typescript
-network: WalletNetwork.MAINNET // Change from TESTNET
-```
-
-Update Trustless Work environment in `arcusx/src/config/trustlessWork.ts`:
-```typescript
-export const TRUSTLESS_WORK_BASE_URL = 'https://api.trustlesswork.com'; // Mainnet
-```
-
-## 📖 Usage
-
-### Creating a Task
-
-1. Log in to ArcusX
-2. Navigate to "Create Task"
-3. Fill in task details (title, description, budget in XLM)
-4. Select category and difficulty
-5. Submit the task
-
-### Applying to a Task
-
-1. Browse available tasks
-2. Click "Apply" on a task
-3. Connect your Freighter wallet
-4. Submit your proposal with portfolio link
-5. Wait for client selection
-
-### Creating Escrow
-
-1. Client selects a proposal
-2. Connect Freighter wallet
-3. Trustless Work escrow contract is created automatically
-4. Client funds the escrow with task amount in USDC
-5. Work begins
-
-### Completing Work and Payment
-
-1. Freelancer completes work and marks milestone as completed
-2. Client reviews and approves the milestone
-3. Client releases funds to the freelancer
-4. Payment processed in 3-5 seconds (0.5% platform fee deducted automatically)
-5. Task is automatically scheduled for deletion after 24 hours
 
 ## 📁 Project Structure
 
-### Frontend Components
+- `arcusx/` — marketplace SPA
+- `packages/arcusx-sdk/` — public TypeScript SDK
+- `supabase/functions/arcusx-api/` — production API (`?action=` + REST `/v1`)
+- `local-test/` — visual partner/agentic harness
+- `docs/sprints/instaawards-sow3/` — SOW 3 Week 1 packet + evidence
 
-- `App.tsx` - Main application router
-- `Dashboard.tsx` - Main dashboard with task listings
-- `CreateTask.tsx` - Task creation form
-- `ApplyTask.tsx` - Application form
-- `ProposalReview.tsx` - Proposal review and escrow creation
-- `SuperviseTask.tsx` - Task supervision and fund withdrawal
-- `EscrowProcessPopup.tsx` - Interactive escrow creation flow
-
-### Services
-
-- `trustlessWorkEscrowService.ts` - Trustless Work escrow operations
-- `platformFeeService.ts` - Platform fee management
-- `authService.ts` - Authentication services
-- `adminService.ts` - Admin panel services
-- `disputeService.ts` - Dispute management
-
-### Hooks
-
-- `useAuth.ts` - Authentication state management
-- `useWallet.ts` - Freighter wallet integration
-
-### Backend Endpoints
-
-Key API endpoints:
-- `/api/auth/login.php` - User login
-- `/api/auth/register.php` - User registration
-- `/api/auth/create_task.php` - Create task
-- `/api/auth/apply_task.php` - Apply to task
-- `/api/auth/select_proposal.php` - Select proposal and create escrow
-- `/api/auth/complete_task.php` - Mark task as completed
-- `/api/auth/create_dispute.php` - Create dispute
-- `/api/auth/admin.php` - Admin panel operations
-- `/api/auth/delete_scheduled_tasks.php` - Scheduled task deletion
-
-See `docs/api/` for complete API documentation.
+API surface: [`docs/sdk/`](./docs/sdk/) and OpenAPI `docs/sdk/openapi-v1.yaml`.
 
 ## 🔒 Security
 
-- **Trustless Work Escrow**: Secure escrow contracts managed by Trustless Work
-- **JWT Authentication**: Secure token-based authentication
-- **Input Validation**: All inputs validated on frontend and backend
-- **Stellar Security**: Leverages Stellar's battle-tested blockchain
-- **No Centralized Control**: Platform cannot freeze or seize funds
-- **Dispute Resolution**: Built-in dispute management with admin oversight
-- **Automatic Task Cleanup**: Completed tasks automatically deleted after 24 hours
+- Non-custodial escrow (platform never holds user keys)
+- Partner keys hashed server-side; never commit `.env`
+- JWT marketplace auth separate from partner API keys
+- Typed error envelopes (`missing_api_key`, `invalid_api_key`, …)
 
 ## 📊 Current Status
 
-### ✅ Completed
-- Full authentication system (Email/Password + OAuth)
-- Task creation and management
-- Proposal/application system
-- Freighter wallet integration
-- **Trustless Work escrow integration** (fully migrated from multisig)
-- Escrow creation, funding, milestone management, and fund release
-- **Dispute resolution system** with admin management
-- Real-time messaging
-- Admin dashboard with fee management (0.5% platform fee)
-- Treasury address configuration
-- Automatic task deletion (24 hours after completion)
-- Platform fee management (configurable via admin panel)
-- Escrow status monitoring and verification
+### Done
+- Marketplace Testnet (tasks, escrow, disputes, ratings)
+- `@arcusx/sdk` SOW 2 (partner escrow + deals)
+- **SOW 3 Week 1** — agentic create/status on `api.arcusx.pro` (Edge `arcusx-api` v128)
+- Platform fee **2% worker-side**
 
-### 🚧 In Progress
-- Migration to Stellar Mainnet
-- Code cleanup and optimization
-
-### 📋 Roadmap
-- Rating and review system
-- Advanced analytics dashboard
-- Mobile app development
-- Multi-asset support (additional Stellar assets)
-- Referral system implementation
+### Next (SOW 3 Week 2+)
+- Fund prepare/confirm + release prepare/confirm on the agentic path
+- Node agent demo E2E with Testnet tx evidence
+- Mainnet remains **documented future work**, not this release
 
 ## 🤝 Contributing
 
@@ -392,12 +235,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🔗 Links
 
 - **Website**: https://arcusx.pro/
-- **Documentation**: https://docs.arcusx.pro/ (React docs frontend on `docs.*` hostname — same `arcusx/dist` as the app; `cd arcusx && npm run build`)
+- **Documentation**: https://docs.arcusx.pro/
+- **Partner API**: https://api.arcusx.pro
 - **Stellar Documentation**: https://developers.stellar.org/
 - **Freighter Wallet**: https://www.freighter.app/
-- **Trustless Work**: https://trustlesswork.com/
-- **Stellar SDK**: https://github.com/stellar/js-stellar-sdk
-- **Horizon API**: https://horizon-testnet.stellar.org/
 
 ## 📧 Contact
 

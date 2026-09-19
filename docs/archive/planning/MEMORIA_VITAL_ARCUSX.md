@@ -1,9 +1,9 @@
 # 🧠 MEMORIA VITAL - ARCUSX
 ## Documento de Referencia Completa del Proyecto
 
-**Última Actualización:** 20 agosto 2026  
-**Versión del Proyecto:** 1.9  
-**Estado:** Testnet operativo · SOW 2 W1–W3 ✅ · **partner escrow + deals live** (firma cliente) · fee 2% · docs [`PLATFORM_OVERVIEW.md`](../../sdk/PLATFORM_OVERVIEW.md)
+**Última Actualización:** 18 septiembre 2026  
+**Versión del Proyecto:** 3.8 (rama `ArcusX3.8`)  
+**Estado:** Testnet operativo · SOW 2 ✅ · **SOW 3 Week 1 ✅** (jobs agenticos create/status) · partner escrow + deals live · fee 2% · docs [`PLATFORM_OVERVIEW.md`](../../sdk/PLATFORM_OVERVIEW.md)
 
 ---
 
@@ -27,10 +27,11 @@
 
 ### ¿Qué es ArcusX?
 
-**ArcusX** es una plataforma de freelancing y **infraestructura de payout** sobre Stellar. Dos rieles:
+**ArcusX** es una plataforma de freelancing y **infraestructura de payout** sobre Stellar. Tres rieles:
 
 1. **Marketplace** (`arcusx.pro`) — OAuth, tareas, ofertas privadas, deals JWT, disputas, ratings.  
-2. **Partner** (`@arcusx/sdk` + API key) — escrow y payment links sin obligar login ArcusX; wallets + monto; fee 2%.
+2. **Partner** (`@arcusx/sdk` + API key) — escrow y payment links sin obligar login ArcusX; wallets + monto; fee 2%.  
+3. **Agentic (SOW 3)** — `client.agent.*` + `/v1/jobs`: un runtime crea jobs autenticados sin UI. Week 1 = create/status; fund/release = Week 2+.
 
 La plataforma permite:
 
@@ -1517,9 +1518,9 @@ En lugar de migrar 60-70 archivos PHP individuales, se consolidarán endpoints r
 - Path: `packages/arcusx-sdk/`
 - Namespaces SOW: `public`, `marketplace`, `private`, `deals`, `escrow`, `settlement`, `evidence`, `ratings`, `webhooks`
 - **Rail B2B (API key only):** `partnerEscrow.*` · `partnerDeals.*` — wallets + monto; fee server-side; firma en app del partner
+- **Rail agentic (SOW 3):** `agent.create` / `agent.get` / `agent.list` / `agent.createSubjob` / `agent.quoteEscrow` — jobs afiliados al `partner_id` de la API key
 - Modelo partner: **cliente** firma deploy/fund/complete/approve/release; worker = receptor USDC
-- `agent.*` fuera de SOW 2
-- Errores: `ArcusXApiError` · `missing_api_key` / `invalid_api_key` / `rate_limit_exceeded`
+- Errores: `ArcusXApiError` · `missing_api_key` / `invalid_api_key` / `missing_title` / `invalid_job_id`
 - Verify: `npm run smoke:strict` · `demo:week1|2|3` · harness `local-test/` (:5200)
 - Docs: `docs/sdk/PLATFORM_OVERVIEW.md` + QUICKSTART / API_REFERENCE / PARTNER_* / FEE_MODEL / KNOWN_LIMITATIONS
 - Examples: `sdk-node-*`, `sdk-freighter-adapter`, `sdk-playground/`
@@ -1561,13 +1562,43 @@ En lugar de migrar 60-70 archivos PHP individuales, se consolidarán endpoints r
 
 1. Editar **este archivo** (`MEMORIA_VITAL_ARCUSX.md`) al cerrar hitos.
 2. Para entregas Instawards, también packets en `docs/sprints/instaawards-sdk/` y changelogs Notion (`WEEK1_NOTION_CHANGELOG.md`, `WEEK2_NOTION_CHANGELOG.md`).
-3. Secciones antiguas de esta memoria (PHP monolito, fee 1%, etc.) pueden estar desactualizadas — **prevalece esta sección Agosto 2026 + CLAUDE.md + docs/sdk**.
+3. Secciones antiguas de esta memoria (PHP monolito, fee 1%, etc.) pueden estar desactualizadas — **prevalece esta sección + SOW 3 Week 1 + CLAUDE.md + docs/sdk**.
 
 ---
 
-**Última actualización:** 20 agosto 2026 (docs PLATFORM_OVERVIEW · partner live · fee 2% · sin nombrar motor on-chain externo)  
+## Actualización Septiembre 2026 — SOW 3 Week 1 (agentic foundation)
+
+**Rama:** `ArcusX3.8` · **Gateway:** `https://api.arcusx.pro` · **Edge:** `arcusx-api` v128  
+**Packet:** `docs/sprints/instaawards-sow3/INSTAAWARDS_SOW3_WEEK1.md`  
+**SOW:** `docs/sprints/SOW3_INSTAAWARDS_FOLLOWON.md`
+
+Week 1 congela el **baseline machine-callable** encima del SDK de SOW 2:
+
+| Pieza | Estado |
+|-------|--------|
+| Partner auth `axk_test_…` (401 `missing_api_key` / `invalid_api_key`) | ✅ live |
+| `POST /v1/jobs` create (201) + envelopes `request_id` | ✅ live |
+| `GET /v1/jobs/{id}` status `open` | ✅ live |
+| Idempotencia por `external_ref` | ✅ |
+| Smoke 9/9 + demo Node | ✅ `scripts/smoke-sow3-week1.mjs` |
+| Harness visual `local-test/` (:5200) | ✅ recorrido agentico + demo Week1 |
+| Título/descripcion los manda el agente vía SDK; fallback Edge si omite subjob title | ✅ |
+| Jobs/tareas quedan con `partner_id` de la API key | ✅ |
+
+**Fuera de Week 1:** fund USDC / sign XDR / release on-chain · demo E2E payout · mainnet.
+
+**Verify:**
+
+```bash
+cd packages/arcusx-sdk && npm run smoke:sow3:week1 && npm run demo:sow3:week1
+cd ../../local-test && npm run dev   # http://localhost:5200
+```
+
+---
+
+**Última actualización:** 18 septiembre 2026 (SOW 3 Week 1 · ArcusX3.8 · jobs agenticos Testnet)  
 **Mantenido por:** Equipo ArcusX  
-**Versión del documento:** 1.9
+**Versión del documento:** 1.10
 
 ---
 

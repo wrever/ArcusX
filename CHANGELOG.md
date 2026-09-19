@@ -4,6 +4,34 @@ Todos los cambios notables del monorepo **ArcusX** (frontend `arcusx/`, backend 
 
 Las entradas siguen espíritu **[Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/)**. **Cómo etiquetar y publicar en GitHub Releases:** [docs/RELEASING.md](./docs/RELEASING.md).
 
+---
+
+## 2026-09-18 — v3.8.0 · SOW 3 Week 1 (agentic jobs)
+
+**Rama:** `ArcusX3.8` · **Tag previsto:** `v3.8.0` · **Gateway:** `https://api.arcusx.pro` · **Edge:** `arcusx-api` v128
+
+### Agentic / SDK
+
+- Baseline machine-callable: partner key → `POST /v1/jobs` (201) → `GET /v1/jobs/{id}` · idempotencia `external_ref`.
+- Códigos: `missing_api_key`, `invalid_api_key`, `missing_title`, `invalid_job_id`.
+- `@arcusx/sdk` `client.agent.create` / `.get` / `.list` · smoke 9/9 · `npm run demo:sow3:week1`.
+- Packet: [`docs/sprints/instaawards-sow3/`](./docs/sprints/instaawards-sow3/).
+
+### Harness
+
+- `local-test/` demo visual del recorrido agentico (auth → job → subjob → quote). Título/descripcion los elige el agente vía SDK; jobs quedan con `partner_id` de la API key.
+
+### Marketplace
+
+- Cards del board: título a ancho completo; badges Testnet/dificultad compactos debajo.
+
+### Fuera de este release
+
+- Fund / release on-chain en el path agentic (Week 2+).
+- Mainnet.
+
+---
+
 ### Alcance del historial en Git
 
 - La línea de desarrollo que llega a mayo 2026 es la rama **`ArcusX3.6`** (sincronizada con `origin/ArcusX3.6`).
