@@ -1,9 +1,9 @@
 # 🧠 MEMORIA VITAL - ARCUSX
 ## Documento de Referencia Completa del Proyecto
 
-**Última Actualización:** Mayo 2026  
-**Versión del Proyecto:** 1.4  
-**Estado:** Testnet operativo (preparación de production readiness)
+**Última Actualización:** 18 septiembre 2026  
+**Versión del Proyecto:** 3.8 (rama `ArcusX3.8`)  
+**Estado:** Testnet operativo · SOW 2 ✅ · **SOW 3 Week 1 ✅** (jobs agenticos create/status) · partner escrow + deals live · fee 2% · docs [`PLATFORM_OVERVIEW.md`](../../sdk/PLATFORM_OVERVIEW.md)
 
 ---
 
@@ -19,6 +19,7 @@
 8. [Integraciones Externas](#integraciones-externas)
 9. [Configuración y Variables de Entorno](#configuración-y-variables-de-entorno)
 10. [Tipos TypeScript](#tipos-typescript)
+11. [Actualización Agosto 2026 — SOW 2 / Docs / DX](#actualización-agosto-2026--sow-2--docs--dx)
 
 ---
 
@@ -26,28 +27,31 @@
 
 ### ¿Qué es ArcusX?
 
-**ArcusX** es una plataforma de freelancing descentralizada construida sobre la blockchain Stellar que conecta clientes con trabajadores mediante contratos inteligentes (escrow) seguros. La plataforma permite:
+**ArcusX** es una plataforma de freelancing y **infraestructura de payout** sobre Stellar. Tres rieles:
 
-- **Creación de tareas** por parte de clientes
-- **Aplicación de propuestas** por parte de trabajadores
-- **Gestión de escrows** mediante Trustless Work
-- **Pagos instantáneos** en USDC (3-5 segundos)
-- **Resolución de disputas** integrada
-- **Sistema de ratings** y reviews
-- **Swap de tokens** (XLM ↔ USDC) integrado
+1. **Marketplace** (`arcusx.pro`) — OAuth, tareas, ofertas privadas, deals JWT, disputas, ratings.  
+2. **Partner** (`@arcusx/sdk` + API key) — escrow y payment links sin obligar login ArcusX; wallets + monto; fee 2%.  
+3. **Agentic (SOW 3)** — `client.agent.*` + `/v1/jobs`: un runtime crea jobs autenticados sin UI. Week 1 = create/status; fund/release = Week 2+.
+
+La plataforma permite:
+
+- **Creación de tareas** y propuestas (marketplace)
+- **Escrow USDC** on-chain (cliente firma; worker recibe)
+- **Partner escrow / deals** para apps terceras
+- **Pagos** en USDC Stellar
+- **Disputas**, ratings, evidence
+- **Swap** XLM ↔ USDC (app)
 
 ### Stack Tecnológico
 
 - **Frontend:** React 19 + TypeScript + Vite
-- **UI:** CSS Modules + Chakra UI (parcial)
-- **Routing:** React Router v6
-- **Estado:** React Hooks + Context API
-- **Blockchain:** Stellar SDK + Trustless Work SDK
-- **Wallets:** Freighter (Stellar Wallets Kit)
-- **Autenticación:** Supabase OAuth (Google/GitHub) obligatorio para usuarios; JWT emitido por `sync_supabase_user.php` tras el callback (sin registro ni login por email/contraseña en la app)
-- **HTTP Client:** Axios
-- **i18n:** Sistema propio de traducciones
-- **Temas:** Dark/Light mode con CSS Variables
+- **API:** Supabase Edge `arcusx-api` + Postgres (path prod; no PHP)
+- **SDK:** `@arcusx/sdk` (`packages/arcusx-sdk`)
+- **Blockchain:** Stellar (Testnet) · escrow ArcusX (motor interno)
+- **Wallets:** Freighter / `WalletAdapter` del integrador
+- **Auth marketplace:** Supabase OAuth → JWT app
+- **Auth partner:** API key `axk_test_` / `axk_live_`
+- **i18n / temas:** sistema propio + dark/light
 
 ---
 
@@ -1470,15 +1474,131 @@ En lugar de migrar 60-70 archivos PHP individuales, se consolidarán endpoints r
 ## 📞 CONTACTO Y SOPORTE
 
 - **Website:** https://arcusx.pro
-- **Documentación:** https://docs.arcusx.pro
+- **Documentación (SPA React):** https://docs.arcusx.pro
+- **Partner API:** https://api.arcusx.pro
 - **Twitter:** @ArcusX_one
-- **GitHub:** (repositorio privado)
+- **GitHub:** https://github.com/wrever/ArcusX
 
 ---
 
-**Última actualización:** Mayo 2026 (OAuth-only usuarios, memoria vital alineada al repo)
+## Actualización Agosto 2026 — SOW 2 / Docs / DX
+
+**Archivo memoria del proyecto:** `docs/archive/planning/MEMORIA_VITAL_ARCUSX.md` (este documento).  
+**Changelog Notion Week 1:** `docs/sprints/instaawards-sdk/WEEK1_NOTION_CHANGELOG.md`  
+**Changelog Notion Week 2:** `docs/sprints/instaawards-sdk/WEEK2_NOTION_CHANGELOG.md`  
+**Packet Week 1:** `docs/sprints/instaawards-sdk/INSTAAWARDS_SDK_WEEK1.md`  
+**Packet Week 2:** `docs/sprints/instaawards-sdk/INSTAAWARDS_SDK_WEEK2.md`  
+**SOW 4 semanas:** `docs/sprints/SOW2_DELIVERY_PLAN.md` (§5.1 W1–W4)
+
+### Backend de verdad (2026)
+
+- Producción marketplace: **Supabase Edge** `arcusx-api` / `arcusx-partner-api` + Postgres — **no PHP** en el path de producción.
+- Fee plataforma: **2%** total al **trabajador** al liberar; cliente fondea el nominal. `getPlatformFee` → `0.02`. Fuente: `getPlatformFee` / `escrow.quote` (no hardcodear en UI).
+- Escrow: single-release USDC vía motor ArcusX interno; no custodia keys (prepare → WalletAdapter → confirm `signedXdr` / `tx_hash`). **Nunca** nombrar proveedor on-chain en docs/SDK/UI partner.
+
+### SOW 2 Instawards (4 semanas — estipulado)
+
+| Semana | Expected output (resumen) |
+|--------|---------------------------|
+| **W1** | Contrato público SDK, auth sandbox valid/invalid, docs `docs/sdk/*`, smoke+demo |
+| **W2** | Módulos flujo award-style solo con SDK; examples Node |
+| **W3** | Escrow Testnet lifecycle + playground + webhooks HMAC + smoke ampliado |
+| **W4** | Release package, changelog, known limitations, demo E2E, checklist mainnet (solo doc) |
+
+**W1 status:** ✅ Complete (smoke PASS 2026-07-30). Package `@arcusx/sdk` **v0.4.5**. Gateway default `https://api.arcusx.pro`.
+
+**W2 status:** ✅ Code-complete (2026-08-05). Award-style reference SDK-only hasta escrow-ready: `examples/sdk-node-award`. Examples Node endurecidos (marketplace / private / deal). Demo: `npm run demo:week2`. **E2E award live** requiere dual JWT en `.env`.
+
+**W3 status:** ✅ Complete (2026-08-18). Escrow rail: `examples/sdk-node-escrow` · Freighter adapter `examples/sdk-freighter-adapter` · webhooks HMAC `examples/sdk-node-webhooks` · playground tabs award→ready / rail E2E / webhooks · `npm run demo:week3` · smoke 13 checks (incl. `escrow.quote`). On-chain tx hashes = evidencia opcional con wallet del integrador. Packet: `INSTAAWARDS_SDK_WEEK3.md` · changelog Notion `WEEK3_NOTION_CHANGELOG.md`.
+
+**Out of SOW:** mainnet launch · agent-to-agent · Python SDK · reemplazo motor on-chain nativo · multi-milestone · large marketplace UI redesign.
+
+### `@arcusx/sdk` (integradores)
+
+- Path: `packages/arcusx-sdk/`
+- Namespaces SOW: `public`, `marketplace`, `private`, `deals`, `escrow`, `settlement`, `evidence`, `ratings`, `webhooks`
+- **Rail B2B (API key only):** `partnerEscrow.*` · `partnerDeals.*` — wallets + monto; fee server-side; firma en app del partner
+- **Rail agentic (SOW 3):** `agent.create` / `agent.get` / `agent.list` / `agent.createSubjob` / `agent.quoteEscrow` — jobs afiliados al `partner_id` de la API key
+- Modelo partner: **cliente** firma deploy/fund/complete/approve/release; worker = receptor USDC
+- Errores: `ArcusXApiError` · `missing_api_key` / `invalid_api_key` / `missing_title` / `invalid_job_id`
+- Verify: `npm run smoke:strict` · `demo:week1|2|3` · harness `local-test/` (:5200)
+- Docs: `docs/sdk/PLATFORM_OVERVIEW.md` + QUICKSTART / API_REFERENCE / PARTNER_* / FEE_MODEL / KNOWN_LIMITATIONS
+- Examples: `sdk-node-*`, `sdk-freighter-adapter`, `sdk-playground/`
+
+### Partner rail Testnet (2026-08-20) — LIVE
+
+| Pieza | Estado |
+|-------|--------|
+| Tablas `arcusx_partner_escrows` / `arcusx_partner_deals` | ✅ |
+| Edge routes `/v1/partner/escrows/*` + `/v1/partner/deals/*` | ✅ |
+| SDK `partnerEscrow` / `partnerDeals` | ✅ |
+| Ciclo on-chain Freighter (client) → `released` + Stellar Expert | ✅ evidenciado |
+| `contract_id` + URLs Expert en respuestas | ✅ |
+| Gateway `api.arcusx.pro` | ⚠ SSL local a veces; harness → Edge directo |
+
+**Separación:** partner ≠ marketplace JWT. Ver `RAILS_SEPARATION.md` · overview `PLATFORM_OVERVIEW.md`.
+
+### Docs públicas `docs.arcusx.pro` (DX)
+
+- **Misma** `arcusx/dist` que la app; hostname `docs.*` → `DocsApp` (`arcusx/src/config/docsSite.ts`, `pages/docs/*`).
+- Contenido builders: Overview, Quickstart, Auth, Modules, Escrow, Errors + FAQ; home mapa tipo tablas.
+- UX: ⌘K search, TOC, code copy, brief/prompt para pegar en IA.
+- **Pollar:** solo inspiración de layout ([docs.pollar.xyz](https://docs.pollar.xyz/docs)) — **sin** integración de producto.
+- Clasificación vs SOW W1: **bonus DX** (W1 gate oficial = `docs/sdk/*.md` + package + smoke). Documentación sí es Deliverable 2 a lo largo del sprint.
+- Deploy: subir `dist/` + **`.htaccess` SPA** al document root de `docs.*` (LiteSpeed 404 en `/developers` si falta rewrite). Guía: `sites/docs/CPANEL_DEPLOY.md`. `.htaccess` fuente: `arcusx/public/.htaccess`.
+
+### Links app ↔ docs
+
+- Navbar / EmpresasNavbar / Footer → `DOCS_SITE_URL` (`docsSite.ts`).
+- Footer rutas actuales: `/developers`, `/developers/escrow`, `/developers/quickstart`, `/faq`, legal/*.
+- Settings Developer promo + `DashboardDeveloperPage` enlazan a docs SDK.
+
+### Producto (extras, no SOW W1)
+
+- Board de tareas: filtros **unificados** en una card; “Remote only” como chip (no toggle suelto) — `dashboard.tsx` + `dashboard.css`.
+- Jobs externas: no mostrar salarios inventados (`salary_text` oculto / null).
+
+### Memoria / cómo actualizar
+
+1. Editar **este archivo** (`MEMORIA_VITAL_ARCUSX.md`) al cerrar hitos.
+2. Para entregas Instawards, también packets en `docs/sprints/instaawards-sdk/` y changelogs Notion (`WEEK1_NOTION_CHANGELOG.md`, `WEEK2_NOTION_CHANGELOG.md`).
+3. Secciones antiguas de esta memoria (PHP monolito, fee 1%, etc.) pueden estar desactualizadas — **prevalece esta sección + SOW 3 Week 1 + CLAUDE.md + docs/sdk**.
+
+---
+
+## Actualización Septiembre 2026 — SOW 3 Week 1 (agentic foundation)
+
+**Rama:** `ArcusX3.8` · **Gateway:** `https://api.arcusx.pro` · **Edge:** `arcusx-api` v128  
+**Packet:** `docs/sprints/instaawards-sow3/INSTAAWARDS_SOW3_WEEK1.md`  
+**SOW:** `docs/sprints/SOW3_INSTAAWARDS_FOLLOWON.md`
+
+Week 1 congela el **baseline machine-callable** encima del SDK de SOW 2:
+
+| Pieza | Estado |
+|-------|--------|
+| Partner auth `axk_test_…` (401 `missing_api_key` / `invalid_api_key`) | ✅ live |
+| `POST /v1/jobs` create (201) + envelopes `request_id` | ✅ live |
+| `GET /v1/jobs/{id}` status `open` | ✅ live |
+| Idempotencia por `external_ref` | ✅ |
+| Smoke 9/9 + demo Node | ✅ `scripts/smoke-sow3-week1.mjs` |
+| Harness visual `local-test/` (:5200) | ✅ recorrido agentico + demo Week1 |
+| Título/descripcion los manda el agente vía SDK; fallback Edge si omite subjob title | ✅ |
+| Jobs/tareas quedan con `partner_id` de la API key | ✅ |
+
+**Fuera de Week 1:** fund USDC / sign XDR / release on-chain · demo E2E payout · mainnet.
+
+**Verify:**
+
+```bash
+cd packages/arcusx-sdk && npm run smoke:sow3:week1 && npm run demo:sow3:week1
+cd ../../local-test && npm run dev   # http://localhost:5200
+```
+
+---
+
+**Última actualización:** 18 septiembre 2026 (SOW 3 Week 1 · ArcusX3.8 · jobs agenticos Testnet)  
 **Mantenido por:** Equipo ArcusX  
-**Versión del documento:** 1.4
+**Versión del documento:** 1.10
 
 ---
 

@@ -7,6 +7,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useI18n } from '../i18n/I18nProvider';
 import { useTheme } from '../contexts/ThemeContext';
 import { dashboardTabHref } from '../config/dashboardTabs';
+import { DOCS_SITE_URL } from '../config/docsSite';
 import { useEnterpriseMode } from '../hooks/useEnterpriseMode';
 
 function normalizePath(p: string) {
@@ -95,7 +96,7 @@ const Navbar = () => {
               {t('nav.tutorials')}
             </Link>
             <a
-              href="https://docs.arcusx.pro"
+              href={DOCS_SITE_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="nav-link nav-link--external"

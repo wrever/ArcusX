@@ -1,37 +1,43 @@
 /**
- * Configuración del cliente de escrow (API externa)
- * 
- * Variables de entorno necesarias:
- * - VITE_TRUSTLESS_WORK_API_KEY: API key del proveedor de escrow
- * - VITE_TRUSTLESS_WORK_BASE_URL: 'development' o 'mainnet'
- * - VITE_PLATFORM_WALLET: Dirección Stellar de la plataforma (para platformAddress)
- * - VITE_ADMIN_WALLET: Dirección Stellar del admin (para disputeResolver)
+ * Trustless Work — soporta testnet + mainnet en paralelo (alpha).
  */
-
 import { development, mainNet } from '@trustless-work/escrow';
+import {
+  adminWalletForNetwork,
+  getActiveStellarNetwork,
+  platformWalletForNetwork,
+  trustlessWorkApiKey,
+  type StellarNetworkId,
+} from './stellarDual';
 
-export const TRUSTLESS_WORK_API_KEY = import.meta.env.VITE_TRUSTLESS_WORK_API_KEY || '';
-export const TRUSTLESS_WORK_BASE_URL = import.meta.env.VITE_TRUSTLESS_WORK_BASE_URL === 'mainnet' 
-  ? mainNet 
-  : development;
-
-// Wallets de ArcusX para roles en el contrato de escrow
-export const PLATFORM_WALLET = import.meta.env.VITE_PLATFORM_WALLET || '';
-export const ADMIN_WALLET = import.meta.env.VITE_ADMIN_WALLET || '';
-
-// Platform fee ArcusX: 2.7% decimal (0.027). API TW recibe 2.7 (+ 0.3% protocolo TW = 3% total).
-export const PLATFORM_FEE_BPS = 2.7;
-
-// Verificar que las variables estén configuradas (solo en desarrollo)
-if (import.meta.env.DEV) {
-  if (!TRUSTLESS_WORK_API_KEY) {
-    console.warn('ArcusX: VITE_TRUSTLESS_WORK_API_KEY no está configurada.');
-  }
-  if (!PLATFORM_WALLET) {
-    console.warn('ArcusX: VITE_PLATFORM_WALLET no está configurada.');
-  }
-  if (!ADMIN_WALLET) {
-    console.warn('ArcusX: VITE_ADMIN_WALLET no está configurada.');
-  }
+export function trustlessWorkEnv(network: StellarNetworkId = getActiveStellarNetwork()) {
+  return network === 'mainnet' ? mainNet : development;
 }
 
+export { trustlessWorkApiKey };
+
+/** @deprecated Usar platformWallet() — valor dinámico según red activa */
+export const PLATFORM_WALLET = platformWalletForNetwork();
+
+/** @deprecated Usar adminWallet() — valor dinámico según red activa */
+export const ADMIN_WALLET = adminWalletForNetwork();
+
+export function platformWallet(network: StellarNetworkId = getActiveStellarNetwork()): string {
+  return platformWalletForNetwork(network);
+}
+
+export function adminWallet(network: StellarNetworkId = getActiveStellarNetwork()): string {
+  return adminWalletForNetwork(network);
+}
+
+/** Platform fee ArcusX: 1.7% (API 1.7). + 0.3% operación on-chain = 2% total al trabajador. */
+export const PLATFORM_FEE_BPS = 1.7;
+
+if (import.meta.env.DEV) {
+  if (!trustlessWorkApiKey()) {
+    console.warn('ArcusX: falta API key TW para la red activa.');
+  }
+  if (!platformWallet() || !adminWallet()) {
+    console.warn('ArcusX: configura VITE_PLATFORM_WALLET y VITE_ADMIN_WALLET (o variantes _TESTNET/_MAINNET).');
+  }
+}

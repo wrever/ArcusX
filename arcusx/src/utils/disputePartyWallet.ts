@@ -1,4 +1,4 @@
-import { PLATFORM_WALLET } from '../config/trustlessWork';
+import { platformWallet } from '../config/trustlessWork';
 
 function pickStellarWallet(...candidates: (string | null | undefined)[]): string | null {
   for (const w of candidates) {
@@ -38,7 +38,7 @@ export function resolveClientRefundWallet(opts: {
   platformWallet?: string;
 }): DisputeWalletPick | null {
   const roles = opts.escrow?.roles ?? {};
-  const platform = (opts.platformWallet ?? PLATFORM_WALLET)?.trim() || '';
+  const platform = (opts.platformWallet ?? platformWallet())?.trim() || '';
 
   const signer = pickStellarWallet(roles.signer, opts.escrow?.signer);
   if (signer) {
@@ -90,7 +90,7 @@ export function resolveWorkerPayoutWallet(opts: {
   platformWallet?: string;
 }): DisputeWalletPick | null {
   const roles = opts.escrow?.roles ?? {};
-  const platform = (opts.platformWallet ?? PLATFORM_WALLET)?.trim() || '';
+  const platform = (opts.platformWallet ?? platformWallet())?.trim() || '';
 
   const serviceProvider = pickStellarWallet(roles.serviceProvider);
   if (serviceProvider) {

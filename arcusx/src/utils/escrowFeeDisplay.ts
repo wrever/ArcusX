@@ -10,7 +10,7 @@ export function formatFeePercent(decimal: number): string {
   return Number.isInteger(p) ? String(p) : p.toFixed(1);
 }
 
-/** Porcentajes mostrados al cliente: 3% total = 2.7% ArcusX + 0.3% operación. */
+/** Porcentajes on-chain (admin / desglose). UX pública: 2% al trabajador. */
 export function clientFeePercents(platformFeeDecimal = STANDARD_PLATFORM_FEE_RATE) {
   const platform = Number(platformFeeDecimal) || STANDARD_PLATFORM_FEE_RATE;
   const protocol = TRUSTLESS_WORK_PROTOCOL_FEE;

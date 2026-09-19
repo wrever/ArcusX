@@ -1,0 +1,49 @@
+/* Keep Pollar SDK modals (tx, etc.) usable if they appear later.
+   Default overlay is z-index 50 — behind ArcusX chrome. */
+.pollar-overlay {
+  z-index: 10050 !important;
+  position: fixed !important;
+  inset: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background-color: rgba(0, 0, 0, 0.55) !important;
+}
+
+.pollar-modal-card,
+.pollar-modal {
+  position: relative !important;
+  width: min(460px, calc(100vw - 2rem)) !important;
+  max-width: 460px !important;
+  background-color: #111827 !important;
+  color: #f9fafb !important;
+  border: 1px solid #374151 !important;
+  border-radius: 1rem !important;
+  padding: 1.75rem !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45) !important;
+}
+
+.pollar-logo {
+  height: 4rem !important;
+  width: 4rem !important;
+  max-width: 4rem !important;
+  object-fit: contain !important;
+}
+
+.pollar-title,
+.pollar-subtitle,
+.pollar-modal-error {
+  color: inherit !important;
+}
+
+.pollar-btn-primary {
+  width: 100%;
+  margin-top: 0.75rem;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #10dd88;
+  color: #04140c;
+  font-weight: 700;
+  cursor: pointer;
+}

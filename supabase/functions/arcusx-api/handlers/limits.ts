@@ -52,15 +52,16 @@ export async function getUserLimits(ctx: ApiContext): Promise<Response> {
 
   const { data: user } = await ctx.supabase
     .from('arcusx_users')
-    .select('id, cooldown_until')
+    .select('id, cooldown_until, is_admin, role')
     .eq('id', userId)
     .maybeSingle();
   if (!user) return jsonError(req, 'Usuario no encontrado.', 404);
 
   const counts = await countTasksForUser(ctx.supabase, userId);
-  let canCreate = counts.tasksToday < 5 && counts.tasksThisWeek < 20;
+  const isAdmin = user.is_admin === true || user.role === 'admin';
+  let canCreate = isAdmin || (counts.tasksToday < 5 && counts.tasksThisWeek < 20);
   let cooldownRemaining = 0;
-  if (user.cooldown_until) {
+  if (!isAdmin && user.cooldown_until) {
     const until = new Date(user.cooldown_until).getTime();
     if (until > Date.now()) {
       canCreate = false;

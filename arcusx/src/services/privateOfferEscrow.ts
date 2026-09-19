@@ -5,7 +5,8 @@ import {
 import { finalizePrivateOffer } from './privateOfferService';
 import { devLog, devError } from '../utils/logger';
 import { quoteEscrowFundAmount } from '../utils/escrowFeeQuote';
-import { USDC_ISSUER } from '../config/usdc';
+import { workerNetFromTaskPrice } from '../utils/bilateralFeeModel';
+import { getUsdcIssuer } from '../config/usdc';
 
 export type PrivateEscrowHooks = {
   kit: unknown;
@@ -30,7 +31,7 @@ export async function createPrivateOfferEscrow(params: {
   hooks: PrivateEscrowHooks;
 }): Promise<{ success: boolean; error?: string; contractId?: string; deployTxHash?: string }> {
   const { task, clientAddress, workerAddress, platformFee, hooks } = params;
-  const workerAmount = parseFloat(String(task.price));
+  const workerAmount = workerNetFromTaskPrice(task.price);
   if (!Number.isFinite(workerAmount) || workerAmount <= 0) {
     return { success: false, error: 'Monto de la tarea inválido' };
   }
@@ -54,6 +55,7 @@ export async function createPrivateOfferEscrow(params: {
     hooks.kit,
     hooks.deployEscrow,
     hooks.sendTransaction,
+    hooks.getEscrowByContractIds,
   );
 
   if (!createResult.success || !createResult.contractId) {
@@ -76,34 +78,21 @@ export async function fundPrivateOfferEscrow(params: {
   hooks: PrivateEscrowHooks;
 }): Promise<{ success: boolean; error?: string; txHash?: string }> {
   const { contractId, task, clientAddress, platformFee, hooks } = params;
-  const workerAmount = parseFloat(String(task.price));
+  const workerAmount = workerNetFromTaskPrice(task.price);
   const amount = quoteEscrowFundAmount(workerAmount, platformFee);
 
-  let fundResult: { success: boolean; txHash?: string; error?: string } | null = null;
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      fundResult = await fundTrustlessEscrow(
-        contractId,
-        amount,
-        clientAddress,
-        hooks.kit,
-        hooks.fundEscrow,
-        hooks.sendTransaction,
-        hooks.getEscrowByContractIds,
-      );
-      if (fundResult.success) break;
-      if (attempt < 3) {
-        await new Promise((r) => setTimeout(r, attempt === 1 ? 30000 : 60000));
-      }
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      fundResult = { success: false, error: msg };
-      if (attempt < 3) await new Promise((r) => setTimeout(r, 30000));
-    }
-  }
+  const fundResult = await fundTrustlessEscrow(
+    contractId,
+    amount,
+    clientAddress,
+    hooks.kit,
+    hooks.fundEscrow,
+    hooks.sendTransaction,
+    hooks.getEscrowByContractIds,
+  );
 
-  if (!fundResult?.success) {
-    return { success: false, error: fundResult?.error || 'No se pudo fondear el escrow' };
+  if (!fundResult.success) {
+    return { success: false, error: fundResult.error || 'No se pudo fondear el escrow' };
   }
 
   return { success: true, txHash: fundResult.txHash };
@@ -120,7 +109,7 @@ export async function sendPrivateOffer(params: {
   task: PrivateEscrowTaskInput;
   platformFee: number;
 }): Promise<{ success: boolean; error?: string }> {
-  const workerAmount = parseFloat(String(params.task.price));
+  const workerAmount = workerNetFromTaskPrice(params.task.price);
   const amount = quoteEscrowFundAmount(workerAmount, params.platformFee);
 
   const finalizePayload = {
@@ -132,7 +121,7 @@ export async function sendPrivateOffer(params: {
     deploy_transaction_hash: params.deployTxHash,
     escrow_amount: amount,
     platform_fee: params.platformFee,
-    trustline_address: USDC_ISSUER,
+    trustline_address: getUsdcIssuer(),
     client_wallet_address: params.clientAddress,
   };
 

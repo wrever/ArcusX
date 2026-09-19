@@ -1,0 +1,102 @@
+.network-mode-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin: 0 0 1rem;
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.network-mode-banner--testnet {
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: var(--text-primary, #e2e8f0);
+}
+
+.network-mode-banner--mainnet {
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: var(--text-primary, #fef3c7);
+}
+
+.network-mode-banner__info {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.network-mode-banner__icon {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  font-size: 1rem;
+}
+
+.network-mode-banner--mainnet .network-mode-banner__icon {
+  color: #f59e0b;
+}
+
+.network-mode-banner--testnet .network-mode-banner__icon {
+  color: #60a5fa;
+}
+
+.network-mode-banner__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.network-mode-banner__text strong {
+  font-size: 0.86rem;
+}
+
+.network-mode-banner__toggle {
+  display: inline-flex;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.network-mode-banner__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.2);
+  color: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.network-mode-banner__btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.network-mode-banner__btn.is-active {
+  border-color: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.14);
+  font-weight: 600;
+}
+
+[data-theme='light'] .network-mode-banner--testnet {
+  color: #1e3a8a;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+[data-theme='light'] .network-mode-banner--mainnet {
+  color: #92400e;
+  background: rgba(245, 158, 11, 0.12);
+}
+
+[data-theme='light'] .network-mode-banner__btn {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: inherit;
+}

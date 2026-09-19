@@ -21,11 +21,10 @@ import {
 } from '../services/privateOfferEscrow';
 import { finalizePrivateOffer } from '../services/privateOfferService';
 import PrivateOfferEscrowPopup from './PrivateOfferEscrowPopup';
-import { USDC_ISSUER } from '../config/usdc';
+import { getUsdcIssuer } from '../config/usdc';
 import { quoteEscrowFundAmount } from '../utils/escrowFeeQuote';
 import { isValidStellarGAddress } from '../utils/stellarAddress';
-import { quoteEscrowCommission } from '../utils/escrowFeeQuote';
-import { clientFeePercents } from '../utils/escrowFeeDisplay';
+import { quoteBilateralFromNominal, WORKER_FEE_PERCENT, workerNetFromTaskPrice } from '../utils/bilateralFeeModel';
 import EscrowFeeBreakdown from './EscrowFeeBreakdown';
 
 interface UserLimits {
@@ -106,11 +105,9 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
   // Estados para monto del trabajador, comisión y total a pagar
   const [workerAmount, setWorkerAmount] = useState<string>('');
   const [commissionAmount, setCommissionAmount] = useState<string>('');
-  const [platformCommissionAmount, setPlatformCommissionAmount] = useState<string>('');
-  const [protocolCommissionAmount, setProtocolCommissionAmount] = useState<string>('');
   const [totalAmount, setTotalAmount] = useState<string>('');
-  const [platformFee, setPlatformFee] = useState<number>(0.027);
-  const [totalClientFeePercent, setTotalClientFeePercent] = useState<string>('3');
+  const [platformFee, setPlatformFee] = useState<number>(0.02);
+  const [totalClientFeePercent, setTotalClientFeePercent] = useState<string>(WORKER_FEE_PERCENT);
   
   // Estados para el popup
   const [showPopup, setShowPopup] = useState(false);
@@ -217,9 +214,8 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
   const loadPlatformFee = async () => {
     try {
       const fee = await getPlatformFee();
-      const percents = clientFeePercents(fee);
       setPlatformFee(fee);
-      setTotalClientFeePercent(percents.totalPercent);
+      setTotalClientFeePercent(WORKER_FEE_PERCENT);
     } catch (error) {
       // Mantener valores por defecto si falla
     }
@@ -230,26 +226,19 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
     if (formData.price && formData.price.trim() !== '') {
       const workerAmountValue = parseFloat(formData.price);
       if (!isNaN(workerAmountValue) && workerAmountValue > 0) {
-        const q = quoteEscrowCommission(workerAmountValue, platformFee);
-        const total = q.fundAmount;
-        
-        setWorkerAmount(workerAmountValue.toFixed(2));
-        setCommissionAmount(q.totalCommission.toFixed(7));
-        setPlatformCommissionAmount(q.platformCommission.toFixed(7));
-        setProtocolCommissionAmount(q.protocolCommission.toFixed(7));
-        setTotalAmount(total.toFixed(7));
+        const q = quoteBilateralFromNominal(workerAmountValue, platformFee);
+
+        setWorkerAmount(q.workerNet.toFixed(2));
+        setCommissionAmount(q.totalCommission.toFixed(2));
+        setTotalAmount(q.clientTotal.toFixed(2));
       } else {
         setWorkerAmount('');
         setCommissionAmount('');
-        setPlatformCommissionAmount('');
-        setProtocolCommissionAmount('');
         setTotalAmount('');
       }
     } else {
       setWorkerAmount('');
       setCommissionAmount('');
-      setPlatformCommissionAmount('');
-      setProtocolCommissionAmount('');
       setTotalAmount('');
     }
   }, [formData.price, platformFee]);
@@ -488,8 +477,8 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
       const result = await getEscrowByContractIds({
         contractIds: ids,
         validateOnChain: Array.isArray(contractIds)
-          ? false
-          : contractIds.validateOnChain ?? false,
+          ? true
+          : contractIds.validateOnChain ?? true,
       });
       return Array.isArray(result) ? result : (result as { escrows?: unknown[] })?.escrows ?? result ?? [];
     },
@@ -717,8 +706,7 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
                   className="commission-text"
                   platformFee={platformFee}
                   totalUsdc={commissionAmount}
-                  platformUsdc={platformCommissionAmount}
-                  protocolUsdc={protocolCommissionAmount}
+                  variant="employer-bilateral"
                 />
                 <p className="total-amount-text" style={{ fontWeight: 'bold', color: '#10dd88', fontSize: '1.1em' }}>
                   <FaCreditCard style={{ marginRight: '6px' }} /> {t('create.total.pay')} <strong>{totalAmount} USDC</strong>
@@ -826,10 +814,7 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
               <ul>
                 <li>{t('create.costs.bullet.worker')}</li>
                 <li>
-                  {t('create.costs.bullet.commission')
-                    .replace('{{total}}', String(totalClientFeePercent))
-                    .replace('{{platform}}', clientFeePercents(platformFee).platformPercent)
-                    .replace('{{protocol}}', clientFeePercents(platformFee).protocolPercent)}
+                  {t('create.costs.bullet.commission').replace('{{total}}', String(totalClientFeePercent))}
                 </li>
                 <li>{t('create.costs.bullet.currency')}</li>
                 <li>{t('create.costs.bullet.total').replace('{{p}}', String(totalClientFeePercent))}</li>
@@ -978,7 +963,7 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
             if (!sent.success && pendingPrivateTask.contractId) {
               try {
                 const amount = quoteEscrowFundAmount(
-                  parseFloat(String(pendingPrivateTask.price)),
+                  workerNetFromTaskPrice(pendingPrivateTask.price),
                   platformFee,
                 );
                 await finalizePrivateOffer({
@@ -990,7 +975,7 @@ const CreateTask = ({ embedded = false }: CreateTaskProps) => {
                   deploy_transaction_hash: pendingPrivateTask.deployTxHash,
                   escrow_amount: amount,
                   platform_fee: platformFee,
-                  trustline_address: USDC_ISSUER,
+                  trustline_address: getUsdcIssuer(),
                   client_wallet_address: clientWallet,
                 });
                 return { success: true };

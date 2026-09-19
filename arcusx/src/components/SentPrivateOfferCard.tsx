@@ -24,6 +24,8 @@ export type SentPrivateOfferTask = SentOfferTaskFields & {
   title: string;
   subtitle: string;
   invited_worker_username?: string | null;
+  invited_user_id?: number | null;
+  user_id?: number | null;
 };
 
 interface SentPrivateOfferCardProps {
@@ -39,6 +41,8 @@ interface SentPrivateOfferCardProps {
     escrowId?: string | null,
     fundTxHash?: string | null,
     readyForSupervision?: boolean,
+    invitedUserId?: number | null,
+    taskOwnerUserId?: number | null,
   ) => void;
 }
 
@@ -131,6 +135,8 @@ const SentPrivateOfferCard = ({
       task.escrow_id,
       task.escrow_fund_tx_hash,
       true,
+      task.invited_user_id,
+      task.user_id,
     );
   };
 

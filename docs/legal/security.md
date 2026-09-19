@@ -47,13 +47,13 @@ We follow secure coding practices:
 
 ### Smart Contract Security
 
-Our escrow system uses Trustless Work smart contracts:
+Our escrow system uses ArcusX Escrow on Stellar:
 
-- **Audited Contracts**: Contracts built on audited Trustless Work platform
-- **Automated Execution**: Contracts execute exactly as programmed
-- **No Modifications**: Contracts cannot be modified after deployment
-- **Open Source**: Contract code is verifiable on blockchain
-- **Security Reviews**: Regular security reviews and updates
+- **On-chain settlement**: USDC locked in programmable contracts
+- **Automated execution**: Contracts follow deploy / fund / release rules
+- **Immutable after deploy**: Contract terms are not silently rewritten off-chain
+- **Verifiable**: Interactions are visible on the Stellar ledger
+- **Reviews**: Platform and settlement paths undergo ongoing security review
 
 ### Stellar Network Security
 
@@ -216,7 +216,7 @@ Important limitations:
 We depend on:
 
 - Stellar network security
-- Trustless Work platform security
+- ArcusX Escrow / Stellar settlement security
 - Wallet provider security
 - Infrastructure provider security
 

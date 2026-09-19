@@ -1,10 +1,17 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { syncSubjobFromTaskAssignment } from '../../_shared/agent-sync.ts';
+import {
+  assertArcusXManagedEscrowContract,
+  assertArcusXManagedEscrowContractForTask,
+} from '../../_shared/escrow-contract-guard.ts';
 import { jsonError, jsonSuccess } from '../../_shared/arcusx-cors.ts';
 import {
   formatFundsReleasedMessage,
   insertArcusxNotification,
 } from '../../_shared/arcusx-notifications.ts';
 import { logDomainEvent } from '../../_shared/domain-events.ts';
+import { usdcIssuerForNetwork } from '../../_shared/stellar-network.ts';
+import { emitPartnerWebhook } from '../../_shared/partner-webhooks.ts';
 import { persistRating } from '../../_shared/rating-persist.ts';
 import type { ApiContext } from './types.ts';
 import { requireUser } from './require.ts';
@@ -103,7 +110,7 @@ export async function createEscrow(ctx: ApiContext): Promise<Response> {
 
   const { data: task } = await auth.supabase
     .from('arcusx_tasks')
-    .select('id, user_id, title, escrow_status, escrow_created_at, accepted_applicant_id, escrow_pending_proposal_id')
+    .select('id, user_id, title, escrow_status, escrow_created_at, accepted_applicant_id, escrow_pending_proposal_id, partner_id, external_id, escrow_platform_fee, escrow_amount')
     .eq('id', taskId)
     .single();
 
@@ -112,6 +119,12 @@ export async function createEscrow(ctx: ApiContext): Promise<Response> {
   }
 
   if (contractId && transactionHash && fundingConfirm) {
+    try {
+      await assertArcusXManagedEscrowContractForTask(auth.supabase, taskId, contractId, ctx.stellarNetwork);
+    } catch (e) {
+      return jsonError(req, e instanceof Error ? e.message : 'Contrato escrow inválido', 403);
+    }
+
     const resolvedProposalId = await resolveProposalIdForFund(
       auth.supabase,
       taskId,
@@ -137,8 +150,12 @@ export async function createEscrow(ctx: ApiContext): Promise<Response> {
         workerId: Number(app.applicant_id),
         escrowId: contractId,
         fundTxHash: transactionHash,
-        escrowAmount: body.escrow_amount != null ? Number(body.escrow_amount) : null,
-        platformFee: body.platform_fee != null ? Number(body.platform_fee) : null,
+        escrowAmount: body.escrow_amount != null
+          ? Number(body.escrow_amount)
+          : (task.escrow_amount != null ? Number(task.escrow_amount) : null),
+        platformFee: task.escrow_platform_fee != null
+          ? Number(task.escrow_platform_fee)
+          : null,
         escrowCreatedAt: task.escrow_created_at as string | null,
         clientFunderWallet: body.client_wallet_address
           ? String(body.client_wallet_address)
@@ -155,36 +172,70 @@ export async function createEscrow(ctx: ApiContext): Promise<Response> {
       actor_user_id: auth.userId,
       payload: { contract_id: contractId, tx: transactionHash, proposal_id: resolvedProposalId },
     });
-    return jsonSuccess(req, { message: 'Escrow fondeado y trabajador asignado' });
+    void emitPartnerWebhook(auth.supabase, task.partner_id as string | null, 'escrow.funded', {
+      task_id: taskId,
+      external_id: task.external_id ?? null,
+      contract_id: contractId,
+      tx_hash: transactionHash,
+      proposal_id: resolvedProposalId,
+    });
+    return jsonSuccess(req, {
+      message: 'Escrow fondeado y trabajador asignado',
+      fund_tx_hash: transactionHash,
+      tx_hash: transactionHash,
+      escrow_id: contractId,
+      contract_id: contractId,
+      proposal_id: resolvedProposalId,
+    });
   }
 
   if (contractId && transactionHash) {
-    let applicantId = task.accepted_applicant_id as number | null;
-    if (proposalId) {
-      const { data: app } = await auth.supabase
+    const resolvedProposalId = proposalId ?? await resolveProposalIdForFund(auth.supabase, taskId, null);
+
+    let keepApplicantId: number | null = task.accepted_applicant_id as number | null;
+    if (!keepApplicantId && resolvedProposalId) {
+      const { data: acceptedApp } = await auth.supabase
         .from('arcusx_applications')
-        .select('applicant_id')
-        .eq('id', proposalId)
+        .select('applicant_id, status')
+        .eq('id', resolvedProposalId)
         .eq('task_id', taskId)
-        .single();
-      if (app) applicantId = app.applicant_id as number;
+        .maybeSingle();
+      if (acceptedApp?.status === 'accepted') {
+        keepApplicantId = Number(acceptedApp.applicant_id);
+      }
     }
 
     const patch: Record<string, unknown> = {
       escrow_id: contractId,
       escrow_deploy_tx_hash: transactionHash,
       escrow_status: 'pending_funding',
-      escrow_created_at: new Date().toISOString(),
+      escrow_created_at: task.escrow_created_at ?? new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      accepted_applicant_id: null,
-      status: 'open',
     };
-    if (proposalId) patch.escrow_pending_proposal_id = proposalId;
-    if (body.escrow_amount != null) patch.escrow_amount = Number(body.escrow_amount);
-    if (body.platform_fee != null) patch.escrow_platform_fee = Number(body.platform_fee);
+
+    if (keepApplicantId) {
+      patch.accepted_applicant_id = keepApplicantId;
+      patch.status = 'assigned';
+    } else {
+      patch.accepted_applicant_id = null;
+      patch.status = 'open';
+    }
+
+    if (resolvedProposalId) patch.escrow_pending_proposal_id = resolvedProposalId;
+    if (body.escrow_amount != null) {
+      patch.escrow_amount = Number(body.escrow_amount);
+    } else if (task.escrow_amount != null) {
+      patch.escrow_amount = Number(task.escrow_amount);
+    }
+    if (task.escrow_platform_fee != null) {
+      patch.escrow_platform_fee = Number(task.escrow_platform_fee);
+    }
     if (body.trustline_address) {
       patch.escrow_trustline_address = String(body.trustline_address);
+    } else {
+      patch.escrow_trustline_address = usdcIssuerForNetwork(ctx.stellarNetwork);
     }
+    patch.stellar_network = ctx.stellarNetwork;
     const clientFunder = String(body.client_wallet_address ?? '').trim();
     if (clientFunder.startsWith('G') && clientFunder.length === 56) {
       patch.client_funder_wallet = clientFunder;
@@ -192,6 +243,17 @@ export async function createEscrow(ctx: ApiContext): Promise<Response> {
 
     const { error } = await auth.supabase.from('arcusx_tasks').update(patch).eq('id', taskId);
     if (error) return jsonError(req, error.message, 500);
+
+    try {
+      await assertArcusXManagedEscrowContractForTask(
+        auth.supabase,
+        taskId,
+        contractId,
+        ctx.stellarNetwork,
+      );
+    } catch (e) {
+      console.warn('[createEscrow] deploy guard deferred (indexer lag):', e);
+    }
 
     await logDomainEvent(auth.supabase, {
       entity_type: 'task',
@@ -204,6 +266,10 @@ export async function createEscrow(ctx: ApiContext): Promise<Response> {
     return jsonSuccess(req, {
       message: 'Contrato escrow registrado',
       escrow_id: contractId,
+      contract_id: contractId,
+      deploy_tx_hash: transactionHash,
+      tx_hash: transactionHash,
+      proposal_id: resolvedProposalId ?? proposalId,
     });
   }
 
@@ -280,6 +346,16 @@ export async function selectProposal(ctx: ApiContext): Promise<Response> {
   };
   if (escrowId && transactionHash) {
     try {
+      await assertArcusXManagedEscrowContractForTask(
+        auth.supabase,
+        taskId,
+        escrowId,
+        ctx.stellarNetwork,
+      );
+    } catch (e) {
+      return jsonError(req, e instanceof Error ? e.message : 'Contrato escrow inválido', 403);
+    }
+    try {
       await assignWorkerAfterEscrowFunded(auth.supabase, {
         taskId,
         taskTitle: String(task.title ?? 'la tarea'),
@@ -294,6 +370,7 @@ export async function selectProposal(ctx: ApiContext): Promise<Response> {
   } else {
     patch.accepted_applicant_id = app.applicant_id;
     patch.status = 'assigned';
+    patch.escrow_pending_proposal_id = proposalId;
     const { error } = await auth.supabase.from('arcusx_tasks').update(patch).eq('id', taskId);
     if (error) return jsonError(req, error.message, 500);
 
@@ -303,6 +380,16 @@ export async function selectProposal(ctx: ApiContext): Promise<Response> {
       .eq('task_id', taskId).neq('id', proposalId);
 
     const workerId = Number(app.applicant_id);
+    const workerWallet = String(app.worker_wallet_address ?? '').trim();
+    if (workerId && workerWallet) {
+      await syncSubjobFromTaskAssignment(
+        auth.supabase,
+        taskId,
+        proposalId,
+        workerId,
+        workerWallet,
+      );
+    }
     if (workerId) {
       await insertArcusxNotification(auth.supabase, {
         user_id_mysql: workerId,
@@ -511,7 +598,10 @@ export async function finalizePrivateOffer(ctx: ApiContext): Promise<Response> {
   if (body.platform_fee != null) patch.escrow_platform_fee = Number(body.platform_fee);
   if (body.trustline_address) {
     patch.escrow_trustline_address = String(body.trustline_address).trim();
+  } else {
+    patch.escrow_trustline_address = usdcIssuerForNetwork(ctx.stellarNetwork);
   }
+  patch.stellar_network = ctx.stellarNetwork;
 
   const { error: updErr } = await auth.supabase.from('arcusx_tasks').update(patch).eq('id', taskId);
   if (updErr) return jsonError(req, updErr.message, 500);
@@ -889,6 +979,8 @@ export async function completeTask(ctx: ApiContext): Promise<Response> {
       message: 'Tarea completada y fondos liberados',
       task_id: taskId,
       status: 'completed',
+      release_tx_hash: txHash,
+      tx_hash: txHash,
     });
   }
 

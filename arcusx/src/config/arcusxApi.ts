@@ -1,4 +1,5 @@
 import { supabaseUrl, supabaseAnonKey, hasSupabase } from './supabase';
+import { getActiveStellarNetwork } from './stellarDual';
 
 if (!hasSupabase) {
   console.error('[ArcusX] VITE_SUPABASE_URL es obligatorio. La API solo usa Supabase Edge.');
@@ -30,6 +31,15 @@ export function arcusxApiUrl(
     }
   }
   return u.toString();
+}
+
+/** REST v1 (`/functions/v1/arcusx-api/v1/...`) */
+export function arcusxApiV1Url(path: string): string {
+  if (!useSupabaseApi || !supabaseUrl) {
+    throw new Error('API no disponible. Configura VITE_SUPABASE_URL en el build.');
+  }
+  const clean = path.replace(/^\//, '');
+  return `${edgeBase}/arcusx-api/v1/${clean}`;
 }
 
 export function arcusxAdminUrl(
@@ -83,5 +93,6 @@ export function arcusxApiHeaders(
       localStorage.getItem('supabase_access_token');
     if (token) headers.set('Authorization', `Bearer ${token}`);
   }
+  headers.set('x-arcusx-network', getActiveStellarNetwork());
   return headers;
 }

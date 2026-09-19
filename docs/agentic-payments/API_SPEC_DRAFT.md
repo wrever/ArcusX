@@ -1,33 +1,33 @@
-# API Spec (borrador v0.1) — Agentic Payments
+# API Spec — Agentic Payments (implementado)
 
-**Estado:** diseño · no implementado  
-**Base URL (futuro):** `https://api.arcusx.pro/v1` o `https://<project>.supabase.co/functions/v1/agentic-v1-...`
+**Estado:** implementado en Edge `arcusx-api` + `@arcusx/sdk` `client.agent` (2026-07)  
+**Base URL:** `https://api.arcusx.pro/v1` (gateway) · OpenAPI: [`../sdk/openapi-v1.yaml`](../sdk/openapi-v1.yaml)  
+**Evidencia Week 1:** [`AGENTIC_WEEK1.md`](./AGENTIC_WEEK1.md)
+
+> El diseño original pedía escrow a nivel **job**. La implementación estable es **1 escrow por subjob** (D3).
 
 ---
 
 ## Autenticación
 
 ```http
-Authorization: Bearer arcusx_live_<secret>
-X-ArcusX-Version: 2026-05-18
+Authorization: Bearer axk_test_<secret>
 ```
 
 | Tipo | Uso |
 |------|-----|
-| API key | Agentes, scripts, servidores |
-| JWT Supabase / app | Marketplace UI (existente) |
-| OAuth M2M | Fase 4 — partners SaaS |
-
-**Scopes (futuro):** `jobs:write`, `escrow:fund`, `escrow:release`, `webhooks:manage`
+| Partner API key | Agentes / servidores (requiere `owner_user_id` en `arcusx_partners`) |
+| JWT app + `x-arcusx-api-key` | Acciones user-scoped |
+| OAuth M2M | Futuro |
 
 ---
 
 ## Convenciones
 
-- Montos: string, **7 decimales** USDC (`"10.5000000"`)
-- Wallets: Stellar `G...` (nunca `C...` como payer)
-- `Idempotency-Key`: UUID en POST que mueven dinero
-- Errores: `{ "success": false, "error": "code", "message": "..." }`
+- Montos: number USDC (quote responde fee bilateral)
+- Wallets: Stellar `G...`
+- `Idempotency-Key` en POST create/confirm/attest
+- Envelope: `{ "success": true, "data": { … }, "meta": { "request_id": "…" } }`
 
 ---
 

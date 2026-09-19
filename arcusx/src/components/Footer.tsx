@@ -5,6 +5,7 @@ import footerLogoLight from '../images/arcusxlogoclaro.png';
 import '../css/Hero.css';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../i18n/I18nProvider';
+import { DOCS_SITE_URL } from '../config/docsSite';
 
 const Footer = () => {
   const { theme } = useTheme();
@@ -33,26 +34,62 @@ const Footer = () => {
           <div className="footer-section">
             <h4>{t('footer.section.platform')}</h4>
             <ul>
-              <li><a href="https://docs.arcusx.pro/getting-started/quickstart" target="_blank" rel="noopener noreferrer">{t('footer.link.howItWorks')}</a></li>
-              <li><Link to="/dashboard">{t('footer.link.availableTasks')}</Link></li>
-              <li><a href="https://docs.arcusx.pro/getting-started/publish-your-docs" target="_blank" rel="noopener noreferrer">{t('footer.link.fees')}</a></li>
+              <li>
+                <a href={`${DOCS_SITE_URL}/developers`} target="_blank" rel="noopener noreferrer">
+                  {t('footer.link.howItWorks')}
+                </a>
+              </li>
+              <li>
+                <Link to="/dashboard">{t('footer.link.availableTasks')}</Link>
+              </li>
+              <li>
+                <a href={`${DOCS_SITE_URL}/developers/escrow`} target="_blank" rel="noopener noreferrer">
+                  {t('footer.link.fees')}
+                </a>
+              </li>
             </ul>
           </div>
           <div className="footer-section">
             <h4>{t('footer.section.resources')}</h4>
             <ul>
-              <li><a href="https://docs.arcusx.pro/" target="_blank" rel="noopener noreferrer">{t('footer.link.guide')}</a></li>
-              <li><a href="https://docs.arcusx.pro/" target="_blank" rel="noopener noreferrer">{t('footer.link.tutorials')}</a></li>
-              <li><a href="https://docs.arcusx.pro/community/faq" target="_blank" rel="noopener noreferrer">{t('footer.link.faq')}</a></li>
+              <li>
+                <a href={`${DOCS_SITE_URL}/developers/quickstart`} target="_blank" rel="noopener noreferrer">
+                  {t('footer.link.guide')}
+                </a>
+              </li>
+              <li>
+                <Link to="/tutoriales">{t('footer.link.tutorials')}</Link>
+              </li>
+              <li>
+                <a href={`${DOCS_SITE_URL}/faq`} target="_blank" rel="noopener noreferrer">
+                  {t('footer.link.faq')}
+                </a>
+              </li>
             </ul>
           </div>
           <div className="footer-section">
             <h4>{t('footer.section.legal')}</h4>
             <ul>
-              <li><a href="https://docs.arcusx.pro/legal/privacy-policy" target="_blank" rel="noopener noreferrer">{t('footer.link.privacy')}</a></li>
-              <li><a href="https://docs.arcusx.pro/legal/terms-and-conditions" target="_blank" rel="noopener noreferrer">{t('footer.link.terms')}</a></li>
-              <li><a href="https://docs.arcusx.pro/legal/security" target="_blank" rel="noopener noreferrer">{t('footer.link.security')}</a></li>
-              <li><a href="https://docs.arcusx.pro/legal/compliance" target="_blank" rel="noopener noreferrer">{t('footer.link.compliance')}</a></li>
+              <li>
+                <a href={`${DOCS_SITE_URL}/legal/privacy`} target="_blank" rel="noopener noreferrer">
+                  {t('footer.link.privacy')}
+                </a>
+              </li>
+              <li>
+                <a href={`${DOCS_SITE_URL}/legal/terms`} target="_blank" rel="noopener noreferrer">
+                  {t('footer.link.terms')}
+                </a>
+              </li>
+              <li>
+                <a href={`${DOCS_SITE_URL}/legal/security`} target="_blank" rel="noopener noreferrer">
+                  {t('footer.link.security')}
+                </a>
+              </li>
+              <li>
+                <a href={`${DOCS_SITE_URL}/legal/compliance`} target="_blank" rel="noopener noreferrer">
+                  {t('footer.link.compliance')}
+                </a>
+              </li>
             </ul>
           </div>
         </div>
@@ -65,4 +102,3 @@ const Footer = () => {
 };
 
 export default Footer;
-

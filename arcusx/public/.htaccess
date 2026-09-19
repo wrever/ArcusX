@@ -1,7 +1,14 @@
 # ArcusX — hosting estático (dist/) + API en Supabase Edge
-# No requiere PHP ni reglas /api/
+# Mismo public_html para arcusx.pro, empresas.* y docs.*
+# docs.* monta el frontend React de documentación (hostname), igual que empresas.*
+#
+# Sin estas reglas, URLs directas tipo /developers dan 404 en LiteSpeed
+# (navegar desde / con React Router sí funciona).
 
 DirectoryIndex index.html
+
+# LiteSpeed / Apache: si rewrite falla, no devolver 404 HTML del servidor
+ErrorDocument 404 /index.html
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
@@ -15,8 +22,11 @@ DirectoryIndex index.html
   RewriteCond %{REQUEST_URI} \.(css|js|mjs|map|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|webp|json|xml|txt|webmanifest)$ [NC]
   RewriteRule . - [L]
 
-  # SPA: todo lo demás → index.html
-  RewriteCond %{REQUEST_FILENAME} !-f
-  RewriteCond %{REQUEST_FILENAME} !-d
-  RewriteRule . /index.html [L]
+  # Ya existe como archivo o carpeta → servir tal cual
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # SPA: cualquier otra ruta → index.html (React Router)
+  RewriteRule ^ index.html [L]
 </IfModule>

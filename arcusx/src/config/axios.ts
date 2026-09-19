@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { supabaseAnonKey } from './supabase';
 import { useSupabaseApi } from './arcusxApi';
+import { getActiveStellarNetwork } from './stellarDual';
 
 const axiosInstance = axios.create({
   baseURL: useSupabaseApi && import.meta.env.VITE_SUPABASE_URL
@@ -25,6 +26,7 @@ axiosInstance.interceptors.request.use(
     if (supabaseAnonKey && !config.headers.apikey) {
       config.headers.apikey = supabaseAnonKey;
     }
+    config.headers['x-arcusx-network'] = getActiveStellarNetwork();
     return config;
   },
   (error) => {

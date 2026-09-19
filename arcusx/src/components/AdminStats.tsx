@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { FaChartLine, FaCoins, FaUsers, FaUserPlus, FaExclamationTriangle, FaCheckCircle, FaWallet, FaGavel, FaCog, FaShieldAlt, FaLink, FaSpinner } from 'react-icons/fa';
-import { PLATFORM_WALLET, ADMIN_WALLET, TRUSTLESS_WORK_BASE_URL } from '../config/trustlessWork';
+import { platformWallet, adminWallet } from '../config/trustlessWork';
+import { getActiveStellarNetwork, trustlessWorkBaseUrl } from '../config/stellarDual';
+import { stellarExpertAccountUrl } from '../utils/stellarNetwork';
 import { useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks';
 import { getAdminTasks } from '../services/adminService';
 import '../css/AdminStats.css';
@@ -279,7 +281,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
       description: stats?.treasury 
         ? `Recibe ${formatCurrency(stats?.totalFees || 0)} en comisiones`
         : 'Dirección del treasury (no configurado)',
-      link: stats?.treasury ? `https://stellar.expert/explorer/testnet/account/${stats.treasury}` : null
+      link: stats?.treasury ? stellarExpertAccountUrl(stats.treasury) : null
     },
     {
       title: 'Arbitrador',
@@ -525,8 +527,8 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
             <span>Red Stellar</span>
           </div>
           <div className="status-item">
-            <FaCheckCircle className={`status-icon ${TRUSTLESS_WORK_BASE_URL ? 'success' : 'warning'}`} />
-            <span>Servicio de escrow {TRUSTLESS_WORK_BASE_URL ? 'conectado' : 'no configurado'}</span>
+            <FaCheckCircle className={`status-icon ${trustlessWorkBaseUrl() ? 'success' : 'warning'}`} />
+            <span>Servicio de escrow {trustlessWorkBaseUrl() ? 'conectado' : 'no configurado'}</span>
           </div>
         </div>
       </div>
@@ -543,7 +545,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
               <h4>Comisiones Totales</h4>
               <p className="revenue-value">{formatCurrency(stats?.totalFees || 0)}</p>
               <p className="revenue-description">
-                {stats?.platformFee ? `${stats.platformFee}%` : '2.7%'} del volumen total
+                {stats?.platformFee ? `${stats.platformFee}%` : '1.7%'} del volumen total
               </p>
               {(stats?.feesThisWeek || stats?.feesThisMonth) && (
                 <div className="revenue-trend">
@@ -566,7 +568,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
               {stats?.treasury ? (
                 <>
                   <a 
-                    href={`https://stellar.expert/explorer/testnet/account/${stats.treasury}`}
+                    href={stellarExpertAccountUrl(stats.treasury)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="revenue-value-link"
@@ -603,7 +605,11 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
             </div>
             <div className="config-content">
               <h4>Entorno</h4>
-              <p className="config-value">{TRUSTLESS_WORK_BASE_URL === 'https://api.trustlesswork.com' ? 'Mainnet' : 'Development'}</p>
+              <p className="config-value">
+                {getActiveStellarNetwork() === 'mainnet' ? 'Mainnet' : 'Testnet (development)'}
+                {' · '}
+                {trustlessWorkBaseUrl()}
+              </p>
               <p className="config-description">Entorno del API de escrow</p>
             </div>
           </div>
@@ -613,7 +619,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
             </div>
             <div className="config-content">
               <h4>Platform Wallet</h4>
-              <p className="config-value">{PLATFORM_WALLET ? formatAddress(PLATFORM_WALLET) : 'No configurado'}</p>
+              <p className="config-value">{platformWallet() ? formatAddress(platformWallet()) : 'No configurado'}</p>
               <p className="config-description">Wallet de la plataforma</p>
             </div>
           </div>
@@ -623,7 +629,7 @@ const AdminStats: React.FC<AdminStatsProps> = ({ stats, onRefresh, loading, onNa
             </div>
             <div className="config-content">
               <h4>Admin Wallet</h4>
-              <p className="config-value">{ADMIN_WALLET ? formatAddress(ADMIN_WALLET) : 'No configurado'}</p>
+              <p className="config-value">{adminWallet() ? formatAddress(adminWallet()) : 'No configurado'}</p>
               <p className="config-description">Wallet del administrador (dispute resolver)</p>
             </div>
           </div>

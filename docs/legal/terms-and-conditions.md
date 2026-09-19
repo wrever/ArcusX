@@ -88,7 +88,7 @@ Tasks use blockchain-based escrow smart contracts:
 - Payments are processed through Stellar blockchain
 - Transactions are permanent and irreversible
 - Processing time is typically 3-5 seconds
-- Platform commission (0.5%) is automatically deducted
+- Platform fee (2% on escrow) is deducted from the worker payout on release
 - Currency used is USDC on Stellar
 
 ### Refunds and Cancellations
@@ -164,9 +164,9 @@ We strive for continuous availability but:
 
 Platform depends on:
 - Stellar network availability
-- Trustless Work service availability
 - Wallet provider functionality
 - Network connectivity
+- Upstream settlement infrastructure operated by ArcusX
 
 We are not responsible for third-party service failures.
 
@@ -174,10 +174,10 @@ We are not responsible for third-party service failures.
 
 ### Platform Commission
 
-- Commission rate: 0.5% per transaction
-- Commission is automatically deducted
+- Commission rate: **2%** platform fee on escrow (worker-side; see Fee model)
+- Fee is applied in the escrow funding / release flow
 - Rate may change with notice
-- Commission applies to all payments
+- Applies to escrow settlements on the platform
 
 ### Network Fees
 

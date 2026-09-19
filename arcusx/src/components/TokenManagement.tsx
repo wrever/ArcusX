@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaPlus, FaTrash, FaCheck, FaTimes, FaShieldAlt } from 'react-icons/fa';
 import { useI18n } from '../i18n/I18nProvider';
+import { getUsdcIssuer } from '../config/usdc';
 import '../css/TokenManagement.css';
 
 interface Token {
@@ -42,7 +43,7 @@ const TokenManagement: React.FC<TokenManagementProps> = ({ onUpdate }) => {
       // Por ahora usar datos mock adaptados a Stellar
       const mockTokens: Token[] = [
         {
-          address: 'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5', // USDC Testnet Issuer
+          address: getUsdcIssuer(),
           symbol: 'USDC',
           name: 'USD Coin',
           decimals: 7,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AgreementDeal } from '../services/dealsService';
 import type { DealEscrowHooks } from '../services/dealEscrow';
 import {
@@ -27,26 +27,36 @@ export function useDealEscrowChainState(
   const [loading, setLoading] = useState(false);
   const [escrow, setEscrow] = useState<DealEscrowIndexerRow | null>(null);
 
+  /** SDK TW devuelve función nueva cada render — ref evita loop infinito en useEffect. */
+  const getEscrowRef = useRef(getEscrowByContractIds);
+  getEscrowRef.current = getEscrowByContractIds;
+
+  const contractId = deal?.escrow_contract_id?.trim() ?? '';
+  const fetchGen = useRef(0);
+
   const refresh = useCallback(async () => {
-    const contractId = deal?.escrow_contract_id?.trim();
-    if (!contractId || !getEscrowByContractIds) {
+    if (!contractId || !getEscrowRef.current) {
       setEscrow(null);
       return;
     }
+    const gen = ++fetchGen.current;
     setLoading(true);
     try {
-      const row = await fetchDealEscrowFromIndexer(contractId, getEscrowByContractIds);
+      const row = await fetchDealEscrowFromIndexer(contractId, (params) =>
+        getEscrowRef.current!(params),
+      );
+      if (gen !== fetchGen.current) return;
       setEscrow(row);
     } finally {
-      setLoading(false);
+      if (gen === fetchGen.current) setLoading(false);
     }
-  }, [deal?.escrow_contract_id, getEscrowByContractIds]);
+  }, [contractId]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
-  const contractOnChain = isDealContractOnChain(escrow) || Boolean(deal?.escrow_contract_id);
+  const contractOnChain = isDealContractOnChain(escrow) || Boolean(contractId);
   const funded =
     isDealEscrowFunded(escrow) || ['funded', 'active'].includes(String(deal?.status ?? ''));
   const milestoneApproved = isDealMilestoneApproved(escrow);

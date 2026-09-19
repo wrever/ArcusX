@@ -70,7 +70,8 @@ const Register = () => {
         url="/register"
         locale={lang}
       />
-      <div className={`register-container${enterprise ? ' register-container--enterprise' : ''}`}>
+      {/* Clases estáticas: PurgeCSS no detecta `register-container` dentro de `register-container${...}` */}
+      <div className={enterprise ? 'register-container register-container--enterprise' : 'register-container'}>
         <Link to="/" className="back-button">
           <FaArrowLeft />
           <span>{t('register.back')}</span>

@@ -10,7 +10,7 @@ We are creating a platform that empowers individuals across Latin America and be
 
 ### Fairness
 
-We believe that workers should receive fair compensation for their work, and clients should have access to quality services at competitive rates. Our low commission structure (0.5%) reflects this commitment.
+We believe that workers should receive fair compensation for their work, and clients should have access to quality services at competitive rates. Our 2% fee (worker-side only) keeps posting tasks frictionless for employers.
 
 ### Transparency
 

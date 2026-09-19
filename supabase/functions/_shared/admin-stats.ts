@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { quoteEscrowCommission } from './escrow-fee-quote.ts';
+import { nominalToWorkerNet } from './bilateral-fee.ts';
 import { normalizePlatformFeeRate } from './platform-fee.ts';
 import { countsTowardReleasedVolume } from './released-metrics.ts';
 
@@ -24,9 +25,10 @@ function taskFundAmount(
 ): number {
   if (escrowAmount != null && escrowAmount > 0) return escrowAmount;
   const fee = escrowPlatformFee != null ? normalizePlatformFeeRate(escrowPlatformFee) : defaultFee;
-  if (price > 0 && fee > 0) {
+  const workerNet = nominalToWorkerNet(price);
+  if (workerNet > 0 && fee > 0) {
     try {
-      return quoteEscrowCommission(price, fee).fundAmount;
+      return quoteEscrowCommission(workerNet, fee).fundAmount;
     } catch {
       return price;
     }
@@ -42,9 +44,10 @@ function dealFundAmount(
 ): number {
   if (clientTotal != null && clientTotal > 0) return clientTotal;
   const fee = platformFeeRate != null ? normalizePlatformFeeRate(platformFeeRate) : defaultFee;
-  if (amountUsdc > 0) {
+  const workerNet = nominalToWorkerNet(amountUsdc);
+  if (workerNet > 0) {
     try {
-      return quoteEscrowCommission(amountUsdc, fee).fundAmount;
+      return quoteEscrowCommission(workerNet, fee).fundAmount;
     } catch {
       return amountUsdc;
     }
@@ -107,9 +110,10 @@ export async function loadReleasedVolumeRows(
 
   for (const t of tasks ?? []) {
     if (!countsTowardReleasedVolume(t)) continue;
-    const worker = parseNum(t.price);
+    const nominal = parseNum(t.price);
+    const worker = nominalToWorkerNet(nominal);
     const fund = taskFundAmount(
-      worker,
+      nominal,
       t.escrow_amount != null ? parseNum(t.escrow_amount) : null,
       t.escrow_platform_fee != null ? parseNum(t.escrow_platform_fee) : null,
       defaultFee,
@@ -138,9 +142,10 @@ export async function loadReleasedVolumeRows(
 
   for (const d of deals ?? []) {
     if (!countsTowardReleasedVolume(d)) continue;
-    const worker = parseNum(d.amount_usdc);
+    const nominal = parseNum(d.amount_usdc);
+    const worker = nominalToWorkerNet(nominal);
     const fund = dealFundAmount(
-      worker,
+      nominal,
       d.client_total != null ? parseNum(d.client_total) : null,
       d.platform_fee_rate != null ? parseNum(d.platform_fee_rate) : null,
       defaultFee,

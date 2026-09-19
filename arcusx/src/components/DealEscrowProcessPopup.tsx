@@ -3,8 +3,8 @@ import { FaWallet, FaFileContract, FaCoins, FaCheckCircle, FaSpinner, FaTimes, F
 import { usePlatformFee } from '../hooks/usePlatformFee';
 import { useI18n } from '../i18n/I18nProvider';
 import type { AgreementDeal } from '../services/dealsService';
-import { dealDepositAmount, dealPlatformFeeRate } from '../utils/dealHelpers';
-import { quoteEscrowCommission } from '../utils/escrowFeeQuote';
+import { dealBeneficiaryNet, dealDepositAmount, dealPlatformFeeRate } from '../utils/dealHelpers';
+import { quoteBilateralFromNominal } from '../utils/bilateralFeeModel';
 import EscrowFeeBreakdown from './EscrowFeeBreakdown';
 import '../css/ProposalReview.css';
 
@@ -50,16 +50,13 @@ const DealEscrowProcessPopup: React.FC<DealEscrowProcessPopupProps> = ({
   const { platformFee: livePlatformFee } = usePlatformFee();
   const dealFee = dealPlatformFeeRate(deal);
 
-  const workerAmount = parseFloat(String(deal.amount_usdc)) || 0;
-  const quote = workerAmount > 0 ? quoteEscrowCommission(workerAmount, dealFee) : null;
-  const escrowAmount = quote?.fundAmount ?? dealDepositAmount(deal);
-  const commission = quote?.totalCommission ?? Math.max(0, escrowAmount - workerAmount);
-  const platformCommission = quote?.platformCommission ?? 0;
-  const protocolCommission = quote?.protocolCommission ?? 0;
+  const nominal = parseFloat(String(deal.amount_usdc)) || 0;
+  const bilateral = nominal > 0 ? quoteBilateralFromNominal(nominal, dealFee) : null;
+  const workerAmount = bilateral?.workerNet ?? dealBeneficiaryNet(deal);
+  const escrowAmount = bilateral?.fundAmount ?? dealDepositAmount(deal);
+  const commission = bilateral?.totalCommission ?? 0;
   const formattedWorkerAmount = workerAmount.toFixed(7);
   const formattedCommission = commission.toFixed(7);
-  const formattedPlatformCommission = platformCommission.toFixed(7);
-  const formattedProtocolCommission = protocolCommission.toFixed(7);
   const formattedTotal = escrowAmount.toFixed(7);
 
   const stepDefs = useMemo((): ProcessStep[] => {
@@ -354,15 +351,14 @@ const DealEscrowProcessPopup: React.FC<DealEscrowProcessPopupProps> = ({
             <p className="escrow-breakdown-title">{t('escrow.popup.breakdown')}</p>
             <div className="escrow-breakdown-rows">
               <div className="escrow-breakdown-row">
-                <span>{t('deals.wizard.protected')}</span>
+                <span>{t('deals.wizard.beneficiaryReceives')}</span>
                 <strong>{formattedWorkerAmount} USDC</strong>
               </div>
               <EscrowFeeBreakdown
                 layout="escrow-rows"
                 platformFee={dealFee || livePlatformFee}
                 totalUsdc={formattedCommission}
-                platformUsdc={formattedPlatformCommission}
-                protocolUsdc={formattedProtocolCommission}
+                variant="employer-bilateral"
               />
             </div>
             <div className="escrow-breakdown-total">

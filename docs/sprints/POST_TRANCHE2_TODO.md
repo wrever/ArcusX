@@ -1,7 +1,8 @@
 # Post–Tranche 2 · Todo list (priorizado)
 
-**Última actualización:** 2026-05-28 (badges listados + B2B UI marcados en repo)  
-**Tranche 2 cierre:** [`TRANCHE2_CLOSURE.md`](./TRANCHE2_CLOSURE.md)
+**Última actualización:** 2026-05-28 — **Tranche 2 ✅ cerrado** · foco activo **Tranche 3**  
+**Tranche 2 cierre:** [`TRANCHE2_CLOSURE.md`](./TRANCHE2_CLOSURE.md)  
+**Tranche 3 (activo):** [`TRANCHE3_INFRA_SDK.md`](./TRANCHE3_INFRA_SDK.md)
 
 Leyenda: `P0` urgente · `P1` siguiente sprint · `P2` Q3+ · `OPS` operación manual
 
@@ -12,7 +13,7 @@ Leyenda: `P0` urgente · `P1` siguiente sprint · `P2` Q3+ · `OPS` operación m
 | ID | Pri | Tarea | Owner | Estado |
 |----|-----|-------|-------|--------|
 | T2-01 | P0 | Re-subir `arcusx/dist` (build con EvidenceUpload + Admin Actividad) | Hosting | ☐ |
-| T2-02 | P0 | Ejecutar [`E2E_CHECKLIST.md`](../demo/E2E_CHECKLIST.md) testnet y archivar capturas | Producto | ☐ |
+| T2-02 | P0 | Ejecutar [`E2E_CHECKLIST.md`](../demo/E2E_CHECKLIST.md) testnet y archivar capturas | Producto | ✅ E2E + demo 3 flujos |
 | T2-03 | P1 | Verificar cron cPanel: `arcusx-escrow-reconcile` + `arcusx-email-worker` | Hosting | ☐ |
 | T2-04 | P1 | Captura Network: 0 `*.php` flujo feliz → `instaawards-week4.md` | Producto | ☐ |
 | T2-05 | P1 | Completar filas InstaAwards 1, 4, 5, 11 en `week-04-plan-and-checklist.md` | Ops | ☐ |
@@ -77,6 +78,20 @@ Leyenda: `P0` urgente · `P1` siguiente sprint · `P2` Q3+ · `OPS` operación m
 
 ---
 
+## Q3-H — Infra API + SDK (**Tranche 3 activo — P0**)
+
+| ID | Pri | Tarea | Doc |
+|----|-----|-------|-----|
+| T3-01 | P0 | Migración partners + API keys | [`TRANCHE3_INFRA_SDK.md`](./TRANCHE3_INFRA_SDK.md) |
+| T3-02 | P0 | `partner-api-keys.ts` en Edge | `PARTNER_AUTH.md` |
+| T3-03 | P0 | SDK módulos tasks/deals/escrow | `packages/arcusx-sdk/` |
+| T3-04 | P0 | Quickstart + `smoke-sdk.mjs` | `instaawards-sdk/` |
+| T3-05 | P1 | Piloto 1 startup Chile (embed) | `REVENUE_STACK.md` |
+| T3-06 | P1 | `platform_fee` override por `partner_id` | Edge + BD |
+| T3-07 | P1 | Dogfood: arcusx usa `@arcusx/sdk` | servicios frontend |
+
+---
+
 ## Q3-E — Escrow nativo Soroban (Tranche 3+ / visión)
 
 | ID | Pri | Tarea | Doc |
@@ -112,9 +127,13 @@ Leyenda: `P0` urgente · `P1` siguiente sprint · `P2` Q3+ · `OPS` operación m
 ## Orden sugerido (próximas 2 semanas)
 
 ```
-Semana 1:  T2-01 → T2-02 → T2-03 → T2-04  (cerrar ops Tranche 2)
-Semana 2:  EXT-01 (piloto Deals) o PIPE-02 si duele en soporte
-B2B v1:    solo cuando un cliente pida marca verificada — no anticipar
+Tranche 2: ✅ cerrado (E2E + demo 3 flujos)
+
+Semana 1:  T3-01 → T3-02 → InstaAwards SDK W1 merge
+Semana 2:  T3-03 → T3-04 → T3-05 quickstart
+Paralelo:  T2-01 dist cPanel si UI vieja · T2-03 cron
+Piloto:    T3-05 — 1 startup integradora (fee 2–2.5% GMV)
+Defer:     GR-03 suscripciones hasta primer partner con volumen
 ```
 
 ---

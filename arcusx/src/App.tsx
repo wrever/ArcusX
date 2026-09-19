@@ -1,10 +1,13 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense, type ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { TrustlessWorkConfig } from '@trustless-work/escrow';
-import { TRUSTLESS_WORK_API_KEY, TRUSTLESS_WORK_BASE_URL } from './config/trustlessWork';
+import { trustlessWorkApiKey, trustlessWorkEnv } from './config/trustlessWork';
+import { useStellarNetwork } from './hooks/useStellarNetwork';
+import { PollarAppProvider } from './components/PollarAppProvider';
 import Navbar from './components/Navbar';
 import EmpresasNavbar from './components/EmpresasNavbar';
 import { isEnterpriseLandingHost } from './config/enterpriseSite';
+import { isDocsLandingHost } from './config/docsSite';
 import LanguageFab from './components/LanguageFab';
 import ThemeToggle from './components/ThemeToggle';
 import Hero from './components/Hero';
@@ -24,6 +27,7 @@ import './css/enterprise-professional.css';
 // Code splitting - Lazy load de componentes pesados
 const Dashboard = lazy(() => import('./dashboard'));
 const DashboardKycPage = lazy(() => import('./pages/DashboardKycPage'));
+const DashboardDeveloperPage = lazy(() => import('./pages/DashboardDeveloperPage'));
 const CreateTask = lazy(() => import('./components/CreateTask'));
 const ApplyTask = lazy(() => import('./components/ApplyTask'));
 const ProposalReview = lazy(() => import('./components/ProposalReview'));
@@ -33,6 +37,7 @@ const EditProfile = lazy(() => import('./components/EditProfile'));
 const SwapPage = lazy(() => import('./pages/SwapPage'));
 const TutorialsPage = lazy(() => import('./pages/TutorialsPage'));
 const EmpresasPage = lazy(() => import('./pages/EmpresasPage'));
+const DocsApp = lazy(() => import('./pages/docs/DocsApp'));
 const DealWizardPage = lazy(() => import('./pages/DealWizardPage'));
 const DealPublicPage = lazy(() => import('./pages/DealPublicPage'));
 const DealJoinRedirect = lazy(() => import('./pages/DealJoinRedirect'));
@@ -152,6 +157,7 @@ function AppContent({ isLoading }: { isLoading: boolean }) {
               <Route path="/profile/:userId" element={<UserProfile />} />
               <Route path="/dashboard/settings/profile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
               <Route path="/dashboard/kyc" element={<ProtectedRoute><DashboardKycPage /></ProtectedRoute>} />
+              <Route path="/dashboard/developer" element={<ProtectedRoute><DashboardDeveloperPage /></ProtectedRoute>} />
               <Route path="/swap" element={<><Navbar /><SwapPage /></>} />
               <Route path="/tutoriales" element={<><Navbar /><TutorialsPage /></>} />
               <Route path="/empresas" element={<EmpresasRoute />} />
@@ -168,11 +174,25 @@ function AppContent({ isLoading }: { isLoading: boolean }) {
   );
 }
 
+function TrustlessWorkProvider({ children }: { children: ReactNode }) {
+  const { network } = useStellarNetwork();
+  return (
+    <TrustlessWorkConfig
+      key={network}
+      baseURL={trustlessWorkEnv(network)}
+      apiKey={trustlessWorkApiKey(network)}
+    >
+      {children}
+    </TrustlessWorkConfig>
+  );
+}
+
 function App() {
   const [isLoading, setIsLoading] = useState(() => !isReferralEntryPath());
+  const docsHost = typeof window !== 'undefined' && isDocsLandingHost();
 
   useEffect(() => {
-    if (isReferralEntryPath()) {
+    if (docsHost || isReferralEntryPath()) {
       setIsLoading(false);
       return;
     }
@@ -181,14 +201,26 @@ function App() {
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [docsHost]);
+
+  if (docsHost) {
+    return (
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <Suspense fallback={<Preloader />}>
+          <DocsApp />
+        </Suspense>
+      </Router>
+    );
+  }
 
   return (
-    <TrustlessWorkConfig baseURL={TRUSTLESS_WORK_BASE_URL} apiKey={TRUSTLESS_WORK_API_KEY}>
-    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <AppContent isLoading={isLoading} />
-      </Router>
-    </TrustlessWorkConfig>
+    <TrustlessWorkProvider>
+      <PollarAppProvider>
+        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <AppContent isLoading={isLoading} />
+        </Router>
+      </PollarAppProvider>
+    </TrustlessWorkProvider>
   );
 }
 

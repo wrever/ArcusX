@@ -10,7 +10,7 @@ import { DEAL_TEMPLATES, getDealTemplate, type DealTemplateId } from '../constan
 import { createDeal, getDealByToken } from '../services/dealsService';
 import DealShareLink from '../components/DealShareLink';
 import '../css/DealsPages.css';
-import { quoteEscrowCommission } from '../utils/escrowFeeQuote';
+import { quoteBilateralFromNominal } from '../utils/bilateralFeeModel';
 import EscrowFeeBreakdown from '../components/EscrowFeeBreakdown';
 
 const STEPS = ['template', 'info', 'payment', 'review'] as const;
@@ -51,12 +51,11 @@ const DealWizardPage = () => {
     });
   }, [refreshPayoutWallet]);
 
-  const netAmount = parseFloat(amount) || 0;
-  const dealQuote = netAmount > 0 ? quoteEscrowCommission(netAmount, platformFee) : null;
-  const clientTotal = dealQuote?.fundAmount ?? 0;
-  const feeAmount = dealQuote?.totalCommission ?? 0;
-  const platformFeeAmount = dealQuote?.platformCommission ?? 0;
-  const protocolFeeAmount = dealQuote?.protocolCommission ?? 0;
+  const nominal = parseFloat(amount) || 0;
+  const bilateral = nominal > 0 ? quoteBilateralFromNominal(nominal, platformFee) : null;
+  const beneficiaryNet = bilateral?.workerNet ?? 0;
+  const clientTotal = bilateral?.clientTotal ?? 0;
+  const feeAmount = bilateral?.totalCommission ?? 0;
 
   const handleCreate = async () => {
     setError('');
@@ -238,6 +237,7 @@ const DealWizardPage = () => {
 
         {step === 2 && (
           <>
+            <p className="deals-disclaimer deals-amount-hint">{t('deals.wizard.amountHint')}</p>
             <label htmlFor="deal-amount">{t('deals.wizard.amountLabel')}</label>
             <input
               id="deal-amount"
@@ -248,6 +248,11 @@ const DealWizardPage = () => {
               onChange={(e) => setAmount(e.target.value)}
               placeholder={t(tpl.amountPlaceholderKey)}
             />
+            {nominal > 0 && iReceivePayment && (
+              <p className="deals-net-preview">
+                {t('deals.wizard.beneficiaryNetSelf').replace('{{amount}}', beneficiaryNet.toFixed(2))}
+              </p>
+            )}
             <label className="deals-checkbox-label">
               <input
                 type="checkbox"
@@ -265,14 +270,17 @@ const DealWizardPage = () => {
             )}
             <div className="deals-actions">
               <button type="button" className="deals-btn secondary" onClick={() => setStep(1)}>{t('deals.wizard.back')}</button>
-              <button type="button" className="deals-btn primary" onClick={() => setStep(3)} disabled={!isConnected || netAmount <= 0}>{t('deals.wizard.next')}</button>
+              <button type="button" className="deals-btn primary" onClick={() => setStep(3)} disabled={!isConnected || nominal <= 0}>{t('deals.wizard.next')}</button>
             </div>
           </>
         )}
 
         {step === 3 && (
           <>
-            <div className="deals-summary-row"><span>{t('deals.wizard.protected')}</span><strong>{netAmount.toFixed(2)} USDC</strong></div>
+            <div className="deals-summary-row"><span>{t('deals.wizard.dealValue')}</span><strong>{nominal.toFixed(2)} USDC</strong></div>
+            {iReceivePayment && (
+              <div className="deals-summary-row"><span>{t('deals.wizard.beneficiaryReceives')}</span><strong>{beneficiaryNet.toFixed(2)} USDC</strong></div>
+            )}
             <div className="deals-summary-row deals-summary-fee">
               <span>{t('deals.wizard.fee')}</span>
               <div>
@@ -282,8 +290,7 @@ const DealWizardPage = () => {
                   <EscrowFeeBreakdown
                     platformFee={platformFee}
                     totalUsdc={feeAmount.toFixed(2)}
-                    platformUsdc={platformFeeAmount.toFixed(2)}
-                    protocolUsdc={protocolFeeAmount.toFixed(2)}
+                    variant="employer-bilateral"
                   />
                 )}
               </div>

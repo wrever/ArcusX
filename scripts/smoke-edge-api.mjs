@@ -54,7 +54,7 @@ async function run() {
   let r = await get('get_platform_fee');
   tests.push({
     name: 'get_platform_fee',
-    pass: r.ok && r.body.success && r.body.platform_fee === 0.03,
+    pass: r.ok && r.body.success && (r.body.platform_fee === 0.017 || r.body.platform_fee === 0.02),
     detail: r.body.platform_fee,
   });
 

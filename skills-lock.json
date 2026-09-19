@@ -5,6 +5,12 @@
       "source": "vercel-labs/skills",
       "sourceType": "github",
       "computedHash": "9e1c8b3103f92fa8092568a44fe64858de7c5c9dc65ce4bea8f168080e889cfd"
+    },
+    "trustless-work-dev": {
+      "source": "trustless-work/trustless-work-dev-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "b53e05e2fc866df8e7cab4eec319d62a08c960c226b41c427fc81e24afdd0589"
     }
   }
 }

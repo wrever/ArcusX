@@ -5,6 +5,7 @@ import {
 import { completeDeal, finalizeDealEscrow, prepareDealEscrow } from './dealsService';
 import type { AgreementDeal } from './dealsService';
 import { dealDepositAmount, dealPlatformFeeRate } from '../utils/dealHelpers';
+import { workerNetFromNominal } from '../utils/bilateralFeeModel';
 import { fetchDealEscrowFromIndexer, validateCommerceEscrowRoles } from '../utils/dealEscrowVerification';
 import { devError, devLog } from '../utils/logger';
 
@@ -71,8 +72,9 @@ export function assertDealReadyForEscrowDeploy(deal: AgreementDeal): string | nu
 }
 
 function buildEscrowAmounts(deal: AgreementDeal) {
-  const workerAmount = parseFloat(String(deal.amount_usdc));
-  if (!Number.isFinite(workerAmount) || workerAmount <= 0) {
+  const nominal = parseFloat(String(deal.amount_usdc));
+  const workerAmount = workerNetFromNominal(deal.amount_usdc);
+  if (!Number.isFinite(nominal) || nominal <= 0 || !Number.isFinite(workerAmount) || workerAmount <= 0) {
     return { error: 'Monto inválido' as const };
   }
   const platformFee = dealPlatformFeeRate(deal);
@@ -122,6 +124,7 @@ export async function deployDealEscrow(params: {
     hooks.kit,
     hooks.deployEscrow as Parameters<typeof createTrustlessEscrow>[2],
     hooks.sendTransaction as Parameters<typeof createTrustlessEscrow>[3],
+    hooks.getEscrowByContractIds as Parameters<typeof createTrustlessEscrow>[4],
   );
 
   if (!createResult.success || !createResult.contractId) {
@@ -200,26 +203,19 @@ export async function fundDealEscrow(params: {
   let fundResult:
     | { success: boolean; txHash?: string; error?: string }
     | undefined;
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      fundResult = await fundTrustlessEscrow(
-        contractId,
-        built.amount,
-        funderAddress,
-        hooks.kit,
-        hooks.fundEscrow as Parameters<typeof fundTrustlessEscrow>[4],
-        hooks.sendTransaction as Parameters<typeof fundTrustlessEscrow>[5],
-        hooks.getEscrowByContractIds as Parameters<typeof fundTrustlessEscrow>[6],
-      );
-      if (fundResult.success) break;
-      if (attempt < 3) {
-        await new Promise((r) => setTimeout(r, attempt === 1 ? 30000 : 60000));
-      }
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      fundResult = { success: false, error: msg };
-      if (attempt < 3) await new Promise((r) => setTimeout(r, 30000));
-    }
+  try {
+    fundResult = await fundTrustlessEscrow(
+      contractId,
+      built.amount,
+      funderAddress,
+      hooks.kit,
+      hooks.fundEscrow as Parameters<typeof fundTrustlessEscrow>[4],
+      hooks.sendTransaction as Parameters<typeof fundTrustlessEscrow>[5],
+      hooks.getEscrowByContractIds as Parameters<typeof fundTrustlessEscrow>[6],
+    );
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    fundResult = { success: false, error: msg };
   }
 
   if (!fundResult?.success) {
@@ -309,6 +305,7 @@ export async function createAndFundDealEscrow(params: {
     hooks.kit,
     hooks.deployEscrow as Parameters<typeof createTrustlessEscrow>[2],
     hooks.sendTransaction as Parameters<typeof createTrustlessEscrow>[3],
+    hooks.getEscrowByContractIds as Parameters<typeof createTrustlessEscrow>[4],
   );
 
   if (!createResult.success || !createResult.contractId) {
@@ -338,26 +335,19 @@ export async function createAndFundDealEscrow(params: {
   let fundResult:
     | { success: boolean; txHash?: string; error?: string }
     | undefined;
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      fundResult = await fundTrustlessEscrow(
-        contractId,
-        built.amount,
-        funderAddress,
-        hooks.kit,
-        hooks.fundEscrow as Parameters<typeof fundTrustlessEscrow>[4],
-        hooks.sendTransaction as Parameters<typeof fundTrustlessEscrow>[5],
-        hooks.getEscrowByContractIds as Parameters<typeof fundTrustlessEscrow>[6],
-      );
-      if (fundResult.success) break;
-      if (attempt < 3) {
-        await new Promise((r) => setTimeout(r, attempt === 1 ? 30000 : 60000));
-      }
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      fundResult = { success: false, error: msg };
-      if (attempt < 3) await new Promise((r) => setTimeout(r, 30000));
-    }
+  try {
+    fundResult = await fundTrustlessEscrow(
+      contractId,
+      built.amount,
+      funderAddress,
+      hooks.kit,
+      hooks.fundEscrow as Parameters<typeof fundTrustlessEscrow>[4],
+      hooks.sendTransaction as Parameters<typeof fundTrustlessEscrow>[5],
+      hooks.getEscrowByContractIds as Parameters<typeof fundTrustlessEscrow>[6],
+    );
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    fundResult = { success: false, error: msg };
   }
 
   if (!fundResult?.success) {

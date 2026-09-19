@@ -1,0 +1,119 @@
+.pollar-connect-overlay {
+  z-index: 10050;
+}
+
+.pollar-connect-content {
+  max-width: 440px;
+}
+
+.pollar-connect-options {
+  margin-top: 8px;
+}
+
+.pollar-connect-error {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.12);
+  color: #fecaca;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+:root[data-theme="light"] .pollar-connect-error {
+  color: #991b1b;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.pollar-connect-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.pollar-connect-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary, #94a3b8);
+}
+
+.pollar-connect-input {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 12px;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  background: var(--bg-secondary, #111);
+  color: var(--text-primary, #fff);
+  padding: 12px 14px;
+  font-size: 1rem;
+}
+
+.pollar-connect-input:focus {
+  outline: 2px solid rgba(16, 221, 136, 0.45);
+  border-color: rgba(16, 221, 136, 0.6);
+}
+
+.pollar-connect-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.pollar-connect-primary,
+.pollar-connect-secondary {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.pollar-connect-primary {
+  background: #10dd88;
+  color: #04140c;
+}
+
+.pollar-connect-primary:disabled,
+.pollar-connect-secondary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.pollar-connect-secondary {
+  background: transparent;
+  border-color: var(--border-color, rgba(255, 255, 255, 0.16));
+  color: var(--text-primary, #fff);
+}
+
+.pollar-connect-working {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 18px 0 8px;
+  color: var(--text-secondary, #94a3b8);
+  font-weight: 600;
+}
+
+.pollar-connect-hint {
+  margin: 0 0 4px;
+  color: var(--text-secondary, #94a3b8);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  word-break: break-all;
+}
+
+.pollar-connect-footnote {
+  margin: 18px 0 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--text-muted, #64748b);
+}

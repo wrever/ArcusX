@@ -6,15 +6,20 @@ import {
   xBullModule
 } from '@creit.tech/stellar-wallets-kit';
 import { Networks } from '@stellar/stellar-sdk';
+import { getActiveStellarNetwork } from '../config/stellarDual';
+import { POLLAR_WALLET_ID, isPollarEnabled } from '../config/pollar';
+import {
+  disconnectPollarSession,
+  isPollarWalletId,
+  signWithPollar,
+} from '../services/pollarWallet';
 
 const walletNetwork = (): WalletNetwork => {
-  const net = import.meta.env.VITE_STELLAR_NETWORK?.trim().toLowerCase();
-  return net === 'mainnet' ? WalletNetwork.PUBLIC : WalletNetwork.TESTNET;
+  return getActiveStellarNetwork() === 'mainnet' ? WalletNetwork.PUBLIC : WalletNetwork.TESTNET;
 };
 
 const networkPassphrase = (): string => {
-  const net = import.meta.env.VITE_STELLAR_NETWORK?.trim().toLowerCase();
-  return net === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
+  return getActiveStellarNetwork() === 'mainnet' ? Networks.PUBLIC : Networks.TESTNET;
 };
 
 interface WalletState {
@@ -25,6 +30,15 @@ interface WalletState {
   loading: boolean;
   error: string | null;
   walletType: 'stellar' | null;
+}
+
+function persistWallet(address: string, walletId: string) {
+  localStorage.setItem('stellar_wallet', JSON.stringify({
+    address,
+    walletId,
+    connected: true,
+    walletType: 'stellar',
+  }));
 }
 
 export const useWallet = () => {
@@ -39,16 +53,37 @@ export const useWallet = () => {
   });
 
   const [kit, setKit] = useState<StellarWalletsKit | null>(null);
+  const [networkEpoch, setNetworkEpoch] = useState(0);
+
+  useEffect(() => {
+    const onNetworkChange = () => {
+      localStorage.removeItem('stellar_wallet');
+      void disconnectPollarSession();
+      setWalletState({
+        isConnected: false,
+        address: null,
+        walletId: null,
+        balance: null,
+        loading: false,
+        error: null,
+        walletType: null,
+      });
+      setNetworkEpoch((n) => n + 1);
+    };
+    window.addEventListener('arcusx:network-changed', onNetworkChange);
+    return () => window.removeEventListener('arcusx:network-changed', onNetworkChange);
+  }, []);
 
   useEffect(() => {
     const initializeKit = async () => {
       try {
         const saved = localStorage.getItem('stellar_wallet');
         const savedWalletId = saved ? (JSON.parse(saved).walletId ?? 'freighter') : 'freighter';
+        const kitSelectedId = isPollarWalletId(savedWalletId) ? 'freighter' : savedWalletId;
 
         const stellarKit = new StellarWalletsKit({
           network: walletNetwork(),
-          selectedWalletId: savedWalletId,
+          selectedWalletId: kitSelectedId,
           modules: [
             new FreighterModule(),
             new xBullModule()
@@ -64,10 +99,18 @@ export const useWallet = () => {
     };
 
     initializeKit();
-  }, []);
+  }, [networkEpoch]);
 
 
   const connectWalletById = async (walletId: string) => {
+    if (isPollarWalletId(walletId)) {
+      setWalletState(prev => ({
+        ...prev,
+        error: 'Elegí Pollar (Stellar) en el popup de wallets.',
+      }));
+      return;
+    }
+
     if (!kit) {
       setWalletState(prev => ({ ...prev, error: 'Kit de wallets no inicializado' }));
       return;
@@ -92,12 +135,7 @@ export const useWallet = () => {
         error: null
       }));
 
-      localStorage.setItem('stellar_wallet', JSON.stringify({
-        address,
-        walletId,
-        connected: true,
-        walletType: 'stellar'
-      }));
+      persistWallet(address, walletId);
 
       if (!wasAlreadyConnected) {
         window.location.reload();
@@ -111,6 +149,27 @@ export const useWallet = () => {
     }
   };
 
+  const completePollarConnect = (address: string) => {
+    const savedWallet = localStorage.getItem('stellar_wallet');
+    const wasAlreadyConnected = Boolean(savedWallet && JSON.parse(savedWallet).connected);
+
+    setWalletState({
+      isConnected: true,
+      address,
+      walletId: POLLAR_WALLET_ID,
+      walletType: 'stellar',
+      loading: false,
+      error: null,
+      balance: null,
+    });
+
+    persistWallet(address, POLLAR_WALLET_ID);
+
+    if (!wasAlreadyConnected) {
+      window.location.reload();
+    }
+  };
+
   const connectFreighter = () => connectWalletById('freighter');
   const connectXBull = () => connectWalletById('xbull');
 
@@ -121,6 +180,10 @@ export const useWallet = () => {
   };
 
   const disconnectWallet = () => {
+    if (isPollarWalletId(walletState.walletId)) {
+      void disconnectPollarSession();
+    }
+
     setWalletState({
       isConnected: false,
       address: null,
@@ -131,12 +194,19 @@ export const useWallet = () => {
       walletType: null
     });
 
-    // Limpiar localStorage
     localStorage.removeItem('stellar_wallet');
   };
 
   const signTransaction = async (transactionXdr: string) => {
-    if (!kit || !walletState.isConnected) {
+    if (!walletState.isConnected || !walletState.address) {
+      throw new Error('Wallet no conectada');
+    }
+
+    if (isPollarWalletId(walletState.walletId)) {
+      return signWithPollar(transactionXdr, walletState.address);
+    }
+
+    if (!kit) {
       throw new Error('Wallet no conectada');
     }
 
@@ -145,11 +215,8 @@ export const useWallet = () => {
     }
 
     try {
-      // Networks.TESTNET es la cadena "Test SDF Network ; September 2015"
-      // WalletNetwork.TESTNET es un enum/objeto de @creit.tech/stellar-wallets-kit
-      // kit.signTransaction necesita la frase de contraseña como cadena
       const { signedTxXdr } = await kit.signTransaction(transactionXdr, {
-        address: walletState.address!,
+        address: walletState.address,
         networkPassphrase: networkPassphrase()
       });
       return signedTxXdr;
@@ -158,9 +225,7 @@ export const useWallet = () => {
     }
   };
 
-  // Verificar si hay una wallet conectada al cargar
   useEffect(() => {
-    // Verificar wallet Stellar
     const savedStellarWallet = localStorage.getItem('stellar_wallet');
     if (savedStellarWallet) {
       try {
@@ -187,8 +252,11 @@ export const useWallet = () => {
     connectWallet,
     connectFreighter,
     connectXBull,
+    completePollarConnect,
     disconnectWallet,
     signTransaction,
-    kit
+    kit,
+    pollarAvailable: isPollarEnabled(),
+    isPollar: isPollarWalletId(walletState.walletId),
   };
 };

@@ -9,4 +9,7 @@ interface ImportMetaEnv {
   readonly VITE_MAIN_SITE_URL?: string;
   /** Forzar modo landing B2B en raíz: "true" | "false" (si omitido, hostname empresas.* ) */
   readonly VITE_ENTERPRISE_LANDING_HOST?: string;
+  readonly VITE_POLLAR_PUBLISHABLE_KEY?: string;
+  readonly VITE_POLLAR_PUBLISHABLE_KEY_TESTNET?: string;
+  readonly VITE_POLLAR_PUBLISHABLE_KEY_MAINNET?: string;
 }

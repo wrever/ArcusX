@@ -829,7 +829,7 @@ export async function adminReleaseDisputeFunds(ctx: AdminCtx): Promise<Response>
     payload: { task_id: dispute?.task_id },
   });
 
-  return jsonSuccess(ctx.req, { message: 'Fondos marcados para liberación (Trustless Work en cliente)' });
+  return jsonSuccess(ctx.req, { message: 'Fondos marcados para liberación (confirmar on-chain en cliente)' });
 }
 
 export async function adminListKycRequests(ctx: AdminCtx): Promise<Response> {

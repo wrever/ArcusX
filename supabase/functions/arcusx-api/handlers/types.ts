@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ArcusxJwtPayload } from '../../_shared/arcusx-jwt.ts';
+import type { StellarNetworkId } from '../../_shared/stellar-network.ts';
 
 export type ApiContext = {
   req: Request;
@@ -9,6 +10,9 @@ export type ApiContext = {
   supabaseUserId?: string;
   jwt?: ArcusxJwtPayload;
   body: Record<string, unknown>;
+  partnerId?: string | null;
+  partnerSandbox?: boolean;
+  stellarNetwork: StellarNetworkId;
 };
 
 export type ApiHandler = (ctx: ApiContext) => Promise<Response>;

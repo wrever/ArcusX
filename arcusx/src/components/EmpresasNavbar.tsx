@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useI18n } from "../i18n/I18nProvider";
 import { useTheme } from "../contexts/ThemeContext";
 import { MAIN_SITE_URL } from "../config/enterpriseSite";
+import { DOCS_SITE_URL } from "../config/docsSite";
 import logoDark from "../images/arcus-logo.png";
 import logoLight from "../images/arcusxlogoclaro.png";
 import "../css/EmpresasNavbar.css";
@@ -69,7 +70,7 @@ export default function EmpresasNavbar() {
 
         <div id="empresas-nav-panel" className="empresas-navbar__links">
           <a
-            href="https://docs.arcusx.pro"
+            href={DOCS_SITE_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="empresas-navbar__link"

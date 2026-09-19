@@ -4,6 +4,7 @@ import { FaWallet, FaFileContract, FaCoins, FaCheckCircle, FaSpinner, FaTimes, F
 import { usePlatformFee } from '../hooks/usePlatformFee';
 import { useI18n } from '../i18n/I18nProvider';
 import { quoteEscrowCommission } from '../utils/escrowFeeQuote';
+import { quoteBilateralFromNominal } from '../utils/bilateralFeeModel';
 import EscrowFeeBreakdown from './EscrowFeeBreakdown';
 import '../css/ProposalReview.css';
 
@@ -56,18 +57,14 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
   // Obtener platform fee para calcular el total con comisión
   const { platformFee } = usePlatformFee();
   
-  const workerAmount = parseFloat(taskPrice) || 0;
+  const nominal = parseFloat(taskPrice) || 0;
+  const bilateral = nominal > 0 ? quoteBilateralFromNominal(nominal, platformFee) : null;
+  const workerAmount = bilateral?.workerNet ?? 0;
   const quote = workerAmount > 0 ? quoteEscrowCommission(workerAmount, platformFee) : null;
-  const escrowAmount = quote?.fundAmount ?? 0;
-  const commission = quote?.totalCommission ?? 0;
-  const platformCommission = quote?.platformCommission ?? 0;
-  const protocolCommission = quote?.protocolCommission ?? 0;
-  
-  // Formatear montos con 7 decimales (USDC)
+  const escrowAmount = quote?.fundAmount ?? bilateral?.clientTotal ?? 0;
+  const commission = bilateral?.totalCommission ?? quote?.totalCommission ?? 0;
   const formattedWorkerAmount = workerAmount.toFixed(7);
   const formattedCommission = commission.toFixed(7);
-  const formattedPlatformCommission = platformCommission.toFixed(7);
-  const formattedProtocolCommission = protocolCommission.toFixed(7);
   const formattedTotal = escrowAmount.toFixed(7);
   
   const [currentStep, setCurrentStep] = useState(0);
@@ -427,15 +424,14 @@ const EscrowProcessPopup: React.FC<EscrowProcessPopupProps> = ({
             <p className="escrow-breakdown-title">{t('escrow.popup.breakdown')}</p>
             <div className="escrow-breakdown-rows">
               <div className="escrow-breakdown-row">
-                <span>{t('escrow.popup.workerPayment')}</span>
+                <span>{t('deals.wizard.beneficiaryReceives')}</span>
                 <strong>{formattedWorkerAmount} USDC</strong>
               </div>
               <EscrowFeeBreakdown
                 layout="escrow-rows"
                 platformFee={platformFee}
                 totalUsdc={formattedCommission}
-                platformUsdc={formattedPlatformCommission}
-                protocolUsdc={formattedProtocolCommission}
+                variant="employer-bilateral"
               />
             </div>
             <div className="escrow-breakdown-total">

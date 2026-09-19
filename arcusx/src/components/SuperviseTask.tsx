@@ -66,6 +66,8 @@ import {
 import { taskHasExchangeFiles } from '../utils/taskExchangeFiles';
 import { isStellarTxHash } from '../utils/stellarNetwork';
 import { quoteEscrowFundAmount } from '../utils/escrowFeeQuote';
+import { workerNetFromTaskPrice, formatWorkerNetDisplay } from '../utils/bilateralFeeModel';
+import { resolveSuperviseWorkerUserId } from '../utils/superviseWorkerId';
 import '../css/ConfirmDialog.css';
 
 function parseTaskDetailsPayload(raw: Record<string, unknown>): Record<string, unknown> {
@@ -109,6 +111,8 @@ interface TaskDetails {
     escrow_amount?: number | string; // Monto del escrow
     escrow_platform_fee?: number | string; // Fee decimal (0.03) al crear el escrow
     accepted_applicant_id?: string; // ID del trabajador asignado
+    is_private_invite?: boolean;
+    invited_user_id?: string | number | null;
     worker_started_at?: string | null; // Edge mark_work_started
     worker_wallet_address?: string; // Wallet del trabajador desde la aplicación
     worker_username?: string; // Username del trabajador
@@ -502,7 +506,12 @@ const SuperviseTask = () => {
                     return;
                 }
 
-                const workerIdToFetch = taskRow?.accepted_applicant_id || acceptedApplicantId;
+                const workerIdToFetch = resolveSuperviseWorkerUserId({
+                    taskOwnerUserId: taskRow.user_id,
+                    acceptedApplicantId: taskRow.accepted_applicant_id,
+                    invitedUserId: taskRow.invited_user_id,
+                    urlApplicantId: acceptedApplicantId,
+                });
                 
                 if (!workerIdToFetch) {
                     setError(t('supervise.error.missingIds'));
@@ -697,7 +706,7 @@ const SuperviseTask = () => {
             !showClientPaymentPopup &&
             !paymentSuccessData
         ) {
-                const workerAmount = parseFloat(task.price);
+                const workerAmount = workerNetFromTaskPrice(task.price);
             const fee =
                 task.escrow_platform_fee != null
                     ? Number(task.escrow_platform_fee)
@@ -1246,7 +1255,7 @@ const SuperviseTask = () => {
                 scheduled_deletion_at: scheduledDeletionAt,
             } : null);
             if (releaseTxHash && task) {
-                const workerAmount = parseFloat(task.price);
+                const workerAmount = workerNetFromTaskPrice(task.price);
                 const fee =
                     task.escrow_platform_fee != null
                         ? Number(task.escrow_platform_fee)
@@ -1596,7 +1605,9 @@ const SuperviseTask = () => {
                 return;
             }
 
-            const isWorkerUser = String(currentUser?.id) === String(worker?.id);
+            const isWorkerUser =
+              String(currentUser?.id) !== String(task?.user_id) &&
+              String(currentUser?.id) === String(worker?.id);
             if (!isWorkerUser) {
                 throw new Error(t('supervise.error.clientUseReleaseFlow'));
             }
@@ -1854,9 +1865,17 @@ const SuperviseTask = () => {
     }
     if (!task || !worker || !currentUser) return <div className="supervise-task-container"><p>{t('supervise.no.task.details')}</p></div>;
 
-    // Determinar si el usuario actual es el cliente o el trabajador
+    // Roles mutuamente excluyentes: el creador nunca es el trabajador en la UI
     const isClient = String(currentUser?.id) === String(task?.user_id);
-    const isWorker = String(currentUser?.id) === String(worker?.id);
+    const assignedWorkerId =
+      task.accepted_applicant_id ??
+      task.invited_user_id ??
+      worker?.id ??
+      null;
+    const isWorker =
+      !isClient &&
+      assignedWorkerId != null &&
+      String(currentUser?.id) === String(assignedWorkerId);
 
     // Lógica para mostrar los nombres según el rol. Ahora es seguro acceder a task y worker.
     const chatPartnerName = isClient ? worker.username : task.creator_username;
@@ -1985,7 +2004,11 @@ const SuperviseTask = () => {
             <div className="task-details-section">
                 <h2>{t('supervise.task.details')}</h2>
                 <p><span className="detail-label">{t('supervise.label.description')}</span> {task.description}</p>
-                <p><span className="detail-label">{t('supervise.label.reward')}</span> {parseFloat(task.price).toFixed(2)} {task.currency}</p>
+                <p><span className="detail-label">{t('supervise.label.reward')}</span>{' '}
+                  {isClient
+                    ? `${parseFloat(task.price).toFixed(2)} ${task.currency}`
+                    : `${formatWorkerNetDisplay(task.price)} ${task.currency}`}
+                </p>
                 <p><span className="detail-label">{t('supervise.label.category')}</span> {task.category}</p>
                 <p><span className="detail-label">{t('supervise.label.difficulty')}</span> {task.difficulty}</p>
                 <div className="task-details-section__deletion">
@@ -2445,7 +2468,7 @@ const SuperviseTask = () => {
                                 </div>
                             )}
                             
-                    {isWorker && (
+                    {isWorker && !isClient && (
                         <div className="worker-actions">
                             {/* Notificación para trabajador cuando el escrow está resuelto */}
                             {isResolved && (
@@ -2467,7 +2490,7 @@ const SuperviseTask = () => {
                                         </div>
                                     )}
                             
-                            {isWorker && taskFundsReleased && (
+                            {isWorker && !isClient && taskFundsReleased && (
                                 <TaskReleaseSummary
                                     variant="worker"
                                     txHash={releaseTxHash}
@@ -2956,7 +2979,7 @@ const SuperviseTask = () => {
             )}
 
             {/* Popup de Éxito - Pago Recibido (SOLO para trabajador) */}
-            {showPaymentSuccessPopup && paymentSuccessData && isWorker && (
+            {showPaymentSuccessPopup && paymentSuccessData && isWorker && !isClient && (
                 <div style={{
                     position: 'fixed',
                     top: 0,

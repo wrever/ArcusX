@@ -1,6 +1,8 @@
 import { clientFeePercents } from '../utils/escrowFeeDisplay';
 import { useI18n } from '../i18n/I18nProvider';
 
+import { TOTAL_ONCHAIN_FEE_RATE } from '../utils/bilateralFeeModel';
+
 type EscrowFeeBreakdownProps = {
   platformFee: number;
   totalUsdc?: string;
@@ -8,9 +10,13 @@ type EscrowFeeBreakdownProps = {
   protocolUsdc?: string;
   className?: string;
   layout?: 'stack' | 'escrow-rows' | 'flex-rows';
+  /**
+   * worker-fee / employer-bilateral: muestra 2% total deducido del trabajador
+   * (sin surcharge al empleador).
+   */
+  variant?: 'default' | 'employer-bilateral' | 'worker-fee';
 };
 
-/** Muestra 3% total y desglose 2.7% ArcusX + 0.3% costo de operación. */
 const EscrowFeeBreakdown = ({
   platformFee,
   totalUsdc,
@@ -18,8 +24,31 @@ const EscrowFeeBreakdown = ({
   protocolUsdc,
   className = '',
   layout = 'stack',
+  variant = 'default',
 }: EscrowFeeBreakdownProps) => {
   const { t } = useI18n();
+
+  if (variant === 'employer-bilateral' || variant === 'worker-fee') {
+    const pct = String(Math.round(TOTAL_ONCHAIN_FEE_RATE * 100));
+    const label = t('fees.worker.label').replace('{{p}}', pct);
+    if (layout === 'escrow-rows') {
+      return (
+        <div className={className}>
+          <div className="escrow-breakdown-row">
+            <span>{label}</span>
+            {totalUsdc != null ? <strong>{totalUsdc} USDC</strong> : null}
+          </div>
+        </div>
+      );
+    }
+    return (
+      <p className={className} style={{ margin: 0 }}>
+        {label}
+        {totalUsdc != null ? `: ${totalUsdc} USDC` : ''}
+      </p>
+    );
+  }
+
   const p = clientFeePercents(platformFee);
 
   const totalLabel = t('fees.total.label').replace('{{p}}', p.totalPercent);

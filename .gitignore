@@ -3,6 +3,7 @@ node_modules/
 
 # Build / deploy artifacts
 dist/
+sites/docs/.vitepress-cache/
 *.zip
 Archivo.zip
 *.tar.gz
@@ -10,11 +11,21 @@ supabase/.deploy/
 supabase/.temp/
 escrow-deployment.json
 
-# Environment
+# Environment / secrets (never commit real values)
 .env
+.env.*
+!.env.example
+**/.env
+!**/.env.example
 .env.local
 .env.production
 arcusx/.env
+local-test/.env
+*.pem
+id_rsa
+id_rsa.pub
+**/credentials.json
+**/serviceAccount*.json
 
 # IDE / OS
 .vscode/

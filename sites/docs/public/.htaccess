@@ -1,0 +1,23 @@
+# RewriteEngine On — SPA React (docs.arcusx.pro)
+# Si docs.* usa esta carpeta, debe ser el mismo dist de arcusx/ con este .htaccess.
+# NO uses reglas VitePress ($1.html): rompen /developers en LiteSpeed.
+
+DirectoryIndex index.html
+ErrorDocument 404 /index.html
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  RewriteCond %{REQUEST_URI} ^/assets/
+  RewriteRule . - [L]
+
+  RewriteCond %{REQUEST_URI} \.(css|js|mjs|map|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|webp|json|xml|txt|webmanifest)$ [NC]
+  RewriteRule . - [L]
+
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  RewriteRule ^ index.html [L]
+</IfModule>

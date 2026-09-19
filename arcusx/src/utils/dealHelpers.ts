@@ -1,15 +1,26 @@
 import type { AgreementDeal } from '../services/dealsService';
 import { funderWallet, releaseSignerWallet } from '../services/dealEscrow';
 import { normalizePlatformFeeRate, STANDARD_PLATFORM_FEE_RATE } from '../config/platformFee';
+import { workerNetFromNominal } from './bilateralFeeModel';
 import { quoteEscrowFundAmount } from './escrowFeeQuote';
+
+export function dealBeneficiaryNet(deal: AgreementDeal): number {
+  return workerNetFromNominal(deal.amount_usdc);
+}
+
+/** True si la wallet conectada es quien cobra en el deal. */
+export function isDealBeneficiaryViewer(deal: AgreementDeal, walletAddress: string | null | undefined): boolean {
+  if (!walletAddress || !deal.beneficiary_wallet) return false;
+  return walletAddress === deal.beneficiary_wallet;
+}
 
 export function dealDepositAmount(deal: AgreementDeal): number {
   const total = Number(deal.client_total);
   if (Number.isFinite(total) && total > 0) return total;
-  const net = Number(deal.amount_usdc);
+  const workerNet = dealBeneficiaryNet(deal);
   const rate = dealPlatformFeeRate(deal);
-  if (!Number.isFinite(net) || net <= 0) return 0;
-  return quoteEscrowFundAmount(net, rate);
+  if (!Number.isFinite(workerNet) || workerNet <= 0) return 0;
+  return quoteEscrowFundAmount(workerNet, rate);
 }
 
 export function dealPlatformFeeRate(deal: AgreementDeal): number {

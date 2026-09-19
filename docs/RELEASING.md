@@ -8,8 +8,8 @@ Objetivo: publicar versiones legibles para inversores, partners y equipo, manten
 
 | Regla | Recomendación |
 |-------|----------------|
-| **Rama etiquetada** | Etiquetar desde la rama que **realmente** despliega en producción. Hoy esa línea es **`ArcusX3.6`**. Opcional pero profesional: **fusionar antes a `main`** y etiquetar `main`. |
-| **Versión** | Usar **[SemVer](https://semver.org/lang/es/)**: `MAJOR.MINOR.PATCH`. Ejemplo alineado a tu naming: **`v3.6.0`** (primera release “oficial” de la línea 3.6). Parches siguientes: `v3.6.1`, etc. |
+| **Rama etiquetada** | Etiquetar desde la rama que **realmente** despliega. Hoy esa línea es **`ArcusX3.8`**. Opcional: fusionar antes a `main` y etiquetar `main`. |
+| **Versión** | SemVer. Esta línea: **`v3.8.0`** (SOW 3 Week 1). Parches: `v3.8.1`, etc. |
 | **Nombre del tag** | Siempre **`v` + número**, ej. `v3.6.0` (GitHub muestra mejor y es estándar). |
 | **Cuerpo del Release** | Copiar/adaptar la sección correspondiente del **`CHANGELOG.md`** (no dejar el release vacío). |
 | **Activos adjuntos** | Para ArcusX (SPA) **no suele hacer falta** subir `dist.zip` en cada release salvo política interna o auditores que lo pidan explícito. |

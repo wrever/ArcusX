@@ -1,0 +1,11 @@
+{
+  "name": "arcusx-sdk-freighter-adapter",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Copy-ready Freighter WalletAdapter for @arcusx/sdk (SOW 2 Week 3)",
+  "dependencies": {
+    "@arcusx/sdk": "file:../../packages/arcusx-sdk",
+    "@stellar/freighter-api": "^3.0.0"
+  }
+}

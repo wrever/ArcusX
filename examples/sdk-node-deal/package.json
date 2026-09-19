@@ -1,0 +1,8 @@
+{
+  "name": "sdk-node-deal",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@arcusx/sdk": "file:../../packages/arcusx-sdk"
+  }
+}

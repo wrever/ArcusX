@@ -283,6 +283,7 @@ export default defineConfig({
             /^ax-empresas/,
             /^empresas-navbar/,
             'login-container--enterprise',
+            'register-container',
             'register-container--enterprise',
             'dashboard--enterprise',
             // Clases de tema

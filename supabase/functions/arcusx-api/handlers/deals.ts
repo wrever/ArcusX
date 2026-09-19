@@ -1,3 +1,4 @@
+import { assertArcusXManagedEscrowContract } from '../../_shared/escrow-contract-guard.ts';
 import { jsonError, jsonSuccess } from '../../_shared/arcusx-cors.ts';
 import {
   formatFundsReleasedMessage,
@@ -8,6 +9,7 @@ import { logDomainEvent } from '../../_shared/domain-events.ts';
 import { persistRating } from '../../_shared/rating-persist.ts';
 import { normalizePlatformFeeRate } from '../../_shared/platform-fee.ts';
 import { quoteEscrowCommission } from '../../_shared/escrow-fee-quote.ts';
+import { quoteBilateralFromNominal } from '../../_shared/bilateral-fee.ts';
 import type { ApiContext } from './types.ts';
 import { requireUser } from './require.ts';
 
@@ -150,16 +152,18 @@ export async function createDeal(ctx: ApiContext): Promise<Response> {
   }
 
   const feeRate = await platformFeeRate(auth.supabase);
-  const feeQuote = quoteEscrowCommission(amountUsdc, feeRate);
-  const clientTotal = Math.round(feeQuote.fundAmount * 1e7) / 1e7;
+  const bilateral = quoteBilateralFromNominal(amountUsdc, feeRate);
+  const feeQuote = quoteEscrowCommission(bilateral.workerNet, feeRate);
+  const clientTotal = Math.round(bilateral.clientTotal * 1e7) / 1e7;
   const feeUsdc = Math.round(feeQuote.totalCommission * 1e7) / 1e7;
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const externalId = body.external_id ? String(body.external_id).trim() : '';
 
   let data: Record<string, unknown> | null = null;
   let dealToken = '';
   for (let attempt = 0; attempt < 3; attempt++) {
     dealToken = newDealToken();
-    const inserted = await auth.supabase.from('arcusx_agreements').insert({
+    const dealRow: Record<string, unknown> = {
       deal_token: dealToken,
       template_id: templateId,
       payment_mode: 'one_time',
@@ -177,7 +181,11 @@ export async function createDeal(ctx: ApiContext): Promise<Response> {
       platform_fee_rate: feeRate,
       status: 'sent',
       expires_at: expiresAt,
-    }).select('*').single();
+    };
+    if (ctx.partnerId) dealRow.partner_id = ctx.partnerId;
+    if (externalId) dealRow.external_id = externalId;
+
+    const inserted = await auth.supabase.from('arcusx_agreements').insert(dealRow).select('*').single();
 
     if (!inserted.error) {
       data = inserted.data as Record<string, unknown>;
@@ -424,10 +432,17 @@ export async function prepareDealEscrow(ctx: ApiContext): Promise<Response> {
     escrow_contract_id: escrowId,
     escrow_deploy_tx_hash: txHash,
     escrow_tx_hash: txHash,
+    stellar_network: ctx.stellarNetwork,
     updated_at: new Date().toISOString(),
   }).eq('id', dealId);
 
   if (error) return jsonError(req, error.message, 500);
+
+  try {
+    await assertArcusXManagedEscrowContract(escrowId, ctx.stellarNetwork);
+  } catch (e) {
+    console.warn('[prepareDealEscrow] guard deferred (indexer lag):', e);
+  }
 
   await logDealEvent(auth.supabase, dealId, 'escrow_prepared', auth.userId, {
     escrow_id: escrowId,
@@ -483,10 +498,20 @@ export async function finalizeDealEscrow(ctx: ApiContext): Promise<Response> {
     });
   }
 
+  const registeredContract = String(deal.escrow_contract_id ?? '').trim();
+  if (registeredContract !== escrowId) {
+    try {
+      await assertArcusXManagedEscrowContract(escrowId, ctx.stellarNetwork);
+    } catch (e) {
+      return jsonError(req, e instanceof Error ? e.message : 'Contrato escrow inválido', 403);
+    }
+  }
+
   const { error } = await auth.supabase.from('arcusx_agreements').update({
     escrow_contract_id: escrowId,
     escrow_fund_tx_hash: txHash,
     escrow_tx_hash: txHash ?? deal.escrow_tx_hash,
+    stellar_network: ctx.stellarNetwork,
     status: 'funded',
     funded_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),

@@ -15,12 +15,13 @@ export type DealEscrowIndexerRow = {
 export async function fetchDealEscrowFromIndexer(
   contractId: string,
   getEscrowByContractIds: DealEscrowHooks['getEscrowByContractIds'],
+  options?: { validateOnChain?: boolean },
 ): Promise<DealEscrowIndexerRow | null> {
   if (!contractId) return null;
   try {
     const result = await getEscrowByContractIds({
       contractIds: [contractId],
-      validateOnChain: true,
+      validateOnChain: options?.validateOnChain ?? false,
     });
     const escrows = Array.isArray(result)
       ? result

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { FaWallet, FaSearch, FaEye, FaCheckCircle, FaExclamationTriangle, FaLink, FaTimesCircle, FaSpinner, FaSync, FaChartLine } from 'react-icons/fa';
 import { getAdminEscrows } from '../services/adminService';
+import { stellarExpertContractUrl } from '../utils/stellarNetwork';
 import { useGetEscrowFromIndexerByContractIds } from '@trustless-work/escrow/hooks';
 import { useI18n } from '../i18n/I18nProvider';
 import '../css/AdminPanel.css';
@@ -801,7 +802,7 @@ const EscrowManagement: React.FC<EscrowManagementProps> = ({ onUpdate: _onUpdate
                           <label>{t('admin.escrows.label.contractId')}</label>
                           <span>
                             <a 
-                              href={`https://stellar.expert/explorer/testnet/contract/${selectedEscrow.escrow_id}`}
+                              href={stellarExpertContractUrl(selectedEscrow.escrow_id)}
                               target="_blank"
                               rel="noopener noreferrer"
                               style={{ 

@@ -1,6 +1,7 @@
 # Tranche 2 — Qué falta vs roadmap público
 
-**Actualizado:** 2026-05-28 · Referencia honesta para stakeholders.  
+**Actualizado:** 2026-05-28 · **Tranche 2 cerrado ✅** — ver [`TRANCHE2_CLOSURE.md`](./TRANCHE2_CLOSURE.md)  
+**Activo:** [`TRANCHE3_INFRA_SDK.md`](./TRANCHE3_INFRA_SDK.md)  
 **Fuera de foco:** wallet embebida, KYC proveedor externo.
 
 ---
@@ -19,9 +20,9 @@
 | Cutover frontend → Edge | ✅ · ☐ dist último build en cPanel |
 | `arcusx-webhook-ingress` | ✅ v1 (manual admin sigue siendo el flujo principal) |
 | PHP fuera del flujo feliz (410/readonly) | ❌ política pendiente (`T2-06`) |
-| E2E testnet documentado ejecutado | ❌ ops (`T2-02`) |
+| E2E testnet documentado ejecutado | ✅ demo 3 flujos + checklist |
 
-**Falta material:** cierre ops cutover + redeploy Edge con últimos handlers.
+**Remanente ops:** dist cPanel (T2-01), cron verify (T2-03) — no bloquea Tranche 3.
 
 ---
 

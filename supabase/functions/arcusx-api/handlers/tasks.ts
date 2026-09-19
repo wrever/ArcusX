@@ -1,5 +1,7 @@
 import { jsonError, jsonResponse, jsonSuccess } from '../../_shared/arcusx-cors.ts';
-import { normalizePlatformFeeRate } from '../../_shared/platform-fee.ts';
+import { normalizePlatformFeeRate, TRUSTLESS_WORK_PROTOCOL_FEE } from '../../_shared/platform-fee.ts';
+import { quoteBilateralFromNominal } from '../../_shared/bilateral-fee.ts';
+import { stellarNetworkApiLabel } from '../../_shared/stellar-network.ts';
 import { insertArcusxNotification } from '../../_shared/arcusx-notifications.ts';
 import type { ApiContext } from './types.ts';
 import { qp, qpInt } from './types.ts';
@@ -8,6 +10,7 @@ import { uploadTaskFile } from './storage-helpers.ts';
 import { normalizeDisplayText } from '../../_shared/text-encoding.ts';
 import { creatorDisplayFields } from '../../_shared/creator-display.ts';
 import { logDomainEvent } from '../../_shared/domain-events.ts';
+import { emitPartnerWebhook } from '../../_shared/partner-webhooks.ts';
 import { loadCreatorEnrichment } from './kyc.ts';
 import { ensureTaskScheduledDeletion } from '../../_shared/task-purge.ts';
 import { loadReleasedVolumeRows, sumVolumeRows } from '../../_shared/admin-stats.ts';
@@ -30,7 +33,7 @@ export async function getTasks(ctx: ApiContext): Promise<Response> {
     .from('arcusx_tasks')
     .select(`
       id, title, subtitle, description, price, currency, difficulty, category,
-      created_at, status, user_id,
+      created_at, status, user_id, stellar_network,
       arcusx_users!arcusx_tasks_user_id_fkey (
         id, username, average_rating, total_ratings
       )
@@ -95,6 +98,7 @@ export async function getTasks(ctx: ApiContext): Promise<Response> {
       creator_total_ratings: u?.total_ratings ?? null,
       created_at: row.created_at,
       status: row.status,
+      stellar_network: row.stellar_network === 'mainnet' ? 'mainnet' : 'testnet',
       proposal_count: 0,
     };
   });
@@ -346,6 +350,10 @@ export async function createTask(ctx: ApiContext): Promise<Response> {
     created_at: new Date().toISOString(),
   };
 
+  if (ctx.partnerId) insertRow.partner_id = ctx.partnerId;
+  const externalId = body.external_id ? String(body.external_id).trim() : '';
+  if (externalId) insertRow.external_id = externalId;
+
   const { data, error } = await auth.supabase.from('arcusx_tasks').insert(insertRow).select('id').single();
   if (error) return jsonError(req, error.message, 500);
 
@@ -375,6 +383,14 @@ export async function createTask(ctx: ApiContext): Promise<Response> {
     event_type: 'task.created',
     actor_user_id: auth.userId,
     payload: { is_private: isPrivate, price },
+  });
+
+  void emitPartnerWebhook(auth.supabase, ctx.partnerId, 'task.created', {
+    task_id: data?.id,
+    external_id: externalId || null,
+    partner_id: ctx.partnerId,
+    price,
+    is_private_invite: isPrivate,
   });
 
   return jsonSuccess(req, { task_id: data?.id, message: 'Tarea creada exitosamente' });
@@ -908,11 +924,44 @@ export async function getPlatformFee(ctx: ApiContext): Promise<Response> {
     .select('config_value')
     .eq('config_key', 'platform_fee')
     .maybeSingle();
-  const platformFee = normalizePlatformFeeRate(data?.config_value);
+  /** Share ArcusX on-chain (TW platformFee). */
+  const arcusxShare = normalizePlatformFeeRate(data?.config_value);
+  /**
+   * Integrator-facing rate = ArcusX + TW protocol (covers on-chain op).
+   * Example: 1.7% + 0.3% = 2%. Do not hardcode in partner UIs — always call this.
+   */
+  const platformFee = arcusxShare + TRUSTLESS_WORK_PROTOCOL_FEE;
   return jsonResponse(req, {
     success: true,
     platform_fee: platformFee,
     platform_fee_percent: Math.round(platformFee * 10000) / 100,
+    arcusx_share: arcusxShare,
+    protocol_share: TRUSTLESS_WORK_PROTOCOL_FEE,
+  });
+}
+
+/** Quote bilateral de fondeo — TW oculto; integrador solo ve montos ArcusX. */
+export async function getEscrowQuote(ctx: ApiContext): Promise<Response> {
+  const { req, url, supabase, stellarNetwork } = ctx;
+  const nominal = Number(
+    url.searchParams.get('nominal') ?? url.searchParams.get('amount_usdc') ?? 0,
+  );
+  if (!Number.isFinite(nominal) || nominal <= 0) {
+    return jsonError(req, 'nominal o amount_usdc requerido (> 0)', 400);
+  }
+
+  const { data } = await supabase
+    .from('arcusx_system_config')
+    .select('config_value')
+    .eq('config_key', 'platform_fee')
+    .maybeSingle();
+  const platformFee = normalizePlatformFeeRate(data?.config_value);
+  const quote = quoteBilateralFromNominal(nominal, platformFee);
+
+  return jsonSuccess(req, {
+    currency: 'USDC',
+    network: stellarNetworkApiLabel(stellarNetwork),
+    quote,
   });
 }
 

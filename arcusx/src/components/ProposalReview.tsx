@@ -19,8 +19,11 @@ import {
   createTrustlessEscrow, 
   fundTrustlessEscrow 
 } from '../services/trustlessWorkEscrowService';
-import { quoteEscrowCommission } from '../utils/escrowFeeQuote';
-import { clientFeePercents } from '../utils/escrowFeeDisplay';
+import {
+  quoteBilateralFromNominal,
+  workerNetFromTaskPrice,
+  WORKER_FEE_PERCENT,
+} from '../utils/bilateralFeeModel';
 import { usePlatformFee } from '../hooks/usePlatformFee';
 import EscrowProcessPopup from './EscrowProcessPopup';
 import { useI18n } from '../i18n/I18nProvider';
@@ -266,19 +269,17 @@ const ProposalReview = () => {
       
       // Crear escrow con Trustless Work
       const engagementId = `arcusx-${taskId}-${Date.now()}`;
-      // El price es el workerAmount (lo que debe recibir el trabajador después de la comisión)
-      const workerAmount = parseFloat(task.price);
-      
-      const { quoteEscrowCommission } = await import('../utils/escrowFeeQuote');
-      const quote = quoteEscrowCommission(workerAmount, platformFee);
+      const quote = quoteBilateralFromNominal(parseFloat(String(task.price)), platformFee);
+      const workerAmount = quote.workerNet;
       const amount = quote.fundAmount;
       const commission = quote.totalCommission;
       
       devLog('Cálculo del escrow:');
-      devLog('  - Worker amount (lo que recibirá):', workerAmount);
+      devLog('  - Nominal / fondeo empleador:', parseFloat(String(task.price)));
+      devLog('  - Worker net (~98%):', workerAmount);
       devLog('  - Platform fee:', platformFee, `(${(platformFee * 100).toFixed(2)}%)`);
-      devLog('  - Escrow amount (calculado):', amount);
-      devLog('  - Commission (que se deducirá):', commission.toFixed(7));
+      devLog('  - Escrow amount:', amount);
+      devLog('  - Commission total (2%):', commission.toFixed(7));
       devLog('  - Comisión plataforma (est.):', quote.platformCommission.toFixed(7));
 
       const result = await createTrustlessEscrow(
@@ -295,7 +296,8 @@ const ProposalReview = () => {
         },
         kit,
         deployEscrow,
-        sendTransaction
+        sendTransaction,
+        getEscrowByContractIds,
       );
 
       if (!result.success) {
@@ -356,16 +358,15 @@ const ProposalReview = () => {
       try {
         const token = localStorage.getItem('token');
         if (token && taskId && selectedProposal) {
-          const payload: any = {
+          const payload: Record<string, unknown> = {
             task_id: parseInt(taskId, 10),
             proposal_id: selectedProposal.id,
             escrow_id: result.contractId,
             transaction_hash: txHash,
             client_wallet_address: clientAddress,
-            escrow_amount: amount // Guardar el amount exacto usado al crear el escrow
+            escrow_amount: amount,
           };
-          
-          // Agregar platformFee y trustline_address si están disponibles
+
           if (platformFeeToSave !== null && platformFeeToSave !== undefined) {
             payload.platform_fee = platformFeeToSave;
           }
@@ -373,16 +374,22 @@ const ProposalReview = () => {
             payload.trustline_address = trustlineAddress;
           }
 
-          await axios.post(`${arcusxApiUrl('create_escrow')}`, payload, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          });
+          const reg = await axios.post(`${arcusxApiUrl('create_escrow')}`, payload);
+          if (reg.data?.success === false) {
+            throw new Error(reg.data?.message || 'No se pudo registrar el deploy del escrow');
+          }
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         devError('Error al guardar escrow en backend:', error);
-        // Continuar de todas formas - el escrow ya se creó en Trustless Work
+        const msg =
+          (error as { response?: { data?: { message?: string } } })?.response?.data?.message
+          ?? (error instanceof Error ? error.message : null);
+        return {
+          success: false,
+          error:
+            msg
+            ?? 'El contrato se desplegó en Stellar pero falló el registro en ArcusX. No fondees hasta reintentar.',
+        };
       }
       
       // NOTA: Ya no guardamos el amount en localStorage porque ahora calculamos totalToFund al fondear
@@ -428,7 +435,7 @@ const ProposalReview = () => {
       }
 
       // Fondear el mismo monto que al crear: worker / (1 - platformFee)
-      const workerAmount = parseFloat(task.price);
+      const workerAmount = workerNetFromTaskPrice(task.price);
       
       // CRÍTICO: Usar el mismo platformFee que al crear el escrow
       // Si el escrow tiene un platformFee guardado, usarlo; si no, usar el actual
@@ -480,8 +487,43 @@ const ProposalReview = () => {
       // Intentar fondear el escrow con reintentos inteligentes
       // El detector de deploy en trustlessWorkEscrowService ya verifica que esté indexado
       let result: { success: boolean; txHash?: string; error?: string } | null = null;
-      const maxRetries = 3;
-      
+      const maxRetries = 2;
+
+      const fundIndexerWrapper = async (
+        contractIds: string[] | { contractIds: string[]; validateOnChain?: boolean },
+      ) => {
+        try {
+          let contractIdsArray: string[];
+          if (Array.isArray(contractIds)) {
+            contractIdsArray = contractIds;
+          } else if (contractIds && typeof contractIds === 'object' && 'contractIds' in contractIds) {
+            contractIdsArray = contractIds.contractIds;
+          } else {
+            devWarn('contractIds inválido en ProposalReview (tipo desconocido):', contractIds);
+            return [];
+          }
+
+          const validContractIds = contractIdsArray.filter(
+            (id) => id && typeof id === 'string' && id.trim() !== '',
+          );
+          if (validContractIds.length === 0) return [];
+
+          const indexerResult = await getEscrowByContractIds({
+            contractIds: validContractIds,
+            validateOnChain: true,
+          });
+          return Array.isArray(indexerResult)
+            ? indexerResult
+            : (indexerResult as { escrows?: unknown[] })?.escrows || indexerResult || [];
+        } catch (error: unknown) {
+          devError(
+            'Error en wrapper de getEscrowByContractIds:',
+            error instanceof Error ? error.message : String(error),
+          );
+          return [];
+        }
+      };
+
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
           result = await fundTrustlessEscrow(
@@ -491,80 +533,25 @@ const ProposalReview = () => {
             kit,
             fundEscrow,
             sendTransaction,
-            async (contractIds: string[] | { contractIds: string[]; validateOnChain?: boolean }) => {
-              try {
-                // Manejar caso donde se recibe un objeto en lugar de un array
-                // waitForEscrowIndexing pasa un array, pero getEscrowFromIndexer puede pasar un objeto
-                let contractIdsArray: string[];
-                if (Array.isArray(contractIds)) {
-                  // Caso normal: se recibe un array directamente
-                  contractIdsArray = contractIds;
-                } else if (contractIds && typeof contractIds === 'object' && 'contractIds' in contractIds) {
-                  // Caso donde se recibe un objeto con la propiedad contractIds
-                  contractIdsArray = contractIds.contractIds;
-                } else {
-                  devWarn('contractIds inválido en ProposalReview (tipo desconocido):', contractIds);
-                  return [];
-                }
-                
-                devLog('ProposalReview wrapper recibió contractIds:', contractIdsArray);
-                
-                // Validar que contractIds sea un array válido y no esté vacío
-                if (!contractIdsArray || !Array.isArray(contractIdsArray) || contractIdsArray.length === 0) {
-                  devWarn('contractIds inválido o vacío en ProposalReview:', contractIdsArray);
-                  return [];
-                }
-                
-                // Filtrar contractIds vacíos o inválidos
-                const validContractIds = contractIdsArray.filter(id => id && typeof id === 'string' && id.trim() !== '');
-                if (validContractIds.length === 0) {
-                  devWarn('No hay contractIds válidos después de filtrar:', contractIdsArray);
-                  return [];
-                }
-                
-                // CRÍTICO: Usar validateOnChain: true para verificar que el escrow esté completamente disponible en la blockchain
-                const result = await getEscrowByContractIds({ 
-                  contractIds: validContractIds,
-                  validateOnChain: true 
-                });
-                // El resultado puede tener diferentes estructuras, devolvemos el resultado completo
-                return Array.isArray(result) ? result : (result as any)?.escrows || result || [];
-              } catch (error: any) {
-                devError('Error en wrapper de getEscrowByContractIds:', error.message);
-                return [];
-              }
-            }
+            fundIndexerWrapper,
           );
-          
+
           if (result.success) {
             break;
           } else if (attempt < maxRetries) {
-            // Detectar si es el error "normalize" para usar tiempos más largos
-            const isNormalizeError = result.error?.includes('normalize') || result.error?.includes('normalize');
-            const delay = isNormalizeError 
-              ? 120000 // 2 minutos si es error normalize
-              : attempt === 1 ? 30000 : 60000; // 30s, 1min para otros errores
-            
-            devLog(`⏳ Reintentando en ${delay / 1000} segundos... (intento ${attempt + 1}/${maxRetries})`);
-            await new Promise(resolve => setTimeout(resolve, delay));
+            const delay = 15000;
+            devLog(`⏳ Reintentando fondeo en ${delay / 1000}s… (intento ${attempt + 1}/${maxRetries})`);
+            await new Promise((resolve) => setTimeout(resolve, delay));
           }
-        } catch (error: any) {
+        } catch (error: unknown) {
           if (attempt === maxRetries) {
             result = {
               success: false,
-              error: error.message || t('proposals.error.fundEscrow')
+              error: error instanceof Error ? error.message : t('proposals.error.fundEscrow'),
             };
             break;
           }
-          
-          // Detectar si es el error "normalize" para usar tiempos más largos
-          const isNormalizeError = error.message?.includes('normalize') || error.message?.includes('normalize');
-          const delay = isNormalizeError 
-            ? 120000 // 2 minutos si es error normalize
-            : attempt === 1 ? 30000 : 60000; // 30s, 1min para otros errores
-          
-          devLog(`⏳ Reintentando en ${delay / 1000} segundos... (intento ${attempt + 1}/${maxRetries})`);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, 15000));
         }
       }
 
@@ -588,7 +575,7 @@ const ProposalReview = () => {
       try {
         const token = localStorage.getItem('token');
         if (token && taskId && selectedProposal) {
-          const workerAmount = parseFloat(task.price);
+          const workerAmount = workerNetFromTaskPrice(task.price);
           let feeToUse = platformFee;
           if (task.escrow_platform_fee !== undefined && task.escrow_platform_fee !== null) {
             feeToUse = typeof task.escrow_platform_fee === 'number'
@@ -672,6 +659,25 @@ const ProposalReview = () => {
           selectResponse.data?.message ||
           `${t('proposals.error.selectWorker')} (${selectResponse.status})`;
         devError('Error al seleccionar propuesta:', errorMessage);
+
+        // Respaldo: create_escrow con funding_confirmed (misma ruta que handleFundEscrow)
+        try {
+          const fallback = await axios.post(arcusxApiUrl('create_escrow'), {
+            task_id: parseInt(String(taskId), 10),
+            proposal_id: selectedProposal.id,
+            escrow_id: escrowId,
+            transaction_hash: fundTx,
+            funding_confirmed: true,
+            escrow_status: 'active',
+          });
+          if (fallback.data?.success !== false) {
+            await fetchTaskAndProposals();
+            return { success: true };
+          }
+        } catch (fallbackErr) {
+          devWarn('Fallback create_escrow tras select_proposal:', fallbackErr);
+        }
+
         return { success: false, error: errorMessage };
       }
 
@@ -794,12 +800,13 @@ const ProposalReview = () => {
       setShowErrorPopup(true);
       return;
     }
-    // Calcular montos usando el nuevo modelo
-    const workerAmount = task?.price ? parseFloat(task.price) : 0;
-    const quote = workerAmount > 0 ? quoteEscrowCommission(workerAmount, platformFee) : null;
-    const commission = quote?.totalCommission ?? 0;
-    const totalAmount = quote?.fundAmount ?? 0;
-    const feePercent = clientFeePercents(platformFee).totalPercent;
+    // Calcular montos: empleador fondea nominal; trabajador −2%
+    const nominal = task?.price ? parseFloat(task.price) : 0;
+    const bilateral = nominal > 0 ? quoteBilateralFromNominal(nominal, platformFee) : null;
+    const workerAmount = bilateral?.workerNet ?? 0;
+    const commission = bilateral?.totalCommission ?? 0;
+    const totalAmount = bilateral?.clientTotal ?? 0;
+    const feePercent = WORKER_FEE_PERCENT;
     
     // Mostrar mensaje de éxito mejorado
     const currency = task?.currency || 'USDC';

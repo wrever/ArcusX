@@ -211,7 +211,7 @@ export async function cancelTask(ctx: ApiContext): Promise<Response> {
 
   return jsonSuccess(req, {
     allowed: true,
-    message: 'Cancelación permitida. Inicia disputa en Trustless Work; el admin resolverá el reembolso.',
+    message: 'Cancelación permitida. Abre disputa en el escrow; el admin resolverá el reembolso.',
     requiresSignature: true,
     requires_signature: true,
     refundAmount,

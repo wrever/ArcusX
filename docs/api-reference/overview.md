@@ -236,13 +236,15 @@ Stellar wallet addresses are 56-character strings starting with 'G'.
 
 Escrow contract IDs are Soroban contract addresses starting with 'C'.
 
-## SDK and Libraries
+## SDK and libraries
 
-While ArcusX doesn't provide official SDKs, you can use our TypeScript services as a reference:
+Official TypeScript client: **`@arcusx/sdk`**.
 
-- Authentication Service: `src/services/authService.ts`
-- Escrow Service: `src/services/trustlessWorkEscrowService.ts`
-- Admin Service: `src/services/adminService.ts`
+- [SDK Quickstart](/sdk/QUICKSTART)
+- [API Reference](/sdk/API_REFERENCE)
+- [Partner Auth](/sdk/PARTNER_AUTH)
+
+Gateway: `https://api.arcusx.pro`
 
 ## Support
 

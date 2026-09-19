@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { FaFlag, FaHandshake, FaTimes } from 'react-icons/fa';
 import {
@@ -37,8 +37,8 @@ import {
   releaseSignerWallet,
   type DealEscrowHooks,
 } from '../services/dealEscrow';
-import { dealPlatformFeeRate, dealRatedUserId } from '../utils/dealHelpers';
-import { quoteEscrowCommission } from '../utils/escrowFeeQuote';
+import { dealBeneficiaryNet, dealPlatformFeeRate, dealRatedUserId, isDealBeneficiaryViewer } from '../utils/dealHelpers';
+import { quoteBilateralFromNominal } from '../utils/bilateralFeeModel';
 import EscrowFeeBreakdown from '../components/EscrowFeeBreakdown';
 import { devError } from '../utils/logger';
 import {
@@ -68,6 +68,8 @@ const DealWorkspacePage = () => {
   const { deployEscrow } = useInitializeEscrow();
   const { fundEscrow } = useFundEscrow();
   const { getEscrowByContractIds } = useGetEscrowFromIndexerByContractIds();
+  const getEscrowRef = useRef(getEscrowByContractIds);
+  getEscrowRef.current = getEscrowByContractIds;
   const { startDispute } = useStartDispute();
   const [deal, setDeal] = useState<AgreementDeal | null>(null);
   const [loading, setLoading] = useState(true);
@@ -127,14 +129,14 @@ const DealWorkspacePage = () => {
       sendTransaction: sendTransaction as DealEscrowHooks['sendTransaction'],
       getEscrowByContractIds: async (contractIds) => {
         const ids = Array.isArray(contractIds) ? contractIds : contractIds.contractIds;
-        const result = await getEscrowByContractIds({
+        const result = await getEscrowRef.current({
           contractIds: ids,
-          validateOnChain: Array.isArray(contractIds) ? true : contractIds.validateOnChain ?? true,
+          validateOnChain: Array.isArray(contractIds) ? false : contractIds.validateOnChain ?? false,
         });
         return Array.isArray(result) ? result : (result as { escrows?: unknown[] })?.escrows ?? result ?? [];
       },
     }),
-    [kit, deployEscrow, fundEscrow, sendTransaction, getEscrowByContractIds],
+    [kit, deployEscrow, fundEscrow, sendTransaction],
   );
 
   const chain = useDealEscrowChainState(deal, escrowHooks.getEscrowByContractIds);
@@ -418,17 +420,19 @@ const DealWorkspacePage = () => {
           <span className={`deals-status-badge ${deal.status}`}>{deal.status}</span>
           <h2 className="deals-form-card__title">{deal.title}</h2>
           <p className="deals-public-desc">{deal.description}</p>
-          <div className="deals-summary-row"><span>{t('deals.wizard.protected')}</span><strong>{Number(deal.amount_usdc).toFixed(2)} USDC</strong></div>
+          <div className="deals-summary-row"><span>{t('deals.wizard.dealValue')}</span><strong>{Number(deal.amount_usdc).toFixed(2)} USDC</strong></div>
+          {isDealBeneficiaryViewer(deal, address) && (
+            <div className="deals-summary-row"><span>{t('deals.wizard.beneficiaryReceives')}</span><strong>{dealBeneficiaryNet(deal).toFixed(2)} USDC</strong></div>
+          )}
           {(() => {
             const feeRate = dealPlatformFeeRate(deal);
-            const quote = quoteEscrowCommission(Number(deal.amount_usdc), feeRate);
+            const bilateral = quoteBilateralFromNominal(Number(deal.amount_usdc), feeRate);
             return (
               <EscrowFeeBreakdown
                 platformFee={feeRate}
                 layout="flex-rows"
-                totalUsdc={quote.totalCommission.toFixed(7)}
-                platformUsdc={quote.platformCommission.toFixed(7)}
-                protocolUsdc={quote.protocolCommission.toFixed(7)}
+                totalUsdc={bilateral.totalCommission.toFixed(2)}
+                variant="employer-bilateral"
                 className="deals-fee-breakdown"
               />
             );

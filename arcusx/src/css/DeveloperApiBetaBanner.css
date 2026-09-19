@@ -1,0 +1,63 @@
+.dev-api-beta-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(239, 68, 68, 0.55);
+  background: rgba(127, 29, 29, 0.35);
+  color: #fecaca;
+}
+
+:root[data-theme='light'] .dev-api-beta-banner {
+  border-color: rgba(220, 38, 38, 0.45);
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.dev-api-beta-banner--compact {
+  margin-bottom: 1rem;
+}
+
+.dev-api-beta-banner--page {
+  margin-bottom: 1.5rem;
+}
+
+.dev-api-beta-banner__icon {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+  font-size: 1.15rem;
+  color: #f87171;
+}
+
+:root[data-theme='light'] .dev-api-beta-banner__icon {
+  color: #dc2626;
+}
+
+.dev-api-beta-banner__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.dev-api-beta-banner__title {
+  display: block;
+  margin: 0 0 0.35rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #fca5a5;
+}
+
+:root[data-theme='light'] .dev-api-beta-banner__title {
+  color: #b91c1c;
+}
+
+.dev-api-beta-banner__body {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: rgba(254, 202, 202, 0.95);
+}
+
+:root[data-theme='light'] .dev-api-beta-banner__body {
+  color: #7f1d1d;
+}

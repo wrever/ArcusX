@@ -14,7 +14,7 @@ interface FeeManagementProps {
 
 const FeeManagement: React.FC<FeeManagementProps> = ({ onUpdate }) => {
   const [config, setConfig] = useState<FeeConfig>({
-    platformFeeBps: 270, // 2.7% ArcusX (+ 0.3% TW = 3% total)
+    platformFeeBps: 170, // ArcusX share on-chain. Integrators see 2% (= share + 0.3% TW) via get_platform_fee.
     referralFeeBps: 100, // 1%
     treasury: ''
   });
@@ -41,7 +41,7 @@ const FeeManagement: React.FC<FeeManagementProps> = ({ onUpdate }) => {
       const platformFeeValue = platformFeeConfig?.config_value;
       const platformFeeBps = typeof platformFeeValue === 'number' 
         ? platformFeeValue * 10000 
-        : (typeof platformFeeValue === 'string' ? parseFloat(platformFeeValue) * 10000 : 270);
+        : (typeof platformFeeValue === 'string' ? parseFloat(platformFeeValue) * 10000 : 370);
       
       const referralFeeValue = referralFeeConfig?.config_value;
       const referralFeeBps = typeof referralFeeValue === 'number' 
@@ -104,7 +104,7 @@ const FeeManagement: React.FC<FeeManagementProps> = ({ onUpdate }) => {
 
   const handleReset = () => {
     setConfig({
-      platformFeeBps: 270,
+      platformFeeBps: 370,
       referralFeeBps: 100,
       treasury: ''
     });
