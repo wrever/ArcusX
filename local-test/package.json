@@ -2,7 +2,7 @@
   "name": "arcusx-sdk-local-test",
   "private": true,
   "version": "0.1.0",
-  "description": "Localhost harness — dual JWT + @arcusx/sdk module explorer (SOW 2)",
+  "description": "Localhost harness — partner + SOW3 Week1 agentic (@arcusx/sdk)",
   "type": "module",
   "scripts": {
     "dev": "vite",

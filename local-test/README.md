@@ -1,10 +1,6 @@
-# ArcusX SDK — local-test (partner path)
+# ArcusX — local-test (agentic payments + partner)
 
-Harness en localhost para **probar el riel partner** como lo usa un integrador:
-
-- Solo **API key** (`axk_test_…`)
-- Suite PASS/FAIL + tabs **Partner escrow** y **Partner deals**
-- Freighter Testnet para firmar deploy, fund, approve y release
+App de prueba visual para el **recorrido de pagos agenticos** en Stellar Testnet, más el harness partner.
 
 ## Arranque
 
@@ -16,8 +12,22 @@ npm install && npm run dev
 
 → http://localhost:5200
 
-En **Partner deals**, el flujo de prueba es:
+| Vista | URL |
+|-------|-----|
+| **Recorrido agentico (default)** | `http://localhost:5200` |
+| Demo SOW3 Week1 (create/status) | `?view=week1` |
+| Harness técnico | `?view=harness` |
 
-`create` → `prepareFund` → firmar deploy → `prepareFund` → firmar fund → `prepareRelease` (approve) → `prepareRelease` (release).
+Pega `axk_test_…` o define `VITE_ARCUSX_API_KEY` en `local-test/.env`.
 
-Docs del motor: [`docs/sdk/PARTNER_ESCROW.md`](../docs/sdk/PARTNER_ESCROW.md).
+## Qué hace el recorrido en vivo
+
+1. Partner auth  
+2. `agent.create` (job)  
+3. `agent.createSubjob` (work unit + USDC)  
+4. `agent.quoteEscrow`  
+5. Status job + subjob  
+
+Fund escrow / release payout aparecen en el path como **próximo** (on-chain, siguiente hito).
+
+Ideal para video a Stellar: un botón → estaciones se encienden → tarjetas Job / Subjob / Quote reales.

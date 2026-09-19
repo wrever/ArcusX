@@ -1096,17 +1096,19 @@ input[type="search"]::placeholder {
 
 .task-header {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 1.25rem;
-  gap: 1rem;
+  flex-direction: column;
+  align-items: stretch;
+  margin-bottom: 0.85rem;
+  gap: 0.4rem;
 }
 
 .task-header h3 {
-  font-size: 1.2rem;
-  margin: 0 1rem 0.5rem 0;
+  font-size: 1.05rem;
+  line-height: 1.35;
+  margin: 0;
   color: var(--text-primary, #ffffff);
-  flex-grow: 1;
+  min-width: 0;
+  width: 100%;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -1116,22 +1118,22 @@ input[type="search"]::placeholder {
 }
 
 .task-difficulty {
-  font-size: 0.75rem;
-  padding: 0.35rem 0.85rem;
-  border-radius: 50px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
+  font-size: 0.62rem;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
-  flex-shrink: 0;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .task-header-badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.3rem;
   align-items: center;
-  justify-content: flex-end;
-  flex-shrink: 0;
+  justify-content: flex-start;
 }
 
 /* Job board — panel unificado (search + chips + selects) */
@@ -1299,13 +1301,14 @@ input[type="search"]::placeholder {
 }
 
 .task-origin-badge {
-  font-size: 0.68rem;
-  padding: 0.3rem 0.7rem;
-  border-radius: 50px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-size: 0.62rem;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
-  flex-shrink: 0;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .task-origin-badge.testnet {

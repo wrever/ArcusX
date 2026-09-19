@@ -33,12 +33,16 @@ export default defineConfig(({ mode }) => {
               if (anonKey) {
                 proxyReq.setHeader('apikey', anonKey);
               }
-              const auth = String(req.headers.authorization || '');
+              const auth = String(req.headers.authorization || req.headers.Authorization || '');
               const m = auth.match(/Bearer\s+(axk_(?:test|live)_[A-Za-z0-9_-]+)/i);
               if (m) {
                 proxyReq.setHeader('x-arcusx-api-key', m[1]);
+                // Edge verify_jwt is off, but requirePartnerAuth still treats
+                // Authorization as user JWT. Send the partner key only on the
+                // dedicated header, like api.arcusx.pro does.
+                proxyReq.removeHeader('Authorization');
+                proxyReq.removeHeader('authorization');
               }
-              // Edge auth partner lee Bearer axk_ o x-arcusx-api-key; no hace falta JWT
             });
           },
         },

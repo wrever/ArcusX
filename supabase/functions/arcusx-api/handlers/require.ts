@@ -4,6 +4,7 @@ import {
   type AuthContext,
 } from '../../_shared/arcusx-auth.ts';
 import { bearerToken } from '../../_shared/arcusx-jwt.ts';
+import { isPartnerApiKey } from '../../_shared/partner-api-keys.ts';
 import type { ApiContext } from './types.ts';
 
 export async function requireUser(ctx: { req: Request }): Promise<AuthContext> {
@@ -25,7 +26,9 @@ export async function requireAdmin(ctx: { req: Request }): Promise<AuthContext> 
  */
 export async function requirePartnerAuth(ctx: ApiContext): Promise<AuthContext> {
   const token = bearerToken(ctx.req);
-  if (token) {
+  // Bearer axk_* is a partner key, not a user JWT. Skip requireUser or we 401
+  // with invalid_or_missing_token when hitting Edge without the public gateway rewrite.
+  if (token && !isPartnerApiKey(token)) {
     return requireUser(ctx);
   }
 

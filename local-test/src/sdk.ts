@@ -52,6 +52,19 @@ export function gatewayHint(config: LocalTestConfig): string {
     : DEFAULT_PARTNER_API_BASE;
 }
 
+/** Base URL absoluta para fetch raw (p.ej. auth missing key en suite agentic). */
+export function resolvedJobsOrigin(config: LocalTestConfig): string {
+  const custom = config.baseUrl.trim();
+  if (custom) {
+    if (custom.startsWith('/')) {
+      return typeof window !== 'undefined' ? `${window.location.origin}${custom}` : custom;
+    }
+    return custom.replace(/\/$/, '');
+  }
+  if (import.meta.env.DEV) return defaultDevBaseUrl();
+  return DEFAULT_PARTNER_API_BASE.replace(/\/$/, '');
+}
+
 /** Cliente partner: solo API key. Sin JWT, sin wallet. */
 export function createPartnerClient(config: LocalTestConfig): ArcusXClient {
   const apiKey = config.apiKey.trim();

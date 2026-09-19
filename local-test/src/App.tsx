@@ -4,17 +4,20 @@ import {
   createPartnerClient,
   gatewayHint,
   loadConfig,
+  resolvedJobsOrigin,
   saveConfig,
   type LocalTestConfig,
 } from './sdk';
 import { runPartnerSuite, type SuiteReport } from './partnerSuite';
+import { runAgenticWeek1Suite } from './agentSuite';
 import {
   createFreighterAdapter,
   stellarExpertContractUrl,
   stellarExpertTxUrl,
 } from './freighter';
 
-type Tab = 'suite' | 'board' | 'quote' | 'escrow' | 'deals' | 'deal';
+type Tab = 'suite' | 'agent' | 'board' | 'quote' | 'escrow' | 'deals' | 'deal';
+type SuiteKind = 'partner' | 'agentic';
 
 type RunState = {
   loading: boolean;
@@ -112,7 +115,7 @@ function Action({
 
 export default function App() {
   const [config, setConfig] = useState<LocalTestConfig>(loadConfig);
-  const [tab, setTab] = useState<Tab>('suite');
+  const [tab, setTab] = useState<Tab>('agent');
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [nominal, setNominal] = useState('50');
@@ -132,7 +135,14 @@ export default function App() {
   const [chain, setChain] = useState<EscrowChainState>(emptyChain);
   const [freighterBusy, setFreighterBusy] = useState(false);
   const [suite, setSuite] = useState<SuiteReport | null>(null);
+  const [suiteKind, setSuiteKind] = useState<SuiteKind | null>(null);
   const [suiteRunning, setSuiteRunning] = useState(false);
+  const [jobId, setJobId] = useState('');
+  const [jobTitle, setJobTitle] = useState('SOW3 Week1 — local-test job');
+  const [jobExternalRef, setJobExternalRef] = useState('');
+  const [payerWalletAgent, setPayerWalletAgent] = useState(
+    () => import.meta.env.VITE_TEST_CLIENT_WALLET?.trim() || '',
+  );
   const [run, setRun] = useState<RunState>({
     loading: false,
     label: '',
@@ -266,21 +276,30 @@ export default function App() {
     }
   }
 
-  async function runSuite() {
+  async function runSuite(kind: SuiteKind) {
     setSuiteRunning(true);
     setSuite(null);
-    setRun({ loading: true, label: 'partner suite', result: null, error: null, ms: null });
+    setSuiteKind(kind);
+    const label = kind === 'agentic' ? 'SOW3 Week1 agentic suite' : 'partner suite';
+    setRun({ loading: true, label, result: null, error: null, ms: null });
     const t0 = performance.now();
     try {
       const client = ax();
-      const report = await runPartnerSuite(client, {
-        gatewayLabel: gatewayHint(config),
-        apiKey: config.apiKey.trim(),
-      });
+      const report =
+        kind === 'agentic'
+          ? await runAgenticWeek1Suite(client, {
+              gatewayLabel: gatewayHint(config),
+              apiKey: config.apiKey.trim(),
+              jobsBaseUrl: resolvedJobsOrigin(config),
+            })
+          : await runPartnerSuite(client, {
+              gatewayLabel: gatewayHint(config),
+              apiKey: config.apiKey.trim(),
+            });
       setSuite(report);
       setRun({
         loading: false,
-        label: 'partner suite',
+        label,
         result: report,
         error: report.failed > 0 ? `${report.failed} check(s) failed` : null,
         ms: Math.round(performance.now() - t0),
@@ -289,7 +308,7 @@ export default function App() {
       const msg = e instanceof Error ? e.message : String(e);
       setRun({
         loading: false,
-        label: 'partner suite',
+        label,
         result: null,
         error: msg,
         ms: Math.round(performance.now() - t0),
@@ -385,8 +404,8 @@ export default function App() {
       <header className="hero">
         <h1>ArcusX SDK · local-test</h1>
         <p>
-          Harness de integrador: API key → fee, board, quote, deals y escrow on-chain.
-          Firma Testnet con Freighter desde esta app.
+          Harness de integrador: API key → SOW 3 Week 1 agentic (create/status), fee, board,
+          quote, deals y escrow on-chain. Firma Testnet con Freighter desde esta app.
         </p>
         <div className="gateway">gateway → {gatewayHint(config)}</div>
       </header>
@@ -418,9 +437,19 @@ export default function App() {
             type="button"
             className="primary"
             disabled={!hasKey || suiteRunning || run.loading}
-            onClick={() => void runSuite()}
+            onClick={() => void runSuite('agentic')}
           >
-            {suiteRunning ? 'Corriendo suite…' : 'Correr suite partner (9 checks)'}
+            {suiteRunning && suiteKind === 'agentic'
+              ? 'Corriendo Week1…'
+              : 'Suite SOW3 Week1 (agentic)'}
+          </button>
+          <button
+            type="button"
+            className="ghost"
+            disabled={!hasKey || suiteRunning || run.loading}
+            onClick={() => void runSuite('partner')}
+          >
+            {suiteRunning && suiteKind === 'partner' ? 'Corriendo suite…' : 'Suite partner (legacy)'}
           </button>
           <button
             type="button"
@@ -429,6 +458,7 @@ export default function App() {
               localStorage.removeItem('arcusx-sdk-local-test-v2');
               setConfig(loadConfig());
               setSuite(null);
+              setSuiteKind(null);
             }}
           >
             Limpiar
@@ -436,6 +466,7 @@ export default function App() {
           <span className="badge">{hasKey ? 'key ✓' : 'pega tu key'}</span>
           {suite && (
             <span className={suite.failed === 0 ? 'badge ok' : 'badge fail'}>
+              {suiteKind === 'agentic' ? 'W1 ' : ''}
               {suite.passed}/{suite.passed + suite.failed} PASS
             </span>
           )}
@@ -444,7 +475,14 @@ export default function App() {
 
       {suite && (
         <section className="panel">
-          <h2>Suite results</h2>
+          <h2>
+            Suite results
+            {suiteKind === 'agentic'
+              ? ' · SOW3 Week1 agentic'
+              : suiteKind === 'partner'
+                ? ' · partner'
+                : ''}
+          </h2>
           <p className="hint">
             {suite.startedAt} · {suite.gateway} · {suite.passed} ok · {suite.failed} fail
           </p>
@@ -466,6 +504,7 @@ export default function App() {
         <div className="tabs">
           {(
             [
+              ['agent', 'Agentic jobs'],
               ['suite', 'Suite'],
               ['board', 'Board / tasks'],
               ['quote', 'Fee quote'],
@@ -487,10 +526,123 @@ export default function App() {
 
         {tab === 'suite' && (
           <p className="hint" style={{ marginTop: '0.75rem' }}>
-            Usa el botón verde de arriba. Checks: fee 0.02 · market stats · getTasks ·
-            escrow.quote · quote inválido · API key inválida · HMAC · partnerEscrow.list ·
-            partnerDeals.create+getByToken. Firma on-chain = app del partner (no aquí).
+            <strong>SOW3 Week1</strong> (botón verde): missing/invalid key, missing_title,
+            create, get, idempotent, invalid_job_id, list. Paridad con{' '}
+            <code>scripts/smoke-sow3-week1.mjs</code>. Suite partner = fee/board/quote/deals
+            legacy.
           </p>
+        )}
+
+        {tab === 'agent' && (
+          <>
+            <p className="hint" style={{ marginTop: '0.75rem' }}>
+              Week 1 machine-callable: <code>client.agent.create</code> /{' '}
+              <code>.get</code> / <code>.list</code> sobre Testnet. Fund/release = Week 2+.
+            </p>
+            <div className="fields" style={{ marginTop: '0.75rem' }}>
+              <label>
+                title
+                <input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
+              </label>
+              <label>
+                external_ref (idempotencia)
+                <input
+                  value={jobExternalRef}
+                  onChange={(e) => setJobExternalRef(e.target.value.trim())}
+                  placeholder="vacío = auto local-test-…"
+                />
+              </label>
+              <label>
+                payer_wallet (opcional G…)
+                <input
+                  value={payerWalletAgent}
+                  onChange={(e) => setPayerWalletAgent(e.target.value.trim())}
+                  placeholder="G…"
+                />
+              </label>
+              <label>
+                job_id
+                <input
+                  value={jobId}
+                  onChange={(e) => setJobId(e.target.value.trim())}
+                  placeholder="uuid tras create"
+                />
+              </label>
+            </div>
+            <div className="actions">
+              <Action
+                title="agent.create"
+                hint="POST /v1/jobs — status open"
+                loading={run.loading}
+                disabled={!hasKey || !jobTitle.trim()}
+                onRun={() =>
+                  void exec('agent.create', async () => {
+                    const ref =
+                      jobExternalRef || `local-test-w1-${Date.now()}`;
+                    if (!jobExternalRef) setJobExternalRef(ref);
+                    const created = await ax().agent.create({
+                      title: jobTitle.trim(),
+                      description: 'local-test agentic harness',
+                      external_ref: ref,
+                      ...(payerWalletAgent.startsWith('G')
+                        ? { payer_wallet: payerWalletAgent }
+                        : {}),
+                      metadata: { track: 'sow3-week1', harness: 'local-test' },
+                    });
+                    const id = String(created.job_id || created.job?.id || '');
+                    if (id) setJobId(id);
+                    return created;
+                  })
+                }
+              />
+              <Action
+                title="agent.get"
+                hint="GET /v1/jobs/{id}"
+                loading={run.loading}
+                disabled={!hasKey || !jobId}
+                onRun={() =>
+                  void exec('agent.get', () => ax().agent.get(jobId))
+                }
+              />
+              <Action
+                title="agent.create (idempotent)"
+                hint="Mismo external_ref → mismo job_id"
+                loading={run.loading}
+                disabled={!hasKey || !jobTitle.trim() || !jobExternalRef}
+                onRun={() =>
+                  void exec('agent.create idempotent', async () => {
+                    const again = await ax().agent.create({
+                      title: jobTitle.trim(),
+                      external_ref: jobExternalRef,
+                      ...(payerWalletAgent.startsWith('G')
+                        ? { payer_wallet: payerWalletAgent }
+                        : {}),
+                    });
+                    const id = String(again.job_id || again.job?.id || '');
+                    return {
+                      ...again,
+                      same_as_ui_job_id: id === jobId,
+                    };
+                  })
+                }
+              />
+              <Action
+                title="agent.list"
+                loading={run.loading}
+                disabled={!hasKey}
+                onRun={() => void exec('agent.list', () => ax().agent.list())}
+              />
+              <Action
+                title="agent.get(invalid)"
+                hint="Espera 400 invalid_job_id"
+                loading={run.loading}
+                disabled={!hasKey}
+                onRun={() =>
+                  void exec('agent.get invalid', () => ax().agent.get('not-a-uuid'))
+                }
+              />
+            </div>
+          </>
         )}
 
         {tab === 'board' && (

@@ -153,6 +153,20 @@ function taskCreatorLabel(task: TaskData): string {
   );
 }
 
+function formatTaskDifficulty(difficulty: string | undefined, t: (key: string) => string): string {
+  const d = String(difficulty ?? '').toLowerCase();
+  if (d.includes('fácil') || d.includes('facil') || d === 'easy') {
+    return t('dashboard.tasks.difficulty.easy');
+  }
+  if (d.includes('inter') || d === 'medium' || d === 'media') {
+    return t('dashboard.tasks.difficulty.medium');
+  }
+  if (d.includes('difícil') || d.includes('dificil') || d === 'hard') {
+    return t('dashboard.tasks.difficulty.hard');
+  }
+  return difficulty ?? '';
+}
+
 const Dashboard = () => {
   const { t, lang } = useI18n();
   const enterprise = useEnterpriseMode();
@@ -1574,7 +1588,7 @@ const Dashboard = () => {
                   return (
                   <div key={task.id} className="task-card">
                     <div className="task-header">
-                      <h3>{task.title}</h3>
+                      <h3 title={task.title}>{task.title}</h3>
                       <div className="task-header-badges">
                         <span className={`task-origin-badge ${networkBadge}`}>
                           {networkBadge === 'mainnet'
@@ -1582,7 +1596,7 @@ const Dashboard = () => {
                             : t('dashboard.tasks.badge.testnet')}
                         </span>
                         <span className={`task-difficulty ${task.difficulty.toLowerCase()}`}>
-                          {task.difficulty}
+                          {formatTaskDifficulty(task.difficulty, t)}
                         </span>
                       </div>
                     </div>
@@ -1632,7 +1646,7 @@ const Dashboard = () => {
                 {!loadingExternalJobs && visibleExternalJobs.map((job) => (
                   <div key={job.id} className="task-card task-card-external">
                     <div className="task-header">
-                      <h3>{job.title}</h3>
+                      <h3 title={job.title}>{job.title}</h3>
                       <div className="task-header-badges">
                         <span className="task-origin-badge externa">
                           {t('dashboard.tasks.badge.external')}
@@ -2075,10 +2089,12 @@ const Dashboard = () => {
                   {privateOffers.map((task) => (
                     <div key={task.id} className="task-card">
                       <div className="task-header">
-                        <h3>{task.title}</h3>
-                        <span className={`task-difficulty ${String(task.difficulty).toLowerCase()}`}>
-                          {task.difficulty}
-                        </span>
+                        <h3 title={task.title}>{task.title}</h3>
+                        <div className="task-header-badges">
+                          <span className={`task-difficulty ${String(task.difficulty).toLowerCase()}`}>
+                            {formatTaskDifficulty(String(task.difficulty), t)}
+                          </span>
+                        </div>
                       </div>
                       <p className="task-description">{task.subtitle || task.description?.slice(0, 160)}</p>
                       <div className="task-details">
@@ -2405,11 +2421,13 @@ const Dashboard = () => {
                   .map(task => (
                     <div key={task.id} className="task-card">
                       <div className="task-header">
-                        <h3>{task.title}</h3>
+                        <h3 title={task.title}>{task.title}</h3>
                         {task.difficulty && (
-                          <span className={`task-difficulty ${task.difficulty.toLowerCase()}`}>
-                          {task.difficulty}
-                        </span>
+                          <div className="task-header-badges">
+                            <span className={`task-difficulty ${task.difficulty.toLowerCase()}`}>
+                              {formatTaskDifficulty(task.difficulty, t)}
+                            </span>
+                          </div>
                         )}
                       </div>
                       <p className="task-description">{task.subtitle}</p>
