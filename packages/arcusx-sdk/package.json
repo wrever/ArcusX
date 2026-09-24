@@ -12,7 +12,9 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "smoke": "npm run build && node ../../scripts/smoke-sdk.mjs",
@@ -29,9 +31,24 @@
     "demo:agentic": "npm run build && node ../../scripts/demo-agentic-week1.mjs",
     "prepublishOnly": "npm run build"
   },
-  "keywords": ["arcusx", "stellar", "usdc", "escrow", "freelance"],
+  "keywords": [
+    "arcusx",
+    "stellar",
+    "usdc",
+    "escrow",
+    "freelance"
+  ],
   "license": "MIT",
+  "peerDependencies": {
+    "@stellar/stellar-sdk": ">=11.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@stellar/stellar-sdk": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@stellar/stellar-sdk": "^11.3.0",
     "typescript": "^5.7.2"
   },
   "engines": {

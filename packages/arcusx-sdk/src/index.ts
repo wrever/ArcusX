@@ -4,6 +4,8 @@ export { ArcusXClient } from './client.js';
 export { ArcusXApiError } from './errors.js';
 export * from './types.js';
 export type { WalletAdapter } from './wallet/adapter.js';
+export { createKeypairWalletAdapter } from './wallet/keypair.js';
+export type { KeypairNetwork } from './wallet/keypair.js';
 export type { PartnerEscrowModule, PartnerEscrowPrepareDeployInput } from './modules/partnerEscrow.js';
 export type { PartnerDealsModule, PartnerDealCreateInput } from './modules/partnerDeals.js';
 export { fundSubjob, releaseSubjob, paySubjobEndToEnd } from './agent/tw-payment.js';
