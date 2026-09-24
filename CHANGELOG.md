@@ -8,21 +8,24 @@ Las entradas siguen espíritu **[Keep a Changelog](https://keepachangelog.com/es
 
 ## 2026-09-24 — v3.8.2 · SOW 3 Week 3 (agentic E2E docs + demo)
 
-**Rama:** `ArcusX3.8` · **Gateway:** `https://api.arcusx.pro`
+**Rama:** `ArcusX3.8` · **Tag:** `v3.8.2` · **Gateway:** `https://api.arcusx.pro` · **Edge:** `arcusx-api` **v131** · **SDK:** `0.5.2`
 
 ### Agentic / SDK
 - `createKeypairWalletAdapter` + `demo/smoke:sow3:week3` (dry verified; live with `PAYER_SECRET_KEY`)
 - Quickstart + known limitations under `docs/sprints/instaawards-sow3/`
+- Edge v131: idempotency scoped + agentic tasks private
+- Weeks 1–3 packets marked closed; evidence smokes re-verified 2026-09-24
 
 ### Fuera de este corte
 - Evidence pack con hashes Expert (Week 4)
+- Fresh-clone closeout
 - Mainnet
 
 ---
 
 ## 2026-09-24 — v3.8.1 · SOW 3 Week 2 (fund/release prepare-confirm)
 
-**Rama:** `ArcusX3.8` · **Tag:** `v3.8.1` · **Gateway:** `https://api.arcusx.pro` · **Edge:** `arcusx-api` v130
+**Rama:** `ArcusX3.8` · **Tag:** `v3.8.1` · **Gateway:** `https://api.arcusx.pro` · **Edge:** `arcusx-api` v130 (live stack later same day: **v131**)
 
 ### Agentic / SDK
 - Fund/release prepare-confirm en `/v1/subjobs/…/escrow/…` + `client.agent.prepareFund|confirmFund|prepareRelease|confirmRelease|markWorkStarted`
@@ -44,7 +47,7 @@ Las entradas siguen espíritu **[Keep a Changelog](https://keepachangelog.com/es
 
 ## 2026-09-18 — v3.8.0 · SOW 3 Week 1 (agentic jobs)
 
-**Rama:** `ArcusX3.8` · **Tag previsto:** `v3.8.0` · **Gateway:** `https://api.arcusx.pro` · **Edge:** `arcusx-api` v128
+**Rama:** `ArcusX3.8` · **Tag:** `v3.8.0` · **Gateway:** `https://api.arcusx.pro` · **Edge:** `arcusx-api` v128 (live stack: **v131**)
 
 ### Agentic / SDK
 
