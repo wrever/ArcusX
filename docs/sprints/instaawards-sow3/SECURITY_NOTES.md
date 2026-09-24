@@ -2,6 +2,8 @@
 
 Short checklist for reviewers / maintainers. Full partner auth: [`docs/sdk/PARTNER_AUTH.md`](../../sdk/PARTNER_AUTH.md).
 
+**Status:** Weeks 1–3 closed · Edge live **`arcusx-api` v131** · SDK **0.5.2** · Re-verified 2026-09-24
+
 ## Do
 
 - Keep `ARCUSX_API_KEY=axk_test_…` only in local `.env` (gitignored)
@@ -21,7 +23,7 @@ Short checklist for reviewers / maintainers. Full partner auth: [`docs/sdk/PARTN
 |---------|--------|
 | v128 | Week 1 create/status |
 | v130 | `requireUser` honors `partnerId` for prepare fund/release |
-| v131+ | Idempotency scoped per partner/user; agentic tasks always private |
+| **v131** (live) | Idempotency scoped per partner/user; agentic tasks always private |
 
 ## Verify after auth changes
 
