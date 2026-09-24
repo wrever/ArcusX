@@ -20,7 +20,7 @@ Make the **machine-callable fund and release path** first-class on Testnet:
 3. Node agent-simulation **skeleton** (SDK only)
 4. `Idempotency-Key` on prepare/confirm calls (same `/v1` pattern as Week 1)
 
-- Live **funded / released** states with Freighter-signed XDR are **Week 3**. Week 2 proves the routes compile, accept partner keys (after Edge redeploy of `requireUser`), return `unsigned_xdr` when deploy exists, and return **typed 4xx** (not 401/500) when the subjob is not yet funded.
+- Live **funded / released** states with Freighter-signed XDR are **Week 3**. Week 2 proves the routes compile, accept partner keys (Edge `arcusx-api` v130+), return `unsigned_xdr` when deploy exists, and return **typed 4xx** (not 401/500) when the subjob is not yet funded.
 
 ---
 
