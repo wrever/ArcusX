@@ -2,9 +2,10 @@
 
 **Track:** Agentic payments — Node E2E demo + docs package  
 **Week:** 3 of 4 (SOW 3 follow-on)  
-**Status:** Complete (dry path verified live; on-chain hashes when `PAYER_SECRET_KEY` set)  
-**Date:** 2026-09-24  
-**Edge:** `arcusx-api` v130+ · Gateway `https://api.arcusx.pro`  
+**Status:** Complete (closed dry path; on-chain hashes when `PAYER_SECRET_KEY` set → Week 4)  
+**Date:** 2026-09-24 · **Re-verified:** 2026-09-24  
+**Release:** [v3.8.2](https://github.com/wrever/ArcusX/releases/tag/v3.8.2)  
+**Edge:** `arcusx-api` **v131** · Gateway `https://api.arcusx.pro`  
 **SOW source:** [`../SOW3_INSTAAWARDS_FOLLOWON.md`](../SOW3_INSTAAWARDS_FOLLOWON.md)  
 **Changelog:** [`WEEK3_NOTION_CHANGELOG.md`](./WEEK3_NOTION_CHANGELOG.md)  
 **Prerequisite:** [`INSTAAWARDS_SOW3_WEEK2.md`](./INSTAAWARDS_SOW3_WEEK2.md)
@@ -77,7 +78,7 @@ npm run smoke:sow3:week3
 SMOKE_STRICT=1 npm run smoke:sow3:week3   # requires live env when STRICT
 ```
 
-### Smoke result (dry, 2026-09-24)
+### Smoke result (dry, re-verified 2026-09-24, Edge v131)
 
 ```
 ✓ sdk.exports — createKeypairWalletAdapter
