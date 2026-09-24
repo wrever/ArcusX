@@ -1,7 +1,7 @@
 /**
  * Agentic payments — visual journey test app (Testnet).
- * Live: auth → create job → create subjob → escrow quote → status.
- * Next (shown locked): fund USDC → release payout.
+ * Live: auth → create job → create subjob → escrow quote → status →
+ * prepareFund / prepareRelease (unsigned XDR or typed 4xx). Confirm+sign = Week 3.
  */
 import { useState } from 'react';
 import { ArcusXApiError } from '@arcusx/sdk';
@@ -38,8 +38,8 @@ const STEPS: Step[] = [
   { id: 'subjob', n: 3, label: 'Create subjob', live: true, detail: 'Work unit + amount' },
   { id: 'quote', n: 4, label: 'Escrow quote', live: true, detail: 'USDC + fee' },
   { id: 'status', n: 5, label: 'Status', live: true, detail: 'Job + subjob open' },
-  { id: 'fund', n: 6, label: 'Fund escrow', live: false, detail: 'Sign XDR (próximo)' },
-  { id: 'release', n: 7, label: 'Release', live: false, detail: 'Payout on-chain (próximo)' },
+  { id: 'fund', n: 6, label: 'Fund prepare', live: true, detail: 'unsigned_xdr o 4xx' },
+  { id: 'release', n: 7, label: 'Release prepare', live: true, detail: 'antes de fund = 4xx' },
 ];
 
 type Snapshot = {
@@ -52,6 +52,8 @@ type Snapshot = {
   amount: number;
   quote: Record<string, unknown> | null;
   externalRef: string;
+  fundNote: string;
+  releaseNote: string;
 };
 
 type Props = {
@@ -63,6 +65,25 @@ function initialStates(): Record<StepId, StepState> {
   return Object.fromEntries(
     STEPS.map((s) => [s.id, s.live ? 'idle' : 'locked']),
   ) as Record<StepId, StepState>;
+}
+
+async function tryPrepare(
+  fn: () => Promise<Record<string, unknown>>,
+): Promise<{ note: string; xdr?: string }> {
+  try {
+    const prep = await fn();
+    const xdr = String(prep.unsigned_xdr || prep.unsignedTransaction || '').trim();
+    if (xdr) return { note: `unsigned_xdr ${xdr.length} chars`, xdr };
+    return { note: 'prepare 200 (sin XDR)' };
+  } catch (e) {
+    if (e instanceof ArcusXApiError && e.status === 401) {
+      return { note: `HTTP 401 ${e.code} (redeploy Edge: partner key en prepareFund)` };
+    }
+    if (e instanceof ArcusXApiError && e.status !== 401 && e.status < 500) {
+      return { note: `HTTP ${e.status} ${e.code}` };
+    }
+    throw e;
+  }
 }
 
 export default function AgenticPaymentsDemo({ onOpenHarness, onOpenWeek1 }: Props) {
@@ -188,6 +209,26 @@ export default function AgenticPaymentsDemo({ onOpenHarness, onOpenWeek1 }: Prop
       mark('status', 'done');
       pushLog(`✓ job=${job.status} · subjob=${subjob.status} · subjobs=${job.subjobs?.length ?? 1}`);
 
+      const signer = payerWallet.startsWith('G')
+        ? payerWallet
+        : 'GA7UTLCKIPSQSCRLILQKZGE24X5CBAH32C7NJEZ2NKQLTB4OZDINXL3D';
+
+      mark('fund', 'running');
+      pushLog(`→ client.agent.prepareFund(${subjobId.slice(0, 8)}…)`);
+      const fundPrep = await tryPrepare(() =>
+        client.agent.prepareFund(subjobId, signer) as Promise<Record<string, unknown>>,
+      );
+      mark('fund', 'done');
+      pushLog(`✓ Fund prepare ${fundPrep.note}`);
+
+      mark('release', 'running');
+      pushLog(`→ client.agent.prepareRelease(${subjobId.slice(0, 8)}…)`);
+      const relPrep = await tryPrepare(() =>
+        client.agent.prepareRelease(subjobId, signer) as Promise<Record<string, unknown>>,
+      );
+      mark('release', 'done');
+      pushLog(`✓ Release prepare ${relPrep.note}`);
+
       setSnap({
         jobId,
         jobStatus: job.status,
@@ -198,10 +239,12 @@ export default function AgenticPaymentsDemo({ onOpenHarness, onOpenWeek1 }: Prop
         amount: workerAmount,
         quote: q && typeof q === 'object' ? q : null,
         externalRef,
+        fundNote: fundPrep.note,
+        releaseNote: relPrep.note,
       });
 
       setMs(Math.round(performance.now() - t0));
-      pushLog('Recorrido off-chain listo. Fund + release on-chain = siguiente hito.');
+      pushLog('Week 2 listo. Firmar XDR y confirmFund/confirmRelease = Week 3.');
     } catch (e) {
       let msg: string;
       if (e instanceof ArcusXApiError) {
@@ -235,13 +278,12 @@ export default function AgenticPaymentsDemo({ onOpenHarness, onOpenWeek1 }: Prop
         <h1 className="aj-title">
           Recorrido de pago agentico
           <span className="aj-title-sub">
-            Un agente orquesta job → subjob → quote — sin UI del marketplace
+            Un agente orquesta job → subjob → quote → prepare fund/release — sin UI del marketplace
           </span>
         </h1>
         <p className="aj-lede">
           App de prueba visual sobre <code>@arcusx/sdk</code> + partner key. Corre el camino
-          real en <code>api.arcusx.pro</code>. Fund/release on-chain se muestran como siguiente
-          paso.
+          real en <code>api.arcusx.pro</code>. Confirmar XDR firmado (funded/released) es Week 3.
         </p>
         <div className="aj-meta">
           <span>{gatewayHint(config)}</span>
@@ -311,12 +353,26 @@ export default function AgenticPaymentsDemo({ onOpenHarness, onOpenWeek1 }: Prop
               {snap.quote ? JSON.stringify(snap.quote, null, 2) : '—'}
             </pre>
           </article>
+          <article className="aj-card">
+            <h2>Prepare</h2>
+            <p className="aj-badge">week 2</p>
+            <dl>
+              <div>
+                <dt>fund</dt>
+                <dd>{snap.fundNote}</dd>
+              </div>
+              <div>
+                <dt>release</dt>
+                <dd>{snap.releaseNote}</dd>
+              </div>
+            </dl>
+          </article>
         </div>
       ) : (
         <div className="aj-empty">
           <p>
             Pulsa <strong>Correr recorrido en vivo</strong> para crear job + subjob + quote
-            reales en Testnet.
+            y llamar prepareFund / prepareRelease en Testnet.
           </p>
         </div>
       )}

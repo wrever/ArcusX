@@ -164,7 +164,7 @@ Unlocks: HTTP 201 on create, `missing_title` / `invalid_job_id` / partner auth c
 
 ## Next week (Week 2)
 
-Fund prepare/confirm + release prepare/confirm on the agentic path; SDK helpers + Node demo skeleton.
+Shipped: [`INSTAAWARDS_SOW3_WEEK2.md`](./INSTAAWARDS_SOW3_WEEK2.md).
 
 ---
 

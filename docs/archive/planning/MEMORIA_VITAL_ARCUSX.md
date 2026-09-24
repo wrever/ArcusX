@@ -3,7 +3,7 @@
 
 **Última Actualización:** 18 septiembre 2026  
 **Versión del Proyecto:** 3.8 (rama `ArcusX3.8`)  
-**Estado:** Testnet operativo · SOW 2 ✅ · **SOW 3 Week 1 ✅** (jobs agenticos create/status) · partner escrow + deals live · fee 2% · docs [`PLATFORM_OVERVIEW.md`](../../sdk/PLATFORM_OVERVIEW.md)
+**Estado:** Testnet operativo · SOW 2 ✅ · **SOW 3 Week 1 ✅** · **SOW 3 Week 2 ✅** (fund/release prepare-confirm · Edge v130 · smoke 10/10) · partner escrow + deals live · fee 2% · docs [`PLATFORM_OVERVIEW.md`](../../sdk/PLATFORM_OVERVIEW.md)
 
 ---
 
@@ -31,7 +31,7 @@
 
 1. **Marketplace** (`arcusx.pro`) — OAuth, tareas, ofertas privadas, deals JWT, disputas, ratings.  
 2. **Partner** (`@arcusx/sdk` + API key) — escrow y payment links sin obligar login ArcusX; wallets + monto; fee 2%.  
-3. **Agentic (SOW 3)** — `client.agent.*` + `/v1/jobs`: un runtime crea jobs autenticados sin UI. Week 1 = create/status; fund/release = Week 2+.
+3. **Agentic (SOW 3)** — `client.agent.*` + `/v1/jobs` + `/v1/subjobs/…/escrow/…`: create/status (W1) + fund/release prepare-confirm (W2). Firmas on-chain E2E = Week 3.
 
 La plataforma permite:
 
@@ -1596,9 +1596,32 @@ cd ../../local-test && npm run dev   # http://localhost:5200
 
 ---
 
-**Última actualización:** 18 septiembre 2026 (SOW 3 Week 1 · ArcusX3.8 · jobs agenticos Testnet)  
+## Actualización Septiembre 2026 — SOW 3 Week 2 (fund/release prepare-confirm)
+
+**Packet:** `docs/sprints/instaawards-sow3/INSTAAWARDS_SOW3_WEEK2.md`  
+**Changelog:** `docs/sprints/instaawards-sow3/WEEK2_NOTION_CHANGELOG.md`
+
+| Pieza | Estado |
+|-------|--------|
+| `prepareFund` / `confirmFund` / `prepareRelease` / `confirmRelease` REST + SDK | ✅ en repo |
+| `markWorkStarted` | ✅ |
+| Node skeleton `demo:sow3:week2` | ✅ exit 0 |
+| Smoke `smoke:sow3:week2` | ✅ 10/10 live (`arcusx-api` v130) |
+| Harness visual prepare fund/release | ✅ `local-test/` |
+| Firmas Freighter → funded/released hashes | Week 3 |
+
+**Bloqueador live:** resuelto en `arcusx-api` **v130** (`requireUser` usa `partnerId` del router).
+
+```bash
+cd packages/arcusx-sdk && SMOKE_STRICT=1 npm run smoke:sow3:week2
+npm run demo:sow3:week2
+```
+
+---
+
+**Última actualización:** 24 septiembre 2026 (SOW 3 Week 2 · ArcusX3.8 · prepare fund/release)  
 **Mantenido por:** Equipo ArcusX  
-**Versión del documento:** 1.10
+**Versión del documento:** 1.11
 
 ---
 

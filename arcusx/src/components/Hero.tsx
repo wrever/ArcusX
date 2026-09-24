@@ -545,7 +545,7 @@ const Hero = () => {
                     {t('hero.search.searching')}
                   </span>
                 )}
-              </div>
+            </div>
               {showResults && searchQuery.trim().length >= 2 && (
                 <div className="landing-hero-search-results">
                   {loadingSearch && searchResults.length === 0 ? (
@@ -597,14 +597,14 @@ const Hero = () => {
                                 >
                                   {t('hero.search.apply')} <FaArrowRight />
                                 </button>
-              </div>
             </div>
+          </div>
                           </li>
                         ))}
                       </ul>
                     </>
                   )}
-              </div>
+          </div>
               )}
             </div>
 
@@ -695,12 +695,12 @@ const Hero = () => {
                                 >
                                   {t('dashboard.tasks.external.apply')} <FaArrowRight />
                                 </a>
-                              </div>
+              </div>
                             </article>
                             ),
                           )}
-              </div>
             </div>
+              </div>
                       <button type="button" className="hero-carousel-btn hero-carousel-btn-next" onClick={() => scrollCarousel('right')} aria-label={t('hero.carousel.next')}>
                         <FaChevronRight />
                       </button>
@@ -709,14 +709,14 @@ const Hero = () => {
               </div>
               </section>
             )}
-              </div>
+            </div>
         </header>
 
         {/* — Trust strip: rápido y seguro — */}
         <section className="landing-trust-strip" aria-label={t('landing.trust.aria')}>
           <div className="landing-trust-strip-inner">
             <span className="landing-trust-text">{t('landing.trust.line')}</span>
-          </div>
+              </div>
         </section>
 
         <section className="hero-carousel-section hero-freelancer-carousel-section" aria-label={t('hero.freelancer.carousel.aria')}>
@@ -768,7 +768,7 @@ const Hero = () => {
                                   {freelancerDisplayInitials(fl.username)}
                                 </span>
                               )}
-            </div>
+              </div>
                             <div className="hero-freelancer-card-head">
                               <div className="hero-freelancer-name-row">
                                 <UsernameWithVerified
@@ -793,8 +793,8 @@ const Hero = () => {
                               {skillsPreview ? (
                                 <span className="hero-freelancer-skills-preview">{skillsPreview}</span>
                               ) : null}
-                  </div>
-                </div>
+              </div>
+            </div>
                           <p className="hero-carousel-card-desc hero-freelancer-bio">{bioText}</p>
                           <div className="hero-carousel-card-footer hero-freelancer-card-footer">
                             {fl.has_payout_wallet ? (
@@ -820,12 +820,12 @@ const Hero = () => {
                                 {t('hero.freelancer.carousel.viewProfile')}
                               </button>
                             )}
-                  </div>
+          </div>
                         </article>
                       );
                     })}
-                  </div>
-                </div>
+        </div>
+      </div>
                 <button 
                   type="button"
                   className="hero-carousel-btn hero-carousel-btn-next"
@@ -872,7 +872,7 @@ const Hero = () => {
                 <div className="landing-value-node landing-value-node-talent" title={t('solution.stat1.label')}>
                   <FaLaptopCode className="landing-value-node-icon" />
                   <span className="landing-value-node-label">{t('solution.stat1.label')}</span>
-                </div>
+                  </div>
                 <div className="landing-value-connector landing-value-connector-h" aria-hidden="true">
                   <span className="landing-value-connector-line" />
                   <span className="landing-value-connector-flow" />
@@ -893,8 +893,8 @@ const Hero = () => {
                   <span className="landing-value-connector-line" />
                   <span className="landing-value-connector-flow" />
                 </div>
-              </div>
-            </div>
+                  </div>
+                </div>
           </motion.div>
         </section>
 
@@ -944,7 +944,7 @@ const Hero = () => {
                 <h3 className="landing-how-step-title">{t('landing.how.step3')}</h3>
                 <p className="landing-how-step-desc">{t('landing.how.desc3')}</p>
               </motion.div>
-            </div>
+              </div>
           </motion.div>
       </section>
 
@@ -1076,12 +1076,12 @@ const Hero = () => {
                         <li>{t('roadmap.mvp.2')}</li>
                         <li>{t('roadmap.mvp.3')}</li>
                       </ul>
+            </div>
                 </div>
                   </div>
-                </div>
                 <div className="landing-roadmap-node" aria-hidden="true">
                   <FaCheck />
-              </div>
+                </div>
                 <div className="landing-roadmap-spacer" aria-hidden="true" />
               </motion.div>
               <motion.div
@@ -1097,7 +1097,7 @@ const Hero = () => {
                 <div className="landing-roadmap-spacer" aria-hidden="true" />
                 <div className="landing-roadmap-node" aria-hidden="true">
                   <FaCheck />
-                </div>
+              </div>
                 <div className="landing-roadmap-content">
                   <div className="landing-roadmap-card">
                     <button
@@ -1118,7 +1118,7 @@ const Hero = () => {
                         <li>{t('roadmap.done.2')}</li>
                         <li>{t('roadmap.done.3')}</li>
                       </ul>
-                    </div>
+                </div>
                   </div>
                 </div>
               </motion.div>
@@ -1153,9 +1153,9 @@ const Hero = () => {
                         <li>{t('roadmap.tranche2.3')}</li>
                         <li>{t('roadmap.tranche2.4')}</li>
                       </ul>
+              </div>
                 </div>
                   </div>
-                </div>
                 <div className="landing-roadmap-node" aria-hidden="true">
                   <FaCheck />
                 </div>
@@ -1238,8 +1238,8 @@ const Hero = () => {
             </div>
                 <div className="landing-roadmap-spacer" aria-hidden="true" />
               </motion.div>
-            </div>
               </div>
+            </div>
         </section>
 
         {/* — FAQ: 2x2 — */}

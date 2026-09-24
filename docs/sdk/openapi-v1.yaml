@@ -387,9 +387,21 @@ paths:
       tags: [Agentic]
       parameters:
         - $ref: '#/components/parameters/SubjobId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrepareEscrowSignerRequest'
       responses:
         '200':
-          description: OK
+          description: unsigned_xdr for client fund
+        '400':
+          description: Missing deploy, invalid client_wallet, or no contract
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
   /subjobs/{subjobId}/escrow/fund/confirm:
     post:
       summary: Confirm fund
@@ -397,9 +409,21 @@ paths:
       tags: [Agentic]
       parameters:
         - $ref: '#/components/parameters/SubjobId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmEscrowTxRequest'
       responses:
         '200':
-          description: OK
+          description: Subjob status funded
+        '400':
+          description: fund_tx_hash or signed_xdr required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
   /subjobs/{subjobId}/escrow/release/prepare:
     post:
       summary: Prepare release XDR
@@ -407,9 +431,21 @@ paths:
       tags: [Agentic]
       parameters:
         - $ref: '#/components/parameters/SubjobId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrepareEscrowSignerRequest'
       responses:
         '200':
-          description: OK
+          description: unsigned_xdr for client release
+        '400':
+          description: Escrow not funded yet
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
   /subjobs/{subjobId}/escrow/release/confirm:
     post:
       summary: Confirm release
@@ -417,9 +453,37 @@ paths:
       tags: [Agentic]
       parameters:
         - $ref: '#/components/parameters/SubjobId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmEscrowTxRequest'
       responses:
         '200':
-          description: OK
+          description: Subjob status released
+        '409':
+          description: already_released
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
+  /subjobs/{subjobId}/work-started:
+    post:
+      summary: Mark work started (executor only)
+      operationId: markSubjobWorkStarted
+      tags: [Agentic]
+      parameters:
+        - $ref: '#/components/parameters/SubjobId'
+      responses:
+        '200':
+          description: Work marked in progress when funded
+        '403':
+          description: Caller is not the executor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeError'
   /subjobs/{subjobId}/attest:
     post:
       summary: Attest completion (callback / webhook_attestation policies)
@@ -474,6 +538,11 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema: { type: string }
   schemas:
     EnvelopeSuccess:
       type: object
@@ -558,3 +627,16 @@ components:
           enum: [manual_approve, webhook_attestation, api_callback]
         external_ref: { type: string }
         verification_policy: { type: object }
+    PrepareEscrowSignerRequest:
+      type: object
+      properties:
+        client_wallet: { type: string, description: Stellar G… signer }
+        signer: { type: string }
+    ConfirmEscrowTxRequest:
+      type: object
+      properties:
+        signed_xdr: { type: string }
+        fund_tx_hash: { type: string }
+        release_tx_hash: { type: string }
+        tx_hash: { type: string }
+        contract_id: { type: string }

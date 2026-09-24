@@ -38,3 +38,8 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# PHP leftover / nested clones (not the production path)
+vendor/
+**/tsconfig.tsbuildinfo
+local-test/tsconfig.tsbuildinfo

@@ -7,35 +7,14 @@ import { bearerToken } from '../../_shared/arcusx-jwt.ts';
 import { isPartnerApiKey } from '../../_shared/partner-api-keys.ts';
 import type { ApiContext } from './types.ts';
 
-export async function requireUser(ctx: { req: Request }): Promise<AuthContext> {
-  return authRequireUser(ctx.req);
-}
-
-export async function requireAdmin(ctx: { req: Request }): Promise<AuthContext> {
-  return authRequireAdmin(ctx.req);
-}
-
 /**
- * Auth para integraciones agénticas: JWT de usuario **o** solo API key de partner.
- * Con solo API key se actúa como el owner_user_id del partner (servidor/agente).
- *
- * Throws coded Unauthorized messages so the router can return stable SOW 3 envelopes:
- * - `Unauthorized:missing_api_key`
- * - `Unauthorized:invalid_api_key`
- * - `Unauthorized:partner_missing_owner`
+ * Resolve partner owner when the router already authenticated an API key.
+ * Does not recurse into requirePartnerAuth (JWT branch would call requireUser again).
  */
-export async function requirePartnerAuth(ctx: ApiContext): Promise<AuthContext> {
-  const token = bearerToken(ctx.req);
-  // Bearer axk_* is a partner key, not a user JWT. Skip requireUser or we 401
-  // with invalid_or_missing_token when hitting Edge without the public gateway rewrite.
-  if (token && !isPartnerApiKey(token)) {
-    return requireUser(ctx);
-  }
-
+async function authAsPartnerOwner(ctx: ApiContext): Promise<AuthContext> {
   if (!ctx.partnerId) {
     throw new Error('Unauthorized:missing_api_key');
   }
-
   const { data: partner } = await ctx.supabase
     .from('arcusx_partners')
     .select('owner_user_id, status')
@@ -55,6 +34,51 @@ export async function requirePartnerAuth(ctx: ApiContext): Promise<AuthContext> 
     supabase: ctx.supabase,
     userId: ownerId,
   };
+}
+
+export async function requireUser(ctx: { req: Request } & Partial<ApiContext>): Promise<AuthContext> {
+  const token = bearerToken(ctx.req);
+
+  // Real user JWT → marketplace path
+  if (token && !isPartnerApiKey(token)) {
+    return authRequireUser(ctx.req);
+  }
+
+  // Partner already resolved by router (Bearer axk_* and/or x-arcusx-api-key).
+  // Gateway may strip Authorization; partnerId is still set — do not fall through to JWT.
+  if (ctx.partnerId && ctx.supabase) {
+    return authAsPartnerOwner(ctx as ApiContext);
+  }
+
+  if (token && isPartnerApiKey(token)) {
+    throw new Error('Unauthorized:missing_api_key');
+  }
+
+  return authRequireUser(ctx.req);
+}
+
+export async function requireAdmin(ctx: { req: Request }): Promise<AuthContext> {
+  return authRequireAdmin(ctx.req);
+}
+
+/**
+ * Auth para integraciones agénticas: JWT de usuario **o** solo API key de partner.
+ * Con solo API key se actúa como el owner_user_id del partner (servidor/agente).
+ *
+ * Throws coded Unauthorized messages so the router can return stable SOW 3 envelopes:
+ * - `Unauthorized:missing_api_key`
+ * - `Unauthorized:invalid_api_key`
+ * - `Unauthorized:partner_missing_owner`
+ */
+export async function requirePartnerAuth(ctx: ApiContext): Promise<AuthContext> {
+  const token = bearerToken(ctx.req);
+  // Bearer axk_* is a partner key, not a user JWT. Skip JWT require or we 401
+  // with invalid_or_missing_token when hitting Edge without the public gateway rewrite.
+  if (token && !isPartnerApiKey(token)) {
+    return authRequireUser(ctx.req);
+  }
+
+  return authAsPartnerOwner(ctx);
 }
 
 /**

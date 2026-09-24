@@ -1,5 +1,21 @@
 # Changelog — `@arcusx/sdk`
 
+## Unreleased
+
+### Next (Week 3)
+- Signed Freighter / WalletAdapter E2E: confirmFund → release with Testnet tx hashes.
+
+## 0.5.1 — SOW 3 Week 2 (2026-09-24)
+
+### Agentic fund / release (Instawards SOW 3)
+- SDK helpers on `client.agent`: `prepareFund` / `confirmFund` / `prepareRelease` / `confirmRelease` / `markWorkStarted` (plus deploy prepare/confirm).
+- Node skeleton: `npm run demo:sow3:week2` — create → quote → prepare routes + typed 4xx until signed XDR.
+- Smoke: `npm run smoke:sow3:week2` — module surface, invalid wallet, missing confirm XDR, release-before-fund, payer cannot mark work started, `Idempotency-Key` (10/10 on gateway; Edge `arcusx-api` v130).
+- Sprint packet: `docs/sprints/instaawards-sow3/INSTAAWARDS_SOW3_WEEK2.md`.
+- Signed Freighter E2E (funded + released hashes) remains **Week 3**.
+
+---
+
 ## Unreleased — SOW 3 Week 1 (2026-09-17)
 
 ### Agentic foundation (Instawards SOW 3)

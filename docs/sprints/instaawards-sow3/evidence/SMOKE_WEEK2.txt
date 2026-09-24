@@ -1,0 +1,23 @@
+
+> @arcusx/sdk@0.5.0 smoke:sow3:week2
+> npm run build && node ../../scripts/smoke-sow3-week2.mjs
+
+
+> @arcusx/sdk@0.5.0 build
+> tsc -p tsconfig.json
+
+SOW3 Week2 smoke via https://api.arcusx.pro
+
+✓ sdk.module_surface — fund/release/workStarted helpers
+✓ agent.createJob — 7450e7bb-d760-427c-9d61-cd9ffd371a29
+✓ agent.createSubjob — 2f8822df-6ddb-4bdd-b8db-26215cdc514c task=149 proposal=null
+✓ agent.quoteEscrow — quote ok
+✓ agent.prepareFund_invalid_wallet — 400 error
+✓ agent.confirmFund_missing_xdr — 400 error
+✓ agent.prepareRelease_before_fund — 400 error
+✓ agent.markWorkStarted_payer_forbidden — 403 error
+✓ agent.prepareFund_idempotency_header — Idempotency-Key accepted → 400 error
+✓ agent.prepareFund_with_wallet — typed 400 error (XDR after deploy = Week 3)
+
+SOW3 Week2 smoke PASS (10 checks)
+EXIT:0

@@ -27,7 +27,9 @@ Pega `axk_test_…` o define `VITE_ARCUSX_API_KEY` en `local-test/.env`.
 3. `agent.createSubjob` (work unit + USDC)  
 4. `agent.quoteEscrow`  
 5. Status job + subjob  
+6. `agent.prepareFund` (unsigned XDR o 4xx tipado si aún no hay deploy)  
+7. `agent.prepareRelease` (4xx esperado hasta fondear)
 
-Fund escrow / release payout aparecen en el path como **próximo** (on-chain, siguiente hito).
+Confirmar XDR firmado (funded / released on-chain) es **Week 3**.
 
-Ideal para video a Stellar: un botón → estaciones se encienden → tarjetas Job / Subjob / Quote reales.
+Ideal para video a Stellar: un botón → estaciones se encienden → tarjetas Job / Subjob / Quote / Prepare reales.

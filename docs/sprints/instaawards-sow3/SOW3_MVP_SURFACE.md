@@ -33,7 +33,7 @@ Settlement is **1 escrow per subjob** (stable implementation). A job without sub
 | Quote | `GET /subjobs/{id}/escrow/quote` | `subjob_escrow_quote` | `quoteEscrow` | 2 |
 | Fund prepare | `POST /subjobs/{id}/escrow/fund/prepare` | `subjob_escrow_fund_prepare` | `prepareFund` | **2** |
 | Fund confirm | `POST /subjobs/{id}/escrow/fund/confirm` | `subjob_escrow_fund_confirm` | `confirmFund` | **2** |
-| Work started / complete signal | `POST /subjobs/{id}/work-started` | `subjob_mark_work_started` | *(SDK helper as needed)* | 2–3 |
+| Work started / complete signal | `POST /subjobs/{id}/work-started` | `subjob_mark_work_started` | `markWorkStarted` | **2** |
 | Release prepare | `POST /subjobs/{id}/escrow/release/prepare` | `subjob_escrow_release_prepare` | `prepareRelease` | **2** |
 | Release confirm | `POST /subjobs/{id}/escrow/release/confirm` | `subjob_escrow_release_confirm` | `confirmRelease` | **2** |
 

@@ -1,6 +1,6 @@
 {
   "name": "@arcusx/sdk",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "TypeScript SDK for ArcusX Work Execution Layer (Stellar USDC escrow + task lifecycle)",
   "type": "module",
   "main": "./dist/index.js",
@@ -20,6 +20,8 @@
     "smoke:agentic": "npm run build && node ../../scripts/smoke-agentic.mjs",
     "smoke:sow3:week1": "npm run build && node ../../scripts/smoke-sow3-week1.mjs",
     "demo:sow3:week1": "npm run build && node ../../scripts/demo-sow3-week1.mjs",
+    "smoke:sow3:week2": "npm run build && node ../../scripts/smoke-sow3-week2.mjs",
+    "demo:sow3:week2": "npm run build && node ../../scripts/demo-sow3-week2.mjs",
     "demo:week1": "npm run build && node ../../scripts/demo-week1-sdk.mjs",
     "demo:week2": "npm run build && node ../../scripts/demo-week2-award.mjs",
     "demo:week3": "npm run build && node ../../scripts/demo-week3-escrow.mjs",

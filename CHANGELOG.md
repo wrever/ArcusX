@@ -1,8 +1,30 @@
 # Changelog
 
-Todos los cambios notables del monorepo **ArcusX** (frontend `arcusx/`, backend `backend_externo/`, docs) se documentan aquí.
+Todos los cambios notables del monorepo **ArcusX** (frontend `arcusx/`, Edge `supabase/functions/`, SDK `packages/arcusx-sdk`) se documentan aquí.
 
 Las entradas siguen espíritu **[Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/)**. **Cómo etiquetar y publicar en GitHub Releases:** [docs/RELEASING.md](./docs/RELEASING.md).
+
+---
+
+## 2026-09-24 — v3.8.1 · SOW 3 Week 2 (fund/release prepare-confirm)
+
+**Rama:** `ArcusX3.8` · **Tag:** `v3.8.1` · **Gateway:** `https://api.arcusx.pro` · **Edge:** `arcusx-api` v130
+
+### Agentic / SDK
+- Fund/release prepare-confirm en `/v1/subjobs/…/escrow/…` + `client.agent.prepareFund|confirmFund|prepareRelease|confirmRelease|markWorkStarted`
+- Smoke 10/10 · `npm run smoke:sow3:week2` / `demo:sow3:week2`
+- `requireUser` respeta `partnerId` del router (gateway sin JWT Bearer)
+- Packet: `docs/sprints/instaawards-sow3/INSTAAWARDS_SOW3_WEEK2.md`
+
+### Harness
+- `local-test/` prepare fund/release live (unsigned XDR o 4xx tipado)
+
+### Cleanup
+- Módulos frontend huérfanos eliminados (admin login deprecado, RatingSystem no cableado, etc.)
+
+### Fuera de este release
+- Firmas Freighter → funded/released hashes (Week 3)
+- Mainnet
 
 ---
 

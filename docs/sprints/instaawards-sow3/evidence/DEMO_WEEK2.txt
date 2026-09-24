@@ -1,0 +1,59 @@
+
+> @arcusx/sdk@0.5.0 demo:sow3:week2
+> npm run build && node ../../scripts/demo-sow3-week2.mjs
+
+
+> @arcusx/sdk@0.5.0 build
+> tsc -p tsconfig.json
+
+@arcusx/sdk — SOW 3 Week 2 demo (fund/release skeleton)
+Gateway: https://api.arcusx.pro
+Network: testnet
+
+── 1) Create job ───────────────────────────────────────────
+job_id=edca0ba5-93d6-45a9-9b08-6036703a1817
+status=open
+
+── 2) Create subjob ────────────────────────────────────────
+subjob_id=867dab70-c04a-4972-bb01-60b0b174ad2d
+task_id=150
+proposal_id=null
+status=task_created
+
+── 3) Escrow quote ─────────────────────────────────────────
+{
+  "nominal": 2.5,
+  "workerNet": 2.45,
+  "clientTotal": 2.5,
+  "clientVisibleFee": 0,
+  "workerFee": 0.05,
+  "fundAmount": 2.5,
+  "platformCommission": 0.0425,
+  "protocolCommission": 0.0075,
+  "totalCommission": 0.05,
+  "platformFee": 0.017
+}
+
+── 4) prepareFund (unsigned XDR or typed 400 until deploy) ─
+ArcusXApiError status=400 code=error Primero deploy del escrow (prepareDeploy)
+(expected before deploy — route is live; sign+confirm = Week 3)
+
+── 5) confirmFund without XDR → typed 400 ──────────────────
+ArcusXApiError status=400 code=error Subjob sin proposal_id — asigna ejecutor primero
+
+── 6) prepareRelease before fund → typed 4xx ───────────────
+ArcusXApiError status=400 code=error Sin escrow activo
+
+── 7) markWorkStarted (executor-only) ──────────────────────
+ArcusXApiError status=403 code=error Solo el ejecutor puede marcar inicio de trabajo
+(payer key is not the executor — 403 proves the route)
+
+── 8) Status ───────────────────────────────────────────────
+job.status=in_progress subjobs=1
+subjob.status=task_created
+
+Cleanup: job cancelled.
+
+SOW 3 Week 2 demo skeleton complete.
+Next (Week 3): WalletAdapter.signTransaction → confirmFund → mark complete → confirmRelease.
+EXIT:0

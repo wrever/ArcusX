@@ -52,7 +52,7 @@ ArcusX is a Stellar Testnet marketplace and **payout infrastructure**: clients a
 | Partner | Integrators | API key `axk_test_…` / `axk_live_…` |
 | Agentic (SOW 3) | Agent runtimes via `client.agent.*` | Same partner API key (`partner_id`) |
 
-**SOW 3 Week 1 (this line):** authenticated `POST/GET /v1/jobs` — create, status, idempotent retry. Fund / release on-chain is **Week 2+**. Packet: [`docs/sprints/instaawards-sow3/`](./docs/sprints/instaawards-sow3/).
+**SOW 3 Week 2 (this line):** fund/release **prepare-confirm** on `/v1/subjobs/…/escrow/…` + SDK helpers + Node skeleton. Signed XDR E2E (funded/released hashes) is **Week 3**. Packet: [`docs/sprints/instaawards-sow3/`](./docs/sprints/instaawards-sow3/).
 
 ### Key Benefits
 
@@ -81,7 +81,7 @@ ArcusX is a Stellar Testnet marketplace and **payout infrastructure**: clients a
 - `@arcusx/sdk` — public, marketplace, partner escrow/deals, **agent jobs**
 - Gateway `https://api.arcusx.pro`
 - Agentic harness: `local-test/` → `npm run dev` (http://localhost:5200)
-- Smoke: `cd packages/arcusx-sdk && npm run smoke:sow3:week1`
+- Smoke: `cd packages/arcusx-sdk && npm run smoke:sow3:week2`
 
 ## 🛠 Technology Stack
 
@@ -134,12 +134,12 @@ npm run dev
 # → http://localhost:5173
 ```
 
-### SDK + Week 1 agentic smoke
+### SDK + Week 2 agentic smoke
 
 ```bash
 cd packages/arcusx-sdk && npm run build
-npm run smoke:sow3:week1
-npm run demo:sow3:week1
+npm run smoke:sow3:week2
+npm run demo:sow3:week2
 ```
 
 ### Visual agentic test app
@@ -153,6 +153,7 @@ See [`local-test/README.md`](./local-test/README.md) and [`CLAUDE.md`](./CLAUDE.
 
 ### Docs for reviewers / Instawards
 
+- SOW 3 Week 2: [`docs/sprints/instaawards-sow3/INSTAAWARDS_SOW3_WEEK2.md`](./docs/sprints/instaawards-sow3/INSTAAWARDS_SOW3_WEEK2.md)
 - SOW 3 Week 1: [`docs/sprints/instaawards-sow3/INSTAAWARDS_SOW3_WEEK1.md`](./docs/sprints/instaawards-sow3/INSTAAWARDS_SOW3_WEEK1.md)
 - SOW 2 SDK: [`docs/sdk/`](./docs/sdk/)
 - Memory: [`docs/archive/planning/MEMORIA_VITAL_ARCUSX.md`](./docs/archive/planning/MEMORIA_VITAL_ARCUSX.md)
@@ -186,7 +187,7 @@ await ax.agent.get(job_id);
 - `packages/arcusx-sdk/` — public TypeScript SDK
 - `supabase/functions/arcusx-api/` — production API (`?action=` + REST `/v1`)
 - `local-test/` — visual partner/agentic harness
-- `docs/sprints/instaawards-sow3/` — SOW 3 Week 1 packet + evidence
+- `docs/sprints/instaawards-sow3/` — SOW 3 Week 1–2 packet + evidence
 
 API surface: [`docs/sdk/`](./docs/sdk/) and OpenAPI `docs/sdk/openapi-v1.yaml`.
 
@@ -203,11 +204,11 @@ API surface: [`docs/sdk/`](./docs/sdk/) and OpenAPI `docs/sdk/openapi-v1.yaml`.
 - Marketplace Testnet (tasks, escrow, disputes, ratings)
 - `@arcusx/sdk` SOW 2 (partner escrow + deals)
 - **SOW 3 Week 1** — agentic create/status on `api.arcusx.pro` (Edge `arcusx-api` v128)
+- **SOW 3 Week 2** — fund/release prepare-confirm + SDK + Node skeleton · smoke 10/10 · Edge `arcusx-api` **v130**
 - Platform fee **2% worker-side**
 
-### Next (SOW 3 Week 2+)
-- Fund prepare/confirm + release prepare/confirm on the agentic path
-- Node agent demo E2E with Testnet tx evidence
+### Next (SOW 3 Week 3+)
+- Node demo E2E with signed XDR and Testnet tx evidence
 - Mainnet remains **documented future work**, not this release
 
 ## 🤝 Contributing
