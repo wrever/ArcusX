@@ -2,9 +2,11 @@ import { jsonError, jsonResponse } from '../../_shared/arcusx-cors.ts';
 import { authenticateRequest } from '../../_shared/arcusx-auth.ts';
 import {
   getIdempotentResponse,
+  scopeIdempotencyKey,
   storeIdempotentResponse,
   wantsIdempotency,
 } from '../../_shared/idempotency.ts';
+
 import {
   logPartnerAudit,
   PartnerAuthError,
@@ -299,13 +301,21 @@ export async function dispatch(req: Request): Promise<Response> {
 
   const idempotencyKey = req.headers.get('Idempotency-Key')?.trim() ??
     req.headers.get('idempotency-key')?.trim();
+  const scopedIdempotencyKey = idempotencyKey
+    ? scopeIdempotencyKey(idempotencyKey, { partnerId, userId: auth.userId })
+    : null;
   const useIdempotency = Boolean(
-    idempotencyKey && wantsIdempotency(action) &&
+    scopedIdempotencyKey && wantsIdempotency(action) &&
       (req.method === 'POST' || req.method === 'PUT'),
   );
 
-  if (useIdempotency && idempotencyKey) {
-    const cached = await getIdempotentResponse(auth.supabase, idempotencyKey, action);
+  if (useIdempotency && scopedIdempotencyKey) {
+    const cached = await getIdempotentResponse(
+      auth.supabase,
+      scopedIdempotencyKey,
+      action,
+      auth.userId,
+    );
     if (cached) {
       return jsonResponse(req, cached.body, cached.status);
     }
@@ -321,13 +331,13 @@ export async function dispatch(req: Request): Promise<Response> {
         ip: req.headers.get('x-forwarded-for') ?? req.headers.get('cf-connecting-ip'),
       });
     }
-    if (useIdempotency && idempotencyKey && response.ok) {
+    if (useIdempotency && scopedIdempotencyKey && response.ok) {
       try {
         const clone = response.clone();
         const stored = await clone.json() as Record<string, unknown>;
         await storeIdempotentResponse(
           auth.supabase,
-          idempotencyKey,
+          scopedIdempotencyKey,
           action,
           auth.userId,
           response.status,
