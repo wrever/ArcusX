@@ -12,11 +12,11 @@ Network: testnet
 Mode: DRY (no PAYER_SECRET_KEY)
 
 ── 1) Create job ───────────────────────────────────────────
-job_id=d15b613a-4876-49fe-800c-68c8dda30c95 status=open
+job_id=3f359e1e-12d3-4e20-a091-141d86ac9ed6 status=open
 
 ── 2) Create subjob ────────────────────────────────────────
-subjob_id=3e8558a1-997d-478a-96b4-34999feb7554
-task_id=155 proposal_id=null
+subjob_id=50dd66f0-8aba-4966-91ba-52189dde6fdc
+task_id=158 proposal_id=null
 NOTE: without AGENTIC_EXECUTOR_USER_ID there is no proposal — fundSubjob will fail.
 
 ── 3) Escrow quote ─────────────────────────────────────────

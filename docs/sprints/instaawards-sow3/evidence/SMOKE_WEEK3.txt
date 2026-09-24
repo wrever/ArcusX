@@ -11,8 +11,8 @@ mode=dry (set PAYER_SECRET_KEY + AGENTIC_EXECUTOR_USER_ID for on-chain)
 
 ✓ sdk.exports — createKeypairWalletAdapter
 ✓ sdk.agent_pay_helpers — fundSubjob/releaseSubjob/pay
-✓ agent.createJob — 9378f15b-1a4b-4a81-8f70-24e8adb47e2e
-✓ agent.createSubjob — 401f3809-a9c5-4e36-a14c-d060fe3daf4f proposal=null
+✓ agent.createJob — 1fd256e6-3310-4334-9f98-25b57c6d17f7
+✓ agent.createSubjob — af3af60f-f8f4-4315-becd-40b0ef8accf3 proposal=null
 ✓ agent.quoteEscrow — ok
 ✓ agent.prepareFund_typed — 400 error
 ✓ e2e.fund_release — skipped — dry mode (optional live)
