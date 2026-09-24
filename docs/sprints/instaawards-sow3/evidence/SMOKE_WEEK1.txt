@@ -1,13 +1,15 @@
 SOW3 Week1 smoke via https://api.arcusx.pro
+Re-verified: 2026-09-24 · Edge arcusx-api v131 · SDK 0.5.2
 
 ✓ auth.missing_key — 401 missing_api_key
 ✓ auth.invalid_key — 401 invalid_api_key
 ✓ agent.missing_title — 400 missing_title
-✓ agent.createJob — 201 3372ac53-c233-43f2-bf40-ca37aa182678
-✓ envelope.create_success — request_id=4f3b3386-c239-4e56-86b7-068660afbc4e
+✓ agent.createJob — 201 be656b76-90a8-4d4c-820c-d48c710aa5cf
+✓ envelope.create_success — request_id=44e4a898-9e48-42da-9dbb-0e8e7cefe528
 ✓ agent.getJob — status=open
-✓ envelope.get_success — request_id=030f218d-3202-4640-b41b-54b6b6327a59
+✓ envelope.get_success — request_id=06657387-305b-4fd1-974d-c3962f7d78ea
 ✓ agent.create_idempotent — 200 existing=true same=true
 ✓ agent.invalid_job_id — 400 invalid_job_id
 
 SOW3 Week1 smoke PASS (9 checks)
+EXIT:0
