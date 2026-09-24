@@ -2,8 +2,17 @@
 
 ## Unreleased
 
-### Next (Week 3)
-- Signed Freighter / WalletAdapter E2E: confirmFund → release with Testnet tx hashes.
+### Next (Week 4)
+- Fresh-clone verification + freeze Testnet Expert links for fund/release.
+
+## 0.5.2 — SOW 3 Week 3 (2026-09-24)
+
+### Agentic E2E (Instawards SOW 3)
+- `createKeypairWalletAdapter(S…)` for Node signing (optional `@stellar/stellar-sdk` peer).
+- Scripts: `npm run smoke:sow3:week3`, `npm run demo:sow3:week3` (dry or live with `PAYER_SECRET_KEY`).
+- Docs: `AGENTIC_QUICKSTART.md`, `KNOWN_LIMITATIONS.md`, `INSTAAWARDS_SOW3_WEEK3.md`.
+
+---
 
 ## 0.5.1 — SOW 3 Week 2 (2026-09-24)
 

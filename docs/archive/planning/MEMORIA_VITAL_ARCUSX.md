@@ -3,7 +3,7 @@
 
 **Última Actualización:** 18 septiembre 2026  
 **Versión del Proyecto:** 3.8 (rama `ArcusX3.8`)  
-**Estado:** Testnet operativo · SOW 2 ✅ · **SOW 3 Week 1 ✅** · **SOW 3 Week 2 ✅** (fund/release prepare-confirm · Edge v130 · smoke 10/10) · partner escrow + deals live · fee 2% · docs [`PLATFORM_OVERVIEW.md`](../../sdk/PLATFORM_OVERVIEW.md)
+**Estado:** Testnet operativo · SOW 2 ✅ · **SOW 3 Week 1–3 ✅** (create → prepare → E2E demo/docs · Edge v130+) · partner escrow + deals live · fee 2% · docs [`PLATFORM_OVERVIEW.md`](../../sdk/PLATFORM_OVERVIEW.md)
 
 ---
 
@@ -1622,6 +1622,29 @@ npm run demo:sow3:week2
 **Última actualización:** 24 septiembre 2026 (SOW 3 Week 2 · ArcusX3.8 · prepare fund/release)  
 **Mantenido por:** Equipo ArcusX  
 **Versión del documento:** 1.11
+
+---
+
+## Actualización Septiembre 2026 — SOW 3 Week 3 (E2E demo + docs)
+
+**Packet:** `docs/sprints/instaawards-sow3/INSTAAWARDS_SOW3_WEEK3.md`  
+**Quickstart:** `AGENTIC_QUICKSTART.md` · **Limitations:** `KNOWN_LIMITATIONS.md`
+
+| Pieza | Estado |
+|-------|--------|
+| `createKeypairWalletAdapter` | ✅ |
+| `demo/smoke:sow3:week3` dry | ✅ 7/7 |
+| Live fund/release hashes | ⏳ requiere `PAYER_SECRET_KEY` + executor (Week 4 evidence) |
+
+```bash
+cd packages/arcusx-sdk && npm run smoke:sow3:week3 && npm run demo:sow3:week3
+```
+
+---
+
+**Última actualización:** 24 septiembre 2026 (SOW 3 Week 3 · ArcusX3.8 · agentic E2E docs)  
+**Mantenido por:** Equipo ArcusX  
+**Versión del documento:** 1.12
 
 ---
 

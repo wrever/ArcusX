@@ -16,7 +16,8 @@
 
 | Archivo | Contenido |
 |---------|-----------|
-| **[SOW 3 Week 2 (Instawards)](../sprints/instaawards-sow3/INSTAAWARDS_SOW3_WEEK2.md)** | Fund/release prepare-confirm + SDK skeleton (active track) |
+| **[SOW 3 Week 3 (Instawards)](../sprints/instaawards-sow3/INSTAAWARDS_SOW3_WEEK3.md)** | Node E2E demo + quickstart (active track) |
+| **[SOW 3 Week 2 (Instawards)](../sprints/instaawards-sow3/INSTAAWARDS_SOW3_WEEK2.md)** | Fund/release prepare-confirm + SDK skeleton |
 | **[SOW 3 Week 1 (Instawards)](../sprints/instaawards-sow3/INSTAAWARDS_SOW3_WEEK1.md)** | Foundation create/status + auth smoke |
 | **[SOW3_MVP_SURFACE.md](../sprints/instaawards-sow3/SOW3_MVP_SURFACE.md)** | Endpoint map create→fund→release |
 | **[AGENTIC_WEEK1.md](./AGENTIC_WEEK1.md)** | Evidencia Fase 1 previa (jobs/subjobs/quote) |

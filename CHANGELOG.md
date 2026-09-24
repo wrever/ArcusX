@@ -6,6 +6,20 @@ Las entradas siguen espíritu **[Keep a Changelog](https://keepachangelog.com/es
 
 ---
 
+## 2026-09-24 — v3.8.2 · SOW 3 Week 3 (agentic E2E docs + demo)
+
+**Rama:** `ArcusX3.8` · **Gateway:** `https://api.arcusx.pro`
+
+### Agentic / SDK
+- `createKeypairWalletAdapter` + `demo/smoke:sow3:week3` (dry verified; live with `PAYER_SECRET_KEY`)
+- Quickstart + known limitations under `docs/sprints/instaawards-sow3/`
+
+### Fuera de este corte
+- Evidence pack con hashes Expert (Week 4)
+- Mainnet
+
+---
+
 ## 2026-09-24 — v3.8.1 · SOW 3 Week 2 (fund/release prepare-confirm)
 
 **Rama:** `ArcusX3.8` · **Tag:** `v3.8.1` · **Gateway:** `https://api.arcusx.pro` · **Edge:** `arcusx-api` v130
