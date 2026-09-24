@@ -2,9 +2,10 @@
 
 **Track:** Agentic payments foundation on `@arcusx/sdk`  
 **Week:** 1 of 4 (SOW 3 follow-on)  
-**Status:** Complete (demo-ready)  
-**Date:** 2026-09-17  
-**Branch:** `ArcusX3.8`  
+**Status:** Complete (closed)  
+**Date:** 2026-09-17 · **Re-verified:** 2026-09-24  
+**Branch:** `ArcusX3.8` · **Release:** [v3.8.0](https://github.com/wrever/ArcusX/releases/tag/v3.8.0)  
+**Edge:** `arcusx-api` **v131** (create/status since v128) · Gateway `https://api.arcusx.pro`  
 **SOW source:** [`../SOW3_INSTAAWARDS_FOLLOWON.md`](../SOW3_INSTAAWARDS_FOLLOWON.md)  
 **Changelog:** [`WEEK1_NOTION_CHANGELOG.md`](./WEEK1_NOTION_CHANGELOG.md)
 
@@ -102,19 +103,19 @@ npm run demo:sow3:week1
 SMOKE_STRICT=1 npm run smoke:sow3:week1
 ```
 
-### Smoke result (2026-09-17)
+### Smoke result (re-verified 2026-09-24, Edge v131)
 
 ```
-✓ auth.missing_key — 401 missing_api_key envelope
+✓ auth.missing_key — 401 missing_api_key
 ✓ auth.invalid_key — 401 invalid_api_key
-✓ agent.missing_title — 400 …
-✓ agent.createJob — 200 <job_uuid>
+✓ agent.missing_title — 400 missing_title
+✓ agent.createJob — 201 …
 ✓ envelope.create_success — request_id=…
 ✓ agent.getJob — status=open
 ✓ envelope.get_success — request_id=…
-✓ agent.create_idempotent — same job_id
-✓ agent.invalid_job_id — 400 …
-SOW3 Week1 smoke PASS
+✓ agent.create_idempotent — 200 existing=true same=true
+✓ agent.invalid_job_id — 400 invalid_job_id
+SOW3 Week1 smoke PASS (9 checks)
 ```
 
 Full logs: [`evidence/SMOKE_WEEK1.txt`](./evidence/SMOKE_WEEK1.txt) · [`evidence/DEMO_WEEK1.txt`](./evidence/DEMO_WEEK1.txt)
@@ -145,20 +146,7 @@ arcusx_jobs (Postgres) · Testnet attribution metadata.sow=sow3
 - [x] Demo script for reviewer walkthrough
 - [x] Env template documents `ARCUSX_API_KEY` (+ optional payer wallet)
 - [x] No secrets in git (key only in local `arcusx/.env`)
-- [x] Edge harden for typed validation codes is in repo (redeploy when PAT available)
-
----
-
-## Edge redeploy (optional polish)
-
-Bundle ready: `supabase/.deploy/arcusx-api-sow3-week1.json` (gitignored under `.deploy/`).
-
-```bash
-node scripts/bundle-edge-fn.mjs arcusx-api
-SUPABASE_ACCESS_TOKEN=… node scripts/deploy-edge-from-bundle.mjs arcusx-api
-```
-
-Unlocks: HTTP 201 on create, `missing_title` / `invalid_job_id` / partner auth codes.
+- [x] Edge harden for typed validation codes live (`arcusx-api` v131)
 
 ---
 
