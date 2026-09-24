@@ -144,7 +144,7 @@ Trustless Work unsigned XDR  →  client signs (Week 3)  →  confirm + subjob.s
 
 ## Next week (Week 3)
 
-Finish Node demo **end-to-end** on Testnet: sign `unsigned_xdr` → confirmFund → complete → confirmRelease with transaction hashes. Quickstart + known limitations.
+Shipped: [`INSTAAWARDS_SOW3_WEEK3.md`](./INSTAAWARDS_SOW3_WEEK3.md).
 
 ---
 

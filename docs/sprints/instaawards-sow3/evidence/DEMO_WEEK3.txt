@@ -1,0 +1,36 @@
+
+> @arcusx/sdk@0.5.2 demo:sow3:week3
+> npm run build && node ../../scripts/demo-sow3-week3.mjs
+
+
+> @arcusx/sdk@0.5.2 build
+> tsc -p tsconfig.json
+
+@arcusx/sdk — SOW 3 Week 3 demo (agentic E2E)
+Gateway: https://api.arcusx.pro
+Network: testnet
+Mode: DRY (no PAYER_SECRET_KEY)
+
+── 1) Create job ───────────────────────────────────────────
+job_id=d15b613a-4876-49fe-800c-68c8dda30c95 status=open
+
+── 2) Create subjob ────────────────────────────────────────
+subjob_id=3e8558a1-997d-478a-96b4-34999feb7554
+task_id=155 proposal_id=null
+NOTE: without AGENTIC_EXECUTOR_USER_ID there is no proposal — fundSubjob will fail.
+
+── 3) Escrow quote ─────────────────────────────────────────
+nominal=1 fundAmount=1 workerNet=0.98 fee=0.02
+
+── 4) DRY — prepareFund (typed) ────────────────────────────
+ArcusXApiError status=400 code=error Primero deploy del escrow (prepareDeploy)
+
+To run LIVE E2E, set:
+  PAYER_SECRET_KEY=S…
+  AGENTIC_EXECUTOR_USER_ID=<mysql user id with wallet>
+  AGENTIC_EXECUTOR_WALLET=G…  # optional
+
+Then: npm run demo:sow3:week3
+
+SOW 3 Week 3 demo DRY complete.
+EXIT:0

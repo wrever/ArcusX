@@ -1,0 +1,21 @@
+
+> @arcusx/sdk@0.5.2 smoke:sow3:week3
+> npm run build && node ../../scripts/smoke-sow3-week3.mjs
+
+
+> @arcusx/sdk@0.5.2 build
+> tsc -p tsconfig.json
+
+SOW3 Week3 smoke via https://api.arcusx.pro
+mode=dry (set PAYER_SECRET_KEY + AGENTIC_EXECUTOR_USER_ID for on-chain)
+
+✓ sdk.exports — createKeypairWalletAdapter
+✓ sdk.agent_pay_helpers — fundSubjob/releaseSubjob/pay
+✓ agent.createJob — 9378f15b-1a4b-4a81-8f70-24e8adb47e2e
+✓ agent.createSubjob — 401f3809-a9c5-4e36-a14c-d060fe3daf4f proposal=null
+✓ agent.quoteEscrow — ok
+✓ agent.prepareFund_typed — 400 error
+✓ e2e.fund_release — skipped — dry mode (optional live)
+
+SOW3 Week3 smoke PASS (7 checks)
+EXIT:0
