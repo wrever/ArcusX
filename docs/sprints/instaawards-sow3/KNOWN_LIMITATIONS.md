@@ -34,3 +34,4 @@ Honest constraints for reviewers and integrators. **Testnet only.**
 
 - Frozen Stellar Expert links for fund + release in the evidence pack
 - Fresh-clone verification checklist execution log
+- Weeks 1–3 dry/API path is closed; only live on-chain evidence remains for SOW Deliverable 3
