@@ -2,9 +2,10 @@
 
 **Track:** Agentic payments — fund / release prepare-confirm  
 **Week:** 2 of 4 (SOW 3 follow-on)  
-**Status:** Complete (demo-ready; signed E2E hashes = Week 3)  
-**Date:** 2026-09-24  
-**Edge:** `arcusx-api` **v130** · Gateway `https://api.arcusx.pro`  
+**Status:** Complete (closed; live signed hashes = Week 3/4)  
+**Date:** 2026-09-24 · **Re-verified:** 2026-09-24  
+**Release:** [v3.8.1](https://github.com/wrever/ArcusX/releases/tag/v3.8.1)  
+**Edge:** `arcusx-api` **v131** (partner prepareFund since **v130**) · Gateway `https://api.arcusx.pro`  
 **SOW source:** [`../SOW3_INSTAAWARDS_FOLLOWON.md`](../SOW3_INSTAAWARDS_FOLLOWON.md)  
 **Changelog:** [`WEEK2_NOTION_CHANGELOG.md`](./WEEK2_NOTION_CHANGELOG.md)  
 **Prerequisite:** [`INSTAAWARDS_SOW3_WEEK1.md`](./INSTAAWARDS_SOW3_WEEK1.md)
@@ -20,7 +21,7 @@ Make the **machine-callable fund and release path** first-class on Testnet:
 3. Node agent-simulation **skeleton** (SDK only)
 4. `Idempotency-Key` on prepare/confirm calls (same `/v1` pattern as Week 1)
 
-- Live **funded / released** states with Freighter-signed XDR are **Week 3**. Week 2 proves the routes compile, accept partner keys (Edge `arcusx-api` v130+), return `unsigned_xdr` when deploy exists, and return **typed 4xx** (not 401/500) when the subjob is not yet funded.
+- Live **funded / released** states with signed XDR are **Week 3/4**. Week 2 proves the routes compile, accept partner keys (Edge `arcusx-api` v130+; current **v131**), return `unsigned_xdr` when deploy exists, and return **typed 4xx** (not 401/500) when the subjob is not yet funded.
 
 ---
 
@@ -85,7 +86,7 @@ SMOKE_STRICT=1 npm run smoke:sow3:week2
 
 Visual harness: `cd local-test && npm run dev` → http://localhost:5200 (fund/release prepare steps live).
 
-### Smoke result (2026-09-24, Edge `arcusx-api` v130)
+### Smoke result (2026-09-24, Edge `arcusx-api` v131)
 
 ```
 ✓ sdk.module_surface
@@ -105,12 +106,7 @@ Demo skeleton **exit 0**. Full logs: [`evidence/SMOKE_WEEK2.txt`](./evidence/SMO
 
 ## Edge note (partner key on prepareFund)
 
-`prepareEscrowFund` / `prepareEscrowRelease` call `requireUser`. Gateway may resolve the partner via `x-arcusx-api-key` without a JWT Bearer. v130: if `ctx.partnerId` is set, `requireUser` authenticates as the partner owner (typed 400s, not `401 invalid_or_missing_token`).
-
-```bash
-node scripts/bundle-edge-fn.mjs arcusx-api
-SUPABASE_ACCESS_TOKEN=… node scripts/deploy-edge-from-bundle.mjs arcusx-api
-```
+`prepareEscrowFund` / `prepareEscrowRelease` call `requireUser`. Gateway may resolve the partner via `x-arcusx-api-key` without a JWT Bearer. Since **v130** (still true on **v131**): if `ctx.partnerId` is set, `requireUser` authenticates as the partner owner (typed 400s, not `401 invalid_or_missing_token`).
 
 ---
 
@@ -138,7 +134,7 @@ Trustless Work unsigned XDR  →  client signs (Week 3)  →  confirm + subjob.s
 - [x] Env template documents payer + executor wallets
 - [x] No secrets in git
 - [x] Visual demo unlocks prepare fund/release (does not require Freighter)
-- [x] `requireUser` accepts partner `axk_*` / resolved `partnerId` on nested escrow prepare (Edge v130)
+- [x] `requireUser` accepts partner `axk_*` / resolved `partnerId` on nested escrow prepare (Edge v130+; live **v131**)
 
 ---
 
