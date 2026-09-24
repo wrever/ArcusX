@@ -1,16 +1,9 @@
-
-> @arcusx/sdk@0.5.2 smoke:sow3:week2
-> npm run build && node ../../scripts/smoke-sow3-week2.mjs
-
-
-> @arcusx/sdk@0.5.2 build
-> tsc -p tsconfig.json
-
 SOW3 Week2 smoke via https://api.arcusx.pro
+Re-verified: 2026-09-24 · Edge arcusx-api v131 · SDK 0.5.2
 
 ✓ sdk.module_surface — fund/release/workStarted helpers
-✓ agent.createJob — 6722a5e9-6da4-4688-97e6-3e00ca7d4cd7
-✓ agent.createSubjob — 75a1db70-578f-4559-bbf0-e6007b9c1877 task=156 proposal=null
+✓ agent.createJob — b307eb47-e73e-4b24-8c2a-441dd94cc7bd
+✓ agent.createSubjob — 6b70df48-dea9-4984-9daf-5f21fa52abe9 task=159 proposal=null
 ✓ agent.quoteEscrow — quote ok
 ✓ agent.prepareFund_invalid_wallet — 400 error
 ✓ agent.confirmFund_missing_xdr — 400 error
