@@ -2,7 +2,9 @@
 
 **Network:** Stellar **Testnet** only  
 **Gateway:** `https://api.arcusx.pro`  
-**Package:** `@arcusx/sdk`
+**Package:** `@arcusx/sdk` **0.5.2**  
+**Edge:** `arcusx-api` **v131**  
+**Packet status:** Weeks 1–3 complete (Week 3 dry; live hashes = Week 4)
 
 ## 1. Install
 
