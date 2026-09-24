@@ -421,7 +421,8 @@ export async function createSubjob(ctx: ApiContext): Promise<Response> {
     ? String(body.description)
     : String(body.instructions ?? job.description ?? 'Agentic subjob via ArcusX API');
 
-  const isPrivate = Boolean(resolved.userId);
+  // Agentic tasks must not appear on the public marketplace board (partner-owned work units).
+  const isPrivate = true;
   const taskExternalId = externalRef && (ctx.partnerId || job.partner_id)
     ? `${job.external_ref ?? jobId}/${externalRef}`
     : externalRef ?? null;
