@@ -11,6 +11,7 @@
 - `createKeypairWalletAdapter(S…)` for Node signing (optional `@stellar/stellar-sdk` peer).
 - Scripts: `npm run smoke:sow3:week3`, `npm run demo:sow3:week3` (dry or live with `PAYER_SECRET_KEY`).
 - Docs: `AGENTIC_QUICKSTART.md`, `KNOWN_LIMITATIONS.md`, `INSTAAWARDS_SOW3_WEEK3.md`.
+- Edge live: `arcusx-api` **v131**. Weeks 1–3 packets closed (dry path re-verified 2026-09-24).
 
 ---
 
@@ -19,13 +20,13 @@
 ### Agentic fund / release (Instawards SOW 3)
 - SDK helpers on `client.agent`: `prepareFund` / `confirmFund` / `prepareRelease` / `confirmRelease` / `markWorkStarted` (plus deploy prepare/confirm).
 - Node skeleton: `npm run demo:sow3:week2` — create → quote → prepare routes + typed 4xx until signed XDR.
-- Smoke: `npm run smoke:sow3:week2` — module surface, invalid wallet, missing confirm XDR, release-before-fund, payer cannot mark work started, `Idempotency-Key` (10/10 on gateway; Edge `arcusx-api` v130).
+- Smoke: `npm run smoke:sow3:week2` — module surface, invalid wallet, missing confirm XDR, release-before-fund, payer cannot mark work started, `Idempotency-Key` (10/10 on gateway; Edge v130+, live **v131**).
 - Sprint packet: `docs/sprints/instaawards-sow3/INSTAAWARDS_SOW3_WEEK2.md`.
-- Signed Freighter E2E (funded + released hashes) remains **Week 3**.
+- Signed E2E (funded + released hashes) = Week 3 live / Week 4 evidence freeze.
 
 ---
 
-## Unreleased — SOW 3 Week 1 (2026-09-17)
+## 0.5.0 — SOW 3 Week 1 (2026-09-17)
 
 ### Agentic foundation (Instawards SOW 3)
 - Week 1 baseline: partner auth negatives + `agent.create` / `agent.get` on Testnet gateway.
