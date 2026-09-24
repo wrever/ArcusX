@@ -1,5 +1,15 @@
 # Dependencies
 node_modules/
+**/node_modules/
+
+# Local agent / MCP deploy scratch (never commit)
+agent-tools/
+supabase/.deploy/
+
+# Nested product trees (separate repos / not this release line)
+# Uncomment if you clone them inside the monorepo by mistake:
+# CertiX/
+# Miraes/
 
 # Build / deploy artifacts
 dist/
@@ -7,7 +17,6 @@ sites/docs/.vitepress-cache/
 *.zip
 Archivo.zip
 *.tar.gz
-supabase/.deploy/
 supabase/.temp/
 escrow-deployment.json
 
