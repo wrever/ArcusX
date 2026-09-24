@@ -82,6 +82,19 @@ new ArcusXClient({
 
 Implementación actual: in-memory por key en Edge (`partner-api-keys.ts`).
 
+## Threat model (SOW 3 agentic)
+
+| Riesgo | Mitigación |
+|--------|------------|
+| Partner key = actúa como `owner_user_id` del partner | Tratar `axk_*` como secreto de servidor; no embeber en apps públicas |
+| Gateway puede enviar solo `x-arcusx-api-key` (sin JWT) | `requireUser` usa `ctx.partnerId` resuelto por hash; no cae a JWT inválido |
+| Colisión de `Idempotency-Key` entre partners | Keys se scopian `p:{partnerId}:…` / `u:{userId}:…` en Edge |
+| Subjobs agenticos en board público | Tasks de `create_subjob` se crean con `is_private_invite=true` |
+| Acciones agenticas en mainnet | Forzadas a **testnet** en `resolveStellarNetwork` |
+| PAT / keys pegadas en chat | Rotar en Dashboard; nunca commit |
+
+Agentic network: siempre Testnet mientras Instawards SOW 3 esté activo.
+
 ## Acceptance (Semana 1)
 
 - [x] Partner keys + gateway en producción (`https://api.arcusx.pro`)
