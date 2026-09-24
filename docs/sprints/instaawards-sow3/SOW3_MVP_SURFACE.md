@@ -2,7 +2,8 @@
 
 **Purpose:** Align SOW 3 Deliverable 1 (machine-callable escrow lifecycle) with the live Edge + `@arcusx/sdk` routes.  
 **Network:** Stellar **Testnet** only.  
-**Base URL:** `https://api.arcusx.pro/v1`
+**Base URL:** `https://api.arcusx.pro/v1`  
+**Live:** Edge `arcusx-api` **v131** · SDK **0.5.2** · Weeks 1–3 closed (Week 3 dry; live hashes = Week 4)
 
 ---
 
