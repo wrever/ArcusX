@@ -1,13 +1,5 @@
 Re-verified: 2026-09-30 · Edge arcusx-api v133 · SDK 0.5.2 · SOW3 Week4 closeout prep
 
-
-> @arcusx/sdk@0.5.2 demo:sow3:week4
-> npm run build && node ../../scripts/demo-sow3-week4.mjs
-
-
-> @arcusx/sdk@0.5.2 build
-> tsc -p tsconfig.json
-
 SOW3 Week4 demo — agentic foundation closeout package
 
 Gateway: https://api.arcusx.pro · Edge: arcusx-api v133 · Testnet only
@@ -18,23 +10,5 @@ Gateway: https://api.arcusx.pro · Edge: arcusx-api v133 · Testnet only
 ✓ CLOSEOUT_CHECKLIST.md
 ✓ MAINNET_READINESS.md
 ✓ evidence/LIVE_E2E.md
-
-Verify dry path:
-  cd packages/arcusx-sdk
-  SMOKE_STRICT=1 npm run smoke:sow3:week1
-  SMOKE_STRICT=1 npm run smoke:sow3:week2
-  npm run smoke:sow3:week3
-  npm run smoke:sow3:week4
-
-Freeze live hashes (required for SOW close):
-  # Node:  PAYER_SECRET_KEY + AGENTIC_EXECUTOR_USER_ID → npm run demo:sow3:week3
-  # UI:    cd local-test && npm run dev  (Freighter fund+release)
-  # Then:  edit docs/sprints/instaawards-sow3/evidence/LIVE_E2E.md
-
-Ambassador pack:
-  - Release v3.8.3 (when LIVE_E2E filled)
-  - docs/sprints/instaawards-sow3/AGENTIC_QUICKSTART.md
-  - docs/sprints/instaawards-sow3/evidence/LIVE_E2E.md
-  - Mainnet = checklist only (docs/sprints/instaawards-sow3/MAINNET_READINESS.md)
 
 Week4 demo package OK — follow CLOSEOUT_CHECKLIST.md to finish today.
