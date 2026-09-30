@@ -2,13 +2,13 @@
 
 Follow-on Instaward after SOW 2 (`@arcusx/sdk`).
 
-**Branch:** `ArcusX3.8` · **Gateway:** `https://api.arcusx.pro` · **Edge:** `arcusx-api` **v131** · **SDK:** `@arcusx/sdk` **0.5.2**
+**Branch:** `ArcusX3.8` · **Gateway:** `https://api.arcusx.pro` · **Edge:** `arcusx-api` **v133** · **SDK:** `@arcusx/sdk` **0.5.2**
 
 | Week | Status | Release | Doc | Focus |
 |------|--------|---------|-----|--------|
 | 1 | **Complete** | [v3.8.0](https://github.com/wrever/ArcusX/releases/tag/v3.8.0) | [`INSTAAWARDS_SOW3_WEEK1.md`](./INSTAAWARDS_SOW3_WEEK1.md) | Auth + create job + status |
-| 2 | **Complete** | [v3.8.1](https://github.com/wrever/ArcusX/releases/tag/v3.8.1) | [`INSTAAWARDS_SOW3_WEEK2.md`](./INSTAAWARDS_SOW3_WEEK2.md) | Fund / release prepare-confirm + SDK + skeleton |
-| 3 | **Complete (dry)** | [v3.8.2](https://github.com/wrever/ArcusX/releases/tag/v3.8.2) | [`INSTAAWARDS_SOW3_WEEK3.md`](./INSTAAWARDS_SOW3_WEEK3.md) | Demo E2E + quickstart + limitations |
+| 2 | **Complete** | [v3.8.1](https://github.com/wrever/ArcusX/releases/tag/v3.8.1) · [changelog](./WEEK2_NOTION_CHANGELOG.md) | [`INSTAAWARDS_SOW3_WEEK2.md`](./INSTAAWARDS_SOW3_WEEK2.md) | Fund / release prepare-confirm + SDK + skeleton |
+| 3 | **Complete (dry + Freighter harden)** | [v3.8.2](https://github.com/wrever/ArcusX/releases/tag/v3.8.2) · [changelog](./WEEK3_NOTION_CHANGELOG.md) | [`INSTAAWARDS_SOW3_WEEK3.md`](./INSTAAWARDS_SOW3_WEEK3.md) | Demo E2E + quickstart + sequential release |
 | 4 | Open | — | TBD | Live hashes / Expert links + fresh-clone closeout |
 
 | Cross-cutting | Doc |
