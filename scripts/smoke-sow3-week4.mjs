@@ -135,6 +135,6 @@ if (failed.length) {
 console.log(`SOW3 Week4 smoke PASS (${tests.length} checks)`);
 console.log(
   liveE2eFrozen
-    ? 'LIVE_E2E frozen — SOW 3 closeout evidence ready (v3.8.3)'
+    ? 'LIVE_E2E frozen — SOW 3 CLOSED · reviewer pack v3.8.4'
     : 'Next: fill evidence/LIVE_E2E.md (see CLOSEOUT_CHECKLIST.md)',
 );

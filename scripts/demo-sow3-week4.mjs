@@ -47,7 +47,8 @@ Verify dry path (reviewer):
   npm run smoke:sow3:week4
 
 Ambassador pack (already published):
-  - Release v3.8.3
+  - Release v3.8.4
+  - ${path.relative(root, path.join(sow3, 'REVIEWER_PACK.md'))}
   - ${path.relative(root, path.join(sow3, 'AGENTIC_QUICKSTART.md'))}
   - ${path.relative(root, path.join(sow3, 'evidence/LIVE_E2E.md'))}
   - Mainnet = checklist only (${path.relative(root, path.join(sow3, 'MAINNET_READINESS.md'))})
