@@ -240,7 +240,7 @@ Passing demo/smoke output, agentic quickstart, changelog, known limitations, and
 | ------------- | ---------------- | ---------------- | ---------------- | -------- |
 | Deliverable 1 | ☑                | ☐                | ☐                | Agentic API MVP on `api.arcusx.pro` · Edge **v133** · Weeks 1–2 smokes · [`instaawards-sow3/SOW3_MVP_SURFACE.md`](./instaawards-sow3/SOW3_MVP_SURFACE.md) |
 | Deliverable 2 | ☑                | ☐                | ☐                | `@arcusx/sdk` agent + `fundSubjob`/`releaseSubjob` + demos · [`instaawards-sow3/AGENTIC_QUICKSTART.md`](./instaawards-sow3/AGENTIC_QUICKSTART.md) |
-| Deliverable 3 | ☑                | ☐                | ☐                | Frozen Expert links [`instaawards-sow3/evidence/LIVE_E2E.md`](./instaawards-sow3/evidence/LIVE_E2E.md) · [v3.8.3](https://github.com/wrever/ArcusX/releases/tag/v3.8.3) · fresh-clone + Week 4 smoke |
+| Deliverable 3 | ☑                | ☐                | ☐                | Frozen Expert links [`instaawards-sow3/evidence/LIVE_E2E.md`](./instaawards-sow3/evidence/LIVE_E2E.md) · reviewer pack [v3.8.4](https://github.com/wrever/ArcusX/releases/tag/v3.8.4) · [`REVIEWER_PACK.md`](./instaawards-sow3/REVIEWER_PACK.md) |
 
 
 ## **7. Next-Step Alignment**
