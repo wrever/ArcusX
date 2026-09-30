@@ -5,7 +5,7 @@
 **Status:** Complete (closed)  
 **Date:** 2026-09-17 · **Re-verified:** 2026-09-24  
 **Branch:** `ArcusX3.8` · **Release:** [v3.8.0](https://github.com/wrever/ArcusX/releases/tag/v3.8.0)  
-**Edge:** `arcusx-api` **v131** (create/status since v128) · Gateway `https://api.arcusx.pro`  
+**Edge at tag:** `arcusx-api` **v131** (create/status since v128) · **Live at SOW close:** **v133** · Gateway `https://api.arcusx.pro`  
 **SOW source:** [`../SOW3_INSTAAWARDS_FOLLOWON.md`](../SOW3_INSTAAWARDS_FOLLOWON.md)  
 **Changelog:** [`WEEK1_NOTION_CHANGELOG.md`](./WEEK1_NOTION_CHANGELOG.md)
 

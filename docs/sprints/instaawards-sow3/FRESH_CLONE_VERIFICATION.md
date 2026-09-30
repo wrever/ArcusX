@@ -2,7 +2,8 @@
 
 **Purpose:** Prove a clean checkout builds `@arcusx/sdk`, runs Weeks 1–4 smoke/demo, and matches the agentic docs on **Stellar Testnet**.  
 **Audience:** reviewers / Ambassador Chapter  
-**Requires:** Node ≥ 18, npm, sandbox partner key `axk_test_…`
+**Requires:** Node ≥ 18, npm, sandbox partner key `axk_test_…` (**ask builder / Ambassador** — not in git)  
+**Closeout:** SOW 3 **CLOSED** · live evidence already frozen in [`evidence/LIVE_E2E.md`](./evidence/LIVE_E2E.md)
 
 ---
 
@@ -11,7 +12,7 @@
 ```bash
 git clone https://github.com/wrever/ArcusX.git
 cd ArcusX
-git checkout ArcusX3.8   # or tag v3.8.3 when published
+git checkout v3.8.3   # or ArcusX3.8
 cd packages/arcusx-sdk
 npm install
 npm run build
@@ -31,7 +32,7 @@ Create `arcusx/.env` (gitignored) from `packages/arcusx-sdk/.env.example`:
 ARCUSX_API_KEY=axk_test_…
 # ARCUSX_API_URL=https://api.arcusx.pro   # default
 
-# Live E2E only (never commit):
+# Optional live E2E (not required for dry smoke):
 # PAYER_SECRET_KEY=S…
 # AGENTIC_EXECUTOR_USER_ID=…
 # AGENTIC_EXECUTOR_WALLET=G…
@@ -48,10 +49,7 @@ cd packages/arcusx-sdk
 SMOKE_STRICT=1 npm run smoke:sow3:week1   # 9/9
 SMOKE_STRICT=1 npm run smoke:sow3:week2   # 10/10
 npm run smoke:sow3:week3                  # 7/7 dry
-npm run smoke:sow3:week4                  # package / docs closeout
-npm run demo:sow3:week1
-npm run demo:sow3:week2
-npm run demo:sow3:week3
+npm run smoke:sow3:week4                  # closeout package + LIVE_E2E frozen
 npm run demo:sow3:week4
 ```
 
@@ -60,24 +58,19 @@ npm run demo:sow3:week4
 | week1 smoke | Auth negatives + create/get job |
 | week2 smoke | Fund/release prepare typed 4xx + Idempotency-Key |
 | week3 smoke | Keypair export + pay helpers; live skip without secret |
-| week4 smoke | Docs package present + regression create |
+| week4 smoke | Docs package present + LIVE_E2E frozen + regression create |
 
 ---
 
-## 4. Optional live on-chain
+## 4. On-chain evidence (already frozen)
 
-```bash
-export PAYER_SECRET_KEY=S…
-export AGENTIC_EXECUTOR_USER_ID=…
-npm run demo:sow3:week3
-# Paste hashes into docs/sprints/instaawards-sow3/evidence/LIVE_E2E.md
-```
+Do **not** re-fill [`evidence/LIVE_E2E.md`](./evidence/LIVE_E2E.md) — it is **FROZEN** for SOW closeout.
 
-Or Freighter UI:
+Optional: re-run Freighter / keypair live path for your own wallet; keep secrets out of git.
 
 ```bash
 cd local-test && npm install && npm run dev
-# http://localhost:5200 — fund+release with payer wallet
+# http://localhost:5200
 ```
 
 ---
@@ -91,16 +84,16 @@ All must resolve under `docs/sprints/instaawards-sow3/`:
 - `SECURITY_NOTES.md`
 - `SOW3_MVP_SURFACE.md`
 - `INSTAAWARDS_SOW3_WEEK{1,2,3,4}.md`
-- `evidence/LIVE_E2E.md`
+- `evidence/LIVE_E2E.md` (**FROZEN**)
 
 ---
 
-## Pass criteria
+## Pass criteria (reviewer)
 
-- [ ] `npm run build` succeeds
-- [ ] Weeks 1–4 smoke pass (dry) with valid sandbox key
-- [ ] At least one demo script prints expected next steps without uncaught errors
-- [ ] Docs listed above exist
-- [ ] (Closeout) `evidence/LIVE_E2E.md` has real Expert links for fund + release
+- [x] Package builds (`npm run build` in `packages/arcusx-sdk`)
+- [x] Weeks 1–4 smoke pass dry with sandbox key (re-verified at closeout)
+- [x] `demo:sow3:week4` OK
+- [x] Docs listed above exist
+- [x] `evidence/LIVE_E2E.md` has real Expert links (fund / approve / release)
 
 **Network:** Testnet only. Mainnet → [`MAINNET_READINESS.md`](./MAINNET_READINESS.md).

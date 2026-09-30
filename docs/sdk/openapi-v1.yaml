@@ -8,7 +8,10 @@ info:
   contact:
     name: ArcusX
 servers:
+  - url: https://api.arcusx.pro/v1
+    description: Production partner gateway (recommended)
   - url: https://{project}.supabase.co/functions/v1/arcusx-api/v1
+    description: Direct Edge (internal / advanced)
     variables:
       project:
         default: your-project-ref
@@ -31,7 +34,7 @@ paths:
                 $ref: '#/components/schemas/EnvelopeSuccess'
   /config/platform-fee:
     get:
-      summary: Platform fee rate (decimal, e.g. 0.037)
+      summary: Platform fee rate (decimal; worker-side, e.g. 0.02 = 2% total / ~0.017 ArcusX share)
       operationId: getPlatformFee
       tags: [Public]
       responses:
@@ -262,7 +265,7 @@ paths:
           description: OK
   /tasks/{taskId}/escrow/quote:
     get:
-      summary: Escrow fee quote (bilateral model)
+      summary: Escrow fee quote (worker-deducted platform fee; employer funds posted amount)
       operationId: escrowQuote
       tags: [Escrow]
       parameters:
@@ -426,7 +429,12 @@ paths:
                 $ref: '#/components/schemas/EnvelopeError'
   /subjobs/{subjobId}/escrow/release/prepare:
     post:
-      summary: Prepare release XDR
+      summary: Prepare next release-step XDR (approve, then release)
+      description: |
+        Edge v133+ returns **one** unsigned XDR per call.
+        Call 1 → `step=approve` (approve milestone). Confirm on-chain.
+        Call 2 → `step=release` (release funds). Confirm on-chain.
+        SDK `releaseSubjob` loops prepare→sign→confirm ×2.
       operationId: prepareSubjobRelease
       tags: [Agentic]
       parameters:
@@ -439,9 +447,9 @@ paths:
               $ref: '#/components/schemas/PrepareEscrowSignerRequest'
       responses:
         '200':
-          description: unsigned_xdr for client release
+          description: One unsigned_xdr (approve_milestone or release_funds) + step metadata
         '400':
-          description: Escrow not funded yet
+          description: Escrow not funded yet, or release requested before approve is on-chain
           content:
             application/json:
               schema:

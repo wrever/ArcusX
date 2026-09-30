@@ -62,6 +62,7 @@ console.log(`docs=${sow3}`);
     'FRESH_CLONE_VERIFICATION.md',
     'CLOSEOUT_CHECKLIST.md',
     'MAINNET_READINESS.md',
+    'REVIEWER_PACK.md',
     'AGENTIC_QUICKSTART.md',
     'KNOWN_LIMITATIONS.md',
     'SECURITY_NOTES.md',
@@ -104,20 +105,24 @@ if (!apiKey) {
   }
 }
 
+let liveE2eFrozen = false;
 {
   const live = fs.readFileSync(path.join(sow3, 'evidence/LIVE_E2E.md'), 'utf8');
-  const frozen =
+  liveE2eFrozen =
     /stellar\.expert\/explorer\/testnet\/tx\/[A-Za-z0-9]{8,}/.test(live) &&
     !/tx\/REPLACE/.test(live.match(/stellar\.expert\/explorer\/testnet\/tx\/\S+/)?.[0] || 'REPLACE');
-  // Soft check: pass if template still — warn; STRICT does not fail closeout package
   push(
     'evidence.live_e2e_frozen',
-    true,
-    frozen
-      ? 'Expert links look filled'
-      : 'TEMPLATE still — fill LIVE_E2E.md before tagging v3.8.3',
+    liveE2eFrozen,
+    liveE2eFrozen
+      ? 'Expert links frozen (SOW 3 CLOSED)'
+      : 'TEMPLATE still — fill LIVE_E2E.md',
   );
 }
+
+// Extra package artifacts reviewers expect
+mustExist('evidence/SMOKE_WEEK4.txt');
+mustExist('evidence/DEMO_WEEK4.txt');
 
 const failed = tests.filter((t) => !t.pass);
 for (const t of tests) {
@@ -129,7 +134,7 @@ if (failed.length) {
 }
 console.log(`SOW3 Week4 smoke PASS (${tests.length} checks)`);
 console.log(
-  frozen
+  liveE2eFrozen
     ? 'LIVE_E2E frozen — SOW 3 closeout evidence ready (v3.8.3)'
-    : 'Next: fill evidence/LIVE_E2E.md → tag v3.8.3 (see CLOSEOUT_CHECKLIST.md)',
+    : 'Next: fill evidence/LIVE_E2E.md (see CLOSEOUT_CHECKLIST.md)',
 );

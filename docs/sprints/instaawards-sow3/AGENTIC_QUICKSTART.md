@@ -50,7 +50,9 @@ const quote = await ax.agent.quoteEscrow(sub.subjob_id);
 // prepareFund returns unsigned_xdr once escrow is deployed
 ```
 
-## 5. Fund + release (Week 3)
+## 5. Fund + release (Week 3–4)
+
+`fundSubjob` signs deploy + fund. `releaseSubjob` signs **twice** (approve milestone, then release funds) — Edge v133 returns one XDR per prepare.
 
 ```ts
 import { ArcusXClient, createKeypairWalletAdapter } from '@arcusx/sdk';
@@ -66,14 +68,18 @@ Or run:
 ```bash
 npm run demo:sow3:week3
 npm run smoke:sow3:week3
+npm run smoke:sow3:week4
 ```
+
+Frozen Expert proof: [`evidence/LIVE_E2E.md`](./evidence/LIVE_E2E.md).
 
 ## 6. OpenAPI
 
-`docs/sdk/openapi-v1.yaml` — tags **Agentic** (`/jobs`, `/subjobs/…/escrow/…`, `/work-started`).
+See [`docs/sdk/openapi-v1.yaml`](../../sdk/openapi-v1.yaml) — tags **Agentic** (`/jobs`, `/subjobs/…/escrow/…`, `/work-started`).
 
 ## See also
 
 - [`KNOWN_LIMITATIONS.md`](./KNOWN_LIMITATIONS.md)
 - [`SECURITY_NOTES.md`](./SECURITY_NOTES.md)
-- [`INSTAAWARDS_SOW3_WEEK3.md`](./INSTAAWARDS_SOW3_WEEK3.md)
+- [`INSTAAWARDS_SOW3_WEEK4.md`](./INSTAAWARDS_SOW3_WEEK4.md)
+- [`FRESH_CLONE_VERIFICATION.md`](./FRESH_CLONE_VERIFICATION.md)

@@ -6,6 +6,15 @@ Las entradas siguen espíritu **[Keep a Changelog](https://keepachangelog.com/es
 
 ---
 
+## 2026-09-30 — v3.8.4 · SOW 3 reviewer polish
+
+**Rama:** `ArcusX3.8` · **Tag:** `v3.8.4` · **Edge:** `arcusx-api` **v133**
+
+- Fix `smoke:sow3:week4` crash (`frozen` scope) — PASS with exit 0
+- `REVIEWER_PACK.md` one-pager for Ambassador checks
+- Align SECURITY_NOTES / Week packets / SOW §6.2 / OpenAPI (gateway server, sequential release, fee copy)
+- Fresh-clone + demo week4 messages post-closeout (no “fill LIVE_E2E”)
+
 ## 2026-09-30 — v3.8.3 · SOW 3 Week 4 (CLOSED — Testnet evidence frozen)
 
 **Rama:** `ArcusX3.8` · **Tag:** `v3.8.3` · **Gateway:** `https://api.arcusx.pro` · **Edge:** `arcusx-api` **v133** · **SDK:** `0.5.2`

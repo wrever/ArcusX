@@ -5,7 +5,7 @@
 **Status:** Complete (closed; live signed hashes = Week 3/4)  
 **Date:** 2026-09-24 · **Re-verified:** 2026-09-24  
 **Release:** [v3.8.1](https://github.com/wrever/ArcusX/releases/tag/v3.8.1)  
-**Edge:** `arcusx-api` **v131** (partner prepareFund since **v130**) · Gateway `https://api.arcusx.pro`  
+**Edge at tag:** `arcusx-api` **v131** (partner prepareFund since **v130**) · **Live at SOW close:** **v133** · Gateway `https://api.arcusx.pro`  
 **SOW source:** [`../SOW3_INSTAAWARDS_FOLLOWON.md`](../SOW3_INSTAAWARDS_FOLLOWON.md)  
 **Changelog:** [`WEEK2_NOTION_CHANGELOG.md`](./WEEK2_NOTION_CHANGELOG.md)  
 **Prerequisite:** [`INSTAAWARDS_SOW3_WEEK1.md`](./INSTAAWARDS_SOW3_WEEK1.md)
@@ -42,7 +42,7 @@ Make the **machine-callable fund and release path** first-class on Testnet:
 - [x] API fund/release prepare-confirm callable with partner key (Testnet gateway)
 - [x] SDK helpers compile and call MVP routes
 - [x] Demo script covers the happy-path **skeleton** (create → quote → prepare + typed confirm errors)
-- [ ] Funded + released on-chain with signed XDR — **Week 3** (needs `WalletAdapter`)
+- [x] Funded + released on-chain with signed XDR — completed in Week 4 ([`evidence/LIVE_E2E.md`](./evidence/LIVE_E2E.md))
 
 ---
 

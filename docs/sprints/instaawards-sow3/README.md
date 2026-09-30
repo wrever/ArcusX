@@ -15,6 +15,7 @@ Follow-on Instaward after SOW 2 (`@arcusx/sdk`).
 | Cross-cutting | Doc |
 |---------------|-----|
 | Closeout checklist | [`CLOSEOUT_CHECKLIST.md`](./CLOSEOUT_CHECKLIST.md) |
+| **Reviewer pack (start here)** | [`REVIEWER_PACK.md`](./REVIEWER_PACK.md) |
 | Fresh-clone verification | [`FRESH_CLONE_VERIFICATION.md`](./FRESH_CLONE_VERIFICATION.md) |
 | **Live Expert evidence (frozen)** | [`evidence/LIVE_E2E.md`](./evidence/LIVE_E2E.md) |
 | Security | [`SECURITY_NOTES.md`](./SECURITY_NOTES.md) |

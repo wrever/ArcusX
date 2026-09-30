@@ -2,10 +2,10 @@
 
 **Track:** Agentic payments — Node E2E demo + docs package  
 **Week:** 3 of 4 (SOW 3 follow-on)  
-**Status:** Complete (closed dry path; on-chain hashes when `PAYER_SECRET_KEY` set → Week 4)  
-**Date:** 2026-09-24 · **Re-verified:** 2026-09-24  
+**Status:** Complete (closed; live Expert evidence in Week 4)  
+**Date:** 2026-09-24 · **Re-verified dry:** 2026-09-30  
 **Release:** [v3.8.2](https://github.com/wrever/ArcusX/releases/tag/v3.8.2)  
-**Edge:** `arcusx-api` **v131** · Gateway `https://api.arcusx.pro`  
+**Edge at tag:** `arcusx-api` **v131** · **Live at SOW close:** **v133** · Gateway `https://api.arcusx.pro`  
 **SOW source:** [`../SOW3_INSTAAWARDS_FOLLOWON.md`](../SOW3_INSTAAWARDS_FOLLOWON.md)  
 **Changelog:** [`WEEK3_NOTION_CHANGELOG.md`](./WEEK3_NOTION_CHANGELOG.md)  
 **Prerequisite:** [`INSTAAWARDS_SOW3_WEEK2.md`](./INSTAAWARDS_SOW3_WEEK2.md)
@@ -42,7 +42,7 @@ Live **transaction hashes** require a Testnet payer secret (`PAYER_SECRET_KEY`) 
 - [x] Demo covers full lifecycle skeleton; **LIVE** when `PAYER_SECRET_KEY` + `AGENTIC_EXECUTOR_USER_ID` set
 - [x] Docs ready for external reproduction (quickstart + limitations + env)
 - [x] SDK agentic module + pay helpers + keypair adapter
-- [ ] Frozen evidence hashes on Stellar Expert — **Week 4** closeout (or attach when live secrets available)
+- [x] Frozen evidence hashes on Stellar Expert — Week 4 [`evidence/LIVE_E2E.md`](./evidence/LIVE_E2E.md) · release [v3.8.3](https://github.com/wrever/ArcusX/releases/tag/v3.8.3)
 
 ---
 
@@ -120,9 +120,9 @@ Node agent runtime
 
 ---
 
-## Next week (Week 4)
+## Next week (Week 4) — done
 
-Fresh-clone verification, freeze Testnet hashes / Expert links, assemble closeout packet.
+Fresh-clone verification, frozen Testnet hashes / Expert links, closeout packet → **[v3.8.3](https://github.com/wrever/ArcusX/releases/tag/v3.8.3)** · [`INSTAAWARDS_SOW3_WEEK4.md`](./INSTAAWARDS_SOW3_WEEK4.md).
 
 ---
 

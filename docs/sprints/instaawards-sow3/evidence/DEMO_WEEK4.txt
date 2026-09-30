@@ -1,14 +1,23 @@
-Re-verified: 2026-09-30 · Edge arcusx-api v133 · SDK 0.5.2 · SOW3 Week4 closeout prep
+Re-verified: 2026-09-30 · Edge arcusx-api v133 · SOW3 CLOSED · LIVE_E2E FROZEN
 
-SOW3 Week4 demo — agentic foundation closeout package
-
+SOW3 Week4 demo — agentic foundation closeout (SOW 3 CLOSED)
 Gateway: https://api.arcusx.pro · Edge: arcusx-api v133 · Testnet only
-
 ✓ INSTAAWARDS_SOW3_WEEK4.md
 ✓ WEEK4_NOTION_CHANGELOG.md
 ✓ FRESH_CLONE_VERIFICATION.md
 ✓ CLOSEOUT_CHECKLIST.md
 ✓ MAINNET_READINESS.md
 ✓ evidence/LIVE_E2E.md
-
-Week4 demo package OK — follow CLOSEOUT_CHECKLIST.md to finish today.
+✓ evidence/LIVE_E2E.md frozen Expert links
+Verify dry path (reviewer):
+  cd packages/arcusx-sdk
+  SMOKE_STRICT=1 npm run smoke:sow3:week1
+  SMOKE_STRICT=1 npm run smoke:sow3:week2
+  npm run smoke:sow3:week3
+  npm run smoke:sow3:week4
+Ambassador pack (already published):
+  - Release v3.8.3
+  - docs/sprints/instaawards-sow3/AGENTIC_QUICKSTART.md
+  - docs/sprints/instaawards-sow3/evidence/LIVE_E2E.md
+  - Mainnet = checklist only (docs/sprints/instaawards-sow3/MAINNET_READINESS.md)
+Week4 demo package OK — SOW 3 CLOSED on Testnet.

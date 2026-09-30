@@ -11,13 +11,17 @@
 
 ```
 create job
-  → (optional) create subjob
+  → create subjob (+ executor_user_id)
   → escrow quote
-  → fund prepare → sign XDR → fund confirm
-  → mark complete / work-started
-  → release prepare → sign XDR → release confirm
+  → deploy prepare → sign → deploy confirm
+  → fund prepare → sign → fund confirm
+  → (optional) work-started
+  → release prepare (approve) → sign → confirm
+  → release prepare (release) → sign → confirm
   → get status
 ```
+
+**Release (Edge v133):** one unsigned XDR per `prepareRelease` call. Approve must be on-chain before release-funds can be prepared. SDK `releaseSubjob` loops prepare→sign→confirm ×2.
 
 Settlement is **1 escrow per subjob** (stable implementation). A job without subjobs is the Week 1 create/status baseline only.
 
@@ -32,11 +36,13 @@ Settlement is **1 escrow per subjob** (stable implementation). A job without sub
 | List | `GET /jobs` | `list_jobs` | `list` | 1 |
 | Create work unit | `POST /jobs/{id}/subjobs` | `create_subjob` | `createSubjob` | 2 |
 | Quote | `GET /subjobs/{id}/escrow/quote` | `subjob_escrow_quote` | `quoteEscrow` | 2 |
+| Deploy prepare | `POST /subjobs/{id}/escrow/deploy/prepare` | `subjob_escrow_deploy_prepare` | `prepareDeploy` | 2–3 |
+| Deploy confirm | `POST /subjobs/{id}/escrow/deploy/confirm` | `subjob_escrow_deploy_confirm` | `confirmDeploy` | 2–3 |
 | Fund prepare | `POST /subjobs/{id}/escrow/fund/prepare` | `subjob_escrow_fund_prepare` | `prepareFund` | **2** |
 | Fund confirm | `POST /subjobs/{id}/escrow/fund/confirm` | `subjob_escrow_fund_confirm` | `confirmFund` | **2** |
 | Work started / complete signal | `POST /subjobs/{id}/work-started` | `subjob_mark_work_started` | `markWorkStarted` | **2** |
-| Release prepare | `POST /subjobs/{id}/escrow/release/prepare` | `subjob_escrow_release_prepare` | `prepareRelease` | **2** |
-| Release confirm | `POST /subjobs/{id}/escrow/release/confirm` | `subjob_escrow_release_confirm` | `confirmRelease` | **2** |
+| Release prepare (approve **or** release) | `POST /subjobs/{id}/escrow/release/prepare` | `subjob_escrow_release_prepare` | `prepareRelease` | **2–4** |
+| Release confirm | `POST /subjobs/{id}/escrow/release/confirm` | `subjob_escrow_release_confirm` | `confirmRelease` | **2–4** |
 
 Optional / later (explicitly out of SOW 3 foundation MVP): `attest`, `release-on-callback`, nested subjob graphs, mainnet.
 

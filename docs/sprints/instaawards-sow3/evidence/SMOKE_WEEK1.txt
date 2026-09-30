@@ -1,4 +1,4 @@
-Re-verified: 2026-09-30 · Edge arcusx-api v133 · SDK 0.5.2 · SOW3 Week4 closeout prep
+Re-verified: 2026-09-30 · Edge arcusx-api v133 · SOW3 CLOSED
 
 > @arcusx/sdk@0.5.2 smoke:sow3:week1
 > npm run build && node ../../scripts/smoke-sow3-week1.mjs
