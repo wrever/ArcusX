@@ -4,8 +4,8 @@ One page for Ambassador / SDF reviewers. **Testnet only.**
 
 | | |
 |--|--|
-| **Release** | [v3.8.3](https://github.com/wrever/ArcusX/releases/tag/v3.8.3) |
-| **Branch / tag** | `ArcusX3.8` · `v3.8.3` |
+| **Release** | [v3.8.4](https://github.com/wrever/ArcusX/releases/tag/v3.8.4) |
+| **Branch / tag** | `ArcusX3.8` · `v3.8.4` |
 | **Gateway** | `https://api.arcusx.pro` |
 | **Edge** | `arcusx-api` **v133** |
 | **SDK** | `@arcusx/sdk` **0.5.2** |
@@ -19,7 +19,7 @@ One page for Ambassador / SDF reviewers. **Testnet only.**
 
 ```bash
 git clone https://github.com/wrever/ArcusX.git && cd ArcusX
-git checkout v3.8.3
+git checkout v3.8.4
 cd packages/arcusx-sdk && npm install && npm run build
 # put ARCUSX_API_KEY=axk_test_… in ../../arcusx/.env
 SMOKE_STRICT=1 npm run smoke:sow3:week1

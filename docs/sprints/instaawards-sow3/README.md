@@ -10,7 +10,7 @@ Follow-on Instaward after SOW 2 (`@arcusx/sdk`).
 | 1 | **Complete** | [v3.8.0](https://github.com/wrever/ArcusX/releases/tag/v3.8.0) · [changelog](./WEEK1_NOTION_CHANGELOG.md) | [`INSTAAWARDS_SOW3_WEEK1.md`](./INSTAAWARDS_SOW3_WEEK1.md) | Auth + create job + status |
 | 2 | **Complete** | [v3.8.1](https://github.com/wrever/ArcusX/releases/tag/v3.8.1) · [changelog](./WEEK2_NOTION_CHANGELOG.md) | [`INSTAAWARDS_SOW3_WEEK2.md`](./INSTAAWARDS_SOW3_WEEK2.md) | Fund / release prepare-confirm + SDK + skeleton |
 | 3 | **Complete** | [v3.8.2](https://github.com/wrever/ArcusX/releases/tag/v3.8.2) · [changelog](./WEEK3_NOTION_CHANGELOG.md) | [`INSTAAWARDS_SOW3_WEEK3.md`](./INSTAAWARDS_SOW3_WEEK3.md) | Demo E2E + quickstart + sequential release |
-| 4 | **Complete** | [v3.8.3](https://github.com/wrever/ArcusX/releases/tag/v3.8.3) · [changelog](./WEEK4_NOTION_CHANGELOG.md) | [`INSTAAWARDS_SOW3_WEEK4.md`](./INSTAAWARDS_SOW3_WEEK4.md) | Fresh-clone + Expert evidence + closeout |
+| 4 | **Complete** | [v3.8.4](https://github.com/wrever/ArcusX/releases/tag/v3.8.4) · [changelog](./WEEK4_NOTION_CHANGELOG.md) | [`INSTAAWARDS_SOW3_WEEK4.md`](./INSTAAWARDS_SOW3_WEEK4.md) | Fresh-clone + Expert evidence + closeout |
 
 | Cross-cutting | Doc |
 |---------------|-----|
