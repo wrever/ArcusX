@@ -76,12 +76,20 @@ export async function fundSubjob(
   }
 
   const signedDeploy = await wallet.signTransaction(deployUnsigned);
+  if (!signedDeploy || signedDeploy.length < 32) {
+    throw new Error('Wallet no devolvió XDR firmado (deploy)');
+  }
   const deployConfirm = asRecord(await client.agent.confirmDeploy(subjobId, {
     signed_xdr: signedDeploy,
     proposal_id: proposalId,
     client_wallet: payerAddress,
     escrow_amount: deployPrep.fund_amount,
-    contract_id: deployPrep.contract_id,
+    ...(pickString(deployPrep, 'contract_id').startsWith('C')
+      ? { contract_id: pickString(deployPrep, 'contract_id') }
+      : {}),
+    ...(pickString(deployPrep, 'engagement_id')
+      ? { engagement_id: pickString(deployPrep, 'engagement_id') }
+      : {}),
   }, { idempotencyKey: `${idemBase}-deploy-confirm` }));
 
   const contractId = pickString(deployConfirm, 'escrow_id', 'contract_id') ||
@@ -126,7 +134,8 @@ export async function fundSubjob(
 }
 
 /**
- * Libera USDC al ejecutor tras trabajo verificado (approve + release TW).
+ * Libera USDC al ejecutor (cliente ×2: approve on-chain → release).
+ * Un prepare por paso: TW no arma release-funds hasta que approve esté confirmado.
  */
 export async function releaseSubjob(
   client: ArcusXClient,
@@ -137,45 +146,63 @@ export async function releaseSubjob(
   const payerAddress = await wallet.getAddress();
   const idemBase = opts?.idempotencyKey ?? `release-subjob-${subjobId}`;
 
-  const releasePrep = asRecord(await client.agent.prepareRelease(subjobId, payerAddress));
-  const contractId = pickString(releasePrep, 'contract_id');
-  const steps = Array.isArray(releasePrep.steps) ? releasePrep.steps as Record<string, unknown>[] : [];
+  let contractId = '';
+  const allStepHashes: string[] = [];
+  let releaseTxHash = '';
 
-  if (!steps.length) {
-    throw new Error('prepareRelease no devolvió steps (approve + release)');
+  for (let round = 0; round < 2; round++) {
+    const prep = asRecord(await client.agent.prepareRelease(subjobId, payerAddress, {
+      idempotencyKey: `${idemBase}-prepare-${round}`,
+    }));
+    if (!contractId) contractId = pickString(prep, 'contract_id');
+
+    const stepName = pickString(prep, 'step', 'action') || (round === 0 ? 'approve' : 'release');
+    const unsigned =
+      pickString(prep, 'unsigned_xdr') ||
+      (() => {
+        const steps = Array.isArray(prep.steps) ? prep.steps as Record<string, unknown>[] : [];
+        return pickString(steps[0] ?? {}, 'unsigned_xdr');
+      })();
+
+    if (!unsigned) {
+      throw new Error(`prepareRelease sin XDR (step=${stepName}, round=${round})`);
+    }
+
+    const signed = await wallet.signTransaction(unsigned);
+    if (!signed || signed.length < 32) {
+      throw new Error(`Wallet no devolvió XDR firmado (${stepName})`);
+    }
+
+    const confirm = asRecord(await client.agent.confirmRelease(subjobId, {
+      signed_xdrs: [signed],
+      step: stepName === 'approve_milestone' ? 'approve' : stepName,
+      escrow_completed: stepName === 'release' || stepName === 'release_funds',
+      action: stepName === 'approve' || stepName === 'approve_milestone' ? 'approve' : 'accept',
+    }, { idempotencyKey: `${idemBase}-confirm-${round}` }));
+
+    const tx = pickString(confirm, 'release_tx_hash', 'tx_hash', 'transaction_hash');
+    if (tx) allStepHashes.push(tx);
+
+    const confirmStep = pickString(confirm, 'step');
+    if (
+      confirmStep === 'release_confirm' ||
+      (stepName === 'release' || stepName === 'release_funds')
+    ) {
+      releaseTxHash = tx;
+      break;
+    }
+    // approve_confirm → siguiente round prepara release
   }
 
-  const signedXdrs: string[] = [];
-  for (const step of steps) {
-    const unsigned = pickString(step, 'unsigned_xdr');
-    if (!unsigned) continue;
-    signedXdrs.push(await wallet.signTransaction(unsigned));
-  }
-
-  if (!signedXdrs.length) {
-    throw new Error('No hay XDR para firmar en release');
-  }
-
-  const releaseConfirm = asRecord(await client.agent.confirmRelease(subjobId, {
-    signed_xdrs: signedXdrs,
-    escrow_completed: true,
-    action: 'accept',
-  }, { idempotencyKey: `${idemBase}-release-confirm` }));
-
-  const releaseTxHash = pickString(releaseConfirm, 'release_tx_hash', 'tx_hash', 'transaction_hash');
   if (!releaseTxHash) {
-    throw new Error('confirmRelease no devolvió release_tx_hash');
+    throw new Error('confirmRelease no devolvió release_tx_hash tras approve+release');
   }
-
-  const stepHashes = Array.isArray(releaseConfirm.step_tx_hashes)
-    ? (releaseConfirm.step_tx_hashes as string[])
-    : undefined;
 
   return {
     subjob_id: subjobId,
     contract_id: contractId,
     release_tx_hash: releaseTxHash,
-    step_hashes: stepHashes,
+    step_hashes: allStepHashes.length ? allStepHashes : undefined,
   };
 }
 

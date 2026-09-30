@@ -1,9 +1,8 @@
 /**
- * Agentic payments — visual journey test app (Testnet).
- * Live: auth → create job → create subjob → escrow quote → status →
- * prepareFund / prepareRelease (unsigned XDR or typed 4xx). Confirm+sign = Week 3.
+ * Visual smoke for agentic escrow on testnet.
+ * prepare-only or Freighter fund/release.
  */
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ArcusXApiError } from '@arcusx/sdk';
 import {
   createPartnerClient,
@@ -12,6 +11,11 @@ import {
   saveConfig,
   type LocalTestConfig,
 } from './sdk';
+import {
+  createFreighterAdapter,
+  stellarExpertContractUrl,
+  stellarExpertTxUrl,
+} from './freighter';
 
 type StepId =
   | 'auth'
@@ -32,16 +36,6 @@ type Step = {
   detail: string;
 };
 
-const STEPS: Step[] = [
-  { id: 'auth', n: 1, label: 'Auth', live: true, detail: 'Partner API key' },
-  { id: 'job', n: 2, label: 'Create job', live: true, detail: 'Orchestrator intent' },
-  { id: 'subjob', n: 3, label: 'Create subjob', live: true, detail: 'Work unit + amount' },
-  { id: 'quote', n: 4, label: 'Escrow quote', live: true, detail: 'USDC + fee' },
-  { id: 'status', n: 5, label: 'Status', live: true, detail: 'Job + subjob open' },
-  { id: 'fund', n: 6, label: 'Fund prepare', live: true, detail: 'unsigned_xdr o 4xx' },
-  { id: 'release', n: 7, label: 'Release prepare', live: true, detail: 'antes de fund = 4xx' },
-];
-
 type Snapshot = {
   jobId: string;
   jobStatus: string;
@@ -49,11 +43,16 @@ type Snapshot = {
   subjobId: string;
   subjobStatus: string;
   taskId: string | number;
+  proposalId: string | number | null;
   amount: number;
   quote: Record<string, unknown> | null;
   externalRef: string;
   fundNote: string;
   releaseNote: string;
+  mode: 'week2' | 'week3';
+  contractId?: string;
+  fundTxHash?: string;
+  releaseTxHash?: string;
 };
 
 type Props = {
@@ -61,9 +60,33 @@ type Props = {
   onOpenWeek1?: () => void;
 };
 
-function initialStates(): Record<StepId, StepState> {
+function stepsFor(week3: boolean): Step[] {
+  return [
+    { id: 'auth', n: 1, label: 'auth', live: true, detail: 'axk key' },
+    { id: 'job', n: 2, label: 'job', live: true, detail: 'create' },
+    { id: 'subjob', n: 3, label: 'subjob', live: true, detail: 'work unit' },
+    { id: 'quote', n: 4, label: 'quote', live: true, detail: 'fees' },
+    { id: 'status', n: 5, label: 'status', live: true, detail: 'poll' },
+    {
+      id: 'fund',
+      n: 6,
+      label: 'fund',
+      live: true,
+      detail: week3 ? 'sign deploy+fund' : 'prepare',
+    },
+    {
+      id: 'release',
+      n: 7,
+      label: 'release',
+      live: true,
+      detail: week3 ? 'sign release' : 'prepare',
+    },
+  ];
+}
+
+function initialStates(week3: boolean): Record<StepId, StepState> {
   return Object.fromEntries(
-    STEPS.map((s) => [s.id, s.live ? 'idle' : 'locked']),
+    stepsFor(week3).map((s) => [s.id, s.live ? 'idle' : 'locked']),
   ) as Record<StepId, StepState>;
 }
 
@@ -90,12 +113,14 @@ export default function AgenticPaymentsDemo({ onOpenHarness, onOpenWeek1 }: Prop
   const [config, setConfig] = useState<LocalTestConfig>(loadConfig);
   const [showKey, setShowKey] = useState(false);
   const [running, setRunning] = useState(false);
-  const [amount, setAmount] = useState('2.5');
-  const [jobTitle, setJobTitle] = useState('Research pipeline — orchestrator');
-  const [jobDescription, setJobDescription] = useState(
-    'El agente orquestador define el trabajo y el pago en USDC.',
+  const [week3Live, setWeek3Live] = useState(true);
+  const [amount, setAmount] = useState('1');
+  const [jobTitle, setJobTitle] = useState('test job');
+  const [jobDescription, setJobDescription] = useState('local smoke');
+  const [workTitle, setWorkTitle] = useState('work unit');
+  const [executorUserId, setExecutorUserId] = useState(
+    () => import.meta.env.VITE_AGENTIC_EXECUTOR_USER_ID?.trim() || '3',
   );
-  const [workTitle, setWorkTitle] = useState('Fetch sources + summarize');
   const [executorWallet, setExecutorWallet] = useState(
     () =>
       import.meta.env.VITE_TEST_WORKER_WALLET?.trim() ||
@@ -107,13 +132,18 @@ export default function AgenticPaymentsDemo({ onOpenHarness, onOpenWeek1 }: Prop
       import.meta.env.VITE_PLATFORM_WALLET?.trim() ||
       '',
   );
-  const [stepState, setStepState] = useState<Record<StepId, StepState>>(initialStates);
+  const [stepState, setStepState] = useState<Record<StepId, StepState>>(() =>
+    initialStates(true),
+  );
   const [log, setLog] = useState<string[]>([]);
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ms, setMs] = useState<number | null>(null);
 
+  const STEPS = useMemo(() => stepsFor(week3Live), [week3Live]);
   const hasKey = Boolean(config.apiKey.trim());
+  const executorIdNum = Number(executorUserId);
+  const hasExecutor = Number.isFinite(executorIdNum) && executorIdNum > 0;
 
   function patchKey(apiKey: string) {
     const next = { ...config, apiKey };
@@ -122,7 +152,7 @@ export default function AgenticPaymentsDemo({ onOpenHarness, onOpenWeek1 }: Prop
   }
 
   function pushLog(line: string) {
-    setLog((prev) => [...prev.slice(-12), line]);
+    setLog((prev) => [...prev.slice(-20), line]);
   }
 
   function mark(id: StepId, state: StepState) {
@@ -131,48 +161,73 @@ export default function AgenticPaymentsDemo({ onOpenHarness, onOpenWeek1 }: Prop
 
   async function runJourney() {
     if (!hasKey || running) return;
+    if (week3Live && !hasExecutor) {
+      setError('falta executor_user_id (sin eso no hay proposal)');
+      return;
+    }
+
     setRunning(true);
     setError(null);
     setSnap(null);
     setLog([]);
     setMs(null);
-    setStepState(initialStates());
+    setStepState(initialStates(week3Live));
 
     const t0 = performance.now();
     const client = createPartnerClient(config);
     const externalRef = `agentic-ui-${Date.now()}`;
-    const workerAmount = Number(amount) || 2.5;
-    const title = jobTitle.trim() || 'Agentic job';
-    const description =
-      jobDescription.trim() || 'Job creado por un agente vía @arcusx/sdk';
+    const workerAmount = Number(amount) || 1;
+    const title = jobTitle.trim() || 'test job';
+    const description = jobDescription.trim() || 'local smoke';
     const subTitle = workTitle.trim() || title;
 
     try {
       mark('auth', 'running');
-      pushLog('→ Validando partner key (agent.list)…');
+      pushLog('auth…');
       await client.agent.list();
       mark('auth', 'done');
-      pushLog('✓ Auth OK');
+      pushLog('ok auth');
+
+      let freighterAddress = '';
+      if (week3Live) {
+        pushLog('freighter…');
+        const wallet = createFreighterAdapter();
+        freighterAddress = await wallet.getAddress();
+        pushLog(`wallet ${freighterAddress.slice(0, 6)}…${freighterAddress.slice(-4)}`);
+        if (payerWallet.startsWith('G') && payerWallet !== freighterAddress) {
+          pushLog('payer_wallet ≠ freighter, using freighter');
+        }
+      }
+
+      const payerForCreate = week3Live
+        ? freighterAddress
+        : payerWallet.startsWith('G')
+          ? payerWallet
+          : undefined;
 
       mark('job', 'running');
-      pushLog('→ client.agent.create(job)');
+      pushLog('create job');
       const created = await client.agent.create({
         title,
         description,
         external_ref: externalRef,
-        ...(payerWallet.startsWith('G') ? { payer_wallet: payerWallet } : {}),
-        metadata: { track: 'agentic-payments', demo: 'visual-journey' },
+        ...(payerForCreate ? { payer_wallet: payerForCreate } : {}),
+        metadata: {
+          track: 'agentic-payments',
+          demo: week3Live ? 'visual-week3' : 'visual-week2',
+        },
       });
       const jobId = String(created.job_id || created.job?.id || '');
       if (!jobId) throw new Error('Create job sin job_id');
       mark('job', 'done');
-      pushLog(`✓ Job ${jobId.slice(0, 8)}… status=${created.job?.status ?? 'open'}`);
+      pushLog(`job ${jobId.slice(0, 8)} ${created.job?.status ?? 'open'}`);
 
       mark('subjob', 'running');
-      pushLog(`→ client.agent.createSubjob(${jobId.slice(0, 8)}…, ${workerAmount} USDC)`);
+      pushLog(`create subjob ${workerAmount} usdc`);
       const sub = await client.agent.createSubjob(jobId, {
         executor_type: 'agent',
         executor_wallet: executorWallet.startsWith('G') ? executorWallet : undefined,
+        ...(hasExecutor ? { executor_user_id: executorIdNum } : {}),
         worker_amount: workerAmount,
         completion_condition: 'manual_approve',
         external_ref: `${externalRef}-work`,
@@ -181,13 +236,17 @@ export default function AgenticPaymentsDemo({ onOpenHarness, onOpenWeek1 }: Prop
       });
       const subjobId = String(sub.subjob_id || sub.subjob?.id || '');
       if (!subjobId) throw new Error('Create subjob sin subjob_id');
+      const proposalId = sub.proposal_id ?? null;
       mark('subjob', 'done');
       pushLog(
-        `✓ Subjob ${subjobId.slice(0, 8)}… task_id=${sub.task_id ?? '?'} status=${sub.subjob?.status ?? 'open'}`,
+        `subjob ${subjobId.slice(0, 8)} task=${sub.task_id ?? '?'} proposal=${proposalId ?? 'null'}`,
       );
+      if (week3Live && !proposalId) {
+        throw new Error('sin proposal_id — chequeá executor_user_id');
+      }
 
       mark('quote', 'running');
-      pushLog(`→ client.agent.quoteEscrow(${subjobId.slice(0, 8)}…)`);
+      pushLog('quote');
       const quoteRes = await client.agent.quoteEscrow(subjobId);
       mark('quote', 'done');
       const raw = quoteRes as unknown as {
@@ -199,35 +258,126 @@ export default function AgenticPaymentsDemo({ onOpenHarness, onOpenWeek1 }: Prop
       };
       const q = (raw.quote ?? raw) as Record<string, unknown>;
       pushLog(
-        `✓ Quote nominal=${String(q.nominal ?? q.worker_amount ?? workerAmount)} fee=${String(q.totalCommission ?? q.platform_fee ?? '—')}`,
+        `quote ${String(q.nominal ?? q.worker_amount ?? workerAmount)} fee=${String(q.totalCommission ?? q.platform_fee ?? '—')}`,
       );
 
       mark('status', 'running');
-      pushLog('→ client.agent.get(job) + getSubjob');
-      const { job } = await client.agent.get(jobId);
-      const { subjob } = await client.agent.getSubjob(subjobId);
+      pushLog('status');
+      let { job } = await client.agent.get(jobId);
+      let { subjob } = await client.agent.getSubjob(subjobId);
       mark('status', 'done');
-      pushLog(`✓ job=${job.status} · subjob=${subjob.status} · subjobs=${job.subjobs?.length ?? 1}`);
+      pushLog(`${job.status} / ${subjob.status}`);
 
-      const signer = payerWallet.startsWith('G')
-        ? payerWallet
-        : 'GA7UTLCKIPSQSCRLILQKZGE24X5CBAH32C7NJEZ2NKQLTB4OZDINXL3D';
+      let fundNote = '';
+      let releaseNote = '';
+      let contractId: string | undefined;
+      let fundTxHash: string | undefined;
+      let releaseTxHash: string | undefined;
 
-      mark('fund', 'running');
-      pushLog(`→ client.agent.prepareFund(${subjobId.slice(0, 8)}…)`);
-      const fundPrep = await tryPrepare(() =>
-        client.agent.prepareFund(subjobId, signer) as Promise<Record<string, unknown>>,
-      );
-      mark('fund', 'done');
-      pushLog(`✓ Fund prepare ${fundPrep.note}`);
+      if (week3Live) {
+        const wallet = createFreighterAdapter();
 
-      mark('release', 'running');
-      pushLog(`→ client.agent.prepareRelease(${subjobId.slice(0, 8)}…)`);
-      const relPrep = await tryPrepare(() =>
-        client.agent.prepareRelease(subjobId, signer) as Promise<Record<string, unknown>>,
-      );
-      mark('release', 'done');
-      pushLog(`✓ Release prepare ${relPrep.note}`);
+        mark('fund', 'running');
+        pushLog('prepareDeploy…');
+        const deployPrep = (await client.agent.prepareDeploy(
+          subjobId,
+          freighterAddress,
+        )) as Record<string, unknown>;
+        const deployUnsigned = String(deployPrep.unsigned_xdr ?? '').trim();
+        if (!deployUnsigned) throw new Error('prepareDeploy sin unsigned_xdr');
+        pushLog(`deploy xdr ${deployUnsigned.length} — sign`);
+        const signedDeploy = await wallet.signTransaction(deployUnsigned);
+        pushLog(`signed ${signedDeploy.length} — confirmDeploy`);
+        const deployConfirm = (await client.agent.confirmDeploy(subjobId, {
+          signed_xdr: signedDeploy,
+          proposal_id: proposalId,
+          client_wallet: freighterAddress,
+          escrow_amount: deployPrep.fund_amount,
+          ...(String(deployPrep.engagement_id ?? '')
+            ? { engagement_id: deployPrep.engagement_id }
+            : {}),
+          ...(String(deployPrep.contract_id ?? '').startsWith('C')
+            ? { contract_id: deployPrep.contract_id }
+            : {}),
+        })) as Record<string, unknown>;
+        contractId = String(
+          deployConfirm.contract_id ?? deployConfirm.escrow_id ?? '',
+        ).trim();
+        const deployTx = String(
+          deployConfirm.deploy_tx_hash ?? deployConfirm.tx_hash ?? '',
+        ).trim();
+        pushLog(`deployed ${contractId.slice(0, 10) || '?'}… tx=${deployTx.slice(0, 10) || '—'}`);
+
+        pushLog('prepareFund…');
+        const fundPrep = (await client.agent.prepareFund(
+          subjobId,
+          freighterAddress,
+        )) as Record<string, unknown>;
+        const fundUnsigned = String(fundPrep.unsigned_xdr ?? '').trim();
+        if (!fundUnsigned) throw new Error('prepareFund sin unsigned_xdr');
+        pushLog(`fund xdr ${fundUnsigned.length} — sign`);
+        const signedFund = await wallet.signTransaction(fundUnsigned);
+        pushLog('confirmFund…');
+        const fundConfirm = (await client.agent.confirmFund(subjobId, {
+          signed_xdr: signedFund,
+          proposal_id: proposalId,
+          contract_id: contractId || fundPrep.contract_id,
+          client_wallet: freighterAddress,
+          funding_confirmed: true,
+        })) as Record<string, unknown>;
+        fundTxHash = String(
+          fundConfirm.fund_tx_hash ?? fundConfirm.tx_hash ?? '',
+        ).trim();
+        if (!contractId) {
+          contractId = String(fundConfirm.contract_id ?? fundPrep.contract_id ?? '').trim();
+        }
+        fundNote = fundTxHash
+          ? `funded ${fundTxHash.slice(0, 10)}…`
+          : `deployed ${contractId?.slice(0, 10) ?? '?'}…`;
+        mark('fund', 'done');
+        pushLog(`fund ok ${fundNote}`);
+        if (deployTx) pushLog(stellarExpertTxUrl(deployTx));
+        if (fundTxHash) pushLog(stellarExpertTxUrl(fundTxHash));
+        if (contractId) pushLog(stellarExpertContractUrl(contractId));
+
+        mark('release', 'running');
+        pushLog('releaseSubjob…');
+        const released = await client.agent.releaseSubjob(subjobId, wallet, {
+          idempotencyKey: `ui-w3-rel-${externalRef}`,
+        });
+        releaseTxHash = released.release_tx_hash;
+        releaseNote = `released ${releaseTxHash.slice(0, 10)}…`;
+        mark('release', 'done');
+        pushLog(`release ok ${releaseNote}`);
+        pushLog(stellarExpertTxUrl(releaseTxHash));
+
+        ({ job } = await client.agent.get(jobId));
+        ({ subjob } = await client.agent.getSubjob(subjobId));
+        pushLog(`done ${job.status} / ${subjob.status}`);
+      } else {
+        const signer = payerWallet.startsWith('G')
+          ? payerWallet
+          : 'GA7UTLCKIPSQSCRLILQKZGE24X5CBAH32C7NJEZ2NKQLTB4OZDINXL3D';
+
+        mark('fund', 'running');
+        pushLog('prepareFund');
+        const fundPrep = await tryPrepare(() =>
+          client.agent.prepareFund(subjobId, signer) as Promise<Record<string, unknown>>,
+        );
+        fundNote = fundPrep.note;
+        mark('fund', 'done');
+        pushLog(fundNote);
+
+        mark('release', 'running');
+        pushLog('prepareRelease');
+        const relPrep = await tryPrepare(() =>
+          client.agent.prepareRelease(subjobId, signer) as Promise<Record<string, unknown>>,
+        );
+        releaseNote = relPrep.note;
+        mark('release', 'done');
+        pushLog(releaseNote);
+        pushLog('prepare path done — tick freighter for on-chain');
+      }
 
       setSnap({
         jobId,
@@ -236,15 +386,19 @@ export default function AgenticPaymentsDemo({ onOpenHarness, onOpenWeek1 }: Prop
         subjobId,
         subjobStatus: subjob.status,
         taskId: sub.task_id ?? subjob.task_id ?? '—',
+        proposalId,
         amount: workerAmount,
         quote: q && typeof q === 'object' ? q : null,
         externalRef,
-        fundNote: fundPrep.note,
-        releaseNote: relPrep.note,
+        fundNote,
+        releaseNote,
+        mode: week3Live ? 'week3' : 'week2',
+        contractId,
+        fundTxHash,
+        releaseTxHash,
       });
 
       setMs(Math.round(performance.now() - t0));
-      pushLog('Week 2 listo. Firmar XDR y confirmFund/confirmRelease = Week 3.');
     } catch (e) {
       let msg: string;
       if (e instanceof ArcusXApiError) {
@@ -273,25 +427,24 @@ export default function AgenticPaymentsDemo({ onOpenHarness, onOpenWeek1 }: Prop
       <header className="aj-top">
         <div className="aj-brand">
           <span className="aj-mark">ArcusX</span>
-          <span className="aj-pill">Agentic payments · Testnet</span>
+          <span className="aj-pill">testnet · local</span>
         </div>
         <h1 className="aj-title">
-          Recorrido de pago agentico
-          <span className="aj-title-sub">
-            Un agente orquesta job → subjob → quote → prepare fund/release — sin UI del marketplace
-          </span>
+          agentic escrow
+          <span className="aj-title-sub">sdk smoke — create / fund / release</span>
         </h1>
         <p className="aj-lede">
-          App de prueba visual sobre <code>@arcusx/sdk</code> + partner key. Corre el camino
-          real en <code>api.arcusx.pro</code>. Confirmar XDR firmado (funded/released) es Week 3.
+          Hit the live gateway with a partner key. Checkbox on = Freighter signs; off = just
+          prepare calls.
         </p>
         <div className="aj-meta">
           <span>{gatewayHint(config)}</span>
+          <span>{week3Live ? 'fund+release' : 'prepare only'}</span>
           {ms != null ? <span>{ms} ms</span> : null}
         </div>
       </header>
 
-      <nav className="aj-path" aria-label="Recorrido">
+      <nav className="aj-path" aria-label="steps">
         {STEPS.map((s, i) => {
           const st = stepState[s.id];
           return (
@@ -301,7 +454,6 @@ export default function AgenticPaymentsDemo({ onOpenHarness, onOpenWeek1 }: Prop
                 <span className="aj-n">{s.n}</span>
                 <strong>{s.label}</strong>
                 <small>{s.detail}</small>
-                {!s.live ? <em>próximo</em> : null}
               </div>
             </div>
           );
@@ -337,8 +489,10 @@ export default function AgenticPaymentsDemo({ onOpenHarness, onOpenWeek1 }: Prop
                 <dd>{snap.subjobId}</dd>
               </div>
               <div>
-                <dt>task_id</dt>
-                <dd>{String(snap.taskId)}</dd>
+                <dt>task / proposal</dt>
+                <dd>
+                  {String(snap.taskId)} / {String(snap.proposalId ?? 'null')}
+                </dd>
               </div>
               <div>
                 <dt>amount</dt>
@@ -354,8 +508,8 @@ export default function AgenticPaymentsDemo({ onOpenHarness, onOpenWeek1 }: Prop
             </pre>
           </article>
           <article className="aj-card">
-            <h2>Prepare</h2>
-            <p className="aj-badge">week 2</p>
+            <h2>{snap.mode === 'week3' ? 'chain' : 'prepare'}</h2>
+            <p className="aj-badge">{snap.mode === 'week3' ? 'signed' : 'typed'}</p>
             <dl>
               <div>
                 <dt>fund</dt>
@@ -365,22 +519,70 @@ export default function AgenticPaymentsDemo({ onOpenHarness, onOpenWeek1 }: Prop
                 <dt>release</dt>
                 <dd>{snap.releaseNote}</dd>
               </div>
+              {snap.fundTxHash ? (
+                <div>
+                  <dt>fund tx</dt>
+                  <dd>
+                    <a href={stellarExpertTxUrl(snap.fundTxHash)} target="_blank" rel="noreferrer">
+                      Expert
+                    </a>
+                  </dd>
+                </div>
+              ) : null}
+              {snap.releaseTxHash ? (
+                <div>
+                  <dt>release tx</dt>
+                  <dd>
+                    <a
+                      href={stellarExpertTxUrl(snap.releaseTxHash)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Expert
+                    </a>
+                  </dd>
+                </div>
+              ) : null}
+              {snap.contractId ? (
+                <div>
+                  <dt>contract</dt>
+                  <dd>
+                    <a
+                      href={stellarExpertContractUrl(snap.contractId)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Expert
+                    </a>
+                  </dd>
+                </div>
+              ) : null}
             </dl>
           </article>
         </div>
       ) : (
         <div className="aj-empty">
           <p>
-            Pulsa <strong>Correr recorrido en vivo</strong> para crear job + subjob + quote
-            y llamar prepareFund / prepareRelease en Testnet.
+            Run it. Need Freighter + USDC on testnet if the checkbox is on.
           </p>
         </div>
       )}
 
       <section className="aj-controls">
         <div className="aj-fields">
+          <label className="aj-check">
+            <input
+              type="checkbox"
+              checked={week3Live}
+              onChange={(e) => {
+                setWeek3Live(e.target.checked);
+                setStepState(initialStates(e.target.checked));
+              }}
+            />
+            sign with Freighter (fund + release)
+          </label>
           <label>
-            API key
+            api key
             <div className="aj-key-row">
               <input
                 type={showKey ? 'text' : 'password'}
@@ -390,40 +592,48 @@ export default function AgenticPaymentsDemo({ onOpenHarness, onOpenWeek1 }: Prop
                 autoComplete="off"
               />
               <button type="button" className="aj-ghost" onClick={() => setShowKey((v) => !v)}>
-                {showKey ? 'Ocultar' : 'Ver'}
+                {showKey ? 'hide' : 'show'}
               </button>
             </div>
           </label>
           <label>
-            Título del job (lo decide el agente)
+            job title
             <input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} />
           </label>
           <label>
-            Descripción
+            description
             <input value={jobDescription} onChange={(e) => setJobDescription(e.target.value)} />
           </label>
           <label>
-            Título del subjob / tarea
+            subjob title
             <input value={workTitle} onChange={(e) => setWorkTitle(e.target.value)} />
           </label>
           <label>
-            Monto USDC (subjob)
+            amount (USDC)
             <input value={amount} onChange={(e) => setAmount(e.target.value)} />
           </label>
           <label>
-            executor_wallet (G…)
+            executor_user_id
             <input
-              value={executorWallet}
-              onChange={(e) => setExecutorWallet(e.target.value.trim())}
-              placeholder="G… quien cobra"
+              value={executorUserId}
+              onChange={(e) => setExecutorUserId(e.target.value.trim())}
+              placeholder="3"
             />
           </label>
           <label>
-            payer_wallet (opcional)
+            executor_wallet
+            <input
+              value={executorWallet}
+              onChange={(e) => setExecutorWallet(e.target.value.trim())}
+              placeholder="G…"
+            />
+          </label>
+          <label>
+            payer_wallet (optional)
             <input
               value={payerWallet}
               onChange={(e) => setPayerWallet(e.target.value.trim())}
-              placeholder="G… pagador"
+              placeholder="G…"
             />
           </label>
         </div>
@@ -435,29 +645,28 @@ export default function AgenticPaymentsDemo({ onOpenHarness, onOpenWeek1 }: Prop
             disabled={!hasKey || running}
             onClick={() => void runJourney()}
           >
-            {running ? 'Corriendo recorrido…' : 'Correr recorrido en vivo'}
+            {running ? 'running…' : 'run'}
           </button>
           {onOpenHarness ? (
             <button type="button" className="aj-ghost" onClick={onOpenHarness}>
-              Harness técnico
+              harness
             </button>
           ) : null}
           {onOpenWeek1 ? (
             <button type="button" className="aj-ghost" onClick={onOpenWeek1}>
-              Demo SOW3 Week1
+              week1 only
             </button>
           ) : null}
         </div>
 
         {!hasKey ? (
           <p className="aj-hint">
-            Necesitas <code>axk_test_…</code> (misma key del partner sandbox).
+            pegá una <code>axk_test_…</code>
           </p>
         ) : null}
         <p className="aj-hint">
-          Título y descripción los manda el agente por <code>client.agent.create</code> /{' '}
-          <code>createSubjob</code>. La API key afilia el job al partner (no al marketplace
-          anónimo). Si el agente omite el título del subjob, el Edge usa el del job.
+          executor_user_id tiene que existir en arcusx_users (default 3). wallet del executor =
+          la de ese user.
         </p>
         {error ? <pre className="aj-error">{error}</pre> : null}
         {log.length > 0 ? <pre className="aj-log">{log.join('\n')}</pre> : null}

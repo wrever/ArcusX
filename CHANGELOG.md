@@ -6,6 +6,16 @@ Las entradas siguen espíritu **[Keep a Changelog](https://keepachangelog.com/es
 
 ---
 
+## 2026-09-30 — v3.8.3 · SOW 3 Week 4 (closeout package — tag after LIVE_E2E)
+
+**Rama:** `ArcusX3.8` · **Tag:** `v3.8.3` (pending Expert freeze) · **Gateway:** `https://api.arcusx.pro` · **Edge:** `arcusx-api` **v133** · **SDK:** `0.5.2`
+
+- Fresh-clone verification + `smoke/demo:sow3:week4` + closeout checklist
+- Live Freighter hardens packaged: confirmDeploy (**v132**), sequential approve→release (**v133**)
+- Evidence template: `docs/sprints/instaawards-sow3/evidence/LIVE_E2E.md`
+- Mainnet = checklist only (`MAINNET_READINESS.md`)
+- **Blocker for tag:** fill LIVE_E2E with fund + release Stellar Expert links
+
 ## 2026-09-24 — v3.8.2 · SOW 3 Week 3 (agentic E2E docs + demo)
 
 **Rama:** `ArcusX3.8` · **Tag:** `v3.8.2` · **Gateway:** `https://api.arcusx.pro` · **Edge:** `arcusx-api` **v131** · **SDK:** `0.5.2`

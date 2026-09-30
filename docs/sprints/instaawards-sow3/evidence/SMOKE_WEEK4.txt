@@ -1,0 +1,8 @@
+Re-verified: 2026-09-30 · Edge arcusx-api v133 · SDK 0.5.2 · SOW3 Week4 closeout prep
+
+SOW3 Week4 closeout smoke via https://api.arcusx.pro
+✓ docs package (WEEK4 packet, fresh-clone, LIVE_E2E, mainnet, quickstart, limitations, security, SMOKE_WEEK1–3)
+✓ sdk.closeout_exports — keypair+fund+release+client
+✓ agent.create_regression + get_regression
+✓ evidence.live_e2e_frozen — TEMPLATE still (fill before tag v3.8.3)
+SOW3 Week4 smoke PASS (16 checks)

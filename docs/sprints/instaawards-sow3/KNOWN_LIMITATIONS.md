@@ -30,8 +30,11 @@ Honest constraints for reviewers and integrators. **Testnet only.**
 | Rate limits | Sandbox ~60 req/min (in-memory Edge bucket) |
 | Mainnet | Documented future work — not SOW 3 |
 
-## Deferred to Week 4
+## Week 4 closeout
 
-- Frozen Stellar Expert links for fund + release in the evidence pack
-- Fresh-clone verification checklist execution log
-- Weeks 1–3 dry/API path is closed; only live on-chain evidence remains for SOW Deliverable 3
+| Item | Status |
+|------|--------|
+| Fresh-clone verification | [`FRESH_CLONE_VERIFICATION.md`](./FRESH_CLONE_VERIFICATION.md) · `npm run smoke:sow3:week4` |
+| Sequential approve → release | Edge **v133** (required before release-funds) |
+| Frozen Expert links | Fill [`evidence/LIVE_E2E.md`](./evidence/LIVE_E2E.md) then tag v3.8.3 |
+| Mainnet | Checklist only — [`MAINNET_READINESS.md`](./MAINNET_READINESS.md) |

@@ -1164,6 +1164,27 @@ a.badge.ok:hover {
   color: var(--aj-muted);
 }
 
+.aj-fields label.aj-check {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--aj-ink);
+}
+
+.aj-fields label.aj-check input {
+  width: auto;
+  margin: 0;
+  padding: 0;
+}
+
+.aj-card dd a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .aj-fields input {
   background: #0c110e;
   border: 1px solid var(--aj-line);

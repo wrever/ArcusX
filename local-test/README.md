@@ -1,35 +1,16 @@
-# ArcusX — local-test (agentic payments + partner)
+# local-test
 
-App de prueba visual para el **recorrido de pagos agenticos** en Stellar Testnet, más el harness partner.
-
-## Arranque
+Smoke UI for agentic + partner against testnet.
 
 ```bash
 cd packages/arcusx-sdk && npm run build
-cd ../../local-test
-npm install && npm run dev
+cd ../../local-test && npm i && npm run dev
 ```
 
-→ http://localhost:5200
+http://localhost:5200 — main flow  
+`?view=week1` — create/status only  
+`?view=harness` — partner suite
 
-| Vista | URL |
-|-------|-----|
-| **Recorrido agentico (default)** | `http://localhost:5200` |
-| Demo SOW3 Week1 (create/status) | `?view=week1` |
-| Harness técnico | `?view=harness` |
+`.env`: `VITE_ARCUSX_API_KEY`, optional wallets + `VITE_AGENTIC_EXECUTOR_USER_ID`.
 
-Pega `axk_test_…` o define `VITE_ARCUSX_API_KEY` en `local-test/.env`.
-
-## Qué hace el recorrido en vivo
-
-1. Partner auth  
-2. `agent.create` (job)  
-3. `agent.createSubjob` (work unit + USDC)  
-4. `agent.quoteEscrow`  
-5. Status job + subjob  
-6. `agent.prepareFund` (unsigned XDR o 4xx tipado si aún no hay deploy)  
-7. `agent.prepareRelease` (4xx esperado hasta fondear)
-
-Confirmar XDR firmado (funded / released on-chain) es **Week 3**.
-
-Ideal para video a Stellar: un botón → estaciones se encienden → tarjetas Job / Subjob / Quote / Prepare reales.
+Checkbox = Freighter fund/release. Off = prepare only (400s are fine pre-deploy).

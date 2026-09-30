@@ -729,6 +729,11 @@ export async function subjobEscrowReleasePrepare(ctx: ApiContext): Promise<Respo
 export async function subjobEscrowReleaseConfirm(ctx: ApiContext): Promise<Response> {
   const auth = await requirePartnerAuth(ctx);
   const subjobId = String(ctx.body.subjob_id ?? '').trim();
+  const step = String(ctx.body.step ?? ctx.body.action ?? 'release').trim().toLowerCase();
+  const isApproveOnly =
+    step === 'approve' ||
+    step === 'approve_milestone' ||
+    step === 'approve_confirm';
 
   const { data: before } = await auth.supabase
     .from('arcusx_subjobs')
@@ -741,7 +746,8 @@ export async function subjobEscrowReleaseConfirm(ctx: ApiContext): Promise<Respo
 
   const res = await delegateSubjobEscrow(ctx, confirmEscrowRelease);
 
-  if (res.ok && before) {
+  // Approve es intermedio: no marcar released ni webhooks de cierre.
+  if (res.ok && before && !isApproveOnly) {
     const now = new Date().toISOString();
     const releaseTx = String(ctx.body.release_tx_hash ?? ctx.body.tx_hash ?? '').trim();
 

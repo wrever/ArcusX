@@ -3,8 +3,8 @@
 **Network:** Stellar **Testnet** only  
 **Gateway:** `https://api.arcusx.pro`  
 **Package:** `@arcusx/sdk` **0.5.2**  
-**Edge:** `arcusx-api` **v131**  
-**Packet status:** Weeks 1–3 complete (Week 3 dry; live hashes = Week 4)
+**Edge:** `arcusx-api` **v133**  
+**Packet status:** Weeks 1–3 complete · Week 4 ready to close ([`CLOSEOUT_CHECKLIST.md`](./CLOSEOUT_CHECKLIST.md))
 
 ## 1. Install
 

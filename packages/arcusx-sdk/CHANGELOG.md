@@ -2,8 +2,11 @@
 
 ## Unreleased
 
-### Next (Week 4)
-- Fresh-clone verification + freeze Testnet Expert links for fund/release.
+### 0.5.3 — SOW 3 Week 4 (pending tag with LIVE_E2E)
+- Fresh-clone verification + Week 4 smoke/demo closeout scripts.
+- `releaseSubjob`: sequential approve → confirm → release → confirm (parity Edge v133).
+- Docs: `INSTAAWARDS_SOW3_WEEK4.md`, `FRESH_CLONE_VERIFICATION.md`, `evidence/LIVE_E2E.md`.
+- Freeze Stellar Expert fund/release links before publishing **v3.8.3**.
 
 ## 0.5.2 — SOW 3 Week 3 (2026-09-24)
 
