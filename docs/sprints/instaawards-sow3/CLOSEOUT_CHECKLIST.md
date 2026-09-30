@@ -1,57 +1,39 @@
-# SOW 3 · Week 4 — Closeout checklist (hoy)
+# SOW 3 · Week 4 — Closeout checklist
 
-Usar esta lista para cerrar el Instaward **hoy**. Marcar en orden.
+**SOW 3 CLOSED** — 2026-09-30 (Testnet)
 
-## A. Repo / Edge (ya listo o casi)
+## A. Repo / Edge
 
 - [x] Edge `arcusx-api` **v133** (sequential approve → release)
 - [x] Edge **v132** confirmDeploy (hash / contract_id)
 - [x] SDK `releaseSubjob` loop ×2
-- [ ] Commit + push código Edge/SDK/local-test pendiente en working tree
-- [ ] Packet Week 4 + changelog + fresh-clone en `docs/sprints/instaawards-sow3/`
+- [x] Packet Week 4 + changelog + fresh-clone in repo
+- [x] Code + docs pushed on `ArcusX3.8`
 
-## B. Dry verification (sin secretos)
+## B. Dry verification
 
-```bash
-cd packages/arcusx-sdk && npm run build
-SMOKE_STRICT=1 npm run smoke:sow3:week1
-SMOKE_STRICT=1 npm run smoke:sow3:week2
-npm run smoke:sow3:week3
-npm run smoke:sow3:week4
-npm run demo:sow3:week4
-```
+- [x] Weeks 1–4 smoke PASS (re-verified 2026-09-30)
+- [x] Evidence logs under `evidence/SMOKE_WEEK*.txt`
 
-- [ ] Smokes verdes
-- [ ] Copiar outputs frescos a `evidence/SMOKE_WEEK{1,2,3,4}.txt` si cambió algo
+## C. Live evidence
 
-## C. Live evidence (bloquea el cierre SOW)
-
-Elegir **una** ruta:
-
-1. `PAYER_SECRET_KEY` + `AGENTIC_EXECUTOR_USER_ID` → `npm run demo:sow3:week3`
-2. `local-test` Freighter → fund + release (cliente ×2)
-
-Luego editar [`evidence/LIVE_E2E.md`](./evidence/LIVE_E2E.md):
-
-- [ ] `contract_id` (C…)
-- [ ] fund tx → https://stellar.expert/explorer/testnet/tx/…
-- [ ] release tx → https://stellar.expert/explorer/testnet/tx/…
-- [ ] fecha / network = testnet / Edge v133
+- [x] Canonical run: task **172** / subjob `bf40c11c-…`
+- [x] Fund + approve + release Expert URLs in [`evidence/LIVE_E2E.md`](./evidence/LIVE_E2E.md)
+- [x] Horizon `successful=true` for fund + release
+- [x] Three additional same-day agentic releases documented (169–171)
 
 ## D. Release público
 
-- [ ] Bump root `CHANGELOG.md` entrada **v3.8.3**
-- [ ] Actualizar SDK `CHANGELOG.md` (Week 4 shipped)
-- [ ] Tag + GitHub release **v3.8.3** con body apuntando a Week 4 changelog
-- [ ] README SOW3: Week 4 **Complete** + link release
+- [x] Root `CHANGELOG.md` · **v3.8.3**
+- [x] SDK changelog Week 4 shipped
+- [x] GitHub release **v3.8.3**
+- [x] README SOW3: Week 4 **Complete** + SOW **CLOSED**
 
-## E. Ambassador pack (copiar/pegar)
+## E. Ambassador pack
 
-- [ ] Link release v3.8.3
-- [ ] Link `AGENTIC_QUICKSTART.md`
-- [ ] Link `evidence/LIVE_E2E.md`
-- [ ] Confirmar: Testnet only · no mainnet claim · no secrets in git
+- [x] Release v3.8.3
+- [x] [`AGENTIC_QUICKSTART.md`](./AGENTIC_QUICKSTART.md)
+- [x] [`evidence/LIVE_E2E.md`](./evidence/LIVE_E2E.md)
+- [x] Testnet only · no mainnet claim · no secrets in git
 
----
-
-**Definition of done:** A+B verdes · C rellenado · D publicado · E listo para Chapter Lead.
+**Definition of done:** met.

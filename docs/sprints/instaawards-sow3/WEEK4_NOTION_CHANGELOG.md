@@ -3,14 +3,14 @@
 **Date:** 2026-09-30  
 **Branch:** `ArcusX3.8`  
 **Engagement:** Instawards SOW 3 — agentic payments foundation  
-**Release (planned):** v3.8.3  
-**Status:** Package ready — freeze live Expert links + tag today to close SOW 3
+**Release:** [v3.8.3](https://github.com/wrever/ArcusX/releases/tag/v3.8.3)  
+**Status:** **Complete** — SOW 3 closed on Stellar Testnet
 
 ---
 
 ## 1. One-sentence summary
 
-Week 4 packages the Testnet **agentic foundation closeout**: fresh-clone verification, Weeks 1–3 issue resolution (Edge v132/v133), smoke/demo evidence, and a slot for frozen Stellar Expert fund/release hashes — mainnet remains future work only.
+Week 4 closes SOW 3 with frozen Stellar Expert fund/approve/release evidence on the machine-callable path, fresh-clone verification, Edge v132/v133 hardens packaged, and release **v3.8.3** — mainnet remains future work only.
 
 ---
 
@@ -22,33 +22,31 @@ Week 4 packages the Testnet **agentic foundation closeout**: fresh-clone verific
 | **Week 4 packet** | [`INSTAAWARDS_SOW3_WEEK4.md`](./INSTAAWARDS_SOW3_WEEK4.md) |
 | **Prior weeks** | [v3.8.0](https://github.com/wrever/ArcusX/releases/tag/v3.8.0) · [v3.8.1](https://github.com/wrever/ArcusX/releases/tag/v3.8.1) · [v3.8.2](https://github.com/wrever/ArcusX/releases/tag/v3.8.2) |
 
-### Three SOW deliverables — Week 4 contribution
+### Three SOW deliverables — closed
 
 | # | Deliverable | Week 4 |
 |---|-------------|--------|
-| **D1** | Agentic Payments API MVP | Closeout: Edge **v133** sequential release; confirmDeploy harden **v132** |
-| **D2** | SDK agentic module + Node demo | Fresh-clone path · `smoke/demo:sow3:week4` · Freighter + keypair documented |
-| **D3** | Testnet validation & release package | **Primary** — evidence pack, Expert links, changelog, limitations, mainnet checklist-only |
+| **D1** | Agentic Payments API MVP | Edge **v133** sequential release · **v132** confirmDeploy |
+| **D2** | SDK agentic module + Node demo | Fresh-clone · `smoke/demo:sow3:week4` · Freighter + keypair |
+| **D3** | Testnet validation & release package | [`evidence/LIVE_E2E.md`](./evidence/LIVE_E2E.md) frozen · **v3.8.3** |
 
 ---
 
-## 3. Planned work → status
-
-Source: SOW §5.1 Week 4.
+## 3. Planned work → done
 
 | Planned | Status | Evidence |
 |---------|--------|----------|
-| Fresh-clone verification | Done (doc + script) | [`FRESH_CLONE_VERIFICATION.md`](./FRESH_CLONE_VERIFICATION.md) · `npm run smoke:sow3:week4` |
+| Fresh-clone verification | Done | [`FRESH_CLONE_VERIFICATION.md`](./FRESH_CLONE_VERIFICATION.md) · smoke week4 **16/16** |
 | Resolve Weeks 1–3 findings | Done | v132 confirmDeploy · v133 approve→release · SDK loop |
-| Collect fund/release Expert links | **Today** | [`evidence/LIVE_E2E.md`](./evidence/LIVE_E2E.md) |
-| Assemble final package | Done (pending LIVE fill + tag) | This changelog + packet + `CLOSEOUT_CHECKLIST.md` |
+| Collect fund/release Expert links | Done | Task **172** (+ 169–171) in LIVE_E2E |
+| Assemble final package | Done | This changelog + packet + **v3.8.3** |
 
-### Expected output checklist
+### Canonical on-chain proof (task 172)
 
-- [x] Foundation builds; dry demo/smoke path passes on Testnet
-- [x] Quickstart, changelog, known limitations packaged
-- [ ] End-to-end on-chain evidence frozen (Expert URLs)
-- [ ] Ambassador evidence bundle = tag **v3.8.3**
+- Fund: https://stellar.expert/explorer/testnet/tx/5e67c5c7cb4be3bebc3b630e68f794716eab3faae5c28f0d64bbfdf38a9962ea
+- Approve: https://stellar.expert/explorer/testnet/tx/7a145246a47a76d91836dab8cecff5e24ea0cbd2e76bf1b16216e9e9a2d01009
+- Release: https://stellar.expert/explorer/testnet/tx/b91184d9e6813a0aafdba1ad2e079b307da0c2f64b220996d11da1fde7b9a58c
+- Contract: https://stellar.expert/explorer/testnet/contract/CDCQ4FEAUMRUDJBM7HFLOYT6TDE2QYIXJSOZDG7N6QJRDNC4L37REDOR
 
 ---
 
@@ -59,54 +57,18 @@ Source: SOW §5.1 Week 4.
 | Week 4 packet | `INSTAAWARDS_SOW3_WEEK4.md` |
 | Closeout checklist | `CLOSEOUT_CHECKLIST.md` |
 | Fresh-clone | `FRESH_CLONE_VERIFICATION.md` |
-| Live evidence template | `evidence/LIVE_E2E.md` |
-| Weeks 1–3 smoke/demo logs | `evidence/SMOKE_WEEK*.txt` · `DEMO_WEEK*.txt` |
-| Quickstart | `AGENTIC_QUICKSTART.md` |
-| Limitations | `KNOWN_LIMITATIONS.md` |
-| Security | `SECURITY_NOTES.md` |
-| Surface map | `SOW3_MVP_SURFACE.md` |
+| Live evidence (frozen) | `evidence/LIVE_E2E.md` |
+| Weeks 1–4 smoke/demo logs | `evidence/SMOKE_WEEK*.txt` · `DEMO_WEEK*.txt` |
+| Quickstart / limitations / security | `AGENTIC_*` · `KNOWN_*` · `SECURITY_*` |
 | Mainnet (future only) | `MAINNET_READINESS.md` |
 | SDK | `packages/arcusx-sdk` **0.5.2** |
 | Edge | `arcusx-api` **v133** |
 
 ---
 
-## 5. How a reviewer verifies
+## 5. Explicitly out of SOW 3
 
-```bash
-git clone https://github.com/wrever/ArcusX.git && cd ArcusX
-git checkout ArcusX3.8   # or tag v3.8.3 when published
-cd packages/arcusx-sdk && npm install && npm run build
-# set ARCUSX_API_KEY=axk_test_… in arcusx/.env (gitignored)
-SMOKE_STRICT=1 npm run smoke:sow3:week1
-SMOKE_STRICT=1 npm run smoke:sow3:week2
-npm run smoke:sow3:week3
-npm run smoke:sow3:week4
-npm run demo:sow3:week4
-```
-
-On-chain: see `evidence/LIVE_E2E.md` Expert links (after freeze).
-
----
-
-## 6. Explicitly out of SOW 3
-
-| Item | Notes |
-|------|--------|
-| Mainnet production launch | Checklist only — [`MAINNET_READINESS.md`](./MAINNET_READINESS.md) |
-| Multi-agent graphs / multi-release | Out of MVP |
-| `releaseOnCallback` as primary | Future follow-on |
-| Python SDK / Soroban escrow swap | Out of SOW |
-
----
-
-## 7. Links
-
-| Resource | Path |
-|----------|------|
-| Packet | [`INSTAAWARDS_SOW3_WEEK4.md`](./INSTAAWARDS_SOW3_WEEK4.md) |
-| Week 3 changelog | [`WEEK3_NOTION_CHANGELOG.md`](./WEEK3_NOTION_CHANGELOG.md) |
-| SOW | [`SOW3_INSTAAWARDS_FOLLOWON.md`](../SOW3_INSTAAWARDS_FOLLOWON.md) |
+Mainnet launch · multi-release graphs · `releaseOnCallback` as primary · Python SDK · Soroban escrow swap.
 
 ---
 

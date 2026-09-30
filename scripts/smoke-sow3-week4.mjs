@@ -128,4 +128,8 @@ if (failed.length) {
   process.exit(1);
 }
 console.log(`SOW3 Week4 smoke PASS (${tests.length} checks)`);
-console.log('Next: fill evidence/LIVE_E2E.md → tag v3.8.3 (see CLOSEOUT_CHECKLIST.md)');
+console.log(
+  frozen
+    ? 'LIVE_E2E frozen — SOW 3 closeout evidence ready (v3.8.3)'
+    : 'Next: fill evidence/LIVE_E2E.md → tag v3.8.3 (see CLOSEOUT_CHECKLIST.md)',
+);

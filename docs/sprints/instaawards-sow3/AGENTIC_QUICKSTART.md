@@ -4,7 +4,7 @@
 **Gateway:** `https://api.arcusx.pro`  
 **Package:** `@arcusx/sdk` **0.5.2**  
 **Edge:** `arcusx-api` **v133**  
-**Packet status:** Weeks 1–3 complete · Week 4 ready to close ([`CLOSEOUT_CHECKLIST.md`](./CLOSEOUT_CHECKLIST.md))
+**Packet status:** **SOW 3 CLOSED** (Weeks 1–4) · live evidence [`evidence/LIVE_E2E.md`](./evidence/LIVE_E2E.md)
 
 ## 1. Install
 

@@ -30,11 +30,11 @@ Honest constraints for reviewers and integrators. **Testnet only.**
 | Rate limits | Sandbox ~60 req/min (in-memory Edge bucket) |
 | Mainnet | Documented future work — not SOW 3 |
 
-## Week 4 closeout
+## Week 4 closeout — done
 
 | Item | Status |
 |------|--------|
 | Fresh-clone verification | [`FRESH_CLONE_VERIFICATION.md`](./FRESH_CLONE_VERIFICATION.md) · `npm run smoke:sow3:week4` |
-| Sequential approve → release | Edge **v133** (required before release-funds) |
-| Frozen Expert links | Fill [`evidence/LIVE_E2E.md`](./evidence/LIVE_E2E.md) then tag v3.8.3 |
+| Sequential approve → release | Edge **v133** |
+| Frozen Expert links | [`evidence/LIVE_E2E.md`](./evidence/LIVE_E2E.md) · release **v3.8.3** |
 | Mainnet | Checklist only — [`MAINNET_READINESS.md`](./MAINNET_READINESS.md) |

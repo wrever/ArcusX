@@ -1,20 +1,12 @@
 # Changelog — `@arcusx/sdk`
 
-## Unreleased
+## 0.5.2 — SOW 3 Weeks 3–4 (2026-09-24 → 2026-09-30)
 
-### 0.5.3 — SOW 3 Week 4 (pending tag with LIVE_E2E)
-- Fresh-clone verification + Week 4 smoke/demo closeout scripts.
-- `releaseSubjob`: sequential approve → confirm → release → confirm (parity Edge v133).
-- Docs: `INSTAAWARDS_SOW3_WEEK4.md`, `FRESH_CLONE_VERIFICATION.md`, `evidence/LIVE_E2E.md`.
-- Freeze Stellar Expert fund/release links before publishing **v3.8.3**.
-
-## 0.5.2 — SOW 3 Week 3 (2026-09-24)
-
-### Agentic E2E (Instawards SOW 3)
-- `createKeypairWalletAdapter(S…)` for Node signing (optional `@stellar/stellar-sdk` peer).
-- Scripts: `npm run smoke:sow3:week3`, `npm run demo:sow3:week3` (dry or live with `PAYER_SECRET_KEY`).
-- Docs: `AGENTIC_QUICKSTART.md`, `KNOWN_LIMITATIONS.md`, `INSTAAWARDS_SOW3_WEEK3.md`.
-- Edge live: `arcusx-api` **v131**. Weeks 1–3 packets closed (dry path re-verified 2026-09-24).
+### Agentic foundation closed (Instawards SOW 3)
+- Sequential `releaseSubjob`: approve → confirm → release → confirm (Edge **v133** parity).
+- Week 3: `createKeypairWalletAdapter`, `smoke/demo:sow3:week3`, quickstart + limitations.
+- Week 4: `smoke/demo:sow3:week4`, fresh-clone, frozen [`evidence/LIVE_E2E.md`](../../docs/sprints/instaawards-sow3/evidence/LIVE_E2E.md).
+- SOW 3 **CLOSED** on Stellar Testnet — GitHub **v3.8.3**.
 
 ---
 

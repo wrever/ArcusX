@@ -2,9 +2,9 @@
 
 **Track:** Agentic payments — Testnet validation & foundation closeout  
 **Week:** 4 of 4 (SOW 3 follow-on)  
-**Status:** Ready to close (docs + dry smoke green; fill live Expert links today)  
+**Status:** **Complete** — SOW 3 closed (Testnet evidence frozen 2026-09-30)  
 **Date:** 2026-09-30  
-**Release (planned):** [v3.8.3](https://github.com/wrever/ArcusX/releases) — tag when evidence frozen  
+**Release:** [v3.8.3](https://github.com/wrever/ArcusX/releases/tag/v3.8.3)  
 **Edge:** `arcusx-api` **v133** · Gateway `https://api.arcusx.pro`  
 **SDK:** `@arcusx/sdk` **0.5.2** (+ sequential release helpers)  
 **SOW source:** [`../SOW3_INSTAAWARDS_FOLLOWON.md`](../SOW3_INSTAAWARDS_FOLLOWON.md)  
@@ -32,8 +32,8 @@ Mainnet = checklist only ([`MAINNET_READINESS.md`](./MAINNET_READINESS.md)) — 
 |---------------------------|----------|
 | Fresh-clone verification | [`FRESH_CLONE_VERIFICATION.md`](./FRESH_CLONE_VERIFICATION.md) · `npm run smoke:sow3:week4` |
 | Resolve Weeks 1–3 issues | Edge **v132** confirmDeploy · **v133** sequential release · SDK `releaseSubjob` loop |
-| Collect Testnet hashes / Expert links | [`evidence/LIVE_E2E.md`](./evidence/LIVE_E2E.md) — fill today |
-| Final foundation package | This packet + [`WEEK4_NOTION_CHANGELOG.md`](./WEEK4_NOTION_CHANGELOG.md) · [`CLOSEOUT_CHECKLIST.md`](./CLOSEOUT_CHECKLIST.md) |
+| Collect Testnet hashes / Expert links | [`evidence/LIVE_E2E.md`](./evidence/LIVE_E2E.md) — task 172 + runs 169–171 |
+| Assemble final package | Packet + changelog + release **v3.8.3** |
 
 ---
 
@@ -42,8 +42,8 @@ Mainnet = checklist only ([`MAINNET_READINESS.md`](./MAINNET_READINESS.md)) — 
 - [x] `@arcusx/sdk` agentic foundation builds; dry smoke Weeks 1–3 + Week 4 pass on Testnet gateway
 - [x] Quickstart, changelog, known limitations, security notes packaged
 - [x] Weeks 1–3 smoke/demo evidence logs present under `evidence/`
-- [ ] Live fund + release Expert URLs frozen in `evidence/LIVE_E2E.md` (**do today**)
-- [ ] GitHub release **v3.8.3** + tag when LIVE_E2E filled (**do today**)
+- [x] Live fund + release Expert URLs frozen in `evidence/LIVE_E2E.md`
+- [x] GitHub release **v3.8.3**
 - [x] Mainnet = future checklist only
 
 ---
@@ -92,8 +92,8 @@ Full path: [`FRESH_CLONE_VERIFICATION.md`](./FRESH_CLONE_VERIFICATION.md) · [`C
 - [x] Packet + changelog + fresh-clone + closeout checklist in repo
 - [x] Edge v133 live with sequential release
 - [x] Dry smoke regression green
-- [ ] `evidence/LIVE_E2E.md` has real Testnet Expert links
-- [ ] v3.8.3 release published for Ambassador review
+- [x] `evidence/LIVE_E2E.md` has real Testnet Expert links (task 172)
+- [x] v3.8.3 release published for Ambassador review
 - [x] No secrets in git · Mainnet not claimed
 
 ---
