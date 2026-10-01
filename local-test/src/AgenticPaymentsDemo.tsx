@@ -1,6 +1,6 @@
 /**
- * Visual smoke for agentic escrow on testnet.
- * prepare-only or Freighter fund/release.
+ * Visual smoke for agentic escrow on Stellar Testnet (SOW 3 closed · v3.8.4).
+ * prepare-only or Freighter fund / approve→release.
  */
 import { useMemo, useState } from 'react';
 import { ArcusXApiError } from '@arcusx/sdk';
@@ -79,7 +79,7 @@ function stepsFor(week3: boolean): Step[] {
       n: 7,
       label: 'release',
       live: true,
-      detail: week3 ? 'sign release' : 'prepare',
+      detail: week3 ? 'approve→release ×2' : 'prepare',
     },
   ];
 }
@@ -341,15 +341,17 @@ export default function AgenticPaymentsDemo({ onOpenHarness, onOpenWeek1 }: Prop
         if (contractId) pushLog(stellarExpertContractUrl(contractId));
 
         mark('release', 'running');
-        pushLog('releaseSubjob…');
+        pushLog('releaseSubjob (approve → release, 2 Freighter prompts)…');
         const released = await client.agent.releaseSubjob(subjobId, wallet, {
           idempotencyKey: `ui-w3-rel-${externalRef}`,
         });
         releaseTxHash = released.release_tx_hash;
+        const stepHashes = released.step_hashes?.filter(Boolean) ?? [];
         releaseNote = `released ${releaseTxHash.slice(0, 10)}…`;
         mark('release', 'done');
         pushLog(`release ok ${releaseNote}`);
-        pushLog(stellarExpertTxUrl(releaseTxHash));
+        for (const h of stepHashes) pushLog(stellarExpertTxUrl(h));
+        if (!stepHashes.includes(releaseTxHash)) pushLog(stellarExpertTxUrl(releaseTxHash));
 
         ({ job } = await client.agent.get(jobId));
         ({ subjob } = await client.agent.getSubjob(subjobId));
@@ -427,19 +429,20 @@ export default function AgenticPaymentsDemo({ onOpenHarness, onOpenWeek1 }: Prop
       <header className="aj-top">
         <div className="aj-brand">
           <span className="aj-mark">ArcusX</span>
-          <span className="aj-pill">testnet · local</span>
+          <span className="aj-pill">SOW 3 · v3.8.4 · testnet</span>
         </div>
         <h1 className="aj-title">
           agentic escrow
-          <span className="aj-title-sub">sdk smoke — create / fund / release</span>
+          <span className="aj-title-sub">create → fund → approve → release</span>
         </h1>
         <p className="aj-lede">
-          Hit the live gateway with a partner key. Checkbox on = Freighter signs; off = just
-          prepare calls.
+          Partner key against <code>api.arcusx.pro</code>. Checkbox on = Freighter signs deploy,
+          fund, then approve+release (2 prompts). Off = prepare-only typed checks.
         </p>
         <div className="aj-meta">
           <span>{gatewayHint(config)}</span>
-          <span>{week3Live ? 'fund+release' : 'prepare only'}</span>
+          <span>{week3Live ? 'live Freighter' : 'prepare only'}</span>
+          <span>Edge v133</span>
           {ms != null ? <span>{ms} ms</span> : null}
         </div>
       </header>
@@ -579,7 +582,7 @@ export default function AgenticPaymentsDemo({ onOpenHarness, onOpenWeek1 }: Prop
                 setStepState(initialStates(e.target.checked));
               }}
             />
-            sign with Freighter (fund + release)
+            sign with Freighter (fund + approve→release ×2)
           </label>
           <label>
             api key
@@ -665,8 +668,26 @@ export default function AgenticPaymentsDemo({ onOpenHarness, onOpenWeek1 }: Prop
           </p>
         ) : null}
         <p className="aj-hint">
-          executor_user_id tiene que existir en arcusx_users (default 3). wallet del executor =
-          la de ese user.
+          executor_user_id must exist in arcusx_users (default 3). executor_wallet = that user&apos;s
+          G… . Release needs two Freighter signatures after fund (Edge v133).
+        </p>
+        <p className="aj-hint">
+          Frozen SOW evidence:{' '}
+          <a
+            href="https://github.com/wrever/ArcusX/blob/v3.8.4/docs/sprints/instaawards-sow3/evidence/LIVE_E2E.md"
+            target="_blank"
+            rel="noreferrer"
+          >
+            LIVE_E2E.md
+          </a>
+          {' · '}
+          <a
+            href="https://github.com/wrever/ArcusX/blob/v3.8.4/docs/sprints/instaawards-sow3/REVIEWER_PACK.md"
+            target="_blank"
+            rel="noreferrer"
+          >
+            REVIEWER_PACK
+          </a>
         </p>
         {error ? <pre className="aj-error">{error}</pre> : null}
         {log.length > 0 ? <pre className="aj-log">{log.join('\n')}</pre> : null}

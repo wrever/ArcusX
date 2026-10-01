@@ -58,13 +58,13 @@ const STEPS: Step[] = [
     id: 'fund',
     label: 'Fund USDC escrow',
     week: 2,
-    detail: 'Prepare → sign → confirm (próxima semana)',
+    detail: 'Prepare → sign → confirm (vista principal / Freighter)',
   },
   {
     id: 'release',
     label: 'Release payout',
     week: 2,
-    detail: 'Approve → release on-chain (próxima semana)',
+    detail: 'Approve → release ×2 (Edge v133 · SOW 3 CLOSED)',
   },
 ];
 
@@ -181,7 +181,7 @@ export default function Week1Demo({ onOpenHarness }: Props) {
       pushLog('✓ Mismo job_id — sin duplicar');
 
       setMs(Math.round(performance.now() - t0));
-      pushLog('Week 1 foundation lista. Fund/release → Week 2.');
+      pushLog('Week 1 foundation lista. Fund/release → vista principal (Freighter).');
     } catch (e) {
       let msg: string;
       if (e instanceof ArcusXApiError) {
@@ -219,7 +219,7 @@ export default function Week1Demo({ onOpenHarness }: Props) {
         </h1>
         <p className="w1-lede">
           Demo en vivo: auth partner → create → status → reintento idempotente vía{' '}
-          <code>@arcusx/sdk</code>. El escrow on-chain llega en Week 2.
+          <code>@arcusx/sdk</code>. Escrow on-chain: vista principal con Freighter (SOW 3 CLOSED · v3.8.4).
         </p>
         <div className="w1-meta">
           <span>{gatewayHint(config)}</span>

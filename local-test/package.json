@@ -2,7 +2,7 @@
   "name": "arcusx-sdk-local-test",
   "private": true,
   "version": "0.1.0",
-  "description": "Localhost harness — partner + SOW3 Week1 agentic (@arcusx/sdk)",
+  "description": "Localhost harness — SOW 3 agentic (v3.8.4) + partner escrow on Testnet",
   "type": "module",
   "scripts": {
     "dev": "vite",

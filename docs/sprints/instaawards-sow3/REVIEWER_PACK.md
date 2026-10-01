@@ -61,6 +61,18 @@ Full metadata: [`evidence/LIVE_E2E.md`](./evidence/LIVE_E2E.md).
 
 ---
 
+## Optional: browser harness (`local-test`)
+
+```bash
+cd packages/arcusx-sdk && npm run build
+cd ../../local-test && npm i && npm run dev
+# http://localhost:5200 — Freighter fund + approve→release ×2
+```
+
+Needs `VITE_ARCUSX_API_KEY` + Freighter Testnet USDC. See [`local-test/README.md`](../../../local-test/README.md).
+
+---
+
 ## Week changelogs
 
 [Week 1](./WEEK1_NOTION_CHANGELOG.md) · [Week 2](./WEEK2_NOTION_CHANGELOG.md) · [Week 3](./WEEK3_NOTION_CHANGELOG.md) · [Week 4](./WEEK4_NOTION_CHANGELOG.md)
